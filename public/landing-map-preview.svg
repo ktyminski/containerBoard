@@ -1,0 +1,126 @@
+<svg width="1600" height="900" viewBox="0 0 1600 900" fill="none" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="title desc">
+  <title id="title">ContainerBoard market map preview</title>
+  <desc id="desc">Stylized static map preview with dense company markers for the landing page.</desc>
+  <defs>
+    <linearGradient id="bg" x1="120" y1="80" x2="1460" y2="820" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#0b1220"/>
+      <stop offset="1" stop-color="#111c2f"/>
+    </linearGradient>
+    <linearGradient id="land" x1="220" y1="140" x2="1320" y2="760" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#16263d"/>
+      <stop offset="1" stop-color="#15263a"/>
+    </linearGradient>
+    <pattern id="grid" width="40" height="40" patternUnits="userSpaceOnUse">
+      <path d="M40 0H0V40" stroke="#22334d" stroke-opacity="0.25" stroke-width="1"/>
+    </pattern>
+    <filter id="soft" x="-20%" y="-20%" width="140%" height="140%">
+      <feGaussianBlur stdDeviation="18"/>
+    </filter>
+    <symbol id="pin" viewBox="0 0 24 30">
+      <path d="M12 1C6.477 1 2 5.477 2 11C2 18.2 12 29 12 29C12 29 22 18.2 22 11C22 5.477 17.523 1 12 1Z" fill="currentColor"/>
+      <circle cx="12" cy="11" r="4.2" fill="#0f172a"/>
+    </symbol>
+  </defs>
+
+  <rect width="1600" height="900" fill="url(#bg)"/>
+  <rect width="1600" height="900" fill="url(#grid)"/>
+
+  <ellipse cx="480" cy="160" rx="220" ry="90" fill="#1d4f7a" fill-opacity="0.2" filter="url(#soft)"/>
+  <ellipse cx="1240" cy="760" rx="240" ry="110" fill="#0f8f73" fill-opacity="0.2" filter="url(#soft)"/>
+
+  <path d="M146 202L342 136L578 160L764 110L1030 166L1226 150L1450 214L1478 374L1408 582L1250 698L1008 740L788 712L560 754L352 700L186 560L130 386L146 202Z" fill="url(#land)" stroke="#2a3e5d" stroke-width="2"/>
+  <path d="M276 270C398 240 464 298 576 286C736 270 814 212 988 238C1102 256 1184 318 1316 320" stroke="#4f6b8f" stroke-opacity="0.6" stroke-width="3" stroke-linecap="round"/>
+  <path d="M232 410C356 380 452 430 584 420C754 406 842 340 1002 362C1132 380 1240 430 1364 454" stroke="#4f6b8f" stroke-opacity="0.58" stroke-width="3" stroke-linecap="round"/>
+  <path d="M262 560C418 526 488 576 660 560C792 548 892 490 1044 500C1178 510 1274 558 1374 594" stroke="#4f6b8f" stroke-opacity="0.5" stroke-width="3" stroke-linecap="round"/>
+  <path d="M470 190L414 684" stroke="#38516f" stroke-opacity="0.45" stroke-width="2" stroke-linecap="round"/>
+  <path d="M742 136L706 734" stroke="#38516f" stroke-opacity="0.42" stroke-width="2" stroke-linecap="round"/>
+  <path d="M1020 160L1002 738" stroke="#38516f" stroke-opacity="0.44" stroke-width="2" stroke-linecap="round"/>
+  <path d="M1272 188L1242 706" stroke="#38516f" stroke-opacity="0.38" stroke-width="2" stroke-linecap="round"/>
+
+  <g opacity="0.95">
+    <use href="#pin" x="232" y="244" width="18" height="22" color="#38bdf8"/>
+    <use href="#pin" x="286" y="288" width="18" height="22" color="#38bdf8"/>
+    <use href="#pin" x="322" y="334" width="18" height="22" color="#38bdf8"/>
+    <use href="#pin" x="350" y="398" width="18" height="22" color="#22c55e"/>
+    <use href="#pin" x="316" y="468" width="18" height="22" color="#38bdf8"/>
+    <use href="#pin" x="256" y="528" width="18" height="22" color="#22c55e"/>
+    <use href="#pin" x="408" y="236" width="18" height="22" color="#22c55e"/>
+    <use href="#pin" x="456" y="286" width="18" height="22" color="#38bdf8"/>
+    <use href="#pin" x="502" y="326" width="18" height="22" color="#22c55e"/>
+    <use href="#pin" x="540" y="390" width="18" height="22" color="#38bdf8"/>
+    <use href="#pin" x="524" y="460" width="18" height="22" color="#22c55e"/>
+    <use href="#pin" x="466" y="530" width="18" height="22" color="#38bdf8"/>
+    <use href="#pin" x="390" y="592" width="18" height="22" color="#22c55e"/>
+    <use href="#pin" x="598" y="212" width="18" height="22" color="#38bdf8"/>
+    <use href="#pin" x="650" y="254" width="18" height="22" color="#22c55e"/>
+    <use href="#pin" x="692" y="296" width="18" height="22" color="#38bdf8"/>
+    <use href="#pin" x="736" y="338" width="18" height="22" color="#22c55e"/>
+    <use href="#pin" x="784" y="382" width="18" height="22" color="#38bdf8"/>
+    <use href="#pin" x="760" y="456" width="18" height="22" color="#22c55e"/>
+    <use href="#pin" x="708" y="514" width="18" height="22" color="#38bdf8"/>
+    <use href="#pin" x="646" y="568" width="18" height="22" color="#22c55e"/>
+    <use href="#pin" x="600" y="622" width="18" height="22" color="#38bdf8"/>
+    <use href="#pin" x="852" y="218" width="18" height="22" color="#22c55e"/>
+    <use href="#pin" x="904" y="266" width="18" height="22" color="#38bdf8"/>
+    <use href="#pin" x="946" y="318" width="18" height="22" color="#22c55e"/>
+    <use href="#pin" x="982" y="370" width="18" height="22" color="#38bdf8"/>
+    <use href="#pin" x="1026" y="420" width="18" height="22" color="#22c55e"/>
+    <use href="#pin" x="1010" y="494" width="18" height="22" color="#38bdf8"/>
+    <use href="#pin" x="956" y="550" width="18" height="22" color="#22c55e"/>
+    <use href="#pin" x="900" y="604" width="18" height="22" color="#38bdf8"/>
+    <use href="#pin" x="842" y="654" width="18" height="22" color="#22c55e"/>
+    <use href="#pin" x="1098" y="246" width="18" height="22" color="#38bdf8"/>
+    <use href="#pin" x="1146" y="300" width="18" height="22" color="#22c55e"/>
+    <use href="#pin" x="1188" y="354" width="18" height="22" color="#38bdf8"/>
+    <use href="#pin" x="1230" y="412" width="18" height="22" color="#22c55e"/>
+    <use href="#pin" x="1262" y="476" width="18" height="22" color="#38bdf8"/>
+    <use href="#pin" x="1230" y="548" width="18" height="22" color="#22c55e"/>
+    <use href="#pin" x="1168" y="604" width="18" height="22" color="#38bdf8"/>
+    <use href="#pin" x="1108" y="654" width="18" height="22" color="#22c55e"/>
+    <use href="#pin" x="136" y="348" width="16" height="20" color="#22c55e"/>
+    <use href="#pin" x="182" y="434" width="16" height="20" color="#38bdf8"/>
+    <use href="#pin" x="208" y="600" width="16" height="20" color="#22c55e"/>
+    <use href="#pin" x="274" y="668" width="16" height="20" color="#38bdf8"/>
+    <use href="#pin" x="1338" y="246" width="16" height="20" color="#38bdf8"/>
+    <use href="#pin" x="1392" y="334" width="16" height="20" color="#22c55e"/>
+    <use href="#pin" x="1410" y="446" width="16" height="20" color="#38bdf8"/>
+    <use href="#pin" x="1374" y="576" width="16" height="20" color="#22c55e"/>
+    <use href="#pin" x="1308" y="668" width="16" height="20" color="#38bdf8"/>
+  </g>
+
+  <g opacity="0.35" fill="#9fb3cf">
+    <circle cx="238" cy="226" r="2.3"/>
+    <circle cx="322" cy="268" r="2.3"/>
+    <circle cx="412" cy="302" r="2.3"/>
+    <circle cx="502" cy="348" r="2.3"/>
+    <circle cx="612" cy="302" r="2.3"/>
+    <circle cx="702" cy="238" r="2.3"/>
+    <circle cx="788" cy="264" r="2.3"/>
+    <circle cx="888" cy="318" r="2.3"/>
+    <circle cx="976" cy="284" r="2.3"/>
+    <circle cx="1068" cy="336" r="2.3"/>
+    <circle cx="1186" cy="286" r="2.3"/>
+    <circle cx="1298" cy="358" r="2.3"/>
+    <circle cx="332" cy="432" r="2.3"/>
+    <circle cx="450" cy="466" r="2.3"/>
+    <circle cx="560" cy="434" r="2.3"/>
+    <circle cx="656" cy="472" r="2.3"/>
+    <circle cx="764" cy="438" r="2.3"/>
+    <circle cx="856" cy="486" r="2.3"/>
+    <circle cx="944" cy="454" r="2.3"/>
+    <circle cx="1048" cy="506" r="2.3"/>
+    <circle cx="1142" cy="474" r="2.3"/>
+    <circle cx="1234" cy="524" r="2.3"/>
+    <circle cx="1318" cy="486" r="2.3"/>
+    <circle cx="290" cy="610" r="2.3"/>
+    <circle cx="398" cy="640" r="2.3"/>
+    <circle cx="510" cy="612" r="2.3"/>
+    <circle cx="622" cy="646" r="2.3"/>
+    <circle cx="724" cy="614" r="2.3"/>
+    <circle cx="832" cy="650" r="2.3"/>
+    <circle cx="942" cy="622" r="2.3"/>
+    <circle cx="1046" cy="654" r="2.3"/>
+    <circle cx="1158" cy="622" r="2.3"/>
+    <circle cx="1260" cy="646" r="2.3"/>
+  </g>
+</svg>

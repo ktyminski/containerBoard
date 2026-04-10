@@ -1,0 +1,26 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="ContainerBoard icon">
+  <defs>
+    <linearGradient id="bg" x1="8" y1="6" x2="56" y2="58" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#0b1734" />
+      <stop offset="1" stop-color="#081022" />
+    </linearGradient>
+    <linearGradient id="pin" x1="20" y1="14" x2="44" y2="50" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#38bdf8" />
+      <stop offset="1" stop-color="#06b6d4" />
+    </linearGradient>
+  </defs>
+  <rect x="4" y="4" width="56" height="56" rx="14" fill="url(#bg)" />
+  <path
+    d="M32 12C23.7157 12 17 18.7157 17 27C17 38.5 32 54 32 54C32 54 47 38.5 47 27C47 18.7157 40.2843 12 32 12Z"
+    fill="url(#pin)"
+  />
+  <circle cx="32" cy="27" r="9.5" fill="#0b1734" />
+  <path
+    d="M37.8 21.8C36.5 20.5 34.7 19.7 32.7 19.7C28.8 19.7 25.7 22.8 25.7 26.7C25.7 30.6 28.8 33.7 32.7 33.7C34.7 33.7 36.5 32.9 37.8 31.6"
+    fill="none"
+    stroke="#e2f3ff"
+    stroke-width="3.2"
+    stroke-linecap="round"
+  />
+  <rect x="4.5" y="4.5" width="55" height="55" rx="13.5" fill="none" stroke="#38bdf8" stroke-opacity="0.28" />
+</svg>

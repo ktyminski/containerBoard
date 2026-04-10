@@ -1,0 +1,21 @@
+{
+  "project": "logistics-map-mvp",
+  "stack": {
+    "frontend": "Next.js (App Router) + TypeScript",
+    "backend": "Next.js Route Handlers (Node runtime)",
+    "database": "MongoDB (GeoJSON + 2dsphere)",
+    "map": "MapLibre GL"
+  },
+  "priorities": [
+    "Vertical slice: DB -> API -> Map UI",
+    "Map viewport (bbox) query + clustering",
+    "Company profile + minimal admin",
+    "Leads form"
+  ],
+  "non_goals_mvp": ["Payments", "Real-time chat", "Full ATS workflows"],
+  "rules": [
+    "Validate env and request inputs (Zod)",
+    "Return minimal payload for map",
+    "Iterate in small steps; avoid big-bang rewrites"
+  ]
+}

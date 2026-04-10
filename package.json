@@ -1,0 +1,46 @@
+{
+  "name": "containerboard",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "eslint",
+    "seed": "node --env-file=.env.local scripts/seed.mjs",
+    "seed:real-companies": "node --env-file=.env.local scripts/seed-real-companies.mjs",
+    "seed:landing-companies": "node --env-file=.env.local scripts/seed-landing-companies.mjs",
+    "create:master-admin": "node --env-file=.env.local scripts/create-master-admin.mjs"
+  },
+  "dependencies": {
+    "@tanstack/react-virtual": "^3.13.12",
+    "@tiptap/extension-link": "^3.20.0",
+    "@tiptap/react": "^3.20.0",
+    "@tiptap/starter-kit": "^3.20.0",
+    "@upstash/redis": "^1.37.0",
+    "@vercel/analytics": "^2.0.1",
+    "@vercel/blob": "^2.3.1",
+    "bcryptjs": "^3.0.3",
+    "jose": "^6.1.3",
+    "maplibre-gl": "^5.11.0",
+    "mongodb": "^6.21.0",
+    "next": "^16.2.1",
+    "react": "19.2.3",
+    "react-dom": "19.2.3",
+    "react-hook-form": "^7.71.1",
+    "redis": "^5.11.0",
+    "sanitize-html": "^2.17.1",
+    "zod": "^4.1.12"
+  },
+  "devDependencies": {
+    "@tailwindcss/postcss": "^4",
+    "@types/node": "^20",
+    "@types/react": "^19",
+    "@types/react-dom": "^19",
+    "@types/sanitize-html": "^2.16.0",
+    "eslint": "^9",
+    "eslint-config-next": "^16.2.1",
+    "tailwindcss": "^4",
+    "typescript": "^5"
+  }
+}
