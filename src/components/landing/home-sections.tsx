@@ -110,7 +110,7 @@ export function HomeWhatSection({
               <ul className="mt-5 space-y-3 text-sm">
                 <li>
                   <Link
-                    href={withLang("/maps/announcements", locale)}
+                    href={withLang("/maps/companies", locale)}
                     className="flex items-center justify-center gap-2 rounded-xl border-2 border-sky-500/55 bg-sky-500/10 px-4 py-3 font-medium text-sky-100 transition hover:border-sky-300 hover:bg-sky-500/20 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-sky-300"
                   >
                     <span aria-hidden="true" className="inline-flex h-6 w-6 items-center justify-center rounded-full bg-sky-500/25 text-xs text-sky-200">🔎</span>
@@ -128,7 +128,7 @@ export function HomeWhatSection({
                 </li>
                 <li>
                   <Link
-                    href={withLang("/maps/lead-requests", locale)}
+                    href={withLang("/list", locale)}
                     className="flex items-center justify-center gap-2 rounded-xl border-2 border-sky-500/55 bg-sky-500/10 px-4 py-3 font-medium text-sky-100 transition hover:border-sky-300 hover:bg-sky-500/20 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-sky-300"
                   >
                     <span aria-hidden="true" className="inline-flex h-6 w-6 items-center justify-center rounded-full bg-sky-500/25 text-xs text-sky-200">🔎</span>
@@ -155,7 +155,7 @@ export function HomeWhatSection({
                 </li>
                 <li>
                   <Link
-                    href={withLang("/offers/new", locale)}
+                    href={withLang("/containers/new", locale)}
                     className="flex items-center justify-center gap-2 rounded-xl border-2 border-emerald-500/55 bg-emerald-500/10 px-4 py-3 font-medium text-emerald-100 transition hover:border-emerald-300 hover:bg-emerald-500/20 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-300"
                   >
                     <span aria-hidden="true" className="inline-flex h-6 w-6 items-center justify-center rounded-full bg-emerald-500/25 text-sm font-semibold text-emerald-200">+</span>
@@ -164,7 +164,7 @@ export function HomeWhatSection({
                 </li>
                 <li>
                   <Link
-                    href={withLang("/announcements/new", locale)}
+                    href={withLang("/containers/new", locale)}
                     className="flex items-center justify-center gap-2 rounded-xl border-2 border-emerald-500/55 bg-emerald-500/10 px-4 py-3 font-medium text-emerald-100 transition hover:border-emerald-300 hover:bg-emerald-500/20 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-300"
                   >
                     <span aria-hidden="true" className="inline-flex h-6 w-6 items-center justify-center rounded-full bg-emerald-500/25 text-sm font-semibold text-emerald-200">+</span>

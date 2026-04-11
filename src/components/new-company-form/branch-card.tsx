@@ -143,7 +143,7 @@ export function BranchCard({
       <label className="mx-auto grid w-full gap-1 text-sm md:w-[70%]">
         <span className="text-slate-300">{messages.branchLabel}*</span>
         <input
-          className="rounded-md border border-slate-600/80 bg-slate-900/80 px-3 py-2 text-slate-100"
+          className="rounded-md border border-slate-300 bg-slate-100/85 px-3 py-2 text-slate-800 placeholder:text-[#94a3b8]"
           {...register(`branches.${index}.label`, {
             required: messages.requiredField,
             minLength: { value: 1, message: messages.requiredField },
@@ -156,7 +156,7 @@ export function BranchCard({
       <label className="mx-auto grid w-full gap-1 text-sm md:w-[70%]">
         <span className="text-slate-300">{messages.branchNote}</span>
         <input
-          className="rounded-md border border-slate-600/80 bg-slate-900/80 px-3 py-2 text-slate-100"
+          className="rounded-md border border-slate-300 bg-slate-100/85 px-3 py-2 text-slate-800 placeholder:text-[#94a3b8]"
           {...register(`branches.${index}.note`, {
             maxLength: { value: 200, message: messages.validationError },
           })}
@@ -165,9 +165,9 @@ export function BranchCard({
 
       <label className="mx-auto grid w-full gap-1 text-sm md:w-[70%]">
         <span className="text-slate-300">{messages.branchAddress}*</span>
-        <div className="flex overflow-hidden rounded-md border border-slate-600/80 bg-slate-900/80">
+        <div className="flex overflow-hidden rounded-md border border-slate-300 bg-slate-100/85">
           <input
-            className="w-full bg-transparent px-3 py-2 text-slate-100 outline-none"
+            className="w-full bg-transparent px-3 py-2 text-slate-800 outline-none"
             {...register(`branches.${index}.addressText`, {
               required: messages.requiredField,
               minLength: { value: 1, message: messages.requiredField },
@@ -182,7 +182,7 @@ export function BranchCard({
           />
           <button
             type="button"
-            className="cursor-pointer border-l border-slate-600/80 px-3 text-xs text-slate-200 hover:bg-slate-800/80 disabled:cursor-not-allowed disabled:opacity-60"
+            className="cursor-pointer border-l border-slate-300 px-3 text-xs text-slate-700 hover:bg-slate-200/70 disabled:cursor-not-allowed disabled:opacity-60"
             onClick={() => {
               void locateByAddress();
             }}
@@ -193,7 +193,7 @@ export function BranchCard({
         </div>
         <p className="text-xs text-slate-400">{messages.branchAddressNoPrefixHint}</p>
         {branchAddressError ? <p className="text-xs text-red-300">{branchAddressError}</p> : null}
-        {locationStatus ? <p className="text-xs text-sky-300">{locationStatus}</p> : null}
+        {locationStatus ? <p className="text-xs text-slate-600">{locationStatus}</p> : null}
       </label>
 
       <input
@@ -246,7 +246,7 @@ export function BranchCard({
       <div className="grid gap-3">
         <button
           type="button"
-          className="cursor-pointer text-sm text-sky-300 hover:text-sky-200"
+          className="cursor-pointer text-sm text-slate-700 hover:text-slate-900"
           onClick={() => {
             const nextUseCustomDetails = !Boolean(branch?.useCustomDetails);
             if (!nextUseCustomDetails) {
@@ -280,7 +280,7 @@ export function BranchCard({
             <label className="grid gap-1 text-sm">
               <span className="text-slate-300">{messages.branchPhone}</span>
               <input
-                className="rounded-md border border-slate-600/80 bg-slate-900/80 px-3 py-2 text-slate-100"
+                className="rounded-md border border-slate-300 bg-slate-100/85 px-3 py-2 text-slate-800 placeholder:text-[#94a3b8]"
                 {...register(`branches.${index}.phone`, {
                   validate: (value) =>
                     !value.trim() || PHONE_REGEX.test(value) || messages.invalidPhone,
@@ -295,7 +295,7 @@ export function BranchCard({
             <label className="grid gap-1 text-sm">
               <span className="text-slate-300">{messages.branchEmail}</span>
               <input
-                className="rounded-md border border-slate-600/80 bg-slate-900/80 px-3 py-2 text-slate-100"
+                className="rounded-md border border-slate-300 bg-slate-100/85 px-3 py-2 text-slate-800 placeholder:text-[#94a3b8]"
                 {...register(`branches.${index}.email`, {
                   validate: (value) =>
                     !value.trim() ||
@@ -317,3 +317,5 @@ export function BranchCard({
     </div>
   );
 }
+
+

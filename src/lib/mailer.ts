@@ -5,7 +5,6 @@ import {
   buildClaimDecisionMail,
   buildClaimSubmittedMail,
   buildEmailVerificationMail,
-  buildLeadRequestPublishedMail,
   buildOfferPublishedMail,
   buildPasswordResetMail,
   buildWelcomeMail,
@@ -269,27 +268,6 @@ export async function sendOfferPublishedEmail(input: {
     offerTitle: input.offerTitle,
     companyName: input.companyName,
     offerUrl: input.offerUrl,
-  });
-  return sendMail({
-    to: input.to,
-    subject: template.subject,
-    text: template.text,
-    html: template.html,
-  });
-}
-
-export async function sendLeadRequestPublishedEmail(input: {
-  to: string;
-  name?: string;
-  leadTypeLabel: string;
-  descriptionPreview: string;
-  boardUrl?: string;
-}): Promise<SendMailResult> {
-  const template = buildLeadRequestPublishedMail({
-    name: input.name,
-    leadTypeLabel: input.leadTypeLabel,
-    descriptionPreview: input.descriptionPreview,
-    boardUrl: input.boardUrl,
   });
   return sendMail({
     to: input.to,

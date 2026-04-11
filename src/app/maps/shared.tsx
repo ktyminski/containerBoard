@@ -28,9 +28,11 @@ function getViewLabel(messages: ReturnType<typeof getMessages>, view: MainMapVie
     ? messages.mapModules.tabs.announcements
     : view === "offers"
       ? messages.mapModules.tabs.offers
-      : view === "lead-requests"
-        ? messages.mapModules.tabs.leadRequests
-        : messages.mapModules.tabs.companies;
+      : messages.mapModules.tabs.companies;
+}
+
+function resolveMapsView(view: MainMapView | null | undefined): MainMapView {
+  return view === "companies" ? view : "companies";
 }
 
 export async function buildMapsPageMetadata(input: {
@@ -46,11 +48,12 @@ export async function buildMapsPageMetadata(input: {
     cookieLocale: cookieStore.get(LOCALE_COOKIE_NAME)?.value,
   });
   const messages = getMessages(locale);
-  const selectedView =
+  const selectedView = resolveMapsView(
     input.forcedView ??
-    parseMainMapView(getFirstParam(params.view)) ??
-    input.fallbackView ??
-    "companies";
+      parseMainMapView(getFirstParam(params.view)) ??
+      input.fallbackView ??
+      "companies",
+  );
 
   return buildPageMetadata({
     path: input.path,
@@ -66,20 +69,18 @@ export async function renderMapsPage(input: {
   fallbackView?: MainMapView;
 }) {
   const params = await input.searchParams;
-  const targetView =
+  const targetView = resolveMapsView(
     input.forcedView ??
-    parseMainMapView(getFirstParam(params.view)) ??
-    input.fallbackView ??
-    "companies";
+      parseMainMapView(getFirstParam(params.view)) ??
+      input.fallbackView ??
+      "companies",
+  );
   const initialMobilePane = getFirstParam(params.pane) === "map" ? "map" : "list";
   const {
     locale,
     messages,
     initialView,
     initialFilters,
-    initialLeadRequestsTab,
-    leadRequestsBoardData,
-    leadRequestsLoginHref,
   } = await getMainMapPageData({
     params,
     fallbackView: input.fallbackView ?? targetView,
@@ -99,10 +100,6 @@ export async function renderMapsPage(input: {
             initialMobilePane={initialMobilePane}
             initialView={initialView}
             initialFilters={initialFilters}
-            leadRequestsMessages={messages.leadRequestsPage}
-            leadRequestsBoardData={leadRequestsBoardData}
-            initialLeadRequestsTab={initialLeadRequestsTab}
-            leadRequestsLoginHref={leadRequestsLoginHref}
           />
         </div>
       </section>

@@ -66,8 +66,8 @@ export async function AuthNav({ locale, roleMessages }: AuthNavProps) {
         adminPanelHref={user.role === USER_ROLE.ADMIN ? withLang("/admin", locale) : undefined}
         companyPanelLabel={undefined}
         companyPanelHref={undefined}
-        myLeadRequestsLabel="Moje kontenery"
-        myLeadRequestsHref={withLang("/containers/mine", locale)}
+        myListingsLabel="Moje kontenery"
+        myListingsHref={withLang("/containers/mine", locale)}
         settingsLabel="Ustawienia"
         settingsHref={withLang("/settings", locale)}
         logoutLabel="Wyloguj"

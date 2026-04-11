@@ -19,7 +19,7 @@ async function resolveView(paramsPromise: Promise<{ view: string }>) {
   const params = await paramsPromise;
   const view = parseMainMapView(params.view);
 
-  if (!view) {
+  if (!view || view !== "companies") {
     notFound();
   }
 

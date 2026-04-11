@@ -1,8 +1,8 @@
 import type { Filter } from "mongodb";
-import type { JobAnnouncementDocument } from "@/lib/announcements";
 import type { CompanyDocument } from "@/lib/companies";
 import type { CompanyCategory } from "@/types/company-category";
 
+type JobAnnouncementDocument = Record<string, unknown>;
 type SearchBbox = [number, number, number, number];
 
 export type SeoCity = {
@@ -275,7 +275,7 @@ function bboxToQuery(bbox: SearchBbox): string {
 }
 
 export function buildSeoMapsHref(input: {
-  view: "companies" | "announcements";
+  view: "companies";
   city: SeoCity;
   keyword?: string;
 }): string {

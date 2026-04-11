@@ -1,10 +1,6 @@
-import { ObjectId, type AnyBulkWriteOperation } from "mongodb";
+import { ObjectId } from "mongodb";
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
-import {
-  getAnnouncementsCollection,
-  type JobAnnouncementDocument,
-} from "@/lib/announcements";
 import {
   ensureCompaniesIndexes,
   getCompaniesCollection,
@@ -28,8 +24,6 @@ import {
 } from "@/lib/company-operating-area";
 import { normalizeCompanyVerificationStatus } from "@/lib/company-verification";
 import { normalizeGeocodeAddressParts } from "@/lib/geocode-address";
-import { getLocaleFromApiRequest, getMessages } from "@/lib/i18n";
-import { JOB_WORK_LOCATION_MODE } from "@/lib/job-announcement";
 import { USER_ROLE } from "@/lib/user-roles";
 import { normalizeCompanyCategory } from "@/types/company-category";
 import {
@@ -226,27 +220,6 @@ function toBlobUrls(
     .filter(Boolean);
 }
 
-function formatBranchLocationLabel(input: { label: string; addressText: string }): string {
-  return `${input.label} - ${input.addressText}`;
-}
-
-function isSamePoint(a?: [number, number], b?: [number, number]): boolean {
-  if (!a || !b) {
-    return false;
-  }
-
-  return Math.abs(a[0] - b[0]) < 0.000001 && Math.abs(a[1] - b[1]) < 0.000001;
-}
-
-function isBranchIndexValid(index: number | undefined, length: number): index is number {
-  return (
-    typeof index === "number" &&
-    Number.isInteger(index) &&
-    index >= 0 &&
-    index < length
-  );
-}
-
 function sumImageAssetBytes(
   assets: Array<{ size?: number } | null | undefined> | undefined,
 ): number {
@@ -270,8 +243,6 @@ type RouteContext = {
 
 export async function PATCH(request: NextRequest, context: RouteContext) {
   try {
-    const manualLocationFallback =
-      getMessages(getLocaleFromApiRequest(request)).announcementCreate.locationPreviewManual;
     const { id } = await context.params;
     if (!ObjectId.isValid(id)) {
       return NextResponse.json({ error: "Invalid company id" }, { status: 400 });
@@ -752,178 +723,6 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
 
     if (updateResult.matchedCount === 0) {
       return NextResponse.json({ error: "Company not found" }, { status: 404 });
-    }
-
-    const announcements = await getAnnouncementsCollection();
-
-    if (existing.name !== nextCompanyName) {
-      await announcements.updateMany(
-        { companyId, companyName: { $ne: nextCompanyName } },
-        { $set: { companyName: nextCompanyName } },
-      );
-    }
-
-    const oldLocations = existing.locations ?? [];
-    const branchAnnouncements = await announcements
-      .find(
-        {
-          companyId,
-          "location.mode": JOB_WORK_LOCATION_MODE.BRANCH,
-        },
-        {
-          projection: {
-            _id: 1,
-            branchIndex: 1,
-            location: 1,
-          },
-        },
-      )
-      .toArray();
-
-    const branchSyncOps: AnyBulkWriteOperation<JobAnnouncementDocument>[] = [];
-
-    for (const announcement of branchAnnouncements) {
-      if (!announcement._id || !announcement.location?.point?.coordinates) {
-        continue;
-      }
-
-      const announcementLabel = announcement.location.label ?? "";
-      const announcementPoint = announcement.location.point.coordinates as [number, number];
-
-      let oldBranchIndex: number | null = null;
-      if (isBranchIndexValid(announcement.branchIndex, oldLocations.length)) {
-        oldBranchIndex = announcement.branchIndex;
-      } else {
-        const byLabelIndex = oldLocations.findIndex(
-          (branch) => formatBranchLocationLabel(branch) === announcementLabel,
-        );
-        if (byLabelIndex >= 0) {
-          oldBranchIndex = byLabelIndex;
-        } else {
-          const byPointIndex = oldLocations.findIndex((branch) =>
-            isSamePoint(branch.point.coordinates, announcementPoint),
-          );
-          if (byPointIndex >= 0) {
-            oldBranchIndex = byPointIndex;
-          }
-        }
-      }
-
-      const oldBranch = oldBranchIndex !== null ? oldLocations[oldBranchIndex] : null;
-      const scoreByIndex = new Map<number, number>();
-      const addScore = (index: number, score: number) => {
-        if (index < 0 || index >= nextLocations.length) {
-          return;
-        }
-        scoreByIndex.set(index, (scoreByIndex.get(index) ?? 0) + score);
-      };
-
-      if (isBranchIndexValid(announcement.branchIndex, nextLocations.length)) {
-        addScore(announcement.branchIndex, 3);
-      }
-      if (oldBranchIndex !== null && oldBranchIndex < nextLocations.length) {
-        addScore(oldBranchIndex, 2);
-      }
-
-      for (let index = 0; index < nextLocations.length; index += 1) {
-        const candidate = nextLocations[index];
-        const candidateLabel = formatBranchLocationLabel(candidate);
-        const candidatePoint = candidate.point.coordinates;
-
-        if (candidateLabel === announcementLabel) {
-          addScore(index, 6);
-        }
-        if (isSamePoint(candidatePoint, announcementPoint)) {
-          addScore(index, 7);
-        }
-        if (oldBranch) {
-          const oldLabel = formatBranchLocationLabel(oldBranch);
-          if (candidateLabel === oldLabel) {
-            addScore(index, 4);
-          }
-          if (isSamePoint(candidatePoint, oldBranch.point.coordinates)) {
-            addScore(index, 5);
-          }
-        }
-      }
-
-      let bestIndex: number | null = null;
-      let bestScore = 0;
-
-      for (const [index, score] of scoreByIndex.entries()) {
-        if (score > bestScore) {
-          bestIndex = index;
-          bestScore = score;
-          continue;
-        }
-
-        if (score === bestScore && bestIndex !== null && oldBranchIndex !== null) {
-          const currentDistance = Math.abs(bestIndex - oldBranchIndex);
-          const nextDistance = Math.abs(index - oldBranchIndex);
-          if (nextDistance < currentDistance) {
-            bestIndex = index;
-          }
-        }
-      }
-
-      if (bestIndex === null || bestScore <= 0) {
-        branchSyncOps.push({
-          updateOne: {
-            filter: { _id: announcement._id },
-            update: {
-              $set: {
-                location: {
-                  mode: JOB_WORK_LOCATION_MODE.MANUAL,
-                  label: announcementLabel || manualLocationFallback,
-                  point: {
-                    type: "Point" as const,
-                    coordinates: announcementPoint,
-                  },
-                },
-                updatedAt: new Date(),
-              },
-              $unset: { branchIndex: "" },
-            },
-          },
-        });
-        continue;
-      }
-
-      const matchedBranch = nextLocations[bestIndex];
-      const matchedLabel = formatBranchLocationLabel(matchedBranch);
-      const matchedPoint = matchedBranch.point.coordinates;
-      const locationChanged =
-        announcementLabel !== matchedLabel ||
-        !isSamePoint(announcementPoint, matchedPoint) ||
-        announcement.branchIndex !== bestIndex;
-
-      if (!locationChanged) {
-        continue;
-      }
-
-      branchSyncOps.push({
-        updateOne: {
-          filter: { _id: announcement._id },
-          update: {
-            $set: {
-              location: {
-                mode: JOB_WORK_LOCATION_MODE.BRANCH,
-                label: matchedLabel,
-                point: {
-                  type: "Point" as const,
-                  coordinates: matchedPoint,
-                },
-              },
-              branchIndex: bestIndex,
-              updatedAt: new Date(),
-            },
-          },
-        },
-      });
-    }
-
-    if (branchSyncOps.length > 0) {
-      await announcements.bulkWrite(branchSyncOps);
     }
 
     await safeDeleteBlobUrls(staleBlobUrls);

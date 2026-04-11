@@ -151,9 +151,6 @@ export default async function CompaniesBySegmentPage({
     messages,
     initialView,
     initialFilters,
-    initialLeadRequestsTab,
-    leadRequestsBoardData,
-    leadRequestsLoginHref,
   } = await getMainMapPageData({
     params: landingMapParams,
     fallbackView: "companies",
@@ -185,10 +182,6 @@ export default async function CompaniesBySegmentPage({
           initialMobilePane={initialMobilePane}
           initialView={initialView}
           initialFilters={initialFilters}
-          leadRequestsMessages={messages.leadRequestsPage}
-          leadRequestsBoardData={leadRequestsBoardData}
-          initialLeadRequestsTab={initialLeadRequestsTab}
-          leadRequestsLoginHref={leadRequestsLoginHref}
         />
       </div>
     </main>

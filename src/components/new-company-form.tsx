@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
@@ -824,22 +824,22 @@ export function NewCompanyForm({
                   <span
                     className={`h-3 w-3 rounded-full border transition ${
                       isActive
-                        ? "border-sky-300 bg-sky-300"
+                        ? "border-slate-700 bg-slate-700"
                         : isCompleted
-                          ? "border-emerald-300 bg-emerald-300"
-                          : "border-slate-500 bg-slate-900"
+                          ? "border-slate-500 bg-slate-500"
+                          : "border-slate-300 bg-white"
                     }`}
                   />
-                  <span className="text-[11px] uppercase tracking-wide text-slate-500">
+                  <span className="text-[11px] uppercase tracking-wide text-slate-600">
                     {messages.stepLabel} {index + 1}
                   </span>
                   <span
                     className={`truncate text-sm ${
                       isActive
-                        ? "text-sky-100"
+                        ? "text-slate-800"
                         : isCompleted
-                          ? "text-emerald-100"
-                          : "text-slate-400"
+                          ? "text-slate-700"
+                          : "text-slate-600"
                     }`}
                   >
                     {stepLabel}
@@ -848,7 +848,7 @@ export function NewCompanyForm({
                 {index < steps.length - 1 ? (
                   <span
                     className={`mx-2 h-px flex-1 ${
-                      index < currentStep ? "bg-emerald-400/70" : "bg-slate-700/80"
+                      index < currentStep ? "bg-slate-400" : "bg-slate-300"
                     }`}
                     aria-hidden="true"
                   />
@@ -859,13 +859,13 @@ export function NewCompanyForm({
         </ol>
       </nav>
 
-      <section className="overflow-hidden rounded-xl border border-slate-700/80 bg-slate-900/45">
+      <section className="overflow-hidden rounded-xl border border-slate-300 bg-[linear-gradient(180deg,rgba(248,250,252,0.92)_0%,rgba(241,245,249,0.92)_100%)] shadow-[0_12px_34px_-26px_rgba(15,23,42,0.28)]">
       {creationLimitNotice ? (
-        <section className="m-5 rounded-lg border border-amber-700/70 bg-amber-950/25 p-4">
-          <h2 className="text-sm font-semibold text-amber-200">
+        <section className="m-5 rounded-lg border border-slate-300 bg-slate-100 p-4">
+          <h2 className="text-sm font-semibold text-slate-800">
             {messages.creationLimitTitle}
           </h2>
-          <p className="mt-2 text-sm whitespace-pre-line text-amber-100/90">
+          <p className="mt-2 text-sm whitespace-pre-line text-slate-700">
             {creationLimitNotice}
           </p>
         </section>
@@ -966,7 +966,7 @@ export function NewCompanyForm({
           <label className="mx-auto grid w-full gap-1 text-sm md:w-[70%]">
             <span className="text-slate-300">{messages.name}*</span>
             <input
-              className="rounded-md border border-slate-600/80 bg-slate-900/80 px-3 py-2 text-slate-100"
+              className="rounded-md border border-slate-300 bg-slate-100/85 px-3 py-2 text-slate-800 placeholder:text-[#94a3b8]"
               {...register("name", {
                 required: messages.requiredField,
                 minLength: { value: 2, message: messages.requiredField },
@@ -984,7 +984,7 @@ export function NewCompanyForm({
           <label className="mx-auto grid w-full gap-1 text-sm md:w-[70%]">
             <span className="text-slate-300">{messages.nip}</span>
             <input
-              className="rounded-md border border-slate-600/80 bg-slate-900/80 px-3 py-2 text-slate-100"
+              className="rounded-md border border-slate-300 bg-slate-100/85 px-3 py-2 text-slate-800 placeholder:text-[#94a3b8]"
               placeholder={messages.nipPlaceholder}
               {...register("nip")}
             />
@@ -1000,7 +1000,7 @@ export function NewCompanyForm({
           <label className="mx-auto grid w-full gap-1 text-sm md:w-[70%]">
             <span className="text-slate-300">{messages.description}*</span>
             <textarea
-              className="min-h-28 rounded-md border border-slate-600/80 bg-slate-900/80 px-3 py-2 text-slate-100"
+              className="min-h-28 rounded-md border border-slate-300 bg-slate-100/85 px-3 py-2 text-slate-800 placeholder:text-[#94a3b8]"
               placeholder={messages.descriptionPlaceholder}
               {...register("description", {
                 required: messages.requiredField,
@@ -1023,7 +1023,7 @@ export function NewCompanyForm({
             <label className="mx-auto grid w-full gap-1 text-sm md:w-[70%]">
               <span className="text-slate-300">{messages.operatingAreaLabel}*</span>
               <select
-                className="rounded-md border border-slate-600/80 bg-slate-900/80 px-3 py-2 text-slate-100"
+                className="rounded-md border border-slate-300 bg-slate-100/85 px-3 py-2 text-slate-800 placeholder:text-[#94a3b8]"
                 {...register("operatingArea", {
                   required: messages.requiredField,
                 })}
@@ -1044,7 +1044,7 @@ export function NewCompanyForm({
             <label className="mx-auto grid w-full gap-1 text-sm md:w-[70%]">
               <span className="text-slate-300">{messages.operatingAreaDetailsLabel}</span>
               <textarea
-                className="min-h-24 rounded-md border border-slate-600/80 bg-slate-900/80 px-3 py-2 text-slate-100"
+                className="min-h-24 rounded-md border border-slate-300 bg-slate-100/85 px-3 py-2 text-slate-800 placeholder:text-[#94a3b8]"
                 placeholder={messages.operatingAreaDetailsPlaceholder}
                 {...register("operatingAreaDetails", {
                   maxLength: { value: 200, message: messages.operatingAreaDetailsTooLong },
@@ -1081,7 +1081,7 @@ export function NewCompanyForm({
             {selectedCommunicationLanguageOptions.map((language) => (
               <div
                 key={language.value}
-                className="inline-flex items-center rounded-md border border-sky-400/35 bg-sky-500/10 px-3 py-1 text-xs font-medium text-sky-100"
+                className="inline-flex items-center rounded-md border border-slate-300 bg-slate-100 px-3 py-1 text-xs font-medium text-slate-700"
               >
                 {language.label}
               </div>
@@ -1091,7 +1091,7 @@ export function NewCompanyForm({
         <div>
           <button
             type="button"
-            className="cursor-pointer rounded-md border border-slate-600/80 bg-slate-900/70 px-3 py-2 text-sm text-slate-100 hover:border-slate-400"
+            className="cursor-pointer rounded-md border border-slate-300 bg-slate-100/85 px-3 py-2 text-sm text-slate-700 hover:border-slate-400"
             onClick={() => setIsCommunicationLanguagesModalOpen(true)}
           >
             {messages.communicationLanguagesOpenModal}
@@ -1114,7 +1114,7 @@ export function NewCompanyForm({
             {selectedBenefitOptions.map((benefit) => (
               <div
                 key={benefit.value}
-                className="inline-flex items-center rounded-md border border-emerald-400/35 bg-emerald-500/10 px-3 py-1 text-xs font-medium text-emerald-100"
+                className="inline-flex items-center rounded-md border border-slate-300 bg-slate-100 px-3 py-1 text-xs font-medium text-slate-700"
               >
                 {benefit.label}
               </div>
@@ -1124,7 +1124,7 @@ export function NewCompanyForm({
         <div>
           <button
             type="button"
-            className="cursor-pointer rounded-md border border-slate-600/80 bg-slate-900/70 px-3 py-2 text-sm text-slate-100 hover:border-slate-400"
+            className="cursor-pointer rounded-md border border-slate-300 bg-slate-100/85 px-3 py-2 text-sm text-slate-700 hover:border-slate-400"
             onClick={() => setIsBenefitsModalOpen(true)}
           >
             {messages.benefitsOpenModal}
@@ -1147,7 +1147,7 @@ export function NewCompanyForm({
             {selectedSpecializationOptions.map((specialization) => (
               <div
                 key={specialization.value}
-                className="inline-flex items-center rounded-md border border-amber-400/35 bg-amber-500/10 px-3 py-1 text-xs font-medium text-amber-100"
+                className="inline-flex items-center rounded-md border border-slate-300 bg-slate-100 px-3 py-1 text-xs font-medium text-slate-700"
               >
                 {specialization.label}
               </div>
@@ -1157,7 +1157,7 @@ export function NewCompanyForm({
         <div>
           <button
             type="button"
-            className="cursor-pointer rounded-md border border-slate-600/80 bg-slate-900/70 px-3 py-2 text-sm text-slate-100 hover:border-slate-400"
+            className="cursor-pointer rounded-md border border-slate-300 bg-slate-100/85 px-3 py-2 text-sm text-slate-700 hover:border-slate-400"
             onClick={() => setIsSpecializationsModalOpen(true)}
           >
             {messages.specializationsOpenModal}
@@ -1308,7 +1308,7 @@ export function NewCompanyForm({
       <label className="mx-auto grid w-full gap-1 text-sm md:w-[70%]">
         <span className="text-slate-300">{messages.phone}</span>
         <input
-          className="rounded-md border border-slate-600/80 bg-slate-900/80 px-3 py-2 text-slate-100"
+          className="rounded-md border border-slate-300 bg-slate-100/85 px-3 py-2 text-slate-800 placeholder:text-[#94a3b8]"
           {...register("phone", {
             validate: {
               format: (value) =>
@@ -1327,7 +1327,7 @@ export function NewCompanyForm({
       <label className="mx-auto grid w-full gap-1 text-sm md:w-[70%]">
         <span className="text-slate-300">{messages.email}*</span>
         <input
-          className="rounded-md border border-slate-600/80 bg-slate-900/80 px-3 py-2 text-slate-100"
+          className="rounded-md border border-slate-300 bg-slate-100/85 px-3 py-2 text-slate-800 placeholder:text-[#94a3b8]"
           {...register("email", {
             validate: {
               required: (value) => value.trim().length > 0 || messages.requiredField,
@@ -1347,7 +1347,7 @@ export function NewCompanyForm({
       <label className="mx-auto grid w-full gap-1 text-sm md:w-[70%]">
         <span className="text-slate-300">{messages.website}</span>
         <input
-          className="rounded-md border border-slate-600/80 bg-slate-900/80 px-3 py-2 text-slate-100"
+          className="rounded-md border border-slate-300 bg-slate-100/85 px-3 py-2 text-slate-800 placeholder:text-[#94a3b8]"
           {...register("website")}
         />
         {getFieldMessage(errors.website?.message) ? (
@@ -1365,7 +1365,7 @@ export function NewCompanyForm({
             {messages.facebookUrl}
           </span>
           <input
-            className="rounded-md border border-slate-600/80 bg-slate-900/80 px-3 py-2 text-slate-100"
+            className="rounded-md border border-slate-300 bg-slate-100/85 px-3 py-2 text-slate-800 placeholder:text-[#94a3b8]"
             {...register("facebookUrl", {
               validate: (value) =>
                 isValidWebsite(value) || messages.invalidWebsite,
@@ -1385,7 +1385,7 @@ export function NewCompanyForm({
             {messages.instagramUrl}
           </span>
           <input
-            className="rounded-md border border-slate-600/80 bg-slate-900/80 px-3 py-2 text-slate-100"
+            className="rounded-md border border-slate-300 bg-slate-100/85 px-3 py-2 text-slate-800 placeholder:text-[#94a3b8]"
             placeholder={messages.instagramPlaceholder}
             {...register("instagramUrl", {
               validate: (value) =>
@@ -1405,7 +1405,7 @@ export function NewCompanyForm({
             {messages.linkedinUrl}
           </span>
           <input
-            className="rounded-md border border-slate-600/80 bg-slate-900/80 px-3 py-2 text-slate-100"
+            className="rounded-md border border-slate-300 bg-slate-100/85 px-3 py-2 text-slate-800 placeholder:text-[#94a3b8]"
             placeholder={messages.linkedinPlaceholder}
             {...register("linkedinUrl", {
               validate: (value) =>
@@ -1460,7 +1460,7 @@ export function NewCompanyForm({
         })}
         <button
           type="button"
-          className="inline-flex w-fit cursor-pointer items-center gap-1 pl-2 text-sm text-sky-300 hover:text-sky-200"
+          className="inline-flex w-fit cursor-pointer items-center gap-1 pl-2 text-sm text-slate-700 hover:text-slate-900"
           onClick={addBranch}
         >
           {messages.addBranch}
@@ -1482,7 +1482,7 @@ export function NewCompanyForm({
         {currentStep > 0 ? (
           <button
             type="button"
-            className="cursor-pointer rounded-md border border-slate-700 px-4 py-2 text-sm text-slate-200 hover:border-slate-500"
+            className="cursor-pointer rounded-md border border-[#94a3b8] bg-white px-4 py-2 text-sm font-medium text-[#0f172a] transition hover:bg-[#f1f5f9]"
             onClick={() => goToStepWithHistory(currentStep - 1)}
           >
             {messages.previousStep}
@@ -1492,7 +1492,7 @@ export function NewCompanyForm({
         {isLastStep ? (
           <button
             type="button"
-            className="cursor-pointer rounded-md bg-sky-500 px-4 py-2 text-sm font-medium text-slate-950 hover:bg-sky-400 disabled:opacity-60"
+            className="cursor-pointer rounded-md bg-[#111827] px-4 py-2 text-sm font-medium text-white transition hover:bg-[#1f2937] disabled:opacity-60"
             disabled={isSubmitting || companyCreationLimit?.isLimited}
             onClick={() => {
               void handleSubmit(onSubmit)();
@@ -1507,7 +1507,7 @@ export function NewCompanyForm({
         ) : (
           <button
             type="button"
-            className="cursor-pointer rounded-md bg-sky-500 px-4 py-2 text-sm font-medium text-slate-950 hover:bg-sky-400"
+            className="cursor-pointer rounded-md bg-[#111827] px-4 py-2 text-sm font-medium text-white transition hover:bg-[#1f2937]"
             onClick={() => {
               void goToNextStep();
             }}
@@ -1659,7 +1659,7 @@ export function NewCompanyForm({
             onClick={closePostCreateModal}
             aria-hidden="true"
           />
-          <div className="relative z-10 w-full max-w-2xl rounded-2xl border border-emerald-600/40 bg-slate-950 p-6 shadow-[0_30px_90px_-40px_rgba(16,185,129,0.65)] sm:p-7">
+          <div className="relative z-10 w-full max-w-2xl rounded-2xl border border-slate-600/50 bg-slate-950 p-6 shadow-[0_30px_90px_-40px_rgba(15,23,42,0.55)] sm:p-7">
             <h3 className="text-2xl font-semibold text-slate-100 sm:text-3xl">
               {messages.postCreateModalTitle}
             </h3>
@@ -1670,7 +1670,7 @@ export function NewCompanyForm({
               <p>
                 {messages.postCreateModalCollabIntro}
               </p>
-              <ul className="list-disc space-y-1 pl-5 marker:text-emerald-300">
+              <ul className="list-disc space-y-1 pl-5 marker:text-slate-400">
                 <li>{messages.postCreateModalBulletSupport}</li>
                 <li>{messages.postCreateModalBulletCoCreate}</li>
                 <li>{messages.postCreateModalBulletPartner}</li>
@@ -1689,7 +1689,7 @@ export function NewCompanyForm({
               </button>
               <button
                 type="button"
-                className="rounded-md bg-emerald-400 px-4 py-2 text-sm font-medium text-slate-950 hover:bg-emerald-300"
+                className="rounded-md bg-slate-200 px-4 py-2 text-sm font-medium text-slate-900 hover:bg-slate-100"
                 onClick={() => {
                   setIsPostCreateModalOpen(false);
                   router.push(withLang("/contact", locale));
@@ -1704,3 +1704,5 @@ export function NewCompanyForm({
     </section>
   );
 }
+
+

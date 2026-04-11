@@ -13,8 +13,6 @@ export default function robots(): MetadataRoute.Robots {
           "/settings",
           "/companies/panel",
           "/companies/new",
-          "/announcements/new",
-          "/offers/new",
           "/login",
           "/register",
         ],

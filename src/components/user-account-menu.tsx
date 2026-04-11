@@ -17,8 +17,8 @@ type UserAccountMenuProps = {
   adminPanelHref?: string;
   companyPanelLabel?: string;
   companyPanelHref?: string;
-  myLeadRequestsLabel?: string;
-  myLeadRequestsHref?: string;
+  myListingsLabel?: string;
+  myListingsHref?: string;
   settingsLabel: string;
   settingsHref: string;
   logoutLabel: string;
@@ -38,8 +38,8 @@ export function UserAccountMenu({
   adminPanelHref,
   companyPanelLabel,
   companyPanelHref,
-  myLeadRequestsLabel,
-  myLeadRequestsHref,
+  myListingsLabel,
+  myListingsHref,
   settingsLabel,
   settingsHref,
   logoutLabel,
@@ -195,15 +195,15 @@ export function UserAccountMenu({
               ) : null}
             </Link>
           ) : null}
-          {myLeadRequestsLabel && myLeadRequestsHref ? (
+          {myListingsLabel && myListingsHref ? (
             <Link
-              href={myLeadRequestsHref}
+              href={myListingsHref}
               className="whitespace-nowrap rounded-md px-3 py-2 text-left text-sm text-[#dbeafe] transition hover:bg-[#103969]"
               onClick={() => {
                 setIsOpen(false);
               }}
             >
-              {myLeadRequestsLabel}
+              {myListingsLabel}
             </Link>
           ) : null}
           <Link

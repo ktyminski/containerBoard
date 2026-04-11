@@ -39,8 +39,8 @@ export async function generateMetadata({
   searchParams,
 }: MapsPageProps): Promise<Metadata> {
   const params = await searchParams;
-  const selectedView =
-    parseMainMapView(Array.isArray(params.view) ? params.view[0] : params.view) ?? null;
+  const parsedView = parseMainMapView(Array.isArray(params.view) ? params.view[0] : params.view);
+  const selectedView = parsedView === "companies" ? parsedView : null;
 
   return buildMapsPageMetadata({
     searchParams: Promise.resolve(params),
@@ -52,8 +52,8 @@ export async function generateMetadata({
 
 export default async function MapsPage({ searchParams }: MapsPageProps) {
   const params = await searchParams;
-  const selectedView =
-    parseMainMapView(Array.isArray(params.view) ? params.view[0] : params.view) ?? null;
+  const parsedView = parseMainMapView(Array.isArray(params.view) ? params.view[0] : params.view);
+  const selectedView = parsedView === "companies" ? parsedView : null;
 
   if (selectedView) {
     const nextSearch = toUrlSearchParams(params);

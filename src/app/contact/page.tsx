@@ -49,7 +49,7 @@ export default async function ContactPage({ searchParams }: ContactPageProps) {
       intro={page.intro}
       links={[
         { href: "/about", label: messages.footer.about },
-        { href: "/maps/lead-requests", label: messages.mapModules.tabs.leadRequests },
+        { href: "/list", label: messages.mapModules.tabs.companies },
       ]}
     >
       <div className="space-y-4">

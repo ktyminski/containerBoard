@@ -6,10 +6,8 @@ import { cookies } from "next/headers";
 import { notFound } from "next/navigation";
 import { CompanyLocationsAndBranches } from "@/components/company-locations-and-branches";
 import { CompanyOwnershipClaimButton } from "@/components/company-ownership-claim-button";
-import { ShowMoreItems } from "@/components/show-more-items";
 import { SmartBackButton } from "@/components/smart-back-button";
 import { FacebookIcon, InstagramIcon, LinkedInIcon } from "@/components/social-icons";
-import { getAnnouncementsCollection } from "@/lib/announcements";
 import { SESSION_COOKIE_NAME } from "@/lib/auth-session";
 import { getCurrentUserFromToken } from "@/lib/auth-user";
 import { COMPANY_BENEFITS, type CompanyBenefit } from "@/lib/company-benefits";
@@ -27,7 +25,6 @@ import {
   getMessages,
   LOCALE_COOKIE_NAME,
   withLang,
-  type AppLocale,
 } from "@/lib/i18n";
 import { buildShortAddressLabelFromParts } from "@/lib/geocode-address";
 import { buildPageMetadata, getAbsoluteUrl, getLocalizedCanonical } from "@/lib/seo";
@@ -36,8 +33,6 @@ import {
   getCompanyFallbackGradient,
   getCompanyInitial,
 } from "@/lib/company-logo-fallback";
-import { OFFER_TYPE, normalizeOfferType } from "@/lib/offer-type";
-import { getOffersCollection } from "@/lib/offers";
 import { USER_ROLE } from "@/lib/user-roles";
 import { normalizeCompanyCommunicationLanguages } from "@/types/company-communication-language";
 import {
@@ -118,19 +113,6 @@ function isValidPoint(value: unknown): value is [number, number] {
     lat >= -90 &&
     lat <= 90
   );
-}
-
-function toIntlLocale(locale: AppLocale): string {
-  if (locale === "en") {
-    return "en-US";
-  }
-  if (locale === "de") {
-    return "de-DE";
-  }
-  if (locale === "uk") {
-    return "uk-UA";
-  }
-  return "pl-PL";
 }
 
 export async function generateMetadata({
@@ -259,56 +241,6 @@ export default async function CompanyDetailsPage({
     })
     .filter((location): location is NonNullable<typeof location> => location !== null);
 
-  const [offerRows, announcementRows] = await Promise.all([
-    (await getOffersCollection())
-      .find(
-        { companyId: company._id, isPublished: true },
-        {
-          projection: {
-            _id: 1,
-            title: 1,
-            offerType: 1,
-            locationLabel: 1,
-            createdAt: 1,
-          },
-          sort: { createdAt: -1 },
-          limit: 24,
-        },
-      )
-      .toArray(),
-    (await getAnnouncementsCollection())
-      .find(
-        { companyId: company._id, isPublished: true },
-        {
-          projection: {
-            _id: 1,
-            title: 1,
-            createdAt: 1,
-          },
-          sort: { createdAt: -1 },
-          limit: 24,
-        },
-      )
-      .toArray(),
-  ]);
-
-  const publishedOffers = offerRows
-    .filter((offer) => offer._id && offer.title)
-    .map((offer) => ({
-      id: offer._id.toHexString(),
-      title: offer.title,
-      offerType: normalizeOfferType(offer.offerType),
-      locationLabel: offer.locationLabel ?? "-",
-      createdAt: offer.createdAt,
-    }));
-
-  const publishedAnnouncements = announcementRows
-    .filter((announcement) => announcement._id && announcement.title)
-    .map((announcement) => ({
-      id: announcement._id.toHexString(),
-      title: announcement.title,
-      createdAt: announcement.createdAt,
-    }));
   const specializationSet = new Set<string>(COMPANY_SPECIALIZATIONS);
   const companySpecializations = (company.specializations ?? []).filter(
     (specialization): specialization is CompanySpecialization =>
@@ -714,101 +646,6 @@ export default async function CompanyDetailsPage({
             ) : null}
           </div>
         </section>
-
-        {publishedOffers.length > 0 ? (
-          <section className="grid gap-3 rounded-xl border border-slate-800 bg-slate-900/60 p-5">
-            <h2 className="text-lg font-semibold text-slate-100">
-              {formatTemplate(messages.companyDetails.offersAndCooperationTitle, {
-                count: publishedOffers.length,
-              })}
-            </h2>
-            <ShowMoreItems
-              className="grid gap-2"
-              showMoreLabel={messages.companyDetails.loadMoreOffers}
-            >
-              {publishedOffers.map((offer) => (
-                <article
-                  key={offer.id}
-                  className="min-w-0 rounded-md border border-slate-800 bg-slate-950/80 px-3 py-2"
-                >
-                  <div className="flex items-start justify-between gap-2 overflow-hidden">
-                    <div className="min-w-0 flex-1 overflow-hidden">
-                      <p
-                        className="w-full overflow-hidden text-ellipsis whitespace-nowrap text-sm font-semibold leading-tight text-slate-100"
-                        title={offer.title}
-                      >
-                        {offer.title}
-                      </p>
-                    </div>
-                    <span className="inline-flex shrink-0 rounded-md border border-cyan-500/60 bg-cyan-500/15 px-2 py-0.5 text-[11px] font-semibold text-cyan-200">
-                      {offer.offerType === OFFER_TYPE.TRANSPORT
-                        ? messages.mapModules.offers.offerTypes.transport
-                        : messages.mapModules.offers.offerTypes.cooperation}
-                    </span>
-                  </div>
-                  <div className="mt-1 flex justify-end text-[11px] text-slate-400">
-                    <p>
-                      {messages.companyDetails.createdLabel}:{" "}
-                      {offer.createdAt?.toLocaleString(toIntlLocale(locale)) ?? "-"}
-                    </p>
-                  </div>
-                  <div className="mt-1.5 flex justify-end text-xs">
-                    <Link
-                      href={withLang(`/offers/${offer.id}`, locale)}
-                      className="text-sky-300 hover:text-sky-200"
-                    >
-                      {messages.companyDetails.openOffer}
-                    </Link>
-                  </div>
-                </article>
-              ))}
-            </ShowMoreItems>
-          </section>
-        ) : null}
-
-        {publishedAnnouncements.length > 0 ? (
-          <section className="grid gap-3 rounded-xl border border-slate-800 bg-slate-900/60 p-5">
-            <h2 className="text-lg font-semibold text-slate-100">
-              {formatTemplate(messages.companyDetails.announcementsTitle, {
-                count: publishedAnnouncements.length,
-              })}
-            </h2>
-            <ShowMoreItems
-              className="grid gap-2"
-              showMoreLabel={messages.companyDetails.loadMoreOffers}
-            >
-              {publishedAnnouncements.map((announcement) => (
-                <article
-                  key={announcement.id}
-                  className="min-w-0 rounded-md border border-slate-800 bg-slate-950/80 px-3 py-2"
-                >
-                  <div className="min-w-0 overflow-hidden">
-                    <p
-                      className="w-full overflow-hidden text-ellipsis whitespace-nowrap text-sm font-semibold leading-tight text-slate-100"
-                      title={announcement.title}
-                    >
-                      {announcement.title}
-                    </p>
-                  </div>
-                  <div className="mt-1 flex justify-end text-[11px] text-slate-400">
-                    <p>
-                      {messages.companyDetails.createdLabel}:{" "}
-                      {announcement.createdAt?.toLocaleString(toIntlLocale(locale)) ?? "-"}
-                    </p>
-                  </div>
-                  <div className="mt-1.5 flex justify-end text-xs">
-                    <Link
-                      href={withLang(`/announcements/${announcement.id}`, locale)}
-                      className="text-sky-300 hover:text-sky-200"
-                    >
-                      {messages.companyDetails.openAnnouncement}
-                    </Link>
-                  </div>
-                </article>
-              ))}
-            </ShowMoreItems>
-          </section>
-        ) : null}
 
         <div>
           <Link

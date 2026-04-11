@@ -3,7 +3,6 @@
 import { useMemo, useState } from "react";
 import type { AppMessages } from "@/lib/i18n";
 import { formatTemplate } from "@/lib/i18n";
-import { getCompanyFallbackColor, getCompanyFallbackGradient } from "@/lib/company-logo-fallback";
 import { ImageDropzone } from "./image-dropzone";
 import type { ImageItem } from "./types";
 
@@ -60,14 +59,12 @@ export function CompanyMediaSection({
   const [logoPlaceholderStyle] = useState(() => ({
     backgroundColor: getRandomPlaceholderColor(),
   }));
-  const [backgroundPlaceholderStyle] = useState(() => {
-    const randomSeed = `${Date.now()}-${Math.random()}`;
-    const color = getCompanyFallbackColor(randomSeed);
-    return {
-      backgroundImage: getCompanyFallbackGradient(color),
-    };
-  });
+  const backgroundPlaceholderStyle = {
+    backgroundImage:
+      "linear-gradient(180deg,#031a3c_0%,#05244f_100%)",
+  };
   const isLogoModalOpen = mediaModalTarget === "logo";
+  const isBackgroundModalOpen = mediaModalTarget === "background";
   const hasLogoImage = Boolean(logo || (initialLogoUrl && !isInitialLogoRemoved));
   const hasBackgroundImage = Boolean(background || (initialBackgroundUrl && !isInitialBackgroundRemoved));
   const activeHasImage = isLogoModalOpen ? hasLogoImage : hasBackgroundImage;
@@ -78,11 +75,14 @@ export function CompanyMediaSection({
   const logoPreviewUrl = logo?.previewUrl ?? (isInitialLogoRemoved ? null : initialLogoUrl);
   const backgroundPreviewUrl =
     background?.previewUrl ?? (isInitialBackgroundRemoved ? null : initialBackgroundUrl);
+  const backgroundOverlayClass = backgroundPreviewUrl
+    ? "absolute inset-0 bg-gradient-to-t from-slate-950/34 via-slate-950/10 to-transparent"
+    : "";
 
   return (
     <>
-      <section className="overflow-hidden border-b border-slate-800 bg-slate-950/40">
-        <div className="relative overflow-hidden bg-slate-950">
+      <section className="overflow-hidden border-b border-[#1f4f86] bg-[linear-gradient(180deg,#031a3c_0%,#05244f_100%)]">
+        <div className="relative overflow-hidden">
           <button
             type="button"
             className="group relative block aspect-[4/1] w-full cursor-pointer overflow-hidden text-left"
@@ -98,12 +98,12 @@ export function CompanyMediaSection({
             ) : (
               <div className="h-full w-full" style={backgroundPlaceholderStyle} />
             )}
-            <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-black/10" />
+            {backgroundOverlayClass ? <div className={backgroundOverlayClass} /> : null}
           </button>
 
           <button
             type="button"
-            className="absolute right-3 top-3 inline-flex h-8 w-8 cursor-pointer items-center justify-center rounded-full border border-slate-400/60 bg-slate-950/75 text-lg text-slate-100 hover:border-slate-300"
+            className="absolute right-3 top-3 inline-flex h-8 w-8 cursor-pointer items-center justify-center rounded-full border border-slate-300 bg-white/92 text-lg text-slate-700 shadow-sm transition hover:border-slate-400"
             onClick={() => setMediaModalTarget("background")}
             aria-label={messages.backgroundFile}
           >
@@ -113,7 +113,7 @@ export function CompanyMediaSection({
           <div className="absolute bottom-4 left-4 z-10 flex max-w-[calc(100%-2rem)] items-end gap-3">
             <button
               type="button"
-              className="relative h-12 w-12 shrink-0 cursor-pointer overflow-hidden rounded-lg border-2 border-slate-700 bg-slate-950 text-xl font-semibold text-white shadow-lg sm:h-12 sm:w-12 md:h-24 md:w-24 lg:h-32 lg:w-32"
+              className="relative h-12 w-12 shrink-0 cursor-pointer overflow-hidden rounded-lg border-2 border-[#d1d5db] bg-[#0b1730] text-xl font-semibold text-white shadow-lg sm:h-12 sm:w-12 md:h-24 md:w-24 lg:h-32 lg:w-32"
               onClick={() => setMediaModalTarget("logo")}
               aria-label={messages.logoFile}
             >
@@ -131,13 +131,13 @@ export function CompanyMediaSection({
                   {companyInitial}
                 </span>
               )}
-              <span className="absolute bottom-1 right-1 inline-flex h-6 w-6 items-center justify-center rounded-full border border-slate-400/60 bg-slate-950/80 text-sm text-slate-100">
+              <span className="absolute bottom-1 right-1 inline-flex h-6 w-6 items-center justify-center rounded-full border border-slate-400/60 bg-[rgba(11,23,48,0.86)] text-sm text-[#e2efff]">
                 +
               </span>
             </button>
 
             {companyNameText ? (
-              <p className="max-w-[400px] min-w-0 truncate pb-1 text-base font-semibold text-white/95 sm:text-lg">
+              <p className="max-w-[400px] min-w-0 truncate pb-1 text-base font-semibold text-white/95 [text-shadow:0_2px_8px_rgba(2,6,23,0.85)] sm:text-lg">
                 {companyNameText}
               </p>
             ) : null}
@@ -146,16 +146,32 @@ export function CompanyMediaSection({
       </section>
 
       {mediaModalTarget ? (
-        <div className="fixed inset-0 z-[70] flex items-center justify-center overflow-y-auto [&>div:not(.fixed)]:my-auto [&>div:not(.fixed)]:max-h-[calc(100dvh-2rem)] [&>div:not(.fixed)]:!overflow-y-auto bg-slate-950/80 p-4">
-          <div className="w-full max-w-xl rounded-xl border border-slate-700 bg-slate-900 p-5 shadow-2xl">
+        <div
+          className={`fixed inset-0 z-[70] flex items-center justify-center overflow-y-auto [&>div:not(.fixed)]:my-auto [&>div:not(.fixed)]:max-h-[calc(100dvh-2rem)] [&>div:not(.fixed)]:!overflow-y-auto p-4 ${
+            isBackgroundModalOpen ? "bg-slate-100/85" : "bg-[rgba(2,6,23,0.82)]"
+          }`}
+        >
+          <div
+            className={`w-full max-w-xl rounded-xl border p-5 shadow-2xl ${
+              isBackgroundModalOpen ? "border-slate-300 bg-white" : "border-[#334155] bg-[#0b1730]"
+            }`}
+          >
             <div className="flex items-start justify-between gap-3">
               <div>
-                <h3 className="text-lg font-semibold text-slate-100">{activeTitle}</h3>
-                <p className="mt-1 text-xs text-slate-400">{activeHint}</p>
+                <h3 className={`text-lg font-semibold ${isBackgroundModalOpen ? "text-slate-800" : "text-[#e2efff]"}`}>
+                  {activeTitle}
+                </h3>
+                <p className={`mt-1 text-xs ${isBackgroundModalOpen ? "text-slate-600" : "text-[#9fb8d8]"}`}>
+                  {activeHint}
+                </p>
               </div>
               <button
                 type="button"
-                className="cursor-pointer rounded-md border border-slate-700 px-3 py-1.5 text-xs text-slate-300 hover:border-slate-500"
+                className={`cursor-pointer rounded-md border px-3 py-1.5 text-xs transition ${
+                  isBackgroundModalOpen
+                    ? "border-slate-300 text-slate-600 hover:border-slate-400"
+                    : "border-[#334155] text-[#cbd5e1] hover:border-[#475569]"
+                }`}
                 onClick={() => setMediaModalTarget(null)}
               >
                 {messages.cropCancel}
@@ -166,6 +182,7 @@ export function CompanyMediaSection({
               <ImageDropzone
                 title={activeTitle}
                 hintText={activeHint}
+                variant={isBackgroundModalOpen ? "light" : "dark"}
                 multiple={false}
                 onFilesAdded={(files) => {
                   if (isLogoModalOpen) {
@@ -196,5 +213,6 @@ export function CompanyMediaSection({
     </>
   );
 }
+
 
 

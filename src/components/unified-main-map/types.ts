@@ -78,7 +78,7 @@ export type CompaniesApiResponse = {
   };
 };
 
-export type ActiveMapView = Exclude<MainMapView, "lead-requests">;
+export type ActiveMapView = MainMapView;
 
 export type UnifiedMainMapProps = {
   locale: AppLocale;

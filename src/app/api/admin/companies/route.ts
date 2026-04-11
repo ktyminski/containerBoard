@@ -1,8 +1,6 @@
 import { ObjectId, type Filter } from "mongodb";
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
-import { getAnnouncementFavoritesCollection } from "@/lib/announcement-favorites";
-import { getAnnouncementsCollection } from "@/lib/announcements";
 import { getCurrentUserFromRequest } from "@/lib/auth-user";
 import { safeDeleteBlobUrls } from "@/lib/blob-storage";
 import {
@@ -16,7 +14,6 @@ import {
   getCompaniesCollection,
   type CompanyDocument,
 } from "@/lib/companies";
-import { getOffersCollection } from "@/lib/offers";
 import { USER_ROLE } from "@/lib/user-roles";
 import { getUsersCollection } from "@/lib/users";
 import { logError } from "@/lib/server-logger";
@@ -364,12 +361,9 @@ export async function DELETE(request: NextRequest) {
 
     const companyId = new ObjectId(parsed.data.companyId);
     await ensureCompaniesIndexes();
-    const [companies, users, offers, announcements, favorites, claims] = await Promise.all([
+    const [companies, users, claims] = await Promise.all([
       getCompaniesCollection(),
       getUsersCollection(),
-      getOffersCollection(),
-      getAnnouncementsCollection(),
-      getAnnouncementFavoritesCollection(),
       getCompanyOwnershipClaimsCollection(),
     ]);
 
@@ -391,30 +385,14 @@ export async function DELETE(request: NextRequest) {
     }
 
     const blobUrls = collectCompanyBlobUrls(company);
-    const announcementIds = (
-      await announcements.find({ companyId }, { projection: { _id: 1 } }).toArray()
-    )
-      .filter((announcement) => announcement._id)
-      .map((announcement) => announcement._id!);
-
     const deleteResult = await companies.deleteOne({ _id: companyId });
     if (deleteResult.deletedCount === 0) {
       return NextResponse.json({ error: "Company not found" }, { status: 404 });
     }
 
     const cleanupOperations: Promise<unknown>[] = [
-      offers.deleteMany({ companyId }),
-      announcements.deleteMany({ companyId }),
       claims.deleteMany({ companyId }),
     ];
-
-    if (announcementIds.length > 0) {
-      cleanupOperations.push(
-        favorites.deleteMany({
-          announcementId: { $in: announcementIds },
-        }),
-      );
-    }
 
     if (company.createdByUserId) {
       cleanupOperations.push(

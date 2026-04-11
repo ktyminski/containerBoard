@@ -3,15 +3,10 @@ export const OFFER_TYPE = {
   COOPERATION: "cooperation",
 } as const;
 
-export const OFFER_TYPES = [OFFER_TYPE.TRANSPORT, OFFER_TYPE.COOPERATION] as const;
+export type OfferType = (typeof OFFER_TYPE)[keyof typeof OFFER_TYPE];
 
-export type OfferType = (typeof OFFER_TYPES)[number];
+export const OFFER_TYPES: OfferType[] = [OFFER_TYPE.TRANSPORT, OFFER_TYPE.COOPERATION];
 
-const OFFER_TYPE_SET = new Set<string>(OFFER_TYPES);
-
-export function normalizeOfferType(value?: string | null): OfferType {
-  if (!value) {
-    return OFFER_TYPE.COOPERATION;
-  }
-  return OFFER_TYPE_SET.has(value) ? (value as OfferType) : OFFER_TYPE.COOPERATION;
+export function normalizeOfferType(value: unknown): OfferType {
+  return value === OFFER_TYPE.TRANSPORT ? OFFER_TYPE.TRANSPORT : OFFER_TYPE.COOPERATION;
 }

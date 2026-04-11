@@ -5,7 +5,7 @@ import {
   type JobWorkModel,
 } from "@/lib/job-announcement";
 
-export type MainMapView = "announcements" | "offers" | "companies" | "lead-requests";
+export type MainMapView = "announcements" | "offers" | "companies";
 export type SearchBBox = [number, number, number, number];
 export type SharedMapViewport = {
   center: [number, number];
@@ -32,8 +32,7 @@ export function parseMainMapView(value: string | undefined): MainMapView | null 
   if (
     value === "announcements" ||
     value === "offers" ||
-    value === "companies" ||
-    value === "lead-requests"
+    value === "companies"
   ) {
     return value;
   }

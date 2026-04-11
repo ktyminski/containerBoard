@@ -7,19 +7,13 @@ import { getCurrentUserFromToken } from "@/lib/auth-user";
 import { getCompanyCreationLimitState } from "@/lib/company-creation-limit";
 import { VerifiedActionLink } from "@/components/verified-action-link";
 import { CompanyDeletionRequestButton } from "@/components/company-deletion-request-button";
-import { ShowMoreItems } from "@/components/show-more-items";
-import { CompanyPanelPublicationItem } from "@/components/company-panel-publication-item";
-import { getAnnouncementsCollection } from "@/lib/announcements";
 import { getCompaniesCollection } from "@/lib/companies";
-import { OFFER_TYPE, normalizeOfferType } from "@/lib/offer-type";
-import { getOffersCollection } from "@/lib/offers";
 import {
   formatTemplate,
   getLocaleFromRequest,
   getMessages,
   LOCALE_COOKIE_NAME,
   withLang,
-  type AppLocale,
 } from "@/lib/i18n";
 import { USER_ROLE } from "@/lib/user-roles";
 import {
@@ -31,19 +25,6 @@ import {
 type CompanyPanelPageProps = {
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 };
-
-function toIntlLocale(locale: AppLocale): string {
-  if (locale === "en") {
-    return "en-US";
-  }
-  if (locale === "de") {
-    return "de-DE";
-  }
-  if (locale === "uk") {
-    return "uk-UA";
-  }
-  return "pl-PL";
-}
 
 export default async function CompanyPanelPage({ searchParams }: CompanyPanelPageProps) {
   const params = await searchParams;
@@ -115,121 +96,12 @@ export default async function CompanyPanelPage({ searchParams }: CompanyPanelPag
   const shouldShowBlockedNotice =
     isUserBlocked || hasBlockedOwnedCompany;
 
-  const companyIds = ownedCompanies
-    .filter((company) => company._id)
-    .map((company) => company._id);
-
-  const announcements = await getAnnouncementsCollection();
-  const announcementRows =
-    companyIds.length > 0
-      ? await announcements
-          .find(
-            { companyId: { $in: companyIds } },
-            {
-              projection: {
-                _id: 1,
-                companyId: 1,
-                title: 1,
-                location: 1,
-                planTier: 1,
-                isPublished: 1,
-                createdAt: 1,
-              },
-              sort: { createdAt: -1 },
-              limit: 2000,
-            },
-          )
-          .toArray()
-      : [];
-  const offers = await getOffersCollection();
-  const offerRows =
-    companyIds.length > 0
-      ? await offers
-          .find(
-            { companyId: { $in: companyIds } },
-            {
-              projection: {
-                _id: 1,
-                companyId: 1,
-                title: 1,
-                offerType: 1,
-                isPublished: 1,
-                createdAt: 1,
-              },
-              sort: { createdAt: -1 },
-              limit: 2000,
-            },
-          )
-          .toArray()
-      : [];
-
-  const announcementsByCompanyId = new Map<
-    string,
-    Array<{
-      id: string;
-      title: string;
-      locationLabel: string;
-      planTier: "basic" | "plus" | "premium";
-      isPublished: boolean;
-      createdAt: Date;
-    }>
-  >();
-
-  for (const announcement of announcementRows) {
-    if (!announcement._id || !announcement.companyId) {
-      continue;
-    }
-
-    const key = announcement.companyId.toHexString();
-    const existing = announcementsByCompanyId.get(key) ?? [];
-    existing.push({
-      id: announcement._id.toHexString(),
-      title: announcement.title,
-      locationLabel: announcement.location?.label ?? "-",
-      planTier: announcement.planTier,
-      isPublished: announcement.isPublished,
-      createdAt: announcement.createdAt,
-    });
-    announcementsByCompanyId.set(key, existing);
-  }
-  const offersByCompanyId = new Map<
-    string,
-    Array<{
-      id: string;
-      title: string;
-      offerType: ReturnType<typeof normalizeOfferType>;
-      isPublished: boolean;
-      createdAt: Date;
-    }>
-  >();
-  for (const offer of offerRows) {
-    if (!offer._id || !offer.companyId) {
-      continue;
-    }
-
-    const key = offer.companyId.toHexString();
-    const existing = offersByCompanyId.get(key) ?? [];
-    existing.push({
-      id: offer._id.toHexString(),
-      title: offer.title,
-      offerType: normalizeOfferType(offer.offerType),
-      isPublished: offer.isPublished,
-      createdAt: offer.createdAt,
-    });
-    offersByCompanyId.set(key, existing);
-  }
-
   return (
-    <section className="relative overflow-hidden">
-      <div className="pointer-events-none absolute inset-0" aria-hidden="true">
-        <div className="absolute -left-28 top-10 h-64 w-64 rounded-full bg-sky-500/15 blur-3xl" />
-        <div className="absolute right-[-5rem] top-28 h-72 w-72 rounded-full bg-cyan-400/10 blur-3xl" />
-        <div className="absolute bottom-8 left-1/3 h-56 w-56 rounded-full bg-emerald-400/10 blur-3xl" />
-      </div>
+    <section className="relative overflow-hidden bg-[linear-gradient(180deg,#ffffff_0%,#f8fafc_100%)]">
       <main className="relative mx-auto flex w-full max-w-5xl flex-col gap-6 px-4 py-6 sm:px-6">
       <header>
-        <h1 className="text-2xl font-semibold text-slate-100 sm:text-3xl">{panelMessages.title}</h1>
-        <p className="mt-2 text-sm text-slate-300">{panelMessages.subtitle}</p>
+        <h1 className="text-2xl font-semibold text-slate-900 sm:text-3xl">{panelMessages.title}</h1>
+        <p className="mt-2 text-sm text-slate-600">{panelMessages.subtitle}</p>
       </header>
 
       {shouldShowBlockedNotice ? (
@@ -251,20 +123,20 @@ export default async function CompanyPanelPage({ searchParams }: CompanyPanelPag
       ) : null}
 
       {ownedCompanies.length === 0 ? (
-        <section className="rounded-xl border border-amber-700/60 bg-amber-950/20 p-5">
-          <h2 className="text-lg font-semibold text-amber-200">{panelMessages.noCompaniesTitle}</h2>
-          <p className="mt-2 text-sm text-amber-100/80">{panelMessages.noCompaniesText}</p>
+        <section className="rounded-xl border border-slate-300 bg-slate-100 p-5">
+          <h2 className="text-lg font-semibold text-slate-800">{panelMessages.noCompaniesTitle}</h2>
+          <p className="mt-2 text-sm text-slate-700">{panelMessages.noCompaniesText}</p>
           <div className="mt-4 flex flex-wrap items-center gap-2">
             <VerifiedActionLink
               href={withLang("/companies/new", locale)}
               label={panelMessages.addCompany}
-              className="rounded-md bg-emerald-500 px-4 py-2 text-sm font-medium text-slate-950 hover:bg-emerald-400"
+              className="rounded-md bg-slate-800 px-4 py-2 text-sm font-medium text-white hover:bg-slate-700"
               requiresEmailVerification={addCompanyBlocked}
               blockedMessage={addCompanyBlockedMessage}
             />
             <Link
               href={withLang("/maps", locale)}
-              className="rounded-md border border-slate-700 px-4 py-2 text-sm text-slate-200 hover:border-slate-500"
+              className="rounded-md border border-slate-400 bg-white px-4 py-2 text-sm text-slate-800 hover:bg-slate-50"
             >
               {panelMessages.backToMap}
             </Link>
@@ -288,8 +160,6 @@ export default async function CompanyPanelPage({ searchParams }: CompanyPanelPag
             const logoFallbackColor = getCompanyFallbackColor(companyId);
             const backgroundFallbackGradient = getCompanyFallbackGradient(logoFallbackColor);
             const logoFallbackInitial = getCompanyInitial(company.name);
-            const items = announcementsByCompanyId.get(companyId) ?? [];
-            const offerItems = offersByCompanyId.get(companyId) ?? [];
             const isPremium = company.isPremium === true;
             const deletionRequest = company.deletionRequest;
             const deletionReason = deletionRequest?.reason?.trim() ?? "";
@@ -298,7 +168,7 @@ export default async function CompanyPanelPage({ searchParams }: CompanyPanelPag
             return (
               <article
                 key={companyId}
-                className="overflow-hidden rounded-xl border border-slate-800 bg-slate-900/60"
+                className="overflow-hidden rounded-xl border border-slate-300 bg-[#eef2f7]"
               >
                 <div className="relative aspect-[4/1] w-full">
                   {backgroundUrl ? (
@@ -315,7 +185,7 @@ export default async function CompanyPanelPage({ searchParams }: CompanyPanelPag
                   <div className="absolute inset-0 bg-gradient-to-t from-slate-950 via-slate-900/70 to-transparent" />
                   <div className="absolute inset-x-4 bottom-4 flex items-end gap-3">
                     <div
-                      className={`relative h-12 w-12 rounded-lg border border-slate-700 bg-slate-900 sm:h-12 sm:w-12 md:h-20 md:w-20 lg:h-28 lg:w-28 ${
+                      className={`relative h-12 w-12 rounded-lg border border-[#cbd5e1] bg-[#0b1730] sm:h-12 sm:w-12 md:h-20 md:w-20 lg:h-28 lg:w-28 ${
                         isPremium ? "overflow-visible" : "overflow-hidden"
                       }`}
                     >
@@ -341,7 +211,7 @@ export default async function CompanyPanelPage({ searchParams }: CompanyPanelPag
                       </div>
                       {isPremium ? (
                         <span
-                          className="absolute left-0 top-0 z-20 inline-flex h-5 w-5 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full border border-amber-400/80 bg-slate-950/90 text-amber-300 shadow-[0_0_10px_rgba(245,158,11,0.35)] md:h-6 md:w-6"
+                          className="absolute left-0 top-0 z-20 inline-flex h-5 w-5 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full border border-amber-400/80 bg-[rgba(2,6,23,0.9)] text-amber-300 shadow-[0_0_10px_rgba(245,158,11,0.35)] md:h-6 md:w-6"
                           aria-hidden="true"
                         >
                           <svg viewBox="0 0 20 20" className="h-3.5 w-3.5 md:h-4 md:w-4" aria-hidden="true">
@@ -354,10 +224,10 @@ export default async function CompanyPanelPage({ searchParams }: CompanyPanelPag
                       ) : null}
                     </div>
                     <div className="min-w-0 flex-1">
-                      <p className="text-xs uppercase tracking-[0.12em] text-slate-300">
+                      <p className="text-xs uppercase tracking-[0.12em] text-[#d4def0]">
                         {panelMessages.companyLabel}
                       </p>
-                      <h2 className="flex min-w-0 items-center gap-2 text-lg font-semibold text-slate-100 sm:text-lg md:text-2xl">
+                      <h2 className="flex min-w-0 items-center gap-2 text-lg font-semibold text-[#f8fbff] sm:text-lg md:text-2xl">
                         <span className="min-w-0 truncate" title={company.name}>
                           {company.name}
                         </span>
@@ -375,39 +245,21 @@ export default async function CompanyPanelPage({ searchParams }: CompanyPanelPag
                 </div>
 
                 <div className="grid gap-4 p-5">
-                  <p className="whitespace-pre-wrap text-sm text-slate-300">{company.description}</p>
+                  <p className="whitespace-pre-wrap text-sm text-slate-700">{company.description}</p>
 
                   <div className="flex flex-wrap items-center gap-2">
                     <Link
                       href={withLang(`/companies/${company.slug}`, locale)}
-                      className="rounded-md border border-slate-200 px-3 py-2 text-sm text-slate-100 transition-colors hover:border-white hover:bg-white/5"
+                      className="rounded-md border border-slate-400 bg-white px-3 py-2 text-sm text-slate-800 transition-colors hover:bg-slate-50"
                     >
                       {panelMessages.previewCompany}
                     </Link>
                     <Link
                       href={withLang(`/companies/${company.slug}/edit`, locale)}
-                      className="rounded-md border border-slate-200 px-3 py-2 text-sm text-slate-100 transition-colors hover:border-white hover:bg-white/5"
+                      className="rounded-md border border-slate-400 bg-white px-3 py-2 text-sm text-slate-800 transition-colors hover:bg-slate-50"
                     >
                       {panelMessages.editCompany}
                     </Link>
-                    {!isUserBlocked ? (
-                      <>
-                        <Link
-                          href={withLang("/announcements/new", locale)}
-                          className="inline-flex items-center gap-1 rounded-md border border-emerald-700 px-3 py-2 text-sm text-emerald-200 transition-colors hover:border-emerald-500 hover:bg-emerald-500/10"
-                        >
-                          {panelMessages.addAnnouncement}
-                          <span aria-hidden="true">+</span>
-                        </Link>
-                        <Link
-                          href={withLang("/offers/new", locale)}
-                          className="inline-flex items-center gap-1 rounded-md border border-emerald-700 px-3 py-2 text-sm text-emerald-200 transition-colors hover:border-emerald-500 hover:bg-emerald-500/10"
-                        >
-                          {panelMessages.addOffer}
-                          <span aria-hidden="true">+</span>
-                        </Link>
-                      </>
-                    ) : null}
                   </div>
 
                   {isDeletionRequested ? (
@@ -422,99 +274,6 @@ export default async function CompanyPanelPage({ searchParams }: CompanyPanelPag
                     </section>
                   ) : null}
 
-                  {items.length > 0 ? (
-                    <section className="grid gap-3">
-                      <h3 className="text-sm font-semibold text-slate-100">
-                        {formatTemplate(panelMessages.announcementsTitle, {
-                          count: items.length,
-                        })}
-                      </h3>
-                      <ShowMoreItems
-                        className="grid gap-2"
-                        showMoreLabel={panelMessages.loadMoreOffers}
-                      >
-                        {items.map((item) => (
-                          <CompanyPanelPublicationItem
-                            key={item.id}
-                            entity="announcements"
-                            itemId={item.id}
-                            title={item.title}
-                            createdAtLabel={item.createdAt.toLocaleString(toIntlLocale(locale))}
-                            isPublished={item.isPublished}
-                            publishedStatusLabel={panelMessages.publishedStatus}
-                            suspendedStatusLabel={panelMessages.suspendedStatus}
-                            createdLabel={panelMessages.createdLabel}
-                            openHref={withLang(`/announcements/${item.id}`, locale)}
-                            openLabel={panelMessages.openAnnouncement}
-                            editHref={withLang(`/announcements/${item.id}/edit`, locale)}
-                            editLabel={messages.announcementEdit.actionShort}
-                            publishLabel={panelMessages.resumeAction}
-                            suspendLabel={panelMessages.suspendAction}
-                            deleteLabel={panelMessages.deleteAction}
-                            publishSuccessMessage={panelMessages.publishSuccess}
-                            suspendSuccessMessage={panelMessages.suspendSuccess}
-                            deleteSuccessMessage={panelMessages.deleteSuccess}
-                            confirmDeleteText={panelMessages.confirmDeleteAnnouncement.replace(
-                              "{title}",
-                              item.title,
-                            )}
-                            unknownError={panelMessages.unknownError}
-                            showActions={!isUserBlocked}
-                          />
-                        ))}
-                      </ShowMoreItems>
-                    </section>
-                  ) : null}
-
-                  {offerItems.length > 0 ? (
-                    <section className="grid gap-3">
-                      <h3 className="text-sm font-semibold text-slate-100">
-                        {formatTemplate(panelMessages.offersTitle, {
-                          count: offerItems.length,
-                        })}
-                      </h3>
-                      <ShowMoreItems
-                        className="grid gap-2"
-                        showMoreLabel={panelMessages.loadMoreOffers}
-                      >
-                        {offerItems.map((item) => (
-                          <CompanyPanelPublicationItem
-                            key={item.id}
-                            entity="offers"
-                            itemId={item.id}
-                            title={item.title}
-                            createdAtLabel={item.createdAt.toLocaleString(toIntlLocale(locale))}
-                            isPublished={item.isPublished}
-                            publishedStatusLabel={panelMessages.publishedStatus}
-                            suspendedStatusLabel={panelMessages.suspendedStatus}
-                            createdLabel={panelMessages.createdLabel}
-                            openHref={withLang(`/offers/${item.id}`, locale)}
-                            openLabel={panelMessages.openOffer}
-                            editHref={withLang(`/offers/${item.id}/edit`, locale)}
-                            editLabel={messages.offerEdit.actionShort}
-                            publishLabel={panelMessages.resumeAction}
-                            suspendLabel={panelMessages.suspendAction}
-                            deleteLabel={panelMessages.deleteAction}
-                            publishSuccessMessage={panelMessages.publishSuccess}
-                            suspendSuccessMessage={panelMessages.suspendSuccess}
-                            deleteSuccessMessage={panelMessages.deleteSuccess}
-                            confirmDeleteText={panelMessages.confirmDeleteOffer.replace(
-                              "{title}",
-                              item.title,
-                            )}
-                            unknownError={panelMessages.unknownError}
-                            showActions={!isUserBlocked}
-                            typeBadgeLabel={
-                              item.offerType === OFFER_TYPE.TRANSPORT
-                                ? messages.mapModules.offers.offerTypes.transport
-                                : messages.mapModules.offers.offerTypes.cooperation
-                            }
-                          />
-                        ))}
-                      </ShowMoreItems>
-                    </section>
-                  ) : null}
-
                   <div className="flex justify-end">
                     <CompanyDeletionRequestButton
                       companyId={companyId}
@@ -522,7 +281,7 @@ export default async function CompanyPanelPage({ searchParams }: CompanyPanelPag
                       messages={panelMessages}
                       initialReason={deletionReason}
                       isAlreadyRequested={isDeletionRequested}
-                      triggerClassName="cursor-pointer text-xs text-slate-500 underline decoration-slate-600 underline-offset-2 transition-colors hover:text-slate-300 hover:decoration-slate-400"
+                      triggerClassName="cursor-pointer text-xs text-slate-600 underline decoration-slate-500 underline-offset-2 transition-colors hover:text-slate-800 hover:decoration-slate-700"
                     />
                   </div>
                 </div>
@@ -535,7 +294,7 @@ export default async function CompanyPanelPage({ searchParams }: CompanyPanelPag
       <div>
         <Link
           href={withLang("/maps", locale)}
-          className="rounded-md border border-slate-700 px-4 py-2 text-sm text-slate-200 hover:border-slate-500"
+          className="rounded-md border border-slate-400 bg-white px-4 py-2 text-sm text-slate-800 hover:bg-slate-50"
         >
           {panelMessages.backToMap}
         </Link>

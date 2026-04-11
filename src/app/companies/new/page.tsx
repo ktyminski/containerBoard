@@ -1,4 +1,4 @@
-﻿import { cookies } from "next/headers";
+import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { NewCompanyForm } from "@/components/new-company-form";
 import { SESSION_COOKIE_NAME } from "@/lib/auth-session";
@@ -55,21 +55,16 @@ export default async function NewCompanyPage({ searchParams }: NewCompanyPagePro
         });
 
   return (
-    <section className="relative overflow-hidden">
-      <div className="pointer-events-none absolute inset-0" aria-hidden="true">
-        <div className="absolute -left-28 top-10 h-64 w-64 rounded-full bg-sky-500/15 blur-3xl" />
-        <div className="absolute right-[-5rem] top-28 h-72 w-72 rounded-full bg-cyan-400/10 blur-3xl" />
-        <div className="absolute bottom-8 left-1/3 h-56 w-56 rounded-full bg-emerald-400/10 blur-3xl" />
-      </div>
+    <section className="relative overflow-hidden bg-[linear-gradient(180deg,#ffffff_0%,#f8fafc_100%)]">
       <main className="relative mx-auto flex w-full max-w-5xl flex-col gap-6 px-4 py-6 sm:px-6">
         <header>
-          <h1 className="text-2xl font-semibold text-slate-100 sm:text-3xl">
+          <h1 className="text-2xl font-semibold text-slate-900 sm:text-3xl">
             {messages.companyCreate.title}
           </h1>
-          <p className="mt-2 text-sm whitespace-pre-line text-slate-300">
+          <p className="mt-2 text-sm whitespace-pre-line text-slate-600">
             {messages.companyCreate.subtitle}
           </p>
-          <p className="mt-1 text-xs text-slate-400">{messages.companyCreate.requiredFieldsHint}</p>
+          <p className="mt-1 text-xs text-slate-500">{messages.companyCreate.requiredFieldsHint}</p>
         </header>
         <NewCompanyForm
           locale={locale}
@@ -91,4 +86,5 @@ export default async function NewCompanyPage({ searchParams }: NewCompanyPagePro
     </section>
   );
 }
+
 

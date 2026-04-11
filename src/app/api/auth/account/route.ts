@@ -9,7 +9,6 @@ import {
   setSessionCookie,
 } from "@/lib/auth-session";
 import { getCurrentUserFromRequest } from "@/lib/auth-user";
-import { getAnnouncementFavoritesCollection } from "@/lib/announcement-favorites";
 import { getEmailVerificationTokensCollection } from "@/lib/email-verification";
 import {
   ensureCompanyOwnershipClaimsIndexes,
@@ -279,11 +278,10 @@ export async function DELETE(request: NextRequest) {
     await ensureCompaniesIndexes();
     await ensureCompanyOwnershipClaimsIndexes();
 
-    const [users, companies, claims, favorites, verificationTokens] = await Promise.all([
+    const [users, companies, claims, verificationTokens] = await Promise.all([
       getUsersCollection(),
       getCompaniesCollection(),
       getCompanyOwnershipClaimsCollection(),
-      getAnnouncementFavoritesCollection(),
       getEmailVerificationTokensCollection(),
     ]);
 
@@ -297,7 +295,6 @@ export async function DELETE(request: NextRequest) {
         },
       ),
       claims.deleteMany({ userId: user._id }),
-      favorites.deleteMany({ userId: user._id }),
       verificationTokens.deleteMany({ userId: user._id }),
     ]);
 
