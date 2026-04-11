@@ -40,7 +40,6 @@ import { OFFER_TYPE, normalizeOfferType } from "@/lib/offer-type";
 import { getOffersCollection } from "@/lib/offers";
 import { USER_ROLE } from "@/lib/user-roles";
 import { normalizeCompanyCommunicationLanguages } from "@/types/company-communication-language";
-import { normalizeCompanyCategory } from "@/types/company-category";
 import {
   COMPANY_SPECIALIZATIONS,
   type CompanySpecialization,
@@ -158,7 +157,6 @@ export async function generateMetadata({
     });
   }
 
-  const categoryLabel = messages.map.categories[normalizeCompanyCategory(company.category)];
   const verificationStatus = normalizeCompanyVerificationStatus(company.verificationStatus);
   const isIndexable =
     verificationStatus === COMPANY_VERIFICATION_STATUS.VERIFIED &&
@@ -167,7 +165,7 @@ export async function generateMetadata({
   return buildPageMetadata({
     path: `/companies/${routeParams.slug}`,
     locale,
-    title: `${company.name} - ${categoryLabel}`,
+    title: company.name,
     description: company.description.slice(0, 160),
     type: "article",
     noIndex: !isIndexable,
@@ -205,7 +203,6 @@ export default async function CompanyDetailsPage({
       currentUser?.role === USER_ROLE.ADMIN ||
       company.createdByUserId?.toHexString() === currentUser?._id?.toHexString()
     );
-  const categoryLabel = messages.map.categories[normalizeCompanyCategory(company.category)];
   const operatingArea = normalizeCompanyOperatingArea(company.operatingArea);
   const operatingAreaLabel = messages.companyCreate.operatingAreas[operatingArea];
   const fallbackBackHref = withLang(canEdit ? "/companies/panel" : "/maps", locale);
@@ -508,15 +505,6 @@ export default async function CompanyDetailsPage({
                     </span>
                   ) : null}
                 </div>
-                <p
-                  className="mt-1 max-w-[400px] min-w-0 truncate text-sm text-slate-200/95 sm:text-base"
-                  style={{
-                    textShadow:
-                      "-1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000, 1px 1px 0 #000",
-                  }}
-                >
-                  {categoryLabel}
-                </p>
               </div>
             </div>
           </div>

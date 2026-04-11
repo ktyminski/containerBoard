@@ -12,7 +12,6 @@ import {
 } from "@/lib/i18n";
 import { NewCompanyForm } from "@/components/new-company-form";
 import { USER_ROLE } from "@/lib/user-roles";
-import { normalizeCompanyCategory } from "@/types/company-category";
 import type { NewCompanyFormValues } from "@/components/new-company-form/types";
 import { normalizeCompanyOperatingArea } from "@/lib/company-operating-area";
 
@@ -132,7 +131,6 @@ export default async function EditCompanyPage({ params, searchParams }: EditComp
   const initialValues: NewCompanyFormValues = {
     name: company.name,
     description: company.description,
-    category: normalizeCompanyCategory(company.category),
     communicationLanguages: company.communicationLanguages ?? [],
     operatingArea: normalizeCompanyOperatingArea(company.operatingArea),
     operatingAreaDetails: company.operatingAreaDetails ?? "",
@@ -200,7 +198,6 @@ export default async function EditCompanyPage({ params, searchParams }: EditComp
         <NewCompanyForm
           locale={locale}
           messages={messages.companyCreate}
-          mapMessages={messages.map}
           initialValues={initialValues}
           initialLogoUrl={initialLogoUrl}
           initialBackgroundUrl={initialBackgroundUrl}

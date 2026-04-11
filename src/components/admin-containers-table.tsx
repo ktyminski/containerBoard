@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
 import { useToast } from "@/components/toast-provider";
 import type { ContainerListingItem } from "@/lib/container-listings";
+import { getContainerShortLabel } from "@/lib/container-listing-types";
 
 type AdminContainersResponse = {
   items?: ContainerListingItem[];
@@ -166,7 +167,7 @@ export function AdminContainersTable({ locale }: AdminContainersTableProps) {
             {items.map((item) => (
               <tr key={item.id} className="border-t border-slate-800 align-top">
                 <td className="py-2 pr-3 text-slate-200">{item.companyName}</td>
-                <td className="py-2 pr-3 text-slate-300">{item.containerType} ({item.type})</td>
+                <td className="py-2 pr-3 text-slate-300">{getContainerShortLabel(item.container)} ({item.type})</td>
                 <td className="py-2 pr-3 text-slate-300">{item.locationCity}, {item.locationCountry}</td>
                 <td className="py-2 pr-3 text-slate-300">{item.quantity}</td>
                 <td className="py-2 pr-3 text-slate-300">{item.status}</td>

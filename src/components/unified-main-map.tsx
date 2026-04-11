@@ -288,9 +288,26 @@ export function UnifiedMainMap({
       : activeMapView === "offers"
         ? offersMessages.loading
         : companiesListMessages.loading;
+  const isCompaniesMapView = activeMapView === "companies";
   const isListPaneActiveOnMobile = mobilePane === "list";
   const mobileMapLabel = mapMessages.mobileMapToggle;
   const mobileListLabel = mapMessages.mobileListToggle;
+  const shellClassName = isCompaniesMapView
+    ? "relative flex h-full min-h-0 flex-col border border-sky-200 bg-gradient-to-b from-sky-50 via-blue-50 to-sky-100/80"
+    : "relative flex h-full min-h-0 flex-col border border-slate-800 bg-slate-950/40";
+  const listPaneSurfaceClass = isCompaniesMapView
+    ? "bg-[linear-gradient(180deg,rgba(239,246,255,0.97)_0%,rgba(224,242,254,0.95)_100%)] lg:border-r lg:border-sky-200 lg:bg-[linear-gradient(180deg,rgba(239,246,255,0.94)_0%,rgba(224,242,254,0.90)_100%)]"
+    : "bg-slate-900 lg:border-r lg:border-slate-800 lg:bg-slate-900/70";
+  const loadingOverlayClass = isCompaniesMapView ? "bg-sky-100/70" : "bg-slate-900/70";
+  const loadingCardClass = isCompaniesMapView
+    ? "border-sky-200 bg-white/90"
+    : "border-slate-700 bg-slate-950/90";
+  const loadingTextClass = isCompaniesMapView ? "text-slate-700" : "text-slate-200";
+  const mapLoadingOverlayClass = isCompaniesMapView ? "bg-sky-100/80" : "bg-slate-900/95";
+  const mobileMapLoadingOverlayClass = isCompaniesMapView ? "bg-sky-100/70" : "bg-slate-900/70";
+  const hasMoreClass = isCompaniesMapView
+    ? "border-t border-sky-200 bg-sky-50/90 px-3 py-2 text-xs text-sky-800"
+    : "border-t border-slate-800 px-3 py-2 text-xs text-amber-300";
 
   const setMobilePaneWithUrl = useCallback((nextPane: "list" | "map") => {
     if (typeof window === "undefined") {
@@ -325,11 +342,11 @@ export function UnifiedMainMap({
   }, []);
 
   return (
-    <section className="relative flex h-full min-h-0 flex-col border border-slate-800 bg-slate-950/40">
+    <section className={shellClassName}>
       <div className="relative min-h-0 flex-1 overflow-hidden lg:grid lg:grid-cols-[minmax(380px,46%)_minmax(0,1fr)]">
         <aside
           ref={listScrollContainerRef}
-          className={`map-results-scroll absolute inset-y-0 left-0 z-20 w-full min-h-0 overflow-y-auto overflow-x-hidden bg-slate-900 transition-transform duration-300 ease-out lg:relative lg:h-full lg:w-auto lg:translate-x-0 lg:border-r lg:border-slate-800 lg:bg-slate-900/70 lg:transition-none ${
+          className={`map-results-scroll absolute inset-y-0 left-0 z-20 w-full min-h-0 overflow-y-auto overflow-x-hidden transition-transform duration-300 ease-out lg:relative lg:h-full lg:w-auto lg:translate-x-0 lg:transition-none ${listPaneSurfaceClass} ${
             isListPaneActiveOnMobile ? "translate-x-0" : "-translate-x-full"
           }`}
         >
@@ -393,14 +410,14 @@ export function UnifiedMainMap({
             ) : null}
           </div>
           {activeLoading ? (
-            <div className="pointer-events-none absolute inset-0 z-30 flex items-center justify-center bg-slate-900/70">
-              <div className="inline-flex items-center gap-2 rounded-md border border-slate-700 bg-slate-950/90 px-3 py-2">
+            <div className={`pointer-events-none absolute inset-0 z-30 flex items-center justify-center ${loadingOverlayClass}`}>
+              <div className={`inline-flex items-center gap-2 rounded-md border px-3 py-2 ${loadingCardClass}`}>
                 <div
                   className={`h-6 w-6 animate-spin rounded-full border-2 border-slate-500 ${activeViewConfig.spinnerTopBorderClass}`}
                   aria-label={activeLoadingLabel}
                   role="status"
                 />
-                <span className="text-xs font-medium text-slate-200">{activeLoadingLabel}</span>
+                <span className={`text-xs font-medium ${loadingTextClass}`}>{activeLoadingLabel}</span>
               </div>
             </div>
           ) : null}
@@ -410,7 +427,7 @@ export function UnifiedMainMap({
           <div className="relative h-full min-h-0 w-full">
             <div ref={mapContainerRef} className="h-full min-h-0 w-full" />
             {!isMapReady ? (
-              <div className="absolute inset-0 z-10 flex items-center justify-center bg-slate-900/95">
+              <div className={`absolute inset-0 z-10 flex items-center justify-center ${mapLoadingOverlayClass}`}>
                 <div
                   className={`h-8 w-8 animate-spin rounded-full border-2 border-slate-500 ${activeViewConfig.spinnerTopBorderClass}`}
                   aria-label={mapMessages.loading}
@@ -419,69 +436,55 @@ export function UnifiedMainMap({
               </div>
             ) : null}
             {isMapReady && activeLoading ? (
-              <div className="absolute inset-0 z-10 flex items-center justify-center bg-slate-900/70 lg:hidden">
-                <div className="inline-flex items-center gap-2 rounded-md border border-slate-700 bg-slate-950/90 px-3 py-2">
+              <div className={`absolute inset-0 z-10 flex items-center justify-center lg:hidden ${mobileMapLoadingOverlayClass}`}>
+                <div className={`inline-flex items-center gap-2 rounded-md border px-3 py-2 ${loadingCardClass}`}>
                   <div
                     className={`h-6 w-6 animate-spin rounded-full border-2 border-slate-500 ${activeViewConfig.spinnerTopBorderClass}`}
                     aria-label={activeLoadingLabel}
                     role="status"
                   />
-                  <span className="text-xs font-medium text-slate-200">{activeLoadingLabel}</span>
+                  <span className={`text-xs font-medium ${loadingTextClass}`}>{activeLoadingLabel}</span>
                 </div>
               </div>
             ) : null}
           </div>
         </div>
 
-        <div className="pointer-events-none absolute inset-0 z-20 lg:hidden">
-          {isListPaneActiveOnMobile ? (
-            <div className="pointer-events-auto absolute top-1 right-2">
-              <button
-                type="button"
-                className="inline-flex items-center gap-2 rounded-md border border-sky-200/90 bg-sky-400/85 px-3.5 py-2 text-sm font-semibold text-slate-950 shadow-xl shadow-slate-950/50 backdrop-blur-sm"
-                onClick={() => {
-                  setMobilePaneWithUrl("map");
-                }}
-                aria-label={mobileMapLabel}
-              >
-                <svg viewBox="0 0 24 24" aria-hidden="true" className="h-4 w-4" fill="none">
-                  <path
-                    d="M12 21s6-5.3 6-10a6 6 0 1 0-12 0c0 4.7 6 10 6 10Z"
-                    stroke="currentColor"
-                    strokeWidth="1.8"
-                  />
-                  <circle cx="12" cy="11" r="2.2" fill="currentColor" />
-                </svg>
-                <span>{mobileMapLabel}</span>
-              </button>
-            </div>
-          ) : (
-            <div className="pointer-events-auto absolute top-1 left-2">
-              <button
-                type="button"
-                className="inline-flex items-center gap-2 rounded-md border border-emerald-200/90 bg-emerald-400/85 px-3.5 py-2 text-sm font-semibold text-slate-950 shadow-xl shadow-slate-950/50 backdrop-blur-sm"
-                onClick={() => {
-                  setMobilePaneWithUrl("list");
-                }}
-                aria-label={mobileListLabel}
-              >
-                <svg viewBox="0 0 24 24" aria-hidden="true" className="h-4 w-4" fill="none">
-                  <path
-                    d="M5 7h14M5 12h14M5 17h14"
-                    stroke="currentColor"
-                    strokeWidth="2"
-                    strokeLinecap="round"
-                  />
-                </svg>
-                <span>{mobileListLabel}</span>
-              </button>
-            </div>
-          )}
+        <div className="pointer-events-none absolute inset-x-0 bottom-[max(0.75rem,env(safe-area-inset-bottom))] z-30 flex justify-center px-3 lg:hidden">
+          <button
+            type="button"
+            className="pointer-events-auto inline-flex items-center gap-2.5 rounded-full border border-[#99c3ea] bg-[linear-gradient(180deg,rgba(248,252,255,0.96)_0%,rgba(229,240,252,0.96)_100%)] px-4 py-2 text-sm font-semibold text-[#0f2b4f] shadow-[0_14px_32px_-16px_rgba(15,23,42,0.65)] backdrop-blur-sm transition-transform duration-150 active:translate-y-px"
+            onClick={() => {
+              setMobilePaneWithUrl(isListPaneActiveOnMobile ? "map" : "list");
+            }}
+            aria-label={isListPaneActiveOnMobile ? mobileMapLabel : mobileListLabel}
+          >
+            {isListPaneActiveOnMobile ? (
+              <svg viewBox="0 0 24 24" aria-hidden="true" className="h-4 w-4" fill="none">
+                <path
+                  d="M12 21s6-5.3 6-10a6 6 0 1 0-12 0c0 4.7 6 10 6 10Z"
+                  stroke="currentColor"
+                  strokeWidth="1.8"
+                />
+                <circle cx="12" cy="11" r="2.2" fill="currentColor" />
+              </svg>
+            ) : (
+              <svg viewBox="0 0 24 24" aria-hidden="true" className="h-4 w-4" fill="none">
+                <path
+                  d="M5 7h14M5 12h14M5 17h14"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                />
+              </svg>
+            )}
+            <span>{isListPaneActiveOnMobile ? mobileMapLabel : mobileListLabel}</span>
+          </button>
         </div>
       </div>
 
       {activeHasMore ? (
-        <p className="border-t border-slate-800 px-3 py-2 text-xs text-amber-300">
+        <p className={hasMoreClass}>
           {resolveTooManyResultsLabel({
             activeMapView,
             announcementsMessages,

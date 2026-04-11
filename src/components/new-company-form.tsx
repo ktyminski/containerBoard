@@ -9,7 +9,6 @@ import { useToast } from "@/components/toast-provider";
 import { TurnstileWidget } from "@/components/turnstile-widget";
 import type { AppLocale, AppMessages } from "@/lib/i18n";
 import { formatTemplate, LOCALE_HEADER_NAME, withLang } from "@/lib/i18n";
-import { COMPANY_CATEGORIES } from "@/types/company-category";
 import { COMPANY_COMMUNICATION_LANGUAGES } from "@/types/company-communication-language";
 import { COMPANY_SPECIALIZATIONS } from "@/types/company-specialization";
 import { BranchCard } from "@/components/new-company-form/branch-card";
@@ -42,7 +41,6 @@ import type {
 type NewCompanyFormProps = {
   locale: AppLocale;
   messages: AppMessages["companyCreate"];
-  mapMessages: AppMessages["map"];
   companyCreationLimit?: {
     isLimited: boolean;
     limit: number;
@@ -177,7 +175,6 @@ function writeStepToCurrentUrl(stepIndex: number, mode: "push" | "replace"): voi
 export function NewCompanyForm({
   locale,
   messages,
-  mapMessages,
   companyCreationLimit,
   initialValues,
   submitEndpoint = "/api/companies",
@@ -254,7 +251,6 @@ export function NewCompanyForm({
     return {
       name: "",
       description: "",
-      category: "logistics",
       communicationLanguages: [],
       operatingArea: "local",
       operatingAreaDetails: "",
@@ -291,14 +287,6 @@ export function NewCompanyForm({
     name: "branches",
   });
 
-  const categoryOptions = useMemo(
-    () =>
-      COMPANY_CATEGORIES.map((value) => ({
-        value,
-        label: mapMessages.categories[value],
-      })),
-    [mapMessages.categories],
-  );
   const companyBenefitOptions = useMemo(
     () =>
       COMPANY_BENEFITS.map((value) => ({
@@ -560,7 +548,6 @@ export function NewCompanyForm({
       const isStepValid = await trigger([
         "name",
         "nip",
-        "category",
         "operatingArea",
         "description",
         "operatingAreaDetails",
@@ -677,7 +664,7 @@ export function NewCompanyForm({
       const formData = new FormData();
       formData.set("name", values.name);
       formData.set("description", values.description);
-      formData.set("category", values.category);
+      formData.set("category", "other");
       formData.set(
         "communicationLanguages",
         JSON.stringify(values.communicationLanguages),
@@ -1008,22 +995,6 @@ export function NewCompanyForm({
             ) : (
               <p className="text-xs text-slate-400">{messages.nipHint}</p>
             )}
-          </label>
-
-          <label className="mx-auto grid w-full gap-1 text-sm md:w-[70%]">
-            <span className="text-slate-300">{messages.category}*</span>
-            <select
-              className="rounded-md border border-slate-600/80 bg-slate-900/80 px-3 py-2 text-slate-100"
-              {...register("category", {
-                required: messages.requiredField,
-              })}
-            >
-              {categoryOptions.map((item) => (
-                <option key={item.value} value={item.value}>
-                  {item.label}
-                </option>
-              ))}
-            </select>
           </label>
 
           <label className="mx-auto grid w-full gap-1 text-sm md:w-[70%]">
@@ -1465,7 +1436,6 @@ export function NewCompanyForm({
               <BranchCard
                 locale={locale}
                 messages={messages}
-                categoryOptions={categoryOptions}
                 index={index}
                 branchesCount={fields.length}
                 branch={branch}

@@ -9,7 +9,6 @@ import type {
 import { BranchLocationPicker } from "@/components/branch-location-picker";
 import type { AppLocale, AppMessages } from "@/lib/i18n";
 import type { GeocodeAddressParts } from "@/lib/geocode-address";
-import type { CompanyCategory } from "@/types/company-category";
 import {
   PHONE_REGEX,
   getFieldMessage,
@@ -20,7 +19,6 @@ import type { BranchFormValue, NewCompanyFormValues } from "./types";
 type BranchCardProps = {
   locale: AppLocale;
   messages: AppMessages["companyCreate"];
-  categoryOptions: Array<{ value: CompanyCategory; label: string }>;
   index: number;
   branchesCount: number;
   branch: BranchFormValue | undefined;
@@ -53,7 +51,6 @@ type GeocodeResponse = {
 export function BranchCard({
   locale,
   messages,
-  categoryOptions,
   index,
   branchesCount,
   branch,
@@ -279,7 +276,7 @@ export function BranchCard({
         </button>
 
         {branch?.useCustomDetails ? (
-          <div className="grid gap-3 md:grid-cols-3">
+          <div className="grid gap-3 md:grid-cols-2">
             <label className="grid gap-1 text-sm">
               <span className="text-slate-300">{messages.branchPhone}</span>
               <input
@@ -310,21 +307,6 @@ export function BranchCard({
               (branchEmailTouched || isSubmitted) ? (
                 <p className="text-xs text-red-300">{branchEmailError}</p>
               ) : null}
-            </label>
-
-            <label className="grid gap-1 text-sm">
-              <span className="text-slate-300">{messages.branchCategory}</span>
-              <select
-                className="rounded-md border border-slate-600/80 bg-slate-900/80 px-3 py-2 text-slate-100"
-                {...register(`branches.${index}.category`)}
-              >
-                <option value="">{messages.useCompanyDefaults}</option>
-                {categoryOptions.map((item) => (
-                  <option key={item.value} value={item.value}>
-                    {item.label}
-                  </option>
-                ))}
-              </select>
             </label>
           </div>
         ) : (

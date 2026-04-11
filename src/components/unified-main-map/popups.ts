@@ -4,7 +4,6 @@ import { withLang, type AppLocale, type AppMessages, formatTemplate } from "@/li
 import type { CompanyMapItem } from "@/types/company";
 import type { JobAnnouncementMapItem, OfferMapItem } from "@/components/unified-main-map/types";
 import {
-  categoryToLabel,
   escapeHtml,
   formatCompanySummary,
   formatSalaryRange,
@@ -106,7 +105,6 @@ function companyPopupCard(
   locale: AppLocale,
 ): string {
   const summary = escapeHtml(formatCompanySummary(company, messages, operatingAreaLabels, specializationLabels));
-  const categoryLabel = escapeHtml(categoryToLabel(messages, company.category));
   const detailsUrl = withLang(`/companies/${company.slug}`, locale);
   const fallbackColor = getCompanyFallbackColor(company.id);
   const premiumLogoStyle = company.isPremium
@@ -119,7 +117,6 @@ function companyPopupCard(
     ? "company-map-popup-card company-map-popup-card--premium"
     : "company-map-popup-card";
   const nameStyle = company.isPremium ? ' style="color:#d1fae5;"' : "";
-  const categoryStyle = company.isPremium ? ' style="color:rgba(167,243,208,0.92);"' : "";
   const summaryStyle = company.isPremium ? ' style="color:rgba(110,231,183,0.86);"' : "";
   const logo = company.logoUrl
     ? `<img src="${escapeHtml(company.logoUrl)}" alt="${escapeHtml(company.name)}" style="width:100%;height:100%;object-fit:contain;" />`
@@ -140,7 +137,6 @@ function companyPopupCard(
             ${verifiedBadge}
           </span>
         </div>
-        <div class="company-map-popup-card__category"${categoryStyle}>${categoryLabel}</div>
         <div class="company-map-popup-card__summary"${summaryStyle}>${summary}</div>
       </div>
     </div>

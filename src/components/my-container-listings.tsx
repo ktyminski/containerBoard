@@ -5,8 +5,8 @@ import { useCallback, useEffect, useState } from "react";
 import { useToast } from "@/components/toast-provider";
 import { type ContainerListingItem } from "@/lib/container-listings";
 import {
+  getContainerShortLabel,
   LISTING_STATUS,
-  type ContainerType,
   type ListingType,
 } from "@/lib/container-listing-types";
 
@@ -24,16 +24,6 @@ type MineResponse = {
 const LISTING_TYPE_LABEL: Record<ListingType, string> = {
   available: "Dostepny",
   wanted: "Poszukiwany",
-};
-
-const CONTAINER_TYPE_LABEL: Record<ContainerType, string> = {
-  "20DV": "20DV",
-  "40DV": "40DV",
-  "40HC": "40HC",
-  reefer: "Reefer",
-  open_top: "Open Top",
-  flat_rack: "Flat Rack",
-  other: "Inny",
 };
 
 export function MyContainerListings() {
@@ -140,7 +130,7 @@ export function MyContainerListings() {
             <li key={item.id} className="rounded-lg border border-slate-800 bg-slate-950/60 p-3">
               <div className="flex flex-wrap items-center justify-between gap-2">
                 <h2 className="text-lg font-semibold text-slate-100">
-                  {CONTAINER_TYPE_LABEL[item.containerType]} • {LISTING_TYPE_LABEL[item.type]}
+                  {getContainerShortLabel(item.container)} • {LISTING_TYPE_LABEL[item.type]}
                 </h2>
                 <span
                   className={

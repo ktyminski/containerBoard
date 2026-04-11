@@ -10,20 +10,33 @@ export const metadata: Metadata = {
   description: "Dodaj nowe ogloszenie kontenera w mniej niz minute.",
 };
 
-export default async function NewContainerPage() {
+type NewContainerPageProps = {
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
+};
+
+function resolveKind(value: string | string[] | undefined): "available" | "wanted" | undefined {
+  const raw = typeof value === "string" ? value : value?.[0];
+  return raw === "available" || raw === "wanted" ? raw : undefined;
+}
+
+export default async function NewContainerPage({ searchParams }: NewContainerPageProps) {
+  const params = await searchParams;
+  const kind = resolveKind(params.kind);
+  const nextPath = kind ? `/containers/new?kind=${kind}` : "/containers/new";
+
   const cookieStore = await cookies();
   const token = cookieStore.get(SESSION_COOKIE_NAME)?.value;
   if (!token) {
-    redirect("/login?next=/containers/new");
+    redirect(`/login?next=${encodeURIComponent(nextPath)}`);
   }
 
   const user = await getCurrentUserFromToken(token);
   if (!user?._id) {
-    redirect("/login?next=/containers/new");
+    redirect(`/login?next=${encodeURIComponent(nextPath)}`);
   }
 
   return (
-    <main className="mx-auto w-full max-w-3xl px-4 py-6 sm:px-6">
+    <main className="mx-auto w-full max-w-5xl px-4 py-6 sm:px-6">
       <header className="mb-4">
         <h1 className="text-2xl font-semibold text-slate-100">Dodaj kontener</h1>
         <p className="mt-1 text-sm text-slate-300">Prosty formularz publikacji kontenera (wygasa po 14 dniach).</p>
@@ -37,6 +50,7 @@ export default async function NewContainerPage() {
         successMessage="Kontener opublikowany"
         backHref="/containers/mine"
         backLabel="Powrot do moich kontenerow"
+        initialValues={kind ? { type: kind } : undefined}
       />
     </main>
   );

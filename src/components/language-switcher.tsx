@@ -21,14 +21,15 @@ export function LanguageSwitcher({ locale, messages }: LanguageSwitcherProps) {
       disabled={isSingleLanguage}
       className={
         isSingleLanguage
-          ? "inline-flex h-10 shrink-0 items-center gap-1.5 rounded-md border border-slate-700 bg-slate-950 px-2.5 text-sm font-medium text-slate-300 opacity-80 md:px-3"
-          : "inline-flex h-10 shrink-0 items-center gap-1.5 rounded-md border border-slate-700 bg-slate-950 px-2.5 text-sm font-medium text-slate-100 md:px-3"
+          ? "inline-flex h-9 w-10 shrink-0 items-center justify-center rounded-md border border-[#2f639a] bg-[#082650]/80 text-sm font-medium text-[#bfdbfe] opacity-80"
+          : "inline-flex h-9 w-10 shrink-0 items-center justify-center rounded-md border border-[#2f639a] bg-[#082650]/80 text-sm font-medium text-[#e2efff] transition hover:border-[#4e86c3] hover:bg-[#0c3466]"
       }
     >
-      <span className="rounded border border-slate-600 px-1.5 py-0.5 text-[10px] leading-none tracking-wide uppercase">
-        {activeLocale}
+      <span className="sr-only">{activeLabel}</span>
+      <span className="relative block h-4 w-6 overflow-hidden rounded-sm border border-[#4e86c3]">
+        <span className="absolute inset-x-0 top-0 h-1/2 bg-white" />
+        <span className="absolute inset-x-0 bottom-0 h-1/2 bg-[#dc2626]" />
       </span>
-      <span className="hidden md:inline">{activeLabel}</span>
     </button>
   );
 }

@@ -2,34 +2,82 @@
 import { ObjectId, type Filter } from "mongodb";
 import { z } from "zod";
 import { getCurrentUserFromRequest } from "@/lib/auth-user";
+import { normalizeGeocodeAddressParts } from "@/lib/geocode-address";
 import {
   buildContainerListingsFilter,
   ensureContainerListingsIndexes,
   expireContainerListingsIfNeeded,
   getContainerListingsCollection,
   getDefaultListingExpiration,
+  mapContainerListingToMapPoint,
   mapContainerListingToItem,
   type ContainerListingDocument,
 } from "@/lib/container-listings";
 import {
+  CONTAINER_CONDITIONS,
+  CONTAINER_FEATURES,
+  CONTAINER_HEIGHTS,
+  CONTAINER_SIZES,
   CONTAINER_TYPES,
   DEAL_TYPES,
   LISTING_STATUSES,
   LISTING_TYPES,
   LISTING_STATUS,
+  type ContainerSize,
   type ListingStatus,
 } from "@/lib/container-listing-types";
 import { enforceRateLimitOrResponse } from "@/lib/request-rate-limit";
 import { logError } from "@/lib/server-logger";
 
 export const runtime = "nodejs";
+const MAX_POPUP_DETAILS_IDS = 80;
+const MAX_MAP_POINTS = 50_000;
+
+const locationAddressPartsSchema = z.object({
+  street: z.string().trim().min(1).max(120).optional(),
+  houseNumber: z.string().trim().min(1).max(40).optional(),
+  city: z.string().trim().min(1).max(120).optional(),
+  country: z.string().trim().min(1).max(120).optional(),
+});
 
 const querySchema = z.object({
   page: z.coerce.number().int().min(1).default(1),
-  pageSize: z.coerce.number().int().min(1).max(100).default(20),
+  pageSize: z.coerce.number().int().min(1).max(500).default(20),
   q: z.string().trim().min(1).max(120).optional(),
   type: z.enum(LISTING_TYPES).optional(),
+  containerSize: z.enum(["10", "20", "40", "45", "53"]).transform((value) => {
+    if (value === "10") {
+      return 10;
+    }
+    if (value === "20") {
+      return 20;
+    }
+    if (value === "40") {
+      return 40;
+    }
+    if (value === "45") {
+      return 45;
+    }
+    return 53;
+  }).optional(),
+  containerHeight: z.enum(CONTAINER_HEIGHTS).optional(),
   containerType: z.enum(CONTAINER_TYPES).optional(),
+  containerFeature: z.enum(CONTAINER_FEATURES).optional(),
+  containerCondition: z.enum(CONTAINER_CONDITIONS).optional(),
+  locationLat: z.coerce.number().finite().min(-90).max(90).optional(),
+  locationLng: z.coerce.number().finite().min(-180).max(180).optional(),
+  radiusKm: z.enum(["20", "50", "100", "200"]).transform((value) => {
+    if (value === "20") {
+      return 20;
+    }
+    if (value === "50") {
+      return 50;
+    }
+    if (value === "100") {
+      return 100;
+    }
+    return 200;
+  }).optional(),
   dealType: z.enum(DEAL_TYPES).optional(),
   city: z.string().trim().min(1).max(120).optional(),
   country: z.string().trim().min(1).max(120).optional(),
@@ -40,14 +88,31 @@ const querySchema = z.object({
     .transform((value) => value === "1" || value === "true"),
   sortBy: z.enum(["createdAt", "availableFrom", "expiresAt", "quantity"]).default("createdAt"),
   sortDir: z.enum(["asc", "desc"]).default("desc"),
+  view: z.enum(["list", "map"]).default("list"),
+  all: z
+    .string()
+    .optional()
+    .transform((value) => value === "1" || value === "true"),
+  ids: z.string().trim().optional(),
 });
 
 const createSchema = z.object({
   type: z.enum(LISTING_TYPES),
-  containerType: z.enum(CONTAINER_TYPES),
+  container: z.object({
+    size: z
+      .number()
+      .int()
+      .refine((value) => CONTAINER_SIZES.includes(value as (typeof CONTAINER_SIZES)[number])),
+    height: z.enum(CONTAINER_HEIGHTS),
+    type: z.enum(CONTAINER_TYPES),
+    features: z.array(z.enum(CONTAINER_FEATURES)).default([]),
+    condition: z.enum(CONTAINER_CONDITIONS),
+  }),
   quantity: z.coerce.number().int().min(1).max(100_000),
-  locationCity: z.string().trim().min(2).max(120),
-  locationCountry: z.string().trim().min(2).max(120),
+  locationLat: z.coerce.number().finite().min(-90).max(90),
+  locationLng: z.coerce.number().finite().min(-180).max(180),
+  locationAddressLabel: z.string().trim().max(250).optional(),
+  locationAddressParts: locationAddressPartsSchema.optional(),
   availableFrom: z.coerce.date(),
   dealType: z.enum(DEAL_TYPES),
   price: z.string().trim().max(100).optional(),
@@ -90,7 +155,14 @@ export async function GET(request: NextRequest) {
       pageSize,
       q,
       type,
+      containerSize,
+      containerHeight,
       containerType,
+      containerFeature,
+      containerCondition,
+      locationLat,
+      locationLng,
+      radiusKm,
       dealType,
       city,
       country,
@@ -98,6 +170,9 @@ export async function GET(request: NextRequest) {
       mine,
       sortBy,
       sortDir,
+      view,
+      all,
+      ids,
     } = parsed.data;
 
     const user = mine ? await getCurrentUserFromRequest(request) : null;
@@ -109,7 +184,14 @@ export async function GET(request: NextRequest) {
     const filter = buildContainerListingsFilter({
       q,
       type,
+      containerSize,
+      containerHeight,
       containerType,
+      containerFeature,
+      containerCondition,
+      locationLat,
+      locationLng,
+      radiusKm,
       dealType,
       city,
       country,
@@ -134,6 +216,74 @@ export async function GET(request: NextRequest) {
 
     const listings = await getContainerListingsCollection();
     const typedFilter = filter as Filter<ContainerListingDocument>;
+
+    if (ids) {
+      const requestedIds = ids
+        .split(",")
+        .map((value) => value.trim())
+        .filter(Boolean)
+        .slice(0, MAX_POPUP_DETAILS_IDS);
+
+      if (requestedIds.length === 0) {
+        return NextResponse.json({ items: [] });
+      }
+
+      const validObjectIds = requestedIds
+        .filter((value) => ObjectId.isValid(value))
+        .map((value) => new ObjectId(value));
+
+      if (validObjectIds.length === 0) {
+        return NextResponse.json({ items: [] });
+      }
+
+      const rows = await listings
+        .find({
+          ...typedFilter,
+          _id: { $in: validObjectIds },
+        })
+        .toArray();
+
+      const byId = new Map(rows.map((row) => [row._id.toHexString(), row]));
+      const ordered = requestedIds
+        .map((id) => byId.get(id))
+        .filter((row): row is ContainerListingDocument => Boolean(row));
+
+      return NextResponse.json({
+        items: ordered.map(mapContainerListingToItem),
+      });
+    }
+
+    if (view === "map") {
+      const rows = await listings
+        .find(typedFilter)
+        .sort(sort)
+        .limit(all ? MAX_MAP_POINTS : pageSize)
+        .project({
+          _id: 1,
+          type: 1,
+          locationLat: 1,
+          locationLng: 1,
+        })
+        .toArray();
+
+      return NextResponse.json({
+        items: rows.map((row) =>
+          mapContainerListingToMapPoint(
+            row as Pick<
+              ContainerListingDocument,
+              "_id" | "type" | "locationLat" | "locationLng"
+            >,
+          ),
+        ),
+        meta: {
+          page: 1,
+          pageSize: rows.length,
+          total: rows.length,
+          totalPages: 1,
+          truncated: all && rows.length >= MAX_MAP_POINTS,
+        },
+      });
+    }
 
     const total = await listings.countDocuments(typedFilter);
     const totalPages = Math.max(1, Math.ceil(total / pageSize));
@@ -218,14 +368,28 @@ export async function POST(request: NextRequest) {
 
     const now = new Date();
     const listing = parsed.data;
+    const locationAddressLabel = normalizeOptionalString(listing.locationAddressLabel);
+    const locationAddressParts = normalizeGeocodeAddressParts(listing.locationAddressParts);
+    const locationCity = locationAddressParts?.city ?? "";
+    const locationCountry = locationAddressParts?.country ?? "";
     const listings = await getContainerListingsCollection();
     const insertResult = await listings.insertOne({
       _id: new ObjectId(),
       type: listing.type,
-      containerType: listing.containerType,
+      container: {
+        size: listing.container.size as ContainerSize,
+        height: listing.container.height,
+        type: listing.container.type,
+        features: Array.from(new Set(listing.container.features)),
+        condition: listing.container.condition,
+      },
       quantity: listing.quantity,
-      locationCity: listing.locationCity.trim(),
-      locationCountry: listing.locationCountry.trim(),
+      locationCity,
+      locationCountry,
+      locationLat: listing.locationLat,
+      locationLng: listing.locationLng,
+      ...(locationAddressLabel ? { locationAddressLabel } : {}),
+      ...(locationAddressParts ? { locationAddressParts } : {}),
       availableFrom: listing.availableFrom,
       dealType: listing.dealType,
       price: normalizeOptionalString(listing.price),

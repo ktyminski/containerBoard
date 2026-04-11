@@ -1,4 +1,3 @@
-import type { CompanyCategory } from "@/types/company-category";
 import type { CompanyCommunicationLanguage } from "@/types/company-communication-language";
 import type { CompanyBenefit } from "@/lib/company-benefits";
 import type { CompanyOperatingArea } from "@/lib/company-operating-area";
@@ -27,7 +26,6 @@ export type BranchFormValue = {
 export type NewCompanyFormValues = {
   name: string;
   description: string;
-  category: CompanyCategory;
   communicationLanguages: CompanyCommunicationLanguage[];
   operatingArea: CompanyOperatingArea;
   operatingAreaDetails: string;

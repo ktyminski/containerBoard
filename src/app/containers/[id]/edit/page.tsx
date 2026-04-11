@@ -8,6 +8,7 @@ import { getCurrentUserFromToken } from "@/lib/auth-user";
 import {
   ensureContainerListingsIndexes,
   getContainerListingsCollection,
+  mapContainerListingToItem,
 } from "@/lib/container-listings";
 import { USER_ROLE } from "@/lib/user-roles";
 
@@ -46,6 +47,7 @@ export default async function EditContainerPage({ params }: EditContainerPagePro
   if (!listing?._id) {
     notFound();
   }
+  const listingItem = mapContainerListingToItem(listing);
 
   const canEdit =
     currentUser.role === USER_ROLE.ADMIN ||
@@ -56,7 +58,7 @@ export default async function EditContainerPage({ params }: EditContainerPagePro
   }
 
   return (
-    <main className="mx-auto w-full max-w-3xl px-4 py-6 sm:px-6">
+    <main className="mx-auto w-full max-w-5xl px-4 py-6 sm:px-6">
       <header className="mb-4">
         <h1 className="text-2xl font-semibold text-slate-100">Edytuj kontener</h1>
       </header>
@@ -70,18 +72,33 @@ export default async function EditContainerPage({ params }: EditContainerPagePro
         backHref={`/containers/${listing._id.toHexString()}`}
         backLabel="Powrot do szczegolow"
         initialValues={{
-          type: listing.type,
-          containerType: listing.containerType,
-          quantity: listing.quantity,
-          locationCity: listing.locationCity,
-          locationCountry: listing.locationCountry,
-          availableFrom: listing.availableFrom.toISOString().slice(0, 10),
-          dealType: listing.dealType,
-          price: listing.price ?? "",
-          description: listing.description ?? "",
-          companyName: listing.companyName,
-          contactEmail: listing.contactEmail,
-          contactPhone: listing.contactPhone ?? "",
+          type: listingItem.type,
+          containerSize: listingItem.container.size,
+          containerHeight: listingItem.container.height,
+          containerType: listingItem.container.type,
+          containerFeatures: listingItem.container.features,
+          containerCondition: listingItem.container.condition,
+          quantity: listingItem.quantity,
+          locationLat:
+            typeof listingItem.locationLat === "number"
+              ? listingItem.locationLat.toFixed(6)
+              : "",
+          locationLng:
+            typeof listingItem.locationLng === "number"
+              ? listingItem.locationLng.toFixed(6)
+              : "",
+          locationAddressLabel: listingItem.locationAddressLabel ?? "",
+          locationStreet: listingItem.locationAddressParts?.street ?? "",
+          locationHouseNumber: listingItem.locationAddressParts?.houseNumber ?? "",
+          locationAddressCity: listingItem.locationAddressParts?.city ?? listingItem.locationCity,
+          locationAddressCountry: listingItem.locationAddressParts?.country ?? listingItem.locationCountry,
+          availableFrom: listingItem.availableFrom.slice(0, 10),
+          dealType: listingItem.dealType,
+          price: listingItem.price ?? "",
+          description: listingItem.description ?? "",
+          companyName: listingItem.companyName,
+          contactEmail: listingItem.contactEmail,
+          contactPhone: listingItem.contactPhone ?? "",
         }}
       />
     </main>

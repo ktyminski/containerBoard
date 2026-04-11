@@ -10,8 +10,16 @@ import {
   ensureContainerListingsIndexes,
   expireContainerListingsIfNeeded,
   getContainerListingsCollection,
+  mapContainerListingToItem,
 } from "@/lib/container-listings";
-import { LISTING_STATUS } from "@/lib/container-listing-types";
+import {
+  CONTAINER_CONDITION_LABEL,
+  CONTAINER_FEATURE_LABEL,
+  CONTAINER_HEIGHT_LABEL,
+  CONTAINER_TYPE_LABEL,
+  getContainerShortLabel,
+  LISTING_STATUS,
+} from "@/lib/container-listing-types";
 import { USER_ROLE } from "@/lib/user-roles";
 
 type ContainerDetailsPageProps = {
@@ -39,6 +47,7 @@ export default async function ContainerDetailsPage({ params }: ContainerDetailsP
   if (!listing?._id) {
     notFound();
   }
+  const listingItem = mapContainerListingToItem(listing);
 
   const cookieStore = await cookies();
   const token = cookieStore.get(SESSION_COOKIE_NAME)?.value;
@@ -52,6 +61,14 @@ export default async function ContainerDetailsPage({ params }: ContainerDetailsP
   if (!isPublic && !isOwner && !isAdmin) {
     notFound();
   }
+
+  const streetLine = listing.locationAddressParts?.street
+    ? [listing.locationAddressParts.street, listing.locationAddressParts.houseNumber]
+      .filter(Boolean)
+      .join(" ")
+    : null;
+  const resolvedAddress = listing.locationAddressLabel
+    ?? [streetLine, listing.locationCity, listing.locationCountry].filter(Boolean).join(", ");
 
   return (
     <main className="mx-auto grid w-full max-w-5xl gap-4 px-4 py-6 sm:px-6">
@@ -75,17 +92,33 @@ export default async function ContainerDetailsPage({ params }: ContainerDetailsP
       <article className="rounded-xl border border-slate-800 bg-slate-900/60 p-5">
         <p className="text-sm text-slate-400">{listing.companyName}</p>
         <h1 className="mt-1 text-2xl font-semibold text-slate-100">
-          {listing.containerType} • {listing.type === "available" ? "Dostepny" : "Poszukiwany"}
+          {getContainerShortLabel(listingItem.container)} • {listing.type === "available" ? "Dostepny" : "Poszukiwany"}
         </h1>
 
         <div className="mt-3 grid gap-2 text-sm text-slate-300 sm:grid-cols-2 lg:grid-cols-3">
           <p>Ilosc: <span className="text-slate-100">{listing.quantity}</span></p>
           <p>Lokalizacja: <span className="text-slate-100">{listing.locationCity}, {listing.locationCountry}</span></p>
+          {resolvedAddress ? <p>Adres: <span className="text-slate-100">{resolvedAddress}</span></p> : null}
+          <p>Rozmiar: <span className="text-slate-100">{listingItem.container.size} ft</span></p>
+          <p>Wysokosc: <span className="text-slate-100">{CONTAINER_HEIGHT_LABEL[listingItem.container.height]}</span></p>
+          <p>Rodzaj: <span className="text-slate-100">{CONTAINER_TYPE_LABEL[listingItem.container.type]}</span></p>
+          <p>Stan: <span className="text-slate-100">{CONTAINER_CONDITION_LABEL[listingItem.container.condition]}</span></p>
           <p>Typ transakcji: <span className="text-slate-100">{listing.dealType}</span></p>
           <p>Dostepny od: <span className="text-slate-100">{listing.availableFrom.toLocaleDateString("pl-PL")}</span></p>
           <p>Wygasa: <span className="text-slate-100">{listing.expiresAt.toLocaleDateString("pl-PL")}</span></p>
           <p>Status: <span className="text-slate-100">{listing.status}</span></p>
         </div>
+
+        {listingItem.container.features.length > 0 ? (
+          <div className="mt-3">
+            <p className="text-sm text-slate-300">Cechy:</p>
+            <p className="text-sm text-slate-100">
+              {listingItem.container.features
+                .map((feature) => CONTAINER_FEATURE_LABEL[feature])
+                .join(", ")}
+            </p>
+          </div>
+        ) : null}
 
         {listing.price ? (
           <p className="mt-3 text-sm text-slate-200">Cena: {listing.price}</p>

@@ -87,7 +87,7 @@ export function UserAccountMenu({
     <div ref={containerRef} className="relative">
       <button
         type="button"
-        className="relative inline-flex h-10 w-10 items-center justify-center rounded-md border border-slate-700 text-slate-200 hover:border-slate-500 md:h-auto md:w-auto md:gap-2 md:px-3 md:py-2 md:text-sm"
+        className="relative inline-flex h-9 w-9 items-center justify-center rounded-md border border-[#2f639a] bg-[#082650]/80 text-[#e2efff] transition hover:border-[#4e86c3] hover:bg-[#0c3466] md:h-9 md:w-auto md:gap-2 md:px-3 md:py-0 md:text-sm"
         aria-expanded={isOpen}
         aria-haspopup="menu"
         aria-label={userName}
@@ -139,16 +139,16 @@ export function UserAccountMenu({
         <svg
           viewBox="0 0 20 20"
           aria-hidden="true"
-          className={`hidden h-4 w-4 text-slate-400 transition-transform md:inline ${isOpen ? "rotate-180" : ""}`}
+          className={`hidden h-4 w-4 text-[#9ecbf0] transition-transform md:inline ${isOpen ? "rotate-180" : ""}`}
         >
           <path d="M5.5 7.25 10 12.75l4.5-5.5" fill="none" stroke="currentColor" strokeWidth="1.8" />
         </svg>
       </button>
       {isOpen ? (
-        <div className="absolute right-0 z-20 mt-2 grid min-w-52 gap-1 rounded-md border border-slate-700 bg-slate-900 p-2 shadow-lg">
-          <div className="rounded-md border border-slate-700 bg-slate-950/60 px-3 py-2">
-            <p className="truncate text-sm text-slate-100">{userName}</p>
-            <p className="mt-1 text-xs text-slate-400">
+        <div className="absolute right-0 z-20 mt-2 grid min-w-52 gap-1 rounded-md border border-[#24558d] bg-[#051c3f] p-2 shadow-[0_20px_40px_-22px_rgba(3,16,38,0.95)]">
+          <div className="rounded-md border border-[#2f639a] bg-[#082650]/85 px-3 py-2">
+            <p className="truncate text-sm text-[#e2efff]">{userName}</p>
+            <p className="mt-1 text-xs text-[#9ecbf0]">
               {accountTypeLabel}: {roleLabel}
             </p>
             {!isEmailVerified ? (
@@ -163,7 +163,7 @@ export function UserAccountMenu({
           {adminPanelLabel && adminPanelHref ? (
             <Link
               href={adminPanelHref}
-              className="whitespace-nowrap rounded-md px-3 py-2 text-left text-sm text-sky-200 hover:bg-slate-800 md:hidden"
+              className="whitespace-nowrap rounded-md px-3 py-2 text-left text-sm text-[#a7e0ff] transition hover:bg-[#103969] md:hidden"
               onClick={() => {
                 setIsOpen(false);
               }}
@@ -176,8 +176,8 @@ export function UserAccountMenu({
               href={companyPanelHref}
               className={
                 hasBlockedCompany
-                  ? "inline-flex items-center justify-between gap-2 whitespace-nowrap rounded-md px-3 py-2 text-left text-sm text-rose-200 hover:bg-slate-800 md:hidden"
-                  : "inline-flex items-center justify-between gap-2 whitespace-nowrap rounded-md px-3 py-2 text-left text-sm text-emerald-200 hover:bg-slate-800 md:hidden"
+                  ? "inline-flex items-center justify-between gap-2 whitespace-nowrap rounded-md px-3 py-2 text-left text-sm text-rose-200 transition hover:bg-[#103969] md:hidden"
+                  : "inline-flex items-center justify-between gap-2 whitespace-nowrap rounded-md px-3 py-2 text-left text-sm text-emerald-200 transition hover:bg-[#103969] md:hidden"
               }
               onClick={() => {
                 setIsOpen(false);
@@ -198,7 +198,7 @@ export function UserAccountMenu({
           {myLeadRequestsLabel && myLeadRequestsHref ? (
             <Link
               href={myLeadRequestsHref}
-              className="whitespace-nowrap rounded-md px-3 py-2 text-left text-sm text-slate-200 hover:bg-slate-800"
+              className="whitespace-nowrap rounded-md px-3 py-2 text-left text-sm text-[#dbeafe] transition hover:bg-[#103969]"
               onClick={() => {
                 setIsOpen(false);
               }}
@@ -208,7 +208,7 @@ export function UserAccountMenu({
           ) : null}
           <Link
             href={settingsHref}
-            className="whitespace-nowrap rounded-md px-3 py-2 text-left text-sm text-slate-200 hover:bg-slate-800"
+            className="whitespace-nowrap rounded-md px-3 py-2 text-left text-sm text-[#dbeafe] transition hover:bg-[#103969]"
             onClick={() => {
               setIsOpen(false);
             }}
@@ -218,7 +218,7 @@ export function UserAccountMenu({
           <form action="/api/auth/logout?redirect=1" method="post">
             <button
               type="submit"
-              className="w-full rounded-md px-3 py-2 text-left text-sm text-slate-200 hover:bg-slate-800"
+              className="w-full rounded-md px-3 py-2 text-left text-sm text-[#dbeafe] transition hover:bg-[#103969]"
             >
               {logoutLabel}
             </button>

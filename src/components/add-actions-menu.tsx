@@ -2,42 +2,14 @@
 
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
-import { useToast } from "@/components/toast-provider";
+import type { AppLocale } from "@/lib/i18n";
+import { withLang } from "@/lib/i18n";
 
 type AddActionsMenuProps = {
-  buttonLabel: string;
-  addCompanyLabel: string;
-  addAnnouncementLabel: string;
-  addOfferLabel: string;
-  addLeadRequestLabel: string;
-  addCompanyHref: string;
-  addAnnouncementHref: string;
-  addOfferHref: string;
-  addLeadRequestHref: string;
-  blockAddCompany?: boolean;
-  addCompanyBlockedMessage?: string;
-  buttonClassName?: string;
-  menuClassName?: string;
-  collapseLabelOnMobile?: boolean;
+  locale: AppLocale;
 };
 
-export function AddActionsMenu({
-  buttonLabel,
-  addCompanyLabel,
-  addAnnouncementLabel,
-  addOfferLabel,
-  addLeadRequestLabel,
-  addCompanyHref,
-  addAnnouncementHref,
-  addOfferHref,
-  addLeadRequestHref,
-  blockAddCompany = false,
-  addCompanyBlockedMessage = "",
-  buttonClassName,
-  menuClassName,
-  collapseLabelOnMobile = true,
-}: AddActionsMenuProps) {
-  const toast = useToast();
+export function AddActionsMenu({ locale }: AddActionsMenuProps) {
   const [isOpen, setIsOpen] = useState(false);
   const containerRef = useRef<HTMLDivElement | null>(null);
 
@@ -72,75 +44,42 @@ export function AddActionsMenu({
     <div ref={containerRef} className="relative">
       <button
         type="button"
-        className={
-          buttonClassName ??
-          "inline-flex h-10 w-10 items-center justify-center rounded-md border border-emerald-700 text-lg font-semibold text-emerald-200 hover:border-emerald-500 md:h-auto md:w-auto md:px-3 md:py-2 md:text-sm md:font-normal"
-        }
+        className="inline-flex h-9 shrink-0 items-center gap-1 rounded-md border border-[#67c7ff] bg-[linear-gradient(90deg,#0ea5e9_0%,#38bdf8_52%,#7dd3fc_100%)] px-2.5 text-xs font-semibold text-[#032447] shadow-[0_10px_24px_-14px_rgba(56,189,248,0.95)] transition hover:brightness-110"
         aria-expanded={isOpen}
         aria-haspopup="menu"
-        aria-label={buttonLabel}
-        title={buttonLabel}
+        aria-label="Dodaj"
         onClick={() => {
           setIsOpen((current) => !current);
         }}
       >
-        {collapseLabelOnMobile ? (
-          <>
-            <span className="md:hidden">+</span>
-            <span className="hidden md:inline">{buttonLabel}</span>
-          </>
-        ) : (
-          <span>{buttonLabel}</span>
-        )}
+        + Dodaj
+        <svg
+          viewBox="0 0 20 20"
+          aria-hidden="true"
+          className={`h-4 w-4 transition-transform ${isOpen ? "rotate-180" : ""}`}
+        >
+          <path d="M5.5 7.25 10 12.75l4.5-5.5" fill="none" stroke="currentColor" strokeWidth="1.8" />
+        </svg>
       </button>
       {isOpen ? (
-        <div
-          className={
-            menuClassName ??
-            "absolute right-0 z-20 mt-2 grid min-w-64 gap-1 rounded-md border border-slate-700 bg-slate-900 p-2 shadow-lg"
-          }
-        >
+        <div className="absolute right-0 top-[calc(100%+0.45rem)] z-50 grid min-w-44 gap-1 rounded-md border border-[#24558d] bg-[#051c3f] p-1.5 shadow-[0_20px_40px_-22px_rgba(3,16,38,0.95)]">
           <Link
-            href={addCompanyHref}
-            className="whitespace-nowrap rounded-md px-3 py-2 text-left text-sm text-slate-200 hover:bg-slate-800"
-            onClick={(event) => {
-              if (blockAddCompany) {
-                event.preventDefault();
-                if (addCompanyBlockedMessage) {
-                  toast.warning(addCompanyBlockedMessage);
-                }
-              }
-              setIsOpen(false);
-            }}
-          >
-            {addCompanyLabel}
-          </Link>
-          <Link
-            href={addAnnouncementHref}
-            className="whitespace-nowrap rounded-md px-3 py-2 text-left text-sm text-slate-200 hover:bg-slate-800"
+            href={withLang("/containers/new", locale)}
+            className="rounded-md px-3 py-2 text-sm text-[#dbeafe] transition hover:bg-[#103969]"
             onClick={() => {
               setIsOpen(false);
             }}
           >
-            {addAnnouncementLabel}
+            Ogloszenie
           </Link>
           <Link
-            href={addOfferHref}
-            className="whitespace-nowrap rounded-md px-3 py-2 text-left text-sm text-slate-200 hover:bg-slate-800"
+            href={withLang("/companies/new", locale)}
+            className="rounded-md px-3 py-2 text-sm text-[#dbeafe] transition hover:bg-[#103969]"
             onClick={() => {
               setIsOpen(false);
             }}
           >
-            {addOfferLabel}
-          </Link>
-          <Link
-            href={addLeadRequestHref}
-            className="whitespace-nowrap rounded-md px-3 py-2 text-left text-sm text-slate-200 hover:bg-slate-800"
-            onClick={() => {
-              setIsOpen(false);
-            }}
-          >
-            {addLeadRequestLabel}
+            Dodaj firme
           </Link>
         </div>
       ) : null}

@@ -62,7 +62,7 @@ export default async function RootLayout({
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
         <ToastProvider messages={messages.common}>
-          <div className="flex min-h-screen flex-col bg-slate-950 text-slate-100">
+          <div className="flex min-h-screen flex-col bg-sky-50 text-slate-900">
             <InAppNavigationHistoryTracker />
             <AppNavbar locale={locale} messages={messages} />
             <div className="w-full flex-1">{children}</div>

@@ -7,59 +7,6 @@ import { withLang, type AppLocale, type AppMessages } from "@/lib/i18n";
 import { toCityCountryLocationLabel } from "@/lib/location-label";
 
 const PHONE_REGEX = /^[+()0-9\s-]{6,30}$/;
-const MAX_CV_BYTES = 8 * 1024 * 1024;
-const ALLOWED_CV_EXTENSIONS = new Set(["pdf", "doc", "docx"]);
-const ALLOWED_CV_MIME_TYPES = new Set([
-  "application/pdf",
-  "application/msword",
-  "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-]);
-
-type StoredCv = {
-  filename: string;
-  size: number;
-  updatedAt: string;
-};
-
-function getCvExtension(filename: string): string {
-  const lastDot = filename.lastIndexOf(".");
-  if (lastDot < 0) {
-    return "";
-  }
-  return filename.slice(lastDot + 1).toLowerCase();
-}
-
-function validateCvClientFile(file: File): "ok" | "required" | "too_large" | "invalid_type" {
-  if (!file || !file.name?.trim() || file.size <= 0) {
-    return "required";
-  }
-
-  if (file.size > MAX_CV_BYTES) {
-    return "too_large";
-  }
-
-  const extension = getCvExtension(file.name);
-  if (!ALLOWED_CV_EXTENSIONS.has(extension)) {
-    return "invalid_type";
-  }
-
-  const normalizedType = (file.type || "").toLowerCase();
-  if (normalizedType && !ALLOWED_CV_MIME_TYPES.has(normalizedType)) {
-    return "invalid_type";
-  }
-
-  return "ok";
-}
-
-function formatFileSize(bytes: number): string {
-  if (bytes < 1024) {
-    return `${bytes} B`;
-  }
-  if (bytes < 1024 * 1024) {
-    return `${(bytes / 1024).toFixed(1)} KB`;
-  }
-  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
-}
 
 type UserSettingsAccountSectionProps = {
   locale: AppLocale;
@@ -68,7 +15,6 @@ type UserSettingsAccountSectionProps = {
     name: string;
     email: string;
     phone: string;
-    cv: StoredCv | null;
     canChangePassword: boolean;
     isEmailVerified: boolean;
   };
@@ -91,19 +37,13 @@ export function UserSettingsAccountSection({
 }: UserSettingsAccountSectionProps) {
   const toast = useToast();
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [isEasyApplyModalOpen, setIsEasyApplyModalOpen] = useState(false);
   const [isPasswordModalOpen, setIsPasswordModalOpen] = useState(false);
   const [isFavoritesModalOpen, setIsFavoritesModalOpen] = useState(false);
   const [profileName, setProfileName] = useState(user.name);
   const [profilePhone, setProfilePhone] = useState(user.phone);
   const [name, setName] = useState(user.name);
   const [phone, setPhone] = useState(user.phone);
-  const [storedCv, setStoredCv] = useState<StoredCv | null>(user.cv);
-  const [easyApplyCvFile, setEasyApplyCvFile] = useState<File | null>(null);
-  const [easyApplyCvInputKey, setEasyApplyCvInputKey] = useState(0);
   const [isSavingProfile, setIsSavingProfile] = useState(false);
-  const [isSavingEasyApply, setIsSavingEasyApply] = useState(false);
-  const [isDeletingCv, setIsDeletingCv] = useState(false);
   const [currentPassword, setCurrentPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [confirmNewPassword, setConfirmNewPassword] = useState("");
@@ -154,92 +94,6 @@ export function UserSettingsAccountSection({
       toast.error(messages.profileUpdateUnknownError);
     } finally {
       setIsSavingProfile(false);
-    }
-  };
-
-  const saveEasyApplyCv = async () => {
-    if (isSavingEasyApply || !easyApplyCvFile) {
-      return;
-    }
-
-    const cvStatus = validateCvClientFile(easyApplyCvFile);
-    if (cvStatus === "required") {
-      toast.error(messages.profileCvUploadUnknownError);
-      return;
-    }
-    if (cvStatus === "too_large") {
-      toast.error(messages.profileCvTooLarge);
-      return;
-    }
-    if (cvStatus === "invalid_type") {
-      toast.error(messages.profileCvInvalidType);
-      return;
-    }
-
-    setIsSavingEasyApply(true);
-    try {
-      const cvPayload = new FormData();
-      cvPayload.set("cv", easyApplyCvFile, easyApplyCvFile.name);
-      const cvResponse = await fetch("/api/auth/account/cv", {
-        method: "PUT",
-        body: cvPayload,
-      });
-      const cvData = (await cvResponse.json().catch(() => null)) as
-        | {
-            error?: string;
-            cv?: { filename: string; size: number; updatedAt: string };
-          }
-        | null;
-      if (!cvResponse.ok) {
-        if (cvData?.error === "Unsupported CV file type") {
-          toast.error(messages.profileCvInvalidType);
-          return;
-        }
-        if (cvData?.error === "CV file is too large") {
-          toast.error(messages.profileCvTooLarge);
-          return;
-        }
-        toast.error(messages.profileCvUploadUnknownError);
-        return;
-      }
-
-      setStoredCv(cvData?.cv ?? null);
-      setEasyApplyCvFile(null);
-      setEasyApplyCvInputKey((value) => value + 1);
-      toast.success(messages.easyApplySaveSuccess);
-      setIsEasyApplyModalOpen(false);
-    } catch {
-      toast.error(messages.easyApplySaveUnknownError);
-    } finally {
-      setIsSavingEasyApply(false);
-    }
-  };
-
-  const deleteStoredCv = async () => {
-    if (isDeletingCv) {
-      return;
-    }
-
-    setIsDeletingCv(true);
-    try {
-      const response = await fetch("/api/auth/account/cv", {
-        method: "DELETE",
-      });
-      const payload = (await response.json().catch(() => null)) as
-        | { error?: string }
-        | null;
-      if (!response.ok) {
-        toast.error(payload?.error ?? messages.profileCvDeleteUnknownError);
-        return;
-      }
-      setStoredCv(null);
-      setEasyApplyCvFile(null);
-      setEasyApplyCvInputKey((value) => value + 1);
-      toast.success(messages.profileCvDeleteSuccess);
-    } catch {
-      toast.error(messages.profileCvDeleteUnknownError);
-    } finally {
-      setIsDeletingCv(false);
     }
   };
 
@@ -360,35 +214,9 @@ export function UserSettingsAccountSection({
         </div>
       </section>
 
-      <section className="rounded-xl border border-slate-800 bg-slate-900/60 p-5">
-        <h2 className="text-lg font-semibold text-slate-100">{messages.easyApplyTitle}</h2>
-        <p className="mt-2 text-sm text-slate-300">{messages.easyApplyHint}</p>
-
-        <div className="mt-4 rounded-lg border border-slate-800 bg-slate-950/50 p-4">
-          {storedCv ? (
-            <p className="text-sm text-slate-300">{storedCv.filename}</p>
-          ) : (
-            <p className="text-sm text-slate-400">{messages.profileCvNotSet}</p>
-          )}
-        </div>
-        <div className="mt-3 flex justify-end">
-          <button
-            type="button"
-            className="rounded-md border border-slate-600 px-4 py-2 text-sm font-medium text-slate-100 hover:border-slate-400"
-            onClick={() => {
-              setEasyApplyCvFile(null);
-              setEasyApplyCvInputKey((value) => value + 1);
-              setIsEasyApplyModalOpen(true);
-            }}
-          >
-            {messages.easyApplyOpenModalButton}
-          </button>
-        </div>
-      </section>
-
       {isModalOpen ? (
         <div
-          className="fixed inset-0 z-[70] flex items-center justify-center overflow-y-auto [&>div:not(.fixed)]:my-auto [&>div:not(.fixed)]:max-h-[calc(100dvh-2rem)] [&>div:not(.fixed)]:!overflow-y-auto bg-slate-950/75 p-4"
+          className="fixed inset-0 z-[70] flex items-center justify-center overflow-y-auto bg-[rgba(2,6,23,0.45)] p-4 backdrop-blur-[2px] [&>div:not(.fixed)]:my-auto [&>div:not(.fixed)]:max-h-[calc(100dvh-2rem)] [&>div:not(.fixed)]:!overflow-y-auto"
           role="dialog"
           aria-modal="true"
         >
@@ -467,103 +295,9 @@ export function UserSettingsAccountSection({
         </div>
       ) : null}
 
-      {isEasyApplyModalOpen ? (
-        <div
-          className="fixed inset-0 z-[70] flex items-center justify-center overflow-y-auto [&>div:not(.fixed)]:my-auto [&>div:not(.fixed)]:max-h-[calc(100dvh-2rem)] [&>div:not(.fixed)]:!overflow-y-auto bg-slate-950/75 p-4"
-          role="dialog"
-          aria-modal="true"
-        >
-          <div className="w-full max-w-lg rounded-xl border border-slate-700 bg-slate-900 p-4 shadow-2xl">
-            <div className="mb-4 flex items-center justify-between">
-              <h3 className="text-base font-semibold text-slate-100">
-                {messages.easyApplyModalTitle}
-              </h3>
-              <button
-                type="button"
-                className="rounded-md border border-slate-700 px-2 py-1 text-xs text-slate-300 hover:border-slate-500"
-                onClick={() => {
-                  setIsEasyApplyModalOpen(false);
-                }}
-              >
-                {messages.cancel}
-              </button>
-            </div>
-
-            <div className="grid gap-2 rounded-md border border-slate-800 bg-slate-950/40 p-3">
-              {storedCv ? (
-                <div className="flex flex-wrap items-center justify-between gap-2">
-                  <p className="min-w-0 flex-1 text-sm text-slate-200">
-                    {storedCv.filename} ({formatFileSize(storedCv.size)})
-                  </p>
-                  <div className="ml-auto flex flex-wrap justify-end gap-2">
-                    <a
-                      href="/api/auth/account/cv"
-                      className="rounded-md border border-slate-700 px-2 py-1 text-xs text-slate-200 hover:border-slate-500"
-                    >
-                      {messages.profileCvDownloadButton}
-                    </a>
-                    <button
-                      type="button"
-                      className="rounded-md border border-rose-700 px-2 py-1 text-xs text-rose-200 hover:border-rose-500 disabled:cursor-not-allowed disabled:opacity-60"
-                      disabled={isDeletingCv}
-                      onClick={() => {
-                        void deleteStoredCv();
-                      }}
-                    >
-                      {isDeletingCv ? messages.profileCvDeleting : messages.profileCvDeleteButton}
-                    </button>
-                  </div>
-                </div>
-              ) : (
-                <p className="text-sm text-slate-400">{messages.profileCvNotSet}</p>
-              )}
-              <label className="grid gap-1">
-                <span className="text-xs text-slate-400">{messages.profileCvCurrentLabel}</span>
-                <input
-                  key={easyApplyCvInputKey}
-                  name="easy_apply_cv"
-                  type="file"
-                  accept=".pdf,.doc,.docx,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
-                  className="rounded-md border border-slate-700 bg-slate-950 px-3 py-2 text-sm text-slate-100 focus:border-sky-500 focus:outline-none"
-                  onChange={(event) => {
-                    const file = event.target.files?.[0] ?? null;
-                    setEasyApplyCvFile(file);
-                  }}
-                />
-              </label>
-              <p className="text-xs text-slate-300">{messages.profileCvHint}</p>
-              <p className="text-xs text-slate-500">
-                {messages.easyApplyConsentText}{" "}
-                <Link
-                  href={withLang("/privacy-policy", locale)}
-                  className="text-sky-300 hover:text-sky-200"
-                >
-                  {messages.easyApplyConsentLinkLabel}
-                </Link>
-              </p>
-            </div>
-
-            <div className="mt-4 flex justify-end">
-              <button
-                type="button"
-                className="rounded-md border border-slate-600 px-4 py-2 text-sm font-medium text-slate-100 hover:border-slate-400 disabled:cursor-not-allowed disabled:opacity-60"
-                disabled={isSavingEasyApply || !easyApplyCvFile}
-                onClick={() => {
-                  void saveEasyApplyCv();
-                }}
-              >
-                {isSavingEasyApply
-                  ? messages.easyApplySaveSubmitting
-                  : messages.easyApplySaveButton}
-              </button>
-            </div>
-          </div>
-        </div>
-      ) : null}
-
       {isPasswordModalOpen ? (
         <div
-          className="fixed inset-0 z-[70] flex items-center justify-center overflow-y-auto [&>div:not(.fixed)]:my-auto [&>div:not(.fixed)]:max-h-[calc(100dvh-2rem)] [&>div:not(.fixed)]:!overflow-y-auto bg-slate-950/75 p-4"
+          className="fixed inset-0 z-[70] flex items-center justify-center overflow-y-auto bg-[rgba(2,6,23,0.45)] p-4 backdrop-blur-[2px] [&>div:not(.fixed)]:my-auto [&>div:not(.fixed)]:max-h-[calc(100dvh-2rem)] [&>div:not(.fixed)]:!overflow-y-auto"
           role="dialog"
           aria-modal="true"
         >
@@ -648,7 +382,7 @@ export function UserSettingsAccountSection({
 
       {isFavoritesModalOpen ? (
         <div
-          className="fixed inset-0 z-[70] flex items-center justify-center overflow-y-auto [&>div:not(.fixed)]:my-auto [&>div:not(.fixed)]:max-h-[calc(100dvh-2rem)] [&>div:not(.fixed)]:!overflow-y-auto bg-slate-950/75 p-4"
+          className="fixed inset-0 z-[70] flex items-center justify-center overflow-y-auto bg-[rgba(2,6,23,0.45)] p-4 backdrop-blur-[2px] [&>div:not(.fixed)]:my-auto [&>div:not(.fixed)]:max-h-[calc(100dvh-2rem)] [&>div:not(.fixed)]:!overflow-y-auto"
           role="dialog"
           aria-modal="true"
         >
@@ -716,5 +450,3 @@ export function UserSettingsAccountSection({
     </div>
   );
 }
-
-

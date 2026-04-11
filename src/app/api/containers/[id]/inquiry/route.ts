@@ -6,8 +6,9 @@ import {
   ensureContainerListingsIndexes,
   getContainerInquiriesCollection,
   getContainerListingsCollection,
+  mapContainerListingToItem,
 } from "@/lib/container-listings";
-import { LISTING_STATUS } from "@/lib/container-listing-types";
+import { getContainerShortLabel, LISTING_STATUS } from "@/lib/container-listing-types";
 import { enforceRateLimitOrResponse } from "@/lib/request-rate-limit";
 import { sendMail } from "@/lib/mailer";
 import { logError } from "@/lib/server-logger";
@@ -78,19 +79,6 @@ export async function POST(request: NextRequest, context: RouteContext) {
         status: LISTING_STATUS.ACTIVE,
         expiresAt: { $gt: new Date() },
       },
-      {
-        projection: {
-          _id: 1,
-          companyName: 1,
-          contactEmail: 1,
-          containerType: 1,
-          type: 1,
-          locationCity: 1,
-          locationCountry: 1,
-          quantity: 1,
-          dealType: 1,
-        },
-      },
     );
 
     if (!listing?._id) {
@@ -114,7 +102,9 @@ export async function POST(request: NextRequest, context: RouteContext) {
       createdAt: now,
     });
 
-    const summaryLine = `${listing.containerType} | ${listing.type} | ${listing.locationCity}, ${listing.locationCountry}`;
+    const listingItem = mapContainerListingToItem(listing);
+    const containerLabel = getContainerShortLabel(listingItem.container);
+    const summaryLine = `${containerLabel} | ${listing.type} | ${listing.locationCity}, ${listing.locationCountry}`;
     const textMessage = [
       `Otrzymales nowe zapytanie do kontenera (${summaryLine}).`,
       "",
@@ -148,7 +138,7 @@ export async function POST(request: NextRequest, context: RouteContext) {
 
     const sendResult = await sendMail({
       to: listing.contactEmail,
-      subject: `Nowe zapytanie o kontener - ${listing.containerType}`,
+      subject: `Nowe zapytanie o kontener - ${containerLabel}`,
       text: textMessage,
       html: htmlMessage,
     });

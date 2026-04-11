@@ -74,7 +74,6 @@ export default async function NewCompanyPage({ searchParams }: NewCompanyPagePro
         <NewCompanyForm
           locale={locale}
           messages={messages.companyCreate}
-          mapMessages={messages.map}
           turnstileSiteKey={turnstileSiteKey}
           companyCreationLimit={
             companyCreationLimit

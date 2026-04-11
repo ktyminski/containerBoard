@@ -55,6 +55,7 @@ export function MapLocationPicker({
   lat,
   lng,
   labels,
+  mapClassName,
   onChange,
 }: {
   lat: number | null;
@@ -62,6 +63,7 @@ export function MapLocationPicker({
   labels: {
     hint: string;
   };
+  mapClassName?: string;
   onChange: (next: { lat: number; lng: number }) => void;
 }) {
   const mapContainerRef = useRef<HTMLDivElement | null>(null);
@@ -152,7 +154,7 @@ export function MapLocationPicker({
     <div className="grid gap-2">
       <div
         ref={mapContainerRef}
-        className="h-56 w-full overflow-hidden rounded-md border border-slate-700"
+        className={`w-full overflow-hidden rounded-md border border-slate-700 ${mapClassName ?? "h-56"}`}
       />
       {labels.hint ? <p className="text-xs text-slate-300">{labels.hint}</p> : null}
     </div>

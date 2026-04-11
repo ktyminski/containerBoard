@@ -9,7 +9,6 @@ import { getAnnouncementFavoritesCollection } from "@/lib/announcement-favorites
 import { getAnnouncementsCollection } from "@/lib/announcements";
 import { getCurrentUserFromToken } from "@/lib/auth-user";
 import { getCompaniesCollection } from "@/lib/companies";
-import { getUserCvCollection } from "@/lib/user-cv";
 import {
   getLocaleFromRequest,
   getMessages,
@@ -212,11 +211,6 @@ export default async function SettingsPage({ searchParams }: SettingsPageProps) 
   }
 
   const shouldShowAssignedCompanies = currentUser.role !== USER_ROLE.ADMIN;
-  const userCv = await (await getUserCvCollection()).findOne(
-    { userId: currentUser._id },
-    { projection: { _id: 0, filename: 1, size: 1, updatedAt: 1 } },
-  );
-
   const assignedCompanies = shouldShowAssignedCompanies
     ? await (await getCompaniesCollection())
         .find(
@@ -275,13 +269,6 @@ export default async function SettingsPage({ searchParams }: SettingsPageProps) 
           name: currentUser.name,
           email: currentUser.email,
           phone: currentUser.phone ?? "",
-          cv: userCv
-            ? {
-                filename: userCv.filename,
-                size: userCv.size,
-                updatedAt: userCv.updatedAt.toISOString(),
-              }
-            : null,
           canChangePassword: currentUser.sessionAuthProvider === "local",
           isEmailVerified:
             currentUser.authProvider !== "local" || currentUser.isEmailVerified !== false,

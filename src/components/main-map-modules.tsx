@@ -482,7 +482,6 @@ export function MainMapModules({
       : isCompaniesView
         ? operatingAreaFilter.length +
           communicationLanguageFilter.length +
-          companyCategoryFilter.length +
           companySpecializationFilter.length
       : leadTransportModeFilter.length +
         leadOriginCountryFilter.length +
@@ -659,20 +658,6 @@ export function MainMapModules({
         subtitle: messages.filters.modalSubtitleOperatingArea,
         sections: [
           {
-            id: "company-categories",
-            title: companyCreateMessages.category,
-            options: COMPANY_CATEGORIES.map((category) => ({
-              value: category,
-              label: mapMessages.categories[category],
-            })),
-            selectedValues: draftCompanyCategoryFilter,
-            onToggle: (value: string) => {
-              setDraftCompanyCategoryFilter((current) =>
-                toggleSelection(current, value as CompanyCategory),
-              );
-            },
-          },
-          {
             id: "operating-areas",
             title: messages.filters.operatingAreasTitle,
             options: COMPANY_OPERATING_AREAS.map((area) => ({
@@ -841,7 +826,6 @@ export function MainMapModules({
           } else if (activeView === "companies") {
             setDraftOperatingAreaFilter(operatingAreaFilter);
             setDraftCommunicationLanguageFilter(communicationLanguageFilter);
-            setDraftCompanyCategoryFilter(companyCategoryFilter);
             setDraftCompanySpecializationFilter(companySpecializationFilter);
           } else {
             setDraftLeadTransportModeFilter(leadTransportModeFilter);
@@ -882,7 +866,7 @@ export function MainMapModules({
               workModels={workModelFilter}
               operatingAreas={operatingAreaFilter}
               communicationLanguages={communicationLanguageFilter}
-              companyCategories={companyCategoryFilter}
+              companyCategories={activeMapView === "companies" ? [] : companyCategoryFilter}
               companySpecializations={companySpecializationFilter}
               locationBbox={locationBbox}
               onLocationFilterRelease={releaseLocationFilter}
@@ -1017,7 +1001,6 @@ export function MainMapModules({
           } else if (activeView === "companies") {
             setDraftOperatingAreaFilter([]);
             setDraftCommunicationLanguageFilter([]);
-            setDraftCompanyCategoryFilter([]);
             setDraftCompanySpecializationFilter([]);
           } else {
             setDraftLeadTransportModeFilter([]);
@@ -1043,7 +1026,6 @@ export function MainMapModules({
           } else if (activeView === "companies") {
             setOperatingAreaFilter(draftOperatingAreaFilter);
             setCommunicationLanguageFilter(draftCommunicationLanguageFilter);
-            setCompanyCategoryFilter(draftCompanyCategoryFilter);
             setCompanySpecializationFilter(draftCompanySpecializationFilter);
           } else {
             setLeadTransportModeFilter(draftLeadTransportModeFilter);

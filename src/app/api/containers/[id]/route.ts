@@ -2,6 +2,7 @@
 import { ObjectId } from "mongodb";
 import { z } from "zod";
 import { getCurrentUserFromRequest } from "@/lib/auth-user";
+import { normalizeGeocodeAddressParts } from "@/lib/geocode-address";
 import {
   ensureContainerListingsIndexes,
   expireContainerListingsIfNeeded,
@@ -10,16 +11,28 @@ import {
   mapContainerListingToItem,
 } from "@/lib/container-listings";
 import {
+  CONTAINER_CONDITIONS,
+  CONTAINER_FEATURES,
+  CONTAINER_HEIGHTS,
+  CONTAINER_SIZES,
   CONTAINER_TYPES,
   DEAL_TYPES,
   LISTING_TYPES,
   LISTING_STATUS,
+  type ContainerSize,
   type ListingStatus,
 } from "@/lib/container-listing-types";
 import { USER_ROLE } from "@/lib/user-roles";
 import { logError } from "@/lib/server-logger";
 
 export const runtime = "nodejs";
+
+const locationAddressPartsSchema = z.object({
+  street: z.string().trim().min(1).max(120).optional(),
+  houseNumber: z.string().trim().min(1).max(40).optional(),
+  city: z.string().trim().min(1).max(120).optional(),
+  country: z.string().trim().min(1).max(120).optional(),
+});
 
 type RouteContext = {
   params: Promise<{
@@ -30,10 +43,21 @@ type RouteContext = {
 const updateSchema = z.object({
   action: z.literal("update"),
   type: z.enum(LISTING_TYPES),
-  containerType: z.enum(CONTAINER_TYPES),
+  container: z.object({
+    size: z
+      .number()
+      .int()
+      .refine((value) => CONTAINER_SIZES.includes(value as (typeof CONTAINER_SIZES)[number])),
+    height: z.enum(CONTAINER_HEIGHTS),
+    type: z.enum(CONTAINER_TYPES),
+    features: z.array(z.enum(CONTAINER_FEATURES)).default([]),
+    condition: z.enum(CONTAINER_CONDITIONS),
+  }),
   quantity: z.coerce.number().int().min(1).max(100_000),
-  locationCity: z.string().trim().min(2).max(120),
-  locationCountry: z.string().trim().min(2).max(120),
+  locationLat: z.coerce.number().finite().min(-90).max(90),
+  locationLng: z.coerce.number().finite().min(-180).max(180),
+  locationAddressLabel: z.string().trim().max(250).optional(),
+  locationAddressParts: locationAddressPartsSchema.optional(),
   availableFrom: z.coerce.date(),
   dealType: z.enum(DEAL_TYPES),
   price: z.string().trim().max(100).optional(),
@@ -154,15 +178,38 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
     const updateParsed = updateSchema.safeParse(payload);
     if (updateParsed.success) {
       const now = new Date();
+      const locationAddressLabel = normalizeOptionalString(updateParsed.data.locationAddressLabel);
+      const locationAddressParts = normalizeGeocodeAddressParts(updateParsed.data.locationAddressParts);
+      const locationCity = locationAddressParts?.city ?? "";
+      const locationCountry = locationAddressParts?.country ?? "";
+      const unsetPatch: Record<string, 1> = {};
+      unsetPatch.containerType = 1;
+      if (!locationAddressLabel) {
+        unsetPatch.locationAddressLabel = 1;
+      }
+      if (!locationAddressParts) {
+        unsetPatch.locationAddressParts = 1;
+      }
+
       await listings.updateOne(
         { _id: listingId },
         {
           $set: {
             type: updateParsed.data.type,
-            containerType: updateParsed.data.containerType,
+            container: {
+              size: updateParsed.data.container.size as ContainerSize,
+              height: updateParsed.data.container.height,
+              type: updateParsed.data.container.type,
+              features: Array.from(new Set(updateParsed.data.container.features)),
+              condition: updateParsed.data.container.condition,
+            },
             quantity: updateParsed.data.quantity,
-            locationCity: updateParsed.data.locationCity.trim(),
-            locationCountry: updateParsed.data.locationCountry.trim(),
+            locationCity,
+            locationCountry,
+            locationLat: updateParsed.data.locationLat,
+            locationLng: updateParsed.data.locationLng,
+            ...(locationAddressLabel ? { locationAddressLabel } : {}),
+            ...(locationAddressParts ? { locationAddressParts } : {}),
             availableFrom: updateParsed.data.availableFrom,
             dealType: updateParsed.data.dealType,
             price: normalizeOptionalString(updateParsed.data.price),
@@ -172,6 +219,7 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
             contactPhone: normalizeOptionalString(updateParsed.data.contactPhone),
             updatedAt: now,
           },
+          ...(Object.keys(unsetPatch).length > 0 ? { $unset: unsetPatch } : {}),
         },
       );
 

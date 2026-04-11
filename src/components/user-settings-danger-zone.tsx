@@ -50,13 +50,13 @@ export function UserSettingsDangerZone({
   };
 
   return (
-    <section className="rounded-xl border border-rose-800/70 bg-rose-950/20 p-5">
-      <h2 className="text-lg font-semibold text-rose-200">{messages.deleteAccountTitle}</h2>
-      <p className="mt-2 text-sm text-rose-100/90">{messages.deleteAccountDescription}</p>
+    <section className="rounded-xl border border-slate-800 bg-slate-900/60 p-5">
+      <h2 className="text-lg font-semibold text-slate-100">{messages.deleteAccountTitle}</h2>
+      <p className="mt-2 text-sm text-slate-300">{messages.deleteAccountDescription}</p>
       <div className="mt-4 flex justify-end">
         <button
           type="button"
-          className="rounded-md border border-rose-700 px-4 py-2 text-sm font-medium text-rose-200 hover:border-rose-500 disabled:cursor-not-allowed disabled:opacity-70"
+          className="rounded-md border border-red-700 bg-red-600 px-4 py-2 text-sm font-medium text-white transition hover:bg-red-500 disabled:cursor-not-allowed disabled:opacity-70"
           onClick={() => {
             setIsConfirmOpen(true);
           }}
@@ -68,7 +68,7 @@ export function UserSettingsDangerZone({
 
       {isConfirmOpen ? (
         <div
-          className="fixed inset-0 z-[70] flex items-center justify-center overflow-y-auto [&>div:not(.fixed)]:my-auto [&>div:not(.fixed)]:max-h-[calc(100dvh-2rem)] [&>div:not(.fixed)]:!overflow-y-auto bg-slate-950/75 p-4"
+          className="fixed inset-0 z-[70] flex items-center justify-center overflow-y-auto bg-[rgba(2,6,23,0.45)] p-4 backdrop-blur-[2px] [&>div:not(.fixed)]:my-auto [&>div:not(.fixed)]:max-h-[calc(100dvh-2rem)] [&>div:not(.fixed)]:!overflow-y-auto"
           role="dialog"
           aria-modal="true"
         >
@@ -95,7 +95,7 @@ export function UserSettingsDangerZone({
               </button>
               <button
                 type="button"
-                className="rounded-md border border-rose-700 px-3 py-1.5 text-xs text-rose-200 hover:border-rose-500 disabled:cursor-not-allowed disabled:opacity-70"
+                className="rounded-md border border-red-700 bg-red-600 px-3 py-1.5 text-xs text-white transition hover:bg-red-500 disabled:cursor-not-allowed disabled:opacity-70"
                 onClick={() => {
                   void deleteAccount();
                 }}

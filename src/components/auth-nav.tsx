@@ -22,13 +22,13 @@ export async function AuthNav({ locale, roleMessages }: AuthNavProps) {
       <div className="flex items-center gap-2">
         <Link
           href={withLang("/login", locale)}
-          className="shrink-0 rounded-md border border-slate-700 px-3 py-2 text-sm text-slate-200 whitespace-nowrap hover:border-slate-500"
+          className="inline-flex h-9 shrink-0 items-center rounded-md border border-[#2f639a] bg-[#082650]/80 px-3 text-sm text-[#e2efff] whitespace-nowrap transition hover:border-[#4e86c3] hover:bg-[#0c3466]"
         >
           Zaloguj
         </Link>
         <Link
           href={withLang("/register", locale)}
-          className="hidden shrink-0 rounded-md bg-sky-500 px-3 py-2 text-sm font-medium text-slate-950 whitespace-nowrap hover:bg-sky-400 md:inline-flex"
+          className="hidden h-9 shrink-0 items-center rounded-md border border-[#67c7ff] bg-[linear-gradient(90deg,#0ea5e9_0%,#38bdf8_52%,#7dd3fc_100%)] px-3 text-sm font-medium text-[#032447] whitespace-nowrap transition hover:brightness-110 md:inline-flex"
         >
           Rejestracja
         </Link>
@@ -39,21 +39,15 @@ export async function AuthNav({ locale, roleMessages }: AuthNavProps) {
   return (
     <div className="flex min-w-0 flex-nowrap items-center justify-end gap-2 text-sm whitespace-nowrap">
       <Link
-        href={withLang("/containers/new", locale)}
-        className="hidden shrink-0 rounded-md border border-emerald-700 px-3 py-2 text-sm text-emerald-200 whitespace-nowrap hover:border-emerald-500 md:inline-flex"
-      >
-        Dodaj kontener
-      </Link>
-      <Link
         href={withLang("/containers/mine", locale)}
-        className="hidden shrink-0 rounded-md border border-slate-700 px-3 py-2 text-sm text-slate-200 whitespace-nowrap hover:border-slate-500 md:inline-flex"
+        className="hidden h-9 shrink-0 items-center rounded-md border border-[#2f639a] bg-[#082650]/80 px-3 text-sm text-[#e2efff] whitespace-nowrap transition hover:border-[#4e86c3] hover:bg-[#0c3466] md:inline-flex"
       >
         Moje kontenery
       </Link>
       {user.role === USER_ROLE.ADMIN ? (
         <Link
           href={withLang("/admin", locale)}
-          className="hidden shrink-0 rounded-md border border-sky-700 px-3 py-2 text-sm text-sky-200 whitespace-nowrap hover:border-sky-500 md:inline-flex"
+          className="hidden h-9 shrink-0 items-center rounded-md border border-[#46a4e0] bg-[#093161]/80 px-3 text-sm text-[#a7e0ff] whitespace-nowrap transition hover:border-[#74c1ec] hover:bg-[#0f3f75] md:inline-flex"
         >
           Admin
         </Link>

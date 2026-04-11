@@ -10,7 +10,6 @@ import type {
   OfferMapItem,
 } from "@/components/unified-main-map/types";
 import {
-  categoryToLabel,
   formatCompanySummary,
   formatSalaryRange,
   getCompanyFallbackColor,
@@ -518,11 +517,7 @@ export function CompaniesList({
           <div
             role="button"
             tabIndex={0}
-            className={`w-full cursor-pointer rounded-md border px-3 py-2 text-left transition ${
-              company.isPremium
-                ? "border-slate-800 bg-slate-950 bg-gradient-to-r from-emerald-900/35 via-emerald-900/12 to-transparent hover:border-emerald-300/75"
-                : "border-slate-800 bg-slate-950 hover:border-sky-400/60"
-            }`}
+            className="w-full cursor-pointer rounded-md border border-sky-200 bg-gradient-to-r from-sky-50 via-blue-50 to-sky-100/75 px-3 py-2 text-left transition hover:border-sky-300 hover:from-sky-100 hover:via-blue-50 hover:to-sky-100"
             onClick={() => {
               onFocusMap(company);
             }}
@@ -535,10 +530,10 @@ export function CompaniesList({
           >
             <div className="flex min-h-[5.25rem] items-center gap-3">
               <div
-                className={`relative h-16 w-16 shrink-0 rounded-md border bg-slate-900 ${
+                className={`relative h-16 w-16 shrink-0 rounded-md border bg-white ${
                   company.isPremium
-                    ? "overflow-visible border-slate-800 shadow-[0_0_14px_rgba(52,211,153,0.30)]"
-                    : "overflow-hidden border-slate-800"
+                    ? "overflow-visible border-sky-200 shadow-[0_0_14px_rgba(244,114,182,0.22)]"
+                    : "overflow-hidden border-sky-200"
                 }`}
               >
                 <div className="relative h-full w-full overflow-hidden rounded-[inherit]">
@@ -560,7 +555,7 @@ export function CompaniesList({
                   )}
                 </div>
                 {company.isPremium ? (
-                  <span className="absolute left-0 top-0 z-10 inline-flex h-5 w-5 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full border border-amber-400/80 bg-slate-950/90 text-amber-300 shadow-[0_0_10px_rgba(245,158,11,0.35)]">
+                  <span className="absolute left-0 top-0 z-10 inline-flex h-5 w-5 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full border border-amber-300/80 bg-white/95 text-amber-500 shadow-[0_0_10px_rgba(245,158,11,0.30)]">
                     <svg viewBox="0 0 20 20" className="h-3.5 w-3.5" aria-hidden="true">
                       <path
                         d="M10 2.9l2.15 4.35 4.8.7-3.47 3.38.82 4.78L10 13.95 5.7 16.1l.82-4.78L3.05 7.95l4.8-.7L10 2.9Z"
@@ -573,16 +568,12 @@ export function CompaniesList({
               <div className="min-w-0 flex-1">
                 <div className="min-w-0">
                   <span className="inline-flex max-w-full items-center gap-1.5">
-                    <span
-                      className={`truncate font-medium ${
-                        company.isPremium ? "text-emerald-100" : "text-slate-100"
-                      }`}
-                    >
+                    <span className="truncate font-medium text-slate-900">
                       {company.name}
                     </span>
                     {company.verificationStatus === COMPANY_VERIFICATION_STATUS.VERIFIED ? (
                       <span
-                        className="inline-flex h-5 w-5 shrink-0 items-center justify-center text-emerald-300"
+                        className="inline-flex h-5 w-5 shrink-0 items-center justify-center text-sky-600"
                         aria-label={verifiedLabel}
                         title={verifiedLabel}
                       >
@@ -599,18 +590,12 @@ export function CompaniesList({
                     ) : null}
                   </span>
                 </div>
-                <p className={`truncate text-xs ${company.isPremium ? "text-emerald-200/80" : "text-slate-400"}`}>
-                  {categoryToLabel(mapMessages, company.category)}
-                  {company.locationCity ? (
-                    <>
-                      {", "}
-                      <strong className={`font-semibold ${company.isPremium ? "text-emerald-100" : "text-slate-200"}`}>
-                        {company.locationCity}
-                      </strong>
-                    </>
-                  ) : null}
-                </p>
-                <p className={`mt-1 truncate text-xs ${company.isPremium ? "text-emerald-300/75" : "text-slate-500"}`}>
+                {company.locationCity ? (
+                  <p className="truncate text-xs text-slate-600">
+                    <strong className="font-semibold text-slate-700">{company.locationCity}</strong>
+                  </p>
+                ) : null}
+                <p className="mt-1 truncate text-xs text-slate-500">
                   {formatCompanySummary(
                     company,
                     mapMessages,
@@ -621,7 +606,7 @@ export function CompaniesList({
                 <div className="mt-1 flex items-center gap-3 text-xs font-medium">
                   <Link
                     href={withLang(`/companies/${company.slug}`, locale)}
-                    className={`transition ${company.isPremium ? "text-emerald-200/90 hover:text-emerald-100" : "text-slate-400 hover:text-sky-300"}`}
+                    className="text-slate-500 transition hover:text-sky-600"
                     onClick={(event) => {
                       event.stopPropagation();
                     }}
@@ -633,7 +618,7 @@ export function CompaniesList({
                   </Link>
                   <button
                     type="button"
-                    className={`transition ${company.isPremium ? "text-emerald-200/90 hover:text-emerald-100" : "text-slate-400 hover:text-sky-300"}`}
+                    className="text-slate-500 transition hover:text-sky-600"
                     onClick={(event) => {
                       event.stopPropagation();
                       onFocusMap(company);
