@@ -1,4 +1,4 @@
-﻿import type { Metadata } from "next";
+import type { Metadata } from "next";
 import { ObjectId } from "mongodb";
 import { cookies } from "next/headers";
 import { notFound, redirect } from "next/navigation";
@@ -60,7 +60,7 @@ export default async function EditContainerPage({ params }: EditContainerPagePro
   return (
     <main className="mx-auto w-full max-w-5xl px-4 py-6 sm:px-6">
       <header className="mb-4">
-        <h1 className="text-2xl font-semibold text-slate-100">Edytuj kontener</h1>
+        <h1 className="text-2xl font-semibold text-neutral-100">Edytuj kontener</h1>
       </header>
 
       <ContainerListingForm
@@ -73,11 +73,18 @@ export default async function EditContainerPage({ params }: EditContainerPagePro
         backLabel="Powrot do szczegolow"
         initialValues={{
           type: listingItem.type,
+          title: listingItem.title ?? "",
           containerSize: listingItem.container.size,
           containerHeight: listingItem.container.height,
           containerType: listingItem.container.type,
           containerFeatures: listingItem.container.features,
           containerCondition: listingItem.container.condition,
+          hasCscPlate: listingItem.hasCscPlate,
+          hasCscCertification: listingItem.hasCscCertification,
+          productionYear:
+            typeof listingItem.productionYear === "number"
+              ? String(listingItem.productionYear)
+              : "",
           quantity: listingItem.quantity,
           locationLat:
             typeof listingItem.locationLat === "number"
@@ -92,8 +99,33 @@ export default async function EditContainerPage({ params }: EditContainerPagePro
           locationHouseNumber: listingItem.locationAddressParts?.houseNumber ?? "",
           locationAddressCity: listingItem.locationAddressParts?.city ?? listingItem.locationCity,
           locationAddressCountry: listingItem.locationAddressParts?.country ?? listingItem.locationCountry,
+          availableNow: listingItem.availableNow,
+          availableFromApproximate: listingItem.availableFromApproximate,
           availableFrom: listingItem.availableFrom.slice(0, 10),
-          dealType: listingItem.dealType,
+          logisticsTransportAvailable: listingItem.logisticsTransportAvailable,
+          logisticsTransportIncluded: listingItem.logisticsTransportIncluded,
+          logisticsTransportFreeDistanceKm:
+            typeof listingItem.logisticsTransportFreeDistanceKm === "number"
+              ? String(listingItem.logisticsTransportFreeDistanceKm)
+              : "",
+          logisticsUnloadingAvailable: listingItem.logisticsUnloadingAvailable,
+          logisticsUnloadingIncluded: listingItem.logisticsUnloadingIncluded,
+          logisticsComment: listingItem.logisticsComment ?? "",
+          priceType: listingItem.pricing?.type ?? "fixed",
+          priceValueAmount:
+            typeof listingItem.pricing?.original.amount === "number"
+              ? String(listingItem.pricing.original.amount)
+              : typeof listingItem.priceAmount === "number"
+                ? String(listingItem.priceAmount)
+                : "",
+          priceCurrency: listingItem.pricing?.original.currency ?? "PLN",
+          priceUnit: listingItem.pricing?.original.unit ?? "per_container",
+          priceTaxMode: listingItem.pricing?.original.taxMode ?? "net",
+          priceVatRate:
+            typeof listingItem.pricing?.original.vatRate === "number"
+              ? String(listingItem.pricing.original.vatRate)
+              : "",
+          priceNegotiable: listingItem.priceNegotiable,
           price: listingItem.price ?? "",
           description: listingItem.description ?? "",
           companyName: listingItem.companyName,
@@ -104,4 +136,6 @@ export default async function EditContainerPage({ params }: EditContainerPagePro
     </main>
   );
 }
+
+
 

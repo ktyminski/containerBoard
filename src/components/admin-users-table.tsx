@@ -260,14 +260,14 @@ export function AdminUsersTable({
   };
 
   if (isInitialLoading && items.length === 0) {
-    return <p className="text-sm text-slate-300">{messages.loading}</p>;
+    return <p className="text-sm text-neutral-300">{messages.loading}</p>;
   }
 
   return (
     <>
-      <div className="rounded-xl border border-slate-800 bg-slate-900/60 p-4">
+      <div className="rounded-xl border border-neutral-800 bg-neutral-900/60 p-4">
       <div className="mb-3 flex items-center justify-between">
-        <h2 className="text-lg font-semibold text-slate-100">{messages.title}</h2>
+        <h2 className="text-lg font-semibold text-neutral-100">{messages.title}</h2>
         <div className="flex gap-2">
           <button
             type="button"
@@ -279,7 +279,7 @@ export function AdminUsersTable({
           </button>
           <button
             type="button"
-            className="rounded-md border border-slate-700 px-3 py-1 text-sm text-slate-200 hover:border-slate-500"
+            className="rounded-md border border-neutral-700 px-3 py-1 text-sm text-neutral-200 hover:border-neutral-500"
             onClick={() => {
               void loadUsers({ keepData: true });
             }}
@@ -290,10 +290,10 @@ export function AdminUsersTable({
         </div>
       </div>
       <div className="mb-3 grid gap-2 md:grid-cols-2 xl:grid-cols-6">
-        <label className="text-xs text-slate-300">
+        <label className="text-xs text-neutral-300">
           {messages.searchLabel}
           <input
-            className="mt-1 w-full rounded-md border border-slate-700 bg-slate-950 px-2 py-1.5 text-sm text-slate-100"
+            className="mt-1 w-full rounded-md border border-neutral-700 bg-neutral-950 px-2 py-1.5 text-sm text-neutral-100"
             placeholder={messages.searchPlaceholder}
             value={searchInput}
             onChange={(event) => {
@@ -302,10 +302,10 @@ export function AdminUsersTable({
             }}
           />
         </label>
-        <label className="text-xs text-slate-300">
+        <label className="text-xs text-neutral-300">
           {messages.roleFilter}
           <select
-            className="mt-1 w-full rounded-md border border-slate-700 bg-slate-950 px-2 py-1.5 text-sm text-slate-100"
+            className="mt-1 w-full rounded-md border border-neutral-700 bg-neutral-950 px-2 py-1.5 text-sm text-neutral-100"
             value={roleFilter}
             onChange={(event) => {
               setRoleFilter(event.target.value as UserRole | "all");
@@ -320,10 +320,10 @@ export function AdminUsersTable({
             ))}
           </select>
         </label>
-        <label className="text-xs text-slate-300">
+        <label className="text-xs text-neutral-300">
           {messages.blockFilter}
           <select
-            className="mt-1 w-full rounded-md border border-slate-700 bg-slate-950 px-2 py-1.5 text-sm text-slate-100"
+            className="mt-1 w-full rounded-md border border-neutral-700 bg-neutral-950 px-2 py-1.5 text-sm text-neutral-100"
             value={blockFilter}
             onChange={(event) => {
               setBlockFilter(event.target.value as "all" | "active" | "blocked");
@@ -335,10 +335,10 @@ export function AdminUsersTable({
             <option value="blocked">{messages.blocked}</option>
           </select>
         </label>
-        <label className="text-xs text-slate-300">
+        <label className="text-xs text-neutral-300">
           {messages.sortBy}
           <select
-            className="mt-1 w-full rounded-md border border-slate-700 bg-slate-950 px-2 py-1.5 text-sm text-slate-100"
+            className="mt-1 w-full rounded-md border border-neutral-700 bg-neutral-950 px-2 py-1.5 text-sm text-neutral-100"
             value={sortBy}
             onChange={(event) => {
               setSortBy(event.target.value as "createdAt" | "name" | "email" | "role");
@@ -351,10 +351,10 @@ export function AdminUsersTable({
             <option value="role">{messages.sortRole}</option>
           </select>
         </label>
-        <label className="text-xs text-slate-300">
+        <label className="text-xs text-neutral-300">
           {messages.sortDir}
           <select
-            className="mt-1 w-full rounded-md border border-slate-700 bg-slate-950 px-2 py-1.5 text-sm text-slate-100"
+            className="mt-1 w-full rounded-md border border-neutral-700 bg-neutral-950 px-2 py-1.5 text-sm text-neutral-100"
             value={sortDir}
             onChange={(event) => {
               setSortDir(event.target.value as "asc" | "desc");
@@ -365,10 +365,10 @@ export function AdminUsersTable({
             <option value="asc">{messages.sortAsc}</option>
           </select>
         </label>
-        <label className="text-xs text-slate-300">
+        <label className="text-xs text-neutral-300">
           {messages.pageSize}
           <select
-            className="mt-1 w-full rounded-md border border-slate-700 bg-slate-950 px-2 py-1.5 text-sm text-slate-100"
+            className="mt-1 w-full rounded-md border border-neutral-700 bg-neutral-950 px-2 py-1.5 text-sm text-neutral-100"
             value={pageSize}
             onChange={(event) => {
               setPageSize(Number(event.target.value));
@@ -382,12 +382,12 @@ export function AdminUsersTable({
         </label>
       </div>
       {availableCompanies.length === 0 ? (
-        <p className="mb-3 text-xs text-slate-400">{messages.noAvailableCompanies}</p>
+        <p className="mb-3 text-xs text-neutral-400">{messages.noAvailableCompanies}</p>
       ) : null}
       {error ? <p className="mb-3 text-sm text-red-300">{error}</p> : null}
-      {isRefreshing ? <p className="mb-3 text-xs text-slate-400">{messages.loading}</p> : null}
+      {isRefreshing ? <p className="mb-3 text-xs text-neutral-400">{messages.loading}</p> : null}
       {items.length === 0 ? (
-        <p className="mb-3 text-sm text-slate-400">{messages.noResults}</p>
+        <p className="mb-3 text-sm text-neutral-400">{messages.noResults}</p>
       ) : null}
       <div className="overflow-auto">
         <table className="w-full min-w-[1380px] table-fixed text-left text-sm">
@@ -402,7 +402,7 @@ export function AdminUsersTable({
             <col className="w-[320px]" />
           </colgroup>
           <thead>
-            <tr className="text-slate-400">
+            <tr className="text-neutral-400">
               <th className="pb-2">{messages.name}</th>
               <th className="pb-2">{messages.email}</th>
               <th className="pb-2">{messages.emailVerification}</th>
@@ -415,8 +415,8 @@ export function AdminUsersTable({
           </thead>
           <tbody>
             {items.map((user) => (
-              <tr key={user.id} className="border-t border-slate-800 align-middle">
-                <td className="py-2 pr-3 text-slate-100">
+              <tr key={user.id} className="border-t border-neutral-800 align-middle">
+                <td className="py-2 pr-3 text-neutral-100">
                   <span className="inline-flex items-center gap-2">
                     <span className="max-w-[170px] truncate" title={user.name}>
                       {user.name}
@@ -432,7 +432,7 @@ export function AdminUsersTable({
                     ) : null}
                   </span>
                 </td>
-                <td className="py-2 pr-3 text-slate-300">
+                <td className="py-2 pr-3 text-neutral-300">
                   <span className="block truncate" title={user.email}>
                     {user.email}
                   </span>
@@ -448,13 +448,13 @@ export function AdminUsersTable({
                     {user.isEmailVerified ? messages.emailVerified : messages.emailNotVerified}
                   </span>
                 </td>
-                <td className="py-2 pr-3 text-slate-300">
+                <td className="py-2 pr-3 text-neutral-300">
                   {user.companies.length > 0 ? (
                     <div className="flex flex-wrap gap-1">
                       {user.companies.map((company) => (
                         <div
                           key={company.id}
-                          className="flex items-center gap-1 rounded-md bg-slate-800 px-2 py-1 text-xs text-slate-200"
+                          className="flex items-center gap-1 rounded-md bg-neutral-800 px-2 py-1 text-xs text-neutral-200"
                           title={company.slug}
                         >
                           <span>{company.name}</span>
@@ -478,11 +478,11 @@ export function AdminUsersTable({
                       ))}
                     </div>
                   ) : (
-                    <span className="text-slate-500">{messages.noCompanies}</span>
+                    <span className="text-neutral-500">{messages.noCompanies}</span>
                   )}
                 </td>
                 <td className="py-2">
-                  <span className="rounded-md bg-slate-800 px-2 py-1 text-xs text-slate-200">
+                  <span className="rounded-md bg-neutral-800 px-2 py-1 text-xs text-neutral-200">
                     {roleMessages[user.role]}
                   </span>
                 </td>
@@ -497,7 +497,7 @@ export function AdminUsersTable({
                     {user.isBlocked ? messages.blocked : messages.active}
                   </span>
                 </td>
-                <td className="py-2 text-slate-400">
+                <td className="py-2 text-neutral-400">
                   {new Date(user.createdAt).toLocaleString(locale)}
                 </td>
                 <td className="py-2">
@@ -520,7 +520,7 @@ export function AdminUsersTable({
                       <button
                         key={role}
                         type="button"
-                        className="min-w-[96px] rounded-md border border-slate-700 px-2 py-1 text-center text-xs text-slate-200 whitespace-nowrap hover:border-slate-500 disabled:opacity-50"
+                        className="min-w-[96px] rounded-md border border-neutral-700 px-2 py-1 text-center text-xs text-neutral-200 whitespace-nowrap hover:border-neutral-500 disabled:opacity-50"
                         disabled={updatingId === user.id || user.role === role}
                         onClick={() => {
                           void updateRole(user.id, role);
@@ -537,7 +537,7 @@ export function AdminUsersTable({
         </table>
       </div>
       <div className="mt-3 flex items-center justify-between gap-2">
-        <p className="text-xs text-slate-400">
+        <p className="text-xs text-neutral-400">
           {messages.pageInfo
             .replace("{page}", String(meta.page))
             .replace("{totalPages}", String(meta.totalPages))
@@ -546,7 +546,7 @@ export function AdminUsersTable({
         <div className="flex items-center gap-2">
           <button
             type="button"
-            className="rounded-md border border-slate-700 px-2 py-1 text-xs text-slate-200 hover:border-slate-500 disabled:opacity-50"
+            className="rounded-md border border-neutral-700 px-2 py-1 text-xs text-neutral-200 hover:border-neutral-500 disabled:opacity-50"
             disabled={page <= 1}
             onClick={() => {
               setPage((current) => Math.max(1, current - 1));
@@ -556,7 +556,7 @@ export function AdminUsersTable({
           </button>
           <button
             type="button"
-            className="rounded-md border border-slate-700 px-2 py-1 text-xs text-slate-200 hover:border-slate-500 disabled:opacity-50"
+            className="rounded-md border border-neutral-700 px-2 py-1 text-xs text-neutral-200 hover:border-neutral-500 disabled:opacity-50"
             disabled={page >= meta.totalPages}
             onClick={() => {
               setPage((current) => Math.min(meta.totalPages, current + 1));
@@ -569,17 +569,17 @@ export function AdminUsersTable({
       </div>
       {isAssignModalOpen ? (
         <div
-          className="fixed inset-0 z-[70] flex items-center justify-center overflow-y-auto [&>div:not(.fixed)]:my-auto [&>div:not(.fixed)]:max-h-[calc(100dvh-2rem)] [&>div:not(.fixed)]:!overflow-y-auto bg-slate-950/75 p-4"
+          className="fixed inset-0 z-[70] flex items-center justify-center overflow-y-auto [&>div:not(.fixed)]:my-auto [&>div:not(.fixed)]:max-h-[calc(100dvh-2rem)] [&>div:not(.fixed)]:!overflow-y-auto bg-neutral-950/75 p-4"
           role="dialog"
           aria-modal="true"
         >
-          <div className="w-full max-w-md rounded-xl border border-slate-700 bg-slate-900 p-4 shadow-2xl">
-            <h3 className="text-sm font-semibold text-slate-100">{messages.assignCompanyTitle}</h3>
+          <div className="w-full max-w-md rounded-xl border border-neutral-700 bg-neutral-900 p-4 shadow-2xl">
+            <h3 className="text-sm font-semibold text-neutral-100">{messages.assignCompanyTitle}</h3>
             <div className="mt-3 space-y-3">
-              <label className="block text-xs text-slate-300">
+              <label className="block text-xs text-neutral-300">
                 {messages.selectUser}
                 <select
-                  className="mt-1 w-full rounded-md border border-slate-700 bg-slate-950 px-2 py-1.5 text-sm text-slate-100"
+                  className="mt-1 w-full rounded-md border border-neutral-700 bg-neutral-950 px-2 py-1.5 text-sm text-neutral-100"
                   value={assignUserId}
                   onChange={(event) => {
                     setAssignUserId(event.target.value);
@@ -592,10 +592,10 @@ export function AdminUsersTable({
                   ))}
                 </select>
               </label>
-              <label className="block text-xs text-slate-300">
+              <label className="block text-xs text-neutral-300">
                 {messages.selectCompany}
                 <select
-                  className="mt-1 w-full rounded-md border border-slate-700 bg-slate-950 px-2 py-1.5 text-sm text-slate-100"
+                  className="mt-1 w-full rounded-md border border-neutral-700 bg-neutral-950 px-2 py-1.5 text-sm text-neutral-100"
                   value={assignCompanyId}
                   onChange={(event) => {
                     setAssignCompanyId(event.target.value);
@@ -612,7 +612,7 @@ export function AdminUsersTable({
             <div className="mt-4 flex justify-end gap-2">
               <button
                 type="button"
-                className="rounded-md border border-slate-700 px-3 py-1.5 text-xs text-slate-300 hover:border-slate-500"
+                className="rounded-md border border-neutral-700 px-3 py-1.5 text-xs text-neutral-300 hover:border-neutral-500"
                 onClick={() => {
                   setIsAssignModalOpen(false);
                 }}
@@ -635,13 +635,13 @@ export function AdminUsersTable({
       ) : null}
       {removeConfirm ? (
         <div
-          className="fixed inset-0 z-[70] flex items-center justify-center overflow-y-auto [&>div:not(.fixed)]:my-auto [&>div:not(.fixed)]:max-h-[calc(100dvh-2rem)] [&>div:not(.fixed)]:!overflow-y-auto bg-slate-950/75 p-4"
+          className="fixed inset-0 z-[70] flex items-center justify-center overflow-y-auto [&>div:not(.fixed)]:my-auto [&>div:not(.fixed)]:max-h-[calc(100dvh-2rem)] [&>div:not(.fixed)]:!overflow-y-auto bg-neutral-950/75 p-4"
           role="dialog"
           aria-modal="true"
         >
-          <div className="w-full max-w-md rounded-xl border border-slate-700 bg-slate-900 p-4 shadow-2xl">
-            <h3 className="text-sm font-semibold text-slate-100">{messages.confirmRemoveTitle}</h3>
-            <p className="mt-2 text-xs leading-5 text-slate-300">
+          <div className="w-full max-w-md rounded-xl border border-neutral-700 bg-neutral-900 p-4 shadow-2xl">
+            <h3 className="text-sm font-semibold text-neutral-100">{messages.confirmRemoveTitle}</h3>
+            <p className="mt-2 text-xs leading-5 text-neutral-300">
               {messages.confirmRemoveText
                 .replace("{company}", removeConfirm.companyName)
                 .replace("{user}", removeConfirm.userName)}
@@ -649,7 +649,7 @@ export function AdminUsersTable({
             <div className="mt-4 flex justify-end gap-2">
               <button
                 type="button"
-                className="rounded-md border border-slate-700 px-3 py-1.5 text-xs text-slate-300 hover:border-slate-500"
+                className="rounded-md border border-neutral-700 px-3 py-1.5 text-xs text-neutral-300 hover:border-neutral-500"
                 onClick={() => {
                   setRemoveConfirm(null);
                 }}
@@ -673,5 +673,6 @@ export function AdminUsersTable({
     </>
   );
 }
+
 
 

@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
@@ -119,10 +119,10 @@ export function AdminContainersTable({ locale }: AdminContainersTableProps) {
   }
 
   return (
-    <section className="rounded-xl border border-slate-800 bg-slate-900/60 p-4">
+    <section className="rounded-xl border border-neutral-800 bg-neutral-900/60 p-4">
       <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
-        <h2 className="text-lg font-semibold text-slate-100">Kontenery</h2>
-        <p className="text-xs text-slate-400">Lacznie: {total}</p>
+        <h2 className="text-lg font-semibold text-neutral-100">Kontenery</h2>
+        <p className="text-xs text-neutral-400">Lacznie: {total}</p>
       </div>
 
       <div className="mb-3 grid gap-2 md:grid-cols-[minmax(0,1fr)_220px]">
@@ -130,7 +130,7 @@ export function AdminContainersTable({ locale }: AdminContainersTableProps) {
           value={q}
           onChange={(event) => setQ(event.target.value)}
           placeholder="Szukaj po firmie, lokalizacji, emailu"
-          className="rounded-md border border-slate-700 bg-slate-950 px-3 py-2 text-sm text-slate-100"
+          className="rounded-md border border-neutral-700 bg-neutral-950 px-3 py-2 text-sm text-neutral-100"
         />
         <select
           value={status}
@@ -138,7 +138,7 @@ export function AdminContainersTable({ locale }: AdminContainersTableProps) {
             setStatus(event.target.value as "all" | "active" | "expired" | "closed");
             setPage(1);
           }}
-          className="rounded-md border border-slate-700 bg-slate-950 px-3 py-2 text-sm text-slate-100"
+          className="rounded-md border border-neutral-700 bg-neutral-950 px-3 py-2 text-sm text-neutral-100"
         >
           <option value="all">Status: wszystkie</option>
           <option value="active">Aktywne</option>
@@ -148,12 +148,12 @@ export function AdminContainersTable({ locale }: AdminContainersTableProps) {
       </div>
 
       {error ? <p className="mb-2 text-sm text-red-300">{error}</p> : null}
-      {isLoading ? <p className="mb-2 text-sm text-slate-300">Ladowanie...</p> : null}
+      {isLoading ? <p className="mb-2 text-sm text-neutral-300">Ladowanie...</p> : null}
 
       <div className="overflow-auto">
         <table className="w-full min-w-[1080px] text-left text-sm">
           <thead>
-            <tr className="text-slate-400">
+            <tr className="text-neutral-400">
               <th className="pb-2">Firma</th>
               <th className="pb-2">Kontener</th>
               <th className="pb-2">Lokalizacja</th>
@@ -165,19 +165,19 @@ export function AdminContainersTable({ locale }: AdminContainersTableProps) {
           </thead>
           <tbody>
             {items.map((item) => (
-              <tr key={item.id} className="border-t border-slate-800 align-top">
-                <td className="py-2 pr-3 text-slate-200">{item.companyName}</td>
-                <td className="py-2 pr-3 text-slate-300">{getContainerShortLabel(item.container)} ({item.type})</td>
-                <td className="py-2 pr-3 text-slate-300">{item.locationCity}, {item.locationCountry}</td>
-                <td className="py-2 pr-3 text-slate-300">{item.quantity}</td>
-                <td className="py-2 pr-3 text-slate-300">{item.status}</td>
-                <td className="py-2 pr-3 text-slate-300">{new Date(item.expiresAt).toLocaleDateString(locale)}</td>
+              <tr key={item.id} className="border-t border-neutral-800 align-top">
+                <td className="py-2 pr-3 text-neutral-200">{item.companyName}</td>
+                <td className="py-2 pr-3 text-neutral-300">{getContainerShortLabel(item.container)} ({item.type})</td>
+                <td className="py-2 pr-3 text-neutral-300">{item.locationCity}, {item.locationCountry}</td>
+                <td className="py-2 pr-3 text-neutral-300">{item.quantity}</td>
+                <td className="py-2 pr-3 text-neutral-300">{item.status}</td>
+                <td className="py-2 pr-3 text-neutral-300">{new Date(item.expiresAt).toLocaleDateString(locale)}</td>
                 <td className="py-2">
                   <div className="flex flex-wrap items-center gap-2">
                     <Link
                       href={`/containers/${item.id}`}
                       target="_blank"
-                      className="rounded-md border border-slate-700 px-2 py-1 text-xs text-slate-200 hover:border-slate-500"
+                      className="rounded-md border border-neutral-700 px-2 py-1 text-xs text-neutral-200 hover:border-neutral-500"
                     >
                       Podglad
                     </Link>
@@ -204,7 +204,7 @@ export function AdminContainersTable({ locale }: AdminContainersTableProps) {
                       onClick={() => {
                         void setListingStatus(item.id, "closed");
                       }}
-                      className="rounded-md border border-slate-700 px-2 py-1 text-xs text-slate-200 hover:border-slate-500"
+                      className="rounded-md border border-neutral-700 px-2 py-1 text-xs text-neutral-200 hover:border-neutral-500"
                     >
                       Zamknij
                     </button>
@@ -232,16 +232,16 @@ export function AdminContainersTable({ locale }: AdminContainersTableProps) {
           type="button"
           disabled={page <= 1}
           onClick={() => setPage((current) => Math.max(1, current - 1))}
-          className="rounded-md border border-slate-700 px-2 py-1 text-xs text-slate-200 disabled:opacity-50"
+          className="rounded-md border border-neutral-700 px-2 py-1 text-xs text-neutral-200 disabled:opacity-50"
         >
           Poprzednia
         </button>
-        <span className="text-xs text-slate-400">{page}/{totalPages}</span>
+        <span className="text-xs text-neutral-400">{page}/{totalPages}</span>
         <button
           type="button"
           disabled={page >= totalPages}
           onClick={() => setPage((current) => Math.min(totalPages, current + 1))}
-          className="rounded-md border border-slate-700 px-2 py-1 text-xs text-slate-200 disabled:opacity-50"
+          className="rounded-md border border-neutral-700 px-2 py-1 text-xs text-neutral-200 disabled:opacity-50"
         >
           Nastepna
         </button>
@@ -249,4 +249,5 @@ export function AdminContainersTable({ locale }: AdminContainersTableProps) {
     </section>
   );
 }
+
 

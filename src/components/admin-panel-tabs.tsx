@@ -35,7 +35,7 @@ export function AdminPanelTabs({
   const [activeTab, setActiveTab] = useState<AdminTabKey>(resolveAdminTab(initialTab));
 
   return (
-    <section className="min-w-0 rounded-xl border border-slate-800 bg-slate-900/40 p-3">
+    <section className="min-w-0 rounded-xl border border-neutral-800 bg-neutral-900/40 p-3">
       <div className="mb-4 flex flex-wrap gap-2">
         {ADMIN_TABS.map((tab) => {
           const isActive = tab === activeTab;
@@ -49,7 +49,7 @@ export function AdminPanelTabs({
               className={
                 isActive
                   ? "rounded-md border border-sky-500 bg-sky-500/15 px-3 py-1.5 text-sm font-medium text-sky-100"
-                  : "rounded-md border border-slate-700 bg-slate-900 px-3 py-1.5 text-sm text-slate-300 hover:border-slate-500 hover:text-slate-100"
+                  : "rounded-md border border-neutral-700 bg-neutral-900 px-3 py-1.5 text-sm text-neutral-300 hover:border-neutral-500 hover:text-neutral-100"
               }
             >
               {TAB_LABELS[tab]}
@@ -65,3 +65,4 @@ export function AdminPanelTabs({
     </section>
   );
 }
+

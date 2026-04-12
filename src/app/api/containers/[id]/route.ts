@@ -1,11 +1,17 @@
-﻿import { NextRequest, NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { ObjectId } from "mongodb";
+import sanitizeHtml from "sanitize-html";
 import { z } from "zod";
 import { getCurrentUserFromRequest } from "@/lib/auth-user";
 import { normalizeGeocodeAddressParts } from "@/lib/geocode-address";
 import {
+  MAX_LISTING_LOCATIONS,
+  normalizeListingLocations,
+} from "@/lib/listing-locations";
+import {
   ensureContainerListingsIndexes,
   expireContainerListingsIfNeeded,
+  getContainerListingFavoritesCollection,
   getContainerListingsCollection,
   getDefaultListingExpiration,
   mapContainerListingToItem,
@@ -16,16 +22,27 @@ import {
   CONTAINER_HEIGHTS,
   CONTAINER_SIZES,
   CONTAINER_TYPES,
-  DEAL_TYPES,
   LISTING_TYPES,
   LISTING_STATUS,
+  PRICE_CURRENCIES,
+  PRICE_TAX_MODES,
+  PRICE_TYPES,
+  PRICE_UNITS,
   type ContainerSize,
   type ListingStatus,
 } from "@/lib/container-listing-types";
+import {
+  buildLegacyListingPrice,
+  normalizeListingPrice,
+  type ListingPriceInput,
+} from "@/lib/listing-price";
+import { getRichTextLength, hasRichTextContent } from "@/lib/listing-rich-text";
 import { USER_ROLE } from "@/lib/user-roles";
 import { logError } from "@/lib/server-logger";
 
 export const runtime = "nodejs";
+const DESCRIPTION_MAX_TEXT_LENGTH = 1000;
+const DESCRIPTION_ALLOWED_TAGS = ["p", "br", "strong", "em", "u", "ul", "ol", "li", "div"];
 
 const locationAddressPartsSchema = z.object({
   street: z.string().trim().min(1).max(120).optional(),
@@ -33,6 +50,65 @@ const locationAddressPartsSchema = z.object({
   city: z.string().trim().min(1).max(120).optional(),
   country: z.string().trim().min(1).max(120).optional(),
 });
+
+const listingLocationSchema = z.object({
+  locationLat: z.coerce.number().finite().min(-90).max(90),
+  locationLng: z.coerce.number().finite().min(-180).max(180),
+  locationCity: z.string().trim().max(120).optional(),
+  locationCountry: z.string().trim().max(120).optional(),
+  locationAddressLabel: z.string().trim().max(250).optional(),
+  locationAddressParts: locationAddressPartsSchema.optional(),
+  isPrimary: z.coerce.boolean().optional(),
+});
+
+const pricingOriginalSchema = z.object({
+  amount: z.coerce.number().finite().nonnegative().max(100_000_000).nullable(),
+  currency: z.enum(PRICE_CURRENCIES).nullable(),
+  unit: z.enum(PRICE_UNITS).nullable(),
+  taxMode: z.enum(PRICE_TAX_MODES).nullable(),
+  vatRate: z.coerce.number().finite().min(0).max(100).nullable(),
+  negotiable: z.coerce.boolean(),
+});
+
+const pricingPayloadSchema = z
+  .object({
+    type: z.enum(PRICE_TYPES),
+    original: pricingOriginalSchema,
+  })
+  .superRefine((value, context) => {
+    if (value.type === "request") {
+      return;
+    }
+
+    if (value.original.amount === null) {
+      context.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["original", "amount"],
+        message: "Amount is required for fixed/starting_from price type",
+      });
+    }
+    if (value.original.currency === null) {
+      context.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["original", "currency"],
+        message: "Currency is required for fixed/starting_from price type",
+      });
+    }
+    if (value.original.unit === null) {
+      context.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["original", "unit"],
+        message: "Unit is required for fixed/starting_from price type",
+      });
+    }
+    if (value.original.taxMode === null) {
+      context.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["original", "taxMode"],
+        message: "Tax mode is required for fixed/starting_from price type",
+      });
+    }
+  });
 
 type RouteContext = {
   params: Promise<{
@@ -43,6 +119,7 @@ type RouteContext = {
 const updateSchema = z.object({
   action: z.literal("update"),
   type: z.enum(LISTING_TYPES),
+  title: z.string().trim().max(80).optional(),
   container: z.object({
     size: z
       .number()
@@ -54,17 +131,65 @@ const updateSchema = z.object({
     condition: z.enum(CONTAINER_CONDITIONS),
   }),
   quantity: z.coerce.number().int().min(1).max(100_000),
-  locationLat: z.coerce.number().finite().min(-90).max(90),
-  locationLng: z.coerce.number().finite().min(-180).max(180),
+  locationLat: z.coerce.number().finite().min(-90).max(90).optional(),
+  locationLng: z.coerce.number().finite().min(-180).max(180).optional(),
   locationAddressLabel: z.string().trim().max(250).optional(),
   locationAddressParts: locationAddressPartsSchema.optional(),
-  availableFrom: z.coerce.date(),
-  dealType: z.enum(DEAL_TYPES),
+  locations: z.array(listingLocationSchema).min(1).max(MAX_LISTING_LOCATIONS).optional(),
+  availableNow: z.coerce.boolean().optional(),
+  availableFromApproximate: z.coerce.boolean().optional(),
+  availableFrom: z.coerce.date().optional(),
+  pricing: pricingPayloadSchema.optional(),
+  priceAmount: z.coerce.number().finite().nonnegative().max(100_000_000).optional(),
+  priceNegotiable: z.coerce.boolean().optional(),
+  logisticsTransportAvailable: z.coerce.boolean().optional(),
+  logisticsTransportIncluded: z.coerce.boolean().optional(),
+  logisticsTransportFreeDistanceKm: z.coerce.number().int().min(1).max(10_000).optional(),
+  logisticsUnloadingAvailable: z.coerce.boolean().optional(),
+  logisticsUnloadingIncluded: z.coerce.boolean().optional(),
+  logisticsComment: z.string().trim().max(600).optional(),
+  hasCscPlate: z.coerce.boolean().optional(),
+  hasCscCertification: z.coerce.boolean().optional(),
+  productionYear: z.coerce.number().int().min(1900).max(2100).optional(),
   price: z.string().trim().max(100).optional(),
-  description: z.string().trim().max(2_000).optional(),
+  description: z.string().trim().max(16_000).optional(),
   companyName: z.string().trim().min(2).max(160),
   contactEmail: z.email().trim().max(160),
   contactPhone: z.string().trim().max(40).optional(),
+}).superRefine((value, context) => {
+  const hasLegacyLocation =
+    typeof value.locationLat === "number" &&
+    Number.isFinite(value.locationLat) &&
+    typeof value.locationLng === "number" &&
+    Number.isFinite(value.locationLng);
+  const hasLocations = Array.isArray(value.locations) && value.locations.length > 0;
+
+  if (!hasLegacyLocation && !hasLocations) {
+    context.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ["locations"],
+      message: "At least one location is required",
+    });
+  }
+
+  if (value.availableNow !== true && !value.availableFrom) {
+    context.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ["availableFrom"],
+      message: "availableFrom is required when availableNow is false",
+    });
+  }
+
+  if (
+    value.logisticsTransportIncluded === true &&
+    typeof value.logisticsTransportFreeDistanceKm !== "number"
+  ) {
+    context.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ["logisticsTransportFreeDistanceKm"],
+      message: "logisticsTransportFreeDistanceKm is required when transport is included",
+    });
+  }
 });
 
 const closeSchema = z.object({
@@ -83,6 +208,40 @@ const adminSetStatusSchema = z.object({
 function normalizeOptionalString(value?: string): string | undefined {
   const trimmed = value?.trim();
   return trimmed ? trimmed : undefined;
+}
+
+function normalizeOptionalDescriptionHtml(value?: string): string | undefined {
+  const trimmed = value?.trim();
+  if (!trimmed || !hasRichTextContent(trimmed)) {
+    return undefined;
+  }
+
+  const sanitized = sanitizeHtml(trimmed, {
+    allowedTags: DESCRIPTION_ALLOWED_TAGS,
+    allowedAttributes: {},
+  }).trim();
+
+  if (!sanitized || !hasRichTextContent(sanitized)) {
+    return undefined;
+  }
+
+  return sanitized;
+}
+
+function resolveAvailableFromDate(input: {
+  availableNow?: boolean;
+  availableFrom?: Date;
+  now: Date;
+}): Date {
+  if (input.availableNow === true) {
+    return input.now;
+  }
+
+  if (input.availableFrom instanceof Date && Number.isFinite(input.availableFrom.getTime())) {
+    return input.availableFrom;
+  }
+
+  return input.now;
 }
 
 function canManageListing(input: {
@@ -178,10 +337,66 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
     const updateParsed = updateSchema.safeParse(payload);
     if (updateParsed.success) {
       const now = new Date();
-      const locationAddressLabel = normalizeOptionalString(updateParsed.data.locationAddressLabel);
-      const locationAddressParts = normalizeGeocodeAddressParts(updateParsed.data.locationAddressParts);
-      const locationCity = locationAddressParts?.city ?? "";
-      const locationCountry = locationAddressParts?.country ?? "";
+      const legacyLocationAddressLabel = normalizeOptionalString(updateParsed.data.locationAddressLabel);
+      const legacyLocationAddressParts = normalizeGeocodeAddressParts(updateParsed.data.locationAddressParts);
+      const normalizedLocations = normalizeListingLocations({
+        locations: updateParsed.data.locations,
+        fallback: {
+          locationLat: updateParsed.data.locationLat,
+          locationLng: updateParsed.data.locationLng,
+          locationAddressLabel: legacyLocationAddressLabel,
+          locationAddressParts: legacyLocationAddressParts,
+          isPrimary: true,
+        },
+        max: MAX_LISTING_LOCATIONS,
+      });
+      const primaryLocation = normalizedLocations[0];
+      if (!primaryLocation) {
+        return NextResponse.json(
+          { error: "At least one valid location is required" },
+          { status: 400 },
+        );
+      }
+
+      const locationAddressLabel = primaryLocation.locationAddressLabel;
+      const locationAddressParts = primaryLocation.locationAddressParts;
+      const locationCity = primaryLocation.locationCity;
+      const locationCountry = primaryLocation.locationCountry;
+      const resolvedAvailableFrom = resolveAvailableFromDate({
+        availableNow: updateParsed.data.availableNow,
+        availableFrom: updateParsed.data.availableFrom,
+        now,
+      });
+      const normalizedTitle = normalizeOptionalString(updateParsed.data.title);
+      const normalizedDescription = normalizeOptionalDescriptionHtml(updateParsed.data.description);
+      const normalizedPrice = normalizeOptionalString(updateParsed.data.price);
+      const normalizedLogisticsComment = normalizeOptionalString(updateParsed.data.logisticsComment);
+      const normalizedPriceAmount =
+        typeof updateParsed.data.priceAmount === "number" &&
+        Number.isFinite(updateParsed.data.priceAmount)
+          ? updateParsed.data.priceAmount
+          : undefined;
+      const logisticsTransportIncluded = updateParsed.data.logisticsTransportIncluded === true;
+      const logisticsTransportAvailable =
+        updateParsed.data.logisticsTransportAvailable === true || logisticsTransportIncluded;
+      const normalizedLogisticsTransportFreeDistanceKm =
+        logisticsTransportIncluded &&
+        typeof updateParsed.data.logisticsTransportFreeDistanceKm === "number" &&
+        Number.isFinite(updateParsed.data.logisticsTransportFreeDistanceKm) &&
+        updateParsed.data.logisticsTransportFreeDistanceKm > 0
+          ? Math.trunc(updateParsed.data.logisticsTransportFreeDistanceKm)
+          : undefined;
+      const logisticsUnloadingIncluded = updateParsed.data.logisticsUnloadingIncluded === true;
+      const logisticsUnloadingAvailable =
+        updateParsed.data.logisticsUnloadingAvailable === true || logisticsUnloadingIncluded;
+      const normalizedPricing =
+        updateParsed.data.pricing
+          ? normalizeListingPrice(updateParsed.data.pricing as ListingPriceInput, now)
+          : buildLegacyListingPrice({
+              amount: normalizedPriceAmount,
+              negotiable: updateParsed.data.priceNegotiable,
+              now,
+            });
       const unsetPatch: Record<string, 1> = {};
       unsetPatch.containerType = 1;
       if (!locationAddressLabel) {
@@ -190,12 +405,44 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
       if (!locationAddressParts) {
         unsetPatch.locationAddressParts = 1;
       }
+      if (normalizedPriceAmount === undefined && normalizedPricing?.original.amount === null) {
+        unsetPatch.priceAmount = 1;
+      }
+      if (!normalizedPricing) {
+        unsetPatch.pricing = 1;
+      }
+      if (typeof updateParsed.data.productionYear !== "number") {
+        unsetPatch.productionYear = 1;
+      }
+      if (!normalizedTitle) {
+        unsetPatch.title = 1;
+      }
+      if (!normalizedDescription) {
+        unsetPatch.description = 1;
+      }
+      if (!normalizedLogisticsComment) {
+        unsetPatch.logisticsComment = 1;
+      }
+      if (normalizedLogisticsTransportFreeDistanceKm === undefined) {
+        unsetPatch.logisticsTransportFreeDistanceKm = 1;
+      }
+
+      if (
+        normalizedDescription &&
+        getRichTextLength(normalizedDescription) > DESCRIPTION_MAX_TEXT_LENGTH
+      ) {
+        return NextResponse.json(
+          { error: `description exceeds ${DESCRIPTION_MAX_TEXT_LENGTH} characters` },
+          { status: 400 },
+        );
+      }
 
       await listings.updateOne(
         { _id: listingId },
         {
           $set: {
             type: updateParsed.data.type,
+            ...(normalizedTitle ? { title: normalizedTitle } : {}),
             container: {
               size: updateParsed.data.container.size as ContainerSize,
               height: updateParsed.data.container.height,
@@ -206,14 +453,47 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
             quantity: updateParsed.data.quantity,
             locationCity,
             locationCountry,
-            locationLat: updateParsed.data.locationLat,
-            locationLng: updateParsed.data.locationLng,
+            locationLat: primaryLocation.locationLat,
+            locationLng: primaryLocation.locationLng,
             ...(locationAddressLabel ? { locationAddressLabel } : {}),
             ...(locationAddressParts ? { locationAddressParts } : {}),
-            availableFrom: updateParsed.data.availableFrom,
-            dealType: updateParsed.data.dealType,
-            price: normalizeOptionalString(updateParsed.data.price),
-            description: normalizeOptionalString(updateParsed.data.description),
+            locations: normalizedLocations,
+            availableNow: updateParsed.data.availableNow === true,
+            availableFromApproximate:
+              updateParsed.data.availableNow === true
+                ? false
+                : updateParsed.data.availableFromApproximate === true,
+            availableFrom: resolvedAvailableFrom,
+            ...(normalizedPricing ? { pricing: normalizedPricing } : {}),
+            ...(normalizedPriceAmount !== undefined || normalizedPricing?.original.amount !== null
+              ? { priceAmount: normalizedPriceAmount ?? normalizedPricing?.original.amount ?? undefined }
+              : {}),
+            priceNegotiable:
+              normalizedPricing?.original.negotiable === true ||
+              updateParsed.data.priceNegotiable === true,
+            logisticsTransportAvailable,
+            logisticsTransportIncluded:
+              logisticsTransportAvailable && logisticsTransportIncluded,
+            ...(normalizedLogisticsTransportFreeDistanceKm !== undefined
+              ? { logisticsTransportFreeDistanceKm: normalizedLogisticsTransportFreeDistanceKm }
+              : {}),
+            logisticsUnloadingAvailable,
+            logisticsUnloadingIncluded:
+              logisticsUnloadingAvailable && logisticsUnloadingIncluded,
+            ...(normalizedLogisticsComment ? { logisticsComment: normalizedLogisticsComment } : {}),
+            hasCscPlate: updateParsed.data.hasCscPlate === true,
+            hasCscCertification: updateParsed.data.hasCscCertification === true,
+            ...(typeof updateParsed.data.productionYear === "number"
+              ? { productionYear: updateParsed.data.productionYear }
+              : {}),
+            price:
+              normalizedPrice ??
+              (normalizedPriceAmount !== undefined
+                ? String(normalizedPriceAmount)
+                : normalizedPricing?.original.amount !== null
+                  ? String(normalizedPricing?.original.amount)
+                  : undefined),
+            ...(normalizedDescription ? { description: normalizedDescription } : {}),
             companyName: updateParsed.data.companyName.trim(),
             contactEmail: updateParsed.data.contactEmail.trim(),
             contactPhone: normalizeOptionalString(updateParsed.data.contactPhone),
@@ -332,6 +612,7 @@ export async function DELETE(request: NextRequest, context: RouteContext) {
     }
 
     await listings.deleteOne({ _id: listingId });
+    await (await getContainerListingFavoritesCollection()).deleteMany({ listingId });
     return NextResponse.json({ ok: true });
   } catch (error) {
     logError("Unhandled API error", { route: "/api/containers/[id]", error });
@@ -344,4 +625,5 @@ export async function DELETE(request: NextRequest, context: RouteContext) {
     );
   }
 }
+
 

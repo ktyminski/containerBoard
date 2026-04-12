@@ -76,7 +76,7 @@ export function CompanyMediaSection({
   const backgroundPreviewUrl =
     background?.previewUrl ?? (isInitialBackgroundRemoved ? null : initialBackgroundUrl);
   const backgroundOverlayClass = backgroundPreviewUrl
-    ? "absolute inset-0 bg-gradient-to-t from-slate-950/34 via-slate-950/10 to-transparent"
+    ? "absolute inset-0 bg-gradient-to-t from-neutral-950/34 via-neutral-950/10 to-transparent"
     : "";
 
   return (
@@ -103,7 +103,7 @@ export function CompanyMediaSection({
 
           <button
             type="button"
-            className="absolute right-3 top-3 inline-flex h-8 w-8 cursor-pointer items-center justify-center rounded-full border border-slate-300 bg-white/92 text-lg text-slate-700 shadow-sm transition hover:border-slate-400"
+            className="absolute right-3 top-3 inline-flex h-8 w-8 cursor-pointer items-center justify-center rounded-full border border-neutral-300 bg-white/92 text-lg text-neutral-700 shadow-sm transition hover:border-neutral-400"
             onClick={() => setMediaModalTarget("background")}
             aria-label={messages.backgroundFile}
           >
@@ -131,7 +131,7 @@ export function CompanyMediaSection({
                   {companyInitial}
                 </span>
               )}
-              <span className="absolute bottom-1 right-1 inline-flex h-6 w-6 items-center justify-center rounded-full border border-slate-400/60 bg-[rgba(11,23,48,0.86)] text-sm text-[#e2efff]">
+              <span className="absolute bottom-1 right-1 inline-flex h-6 w-6 items-center justify-center rounded-full border border-neutral-400/60 bg-[rgba(11,23,48,0.86)] text-sm text-[#e2efff]">
                 +
               </span>
             </button>
@@ -148,20 +148,20 @@ export function CompanyMediaSection({
       {mediaModalTarget ? (
         <div
           className={`fixed inset-0 z-[70] flex items-center justify-center overflow-y-auto [&>div:not(.fixed)]:my-auto [&>div:not(.fixed)]:max-h-[calc(100dvh-2rem)] [&>div:not(.fixed)]:!overflow-y-auto p-4 ${
-            isBackgroundModalOpen ? "bg-slate-100/85" : "bg-[rgba(2,6,23,0.82)]"
+            isBackgroundModalOpen ? "bg-neutral-100/85" : "bg-[rgba(2,6,23,0.82)]"
           }`}
         >
           <div
             className={`w-full max-w-xl rounded-xl border p-5 shadow-2xl ${
-              isBackgroundModalOpen ? "border-slate-300 bg-white" : "border-[#334155] bg-[#0b1730]"
+              isBackgroundModalOpen ? "border-neutral-300 bg-white" : "border-[#334155] bg-[#0b1730]"
             }`}
           >
             <div className="flex items-start justify-between gap-3">
               <div>
-                <h3 className={`text-lg font-semibold ${isBackgroundModalOpen ? "text-slate-800" : "text-[#e2efff]"}`}>
+                <h3 className={`text-lg font-semibold ${isBackgroundModalOpen ? "text-neutral-800" : "text-[#e2efff]"}`}>
                   {activeTitle}
                 </h3>
-                <p className={`mt-1 text-xs ${isBackgroundModalOpen ? "text-slate-600" : "text-[#9fb8d8]"}`}>
+                <p className={`mt-1 text-xs ${isBackgroundModalOpen ? "text-neutral-600" : "text-[#9fb8d8]"}`}>
                   {activeHint}
                 </p>
               </div>
@@ -169,7 +169,7 @@ export function CompanyMediaSection({
                 type="button"
                 className={`cursor-pointer rounded-md border px-3 py-1.5 text-xs transition ${
                   isBackgroundModalOpen
-                    ? "border-slate-300 text-slate-600 hover:border-slate-400"
+                    ? "border-neutral-300 text-neutral-600 hover:border-neutral-400"
                     : "border-[#334155] text-[#cbd5e1] hover:border-[#475569]"
                 }`}
                 onClick={() => setMediaModalTarget(null)}
@@ -213,6 +213,7 @@ export function CompanyMediaSection({
     </>
   );
 }
+
 
 
 

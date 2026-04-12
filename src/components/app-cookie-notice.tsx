@@ -48,8 +48,8 @@ export function AppCookieNotice({ locale, messages, isLoggedIn }: AppCookieNotic
   }
 
   return (
-    <div className="fixed inset-x-0 bottom-0 z-50 border-t border-slate-700 bg-slate-950/95 backdrop-blur">
-      <div className="mx-auto flex w-full max-w-7xl flex-col gap-3 px-3 py-3 text-xs text-slate-300 sm:flex-row sm:items-center sm:justify-between">
+    <div className="fixed inset-x-0 bottom-0 z-50 border-t border-neutral-700 bg-neutral-950/95 backdrop-blur">
+      <div className="mx-auto flex w-full max-w-7xl flex-col gap-3 px-3 py-3 text-xs text-neutral-300 sm:flex-row sm:items-center sm:justify-between">
         <p className="leading-relaxed">
           {messages.message}{" "}
           <Link
@@ -76,7 +76,7 @@ export function AppCookieNotice({ locale, messages, isLoggedIn }: AppCookieNotic
         </p>
         <button
           type="button"
-          className="rounded-md bg-sky-500 px-3 py-1.5 text-xs font-medium text-slate-950 hover:bg-sky-400"
+          className="rounded-md bg-sky-500 px-3 py-1.5 text-xs font-medium text-neutral-950 hover:bg-sky-400"
           onClick={() => {
             try {
               window.localStorage.setItem(COOKIE_NOTICE_STORAGE_KEY, "1");
@@ -92,3 +92,4 @@ export function AppCookieNotice({ locale, messages, isLoggedIn }: AppCookieNotic
     </div>
   );
 }
+

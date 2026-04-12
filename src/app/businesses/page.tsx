@@ -47,17 +47,17 @@ export default async function CompaniesIndexPage({
 
   return (
     <main className="mx-auto w-full max-w-6xl px-4 py-8 sm:px-6 lg:px-8">
-      <header className="rounded-xl border border-slate-800 bg-slate-900/60 p-6">
-        <h1 className="text-2xl font-semibold text-slate-100 sm:text-3xl">
+      <header className="rounded-xl border border-neutral-800 bg-neutral-900/60 p-6">
+        <h1 className="text-2xl font-semibold text-neutral-100 sm:text-3xl">
           {messages.seoLandingIndexes.companies.heroTitle}
         </h1>
-        <p className="mt-3 max-w-3xl text-sm leading-6 text-slate-300">
+        <p className="mt-3 max-w-3xl text-sm leading-6 text-neutral-300">
           {messages.seoLandingIndexes.companies.heroDescription}
         </p>
       </header>
 
-      <section className="mt-6 rounded-xl border border-slate-800 bg-slate-900/50 p-5">
-        <h2 className="text-lg font-semibold text-slate-100">
+      <section className="mt-6 rounded-xl border border-neutral-800 bg-neutral-900/50 p-5">
+        <h2 className="text-lg font-semibold text-neutral-100">
           {messages.seoLandingIndexes.companies.byCityTitle}
         </h2>
         <ul className="mt-3 grid grid-cols-2 gap-2 text-sm sm:grid-cols-3 lg:grid-cols-4">
@@ -76,8 +76,8 @@ export default async function CompaniesIndexPage({
         </ul>
       </section>
 
-      <section className="mt-6 rounded-xl border border-slate-800 bg-slate-900/50 p-5">
-        <h2 className="text-lg font-semibold text-slate-100">
+      <section className="mt-6 rounded-xl border border-neutral-800 bg-neutral-900/50 p-5">
+        <h2 className="text-lg font-semibold text-neutral-100">
           {messages.seoLandingIndexes.companies.bySectorTitle}
         </h2>
         <ul className="mt-3 grid gap-2 text-sm sm:grid-cols-2 lg:grid-cols-3">
@@ -99,3 +99,4 @@ export default async function CompaniesIndexPage({
     </main>
   );
 }
+

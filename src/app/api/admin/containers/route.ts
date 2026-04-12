@@ -1,4 +1,4 @@
-﻿import { NextRequest, NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { type Filter } from "mongodb";
 import { getCurrentUserFromRequest } from "@/lib/auth-user";
@@ -67,7 +67,6 @@ export async function GET(request: NextRequest) {
         { "container.height": pattern },
         { "container.condition": pattern },
         { containerType: pattern },
-        { dealType: pattern },
         { contactEmail: pattern },
       ];
     }

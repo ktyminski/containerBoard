@@ -45,9 +45,6 @@ function resolveMainMapView(
   if (!parsed) {
     return fallbackView;
   }
-  if (parsed === "announcements" || parsed === "offers") {
-    return fallbackView;
-  }
   return parsed;
 }
 

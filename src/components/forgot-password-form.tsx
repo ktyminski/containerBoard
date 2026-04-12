@@ -110,9 +110,9 @@ export function ForgotPasswordForm({
   };
 
   return (
-    <div className="w-full max-w-md rounded-xl border border-slate-800 bg-slate-900/70 p-6">
-      <h1 className="text-2xl font-semibold text-slate-100">{messages.forgotPasswordTitle}</h1>
-      <p className="mt-1 text-sm text-slate-400">{messages.forgotPasswordSubtitle}</p>
+    <div className="w-full max-w-md rounded-xl border border-neutral-800 bg-neutral-900/70 p-6">
+      <h1 className="text-2xl font-semibold text-neutral-100">{messages.forgotPasswordTitle}</h1>
+      <p className="mt-1 text-sm text-neutral-400">{messages.forgotPasswordSubtitle}</p>
 
       <form
         onSubmit={(event) => {
@@ -121,7 +121,7 @@ export function ForgotPasswordForm({
         }}
       >
         <input
-          className="mt-4 w-full rounded-md border border-slate-700 bg-slate-950 px-3 py-2 text-sm text-slate-100"
+          className="mt-4 w-full rounded-md border border-neutral-700 bg-neutral-950 px-3 py-2 text-sm text-neutral-100"
           placeholder={messages.emailPlaceholder}
           type="email"
           {...register("email", {
@@ -148,14 +148,14 @@ export function ForgotPasswordForm({
 
         <button
           type="submit"
-          className="mt-4 w-full rounded-md bg-sky-500 px-3 py-2 text-sm font-medium text-slate-950 hover:bg-sky-400 disabled:opacity-60"
+          className="mt-4 w-full rounded-md bg-sky-500 px-3 py-2 text-sm font-medium text-neutral-950 hover:bg-sky-400 disabled:opacity-60"
           disabled={isSubmitting}
         >
           {isSubmitting ? messages.submitLoading : messages.forgotPasswordSubmit}
         </button>
       </form>
 
-      <p className="mt-4 text-sm text-slate-400">
+      <p className="mt-4 text-sm text-neutral-400">
         <Link href={withLang("/login", locale)} className="text-sky-400 hover:text-sky-300">
           {messages.goToLogin}
         </Link>
@@ -163,3 +163,4 @@ export function ForgotPasswordForm({
     </div>
   );
 }
+

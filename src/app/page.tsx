@@ -54,7 +54,6 @@ export default async function LandingPage() {
   const isLoggedIn = Boolean(cookieStore.get(SESSION_COOKIE_NAME)?.value);
   const latestListings = await getLatestListings(6);
   const nextCreate = encodeURIComponent("/containers/new");
-  const nextMine = encodeURIComponent("/containers/mine");
 
   return (
     <main className="w-full">
@@ -113,7 +112,7 @@ export default async function LandingPage() {
               <h2 className="mt-2 text-3xl font-semibold text-[#0b1f42] sm:text-4xl">
                 Ostatnio dodane kontenery
               </h2>
-              <p className="mt-2 max-w-2xl text-sm text-slate-600 sm:text-base">
+              <p className="mt-2 max-w-2xl text-sm text-neutral-600 sm:text-base">
                 Podglad swiezych wpisow z tablicy. Kliknij wybrane ogloszenie, aby zobaczyc szczegoly i kontakt.
               </p>
             </div>
@@ -136,17 +135,17 @@ export default async function LandingPage() {
                     <span className="rounded-full bg-sky-100 px-2.5 py-1 text-xs font-semibold text-sky-700">
                       {LISTING_TYPE_LABEL[item.type]}
                     </span>
-                    <span className="text-xs text-slate-500">
+                    <span className="text-xs text-neutral-500">
                       {new Date(item.createdAt).toLocaleDateString("pl-PL")}
                     </span>
                   </div>
                   <h3 className="mt-3 text-lg font-semibold text-[#0b1f42]">
                     {getContainerShortLabel(item.container)} - {item.quantity} szt.
                   </h3>
-                  <p className="mt-1 text-sm text-slate-600">
+                  <p className="mt-1 text-sm text-neutral-600">
                     {item.locationCity}, {item.locationCountry}
                   </p>
-                  <p className="mt-2 text-sm text-slate-500">{item.companyName}</p>
+                  <p className="mt-2 text-sm text-neutral-500">{item.companyName}</p>
                   <div className="mt-4">
                     <Link
                       href={`/containers/${item.id}`}
@@ -160,7 +159,7 @@ export default async function LandingPage() {
             </ul>
           ) : (
             <div className="rounded-2xl border border-sky-200 bg-white p-6 text-center">
-              <p className="text-sm text-slate-600">
+              <p className="text-sm text-neutral-600">
                 Brak aktywnych ogloszen. Dodaj pierwszy wpis i zacznij budowac tablice.
               </p>
               <div className="mt-4">
@@ -193,7 +192,7 @@ export default async function LandingPage() {
                 1
               </span>
               <h3 className="mt-4 text-lg font-semibold text-[#0b1f42]">Dodaj wpis</h3>
-              <p className="mt-2 text-sm text-slate-600">
+              <p className="mt-2 text-sm text-neutral-600">
                 Publikujesz kontener dostepny albo poszukiwany. Formularz jest prosty i prowadzi krok po kroku.
               </p>
             </article>
@@ -202,7 +201,7 @@ export default async function LandingPage() {
                 2
               </span>
               <h3 className="mt-4 text-lg font-semibold text-[#0b1f42]">Filtruj i porownuj</h3>
-              <p className="mt-2 text-sm text-slate-600">
+              <p className="mt-2 text-sm text-neutral-600">
                 Wyszukujesz po typie, kontenerze i lokalizacji. Od razu widzisz kluczowe dane i termin waznosci.
               </p>
             </article>
@@ -211,7 +210,7 @@ export default async function LandingPage() {
                 3
               </span>
               <h3 className="mt-4 text-lg font-semibold text-[#0b1f42]">Kontaktuj sie bezposrednio</h3>
-              <p className="mt-2 text-sm text-slate-600">
+              <p className="mt-2 text-sm text-neutral-600">
                 Wchodzisz w szczegoly wpisu i wysylasz zapytanie do osoby kontaktowej, bez dodatkowych systemow.
               </p>
             </article>
@@ -232,10 +231,10 @@ export default async function LandingPage() {
                 Dodaj ogloszenie
               </Link>
               <Link
-                href={isLoggedIn ? "/containers/mine" : `/login?next=${nextMine}`}
+                href="/list"
                 className="rounded-md border border-sky-300/80 bg-white/10 px-5 py-2.5 text-sm font-semibold text-sky-100 transition hover:border-sky-200 hover:bg-white/15"
               >
-                Moje ogloszenia
+                Przegladaj tablice
               </Link>
             </div>
           </div>
@@ -244,3 +243,4 @@ export default async function LandingPage() {
     </main>
   );
 }
+

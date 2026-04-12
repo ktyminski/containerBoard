@@ -2,7 +2,6 @@ import type { Filter } from "mongodb";
 import type { CompanyDocument } from "@/lib/companies";
 import type { CompanyCategory } from "@/types/company-category";
 
-type JobAnnouncementDocument = Record<string, unknown>;
 type SearchBbox = [number, number, number, number];
 
 export type SeoCity = {
@@ -105,7 +104,6 @@ export const SEO_CITIES: SeoCity[] = [
 type SeoSector = {
   slug: string;
   name: string;
-  jobKeywords: string[];
   companyCategories?: CompanyCategory[];
   companyKeywords?: string[];
 };
@@ -114,92 +112,23 @@ export const SEO_SECTORS: SeoSector[] = [
   {
     slug: "spedycja",
     name: "Spedycja",
-    jobKeywords: ["spedy", "spedytor", "freight", "forward"],
     companyCategories: ["freight-forwarding"],
     companyKeywords: ["spedy", "spedyt", "freight", "forward"],
   },
   {
     slug: "transport",
     name: "Transport",
-    jobKeywords: ["transport", "kierow", "przewoz", "flota"],
     companyCategories: ["transport"],
   },
   {
     slug: "logistyka",
     name: "Logistyka",
-    jobKeywords: ["logist", "supply chain", "lancuch dostaw"],
     companyCategories: ["logistics"],
-  },
-];
-
-type SeoJobRole = {
-  slug: string;
-  name: string;
-  keywords: string[];
-};
-
-export const SEO_JOB_ROLES: SeoJobRole[] = [
-  { slug: "spedytor", name: "Spedytor", keywords: ["spedytor", "spedycja"] },
-  {
-    slug: "spedytor-miedzynarodowy",
-    name: "Spedytor międzynarodowy",
-    keywords: ["spedytor miedzynarod", "international freight"],
-  },
-  {
-    slug: "mlodszy-spedytor",
-    name: "Młodszy spedytor",
-    keywords: ["mlodszy spedytor", "junior spedytor"],
-  },
-  {
-    slug: "dyspozytor-transportu",
-    name: "Dyspozytor transportu",
-    keywords: ["dyspozytor", "dispatcher", "transport"],
-  },
-  {
-    slug: "planista-transportu",
-    name: "Planista transportu",
-    keywords: ["planista transportu", "transport planner"],
-  },
-  {
-    slug: "kierowca-ce",
-    name: "Kierowca C+E",
-    keywords: ["kierowca c+e", "kierowca ce", "kat c+e", "ciezarowka"],
-  },
-  {
-    slug: "kierowca-c",
-    name: "Kierowca C",
-    keywords: ["kierowca c", "kat c", "ciezarowka"],
-  },
-  {
-    slug: "kierowca-kat-b",
-    name: "Kierowca kat. B",
-    keywords: ["kierowca b", "kat b", "kurier"],
-  },
-  {
-    slug: "specjalista-ds-logistyki",
-    name: "Specjalista ds. logistyki",
-    keywords: ["specjalista ds logistyki", "logistics specialist"],
-  },
-  {
-    slug: "koordynator-logistyki",
-    name: "Koordynator logistyki",
-    keywords: ["koordynator logistyki", "logistics coordinator"],
-  },
-  {
-    slug: "magazynier",
-    name: "Magazynier",
-    keywords: ["magazynier", "warehouse", "kompletac"],
-  },
-  {
-    slug: "operator-wozka-widlowego",
-    name: "Operator wózka widłowego",
-    keywords: ["wozek widlowy", "forklift", "udt"],
   },
 ];
 
 const CITY_BY_SLUG = new Map(SEO_CITIES.map((city) => [city.slug, city]));
 const SECTOR_BY_SLUG = new Map(SEO_SECTORS.map((sector) => [sector.slug, sector]));
-const JOB_ROLE_BY_SLUG = new Map(SEO_JOB_ROLES.map((role) => [role.slug, role]));
 
 function escapeRegex(value: string): string {
   return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
@@ -258,10 +187,6 @@ export function getSeoSectorBySlug(slug: string): SeoSector | undefined {
   return SECTOR_BY_SLUG.get(slug);
 }
 
-export function getSeoJobRoleBySlug(slug: string): SeoJobRole | undefined {
-  return JOB_ROLE_BY_SLUG.get(slug);
-}
-
 export function getCityBbox(city: SeoCity): SearchBbox {
   return toBboxFromRadius({
     lat: city.lat,
@@ -289,44 +214,6 @@ export function buildSeoMapsHref(input: {
   }
 
   return `/maps/${input.view}?${search.toString()}`;
-}
-
-export function buildJobsLandingFilter(input: {
-  city: SeoCity;
-  sectorSlug?: string;
-  roleSlug?: string;
-}): Filter<JobAnnouncementDocument> {
-  const bbox = getCityBbox(input.city);
-  const clauses: Array<Record<string, unknown>> = [
-    { isPublished: true },
-    { "location.point": toGeoWithinPolygon(bbox) },
-  ];
-
-  if (input.sectorSlug) {
-    const sector = getSeoSectorBySlug(input.sectorSlug);
-    if (sector) {
-      const sectorRegex = buildKeywordRegex(sector.jobKeywords);
-      clauses.push({
-        $or: [{ title: sectorRegex }, { description: sectorRegex }, { tags: sectorRegex }],
-      });
-    }
-  }
-
-  if (input.roleSlug) {
-    const role = getSeoJobRoleBySlug(input.roleSlug);
-    if (role) {
-      const roleRegex = buildKeywordRegex(role.keywords);
-      clauses.push({
-        $or: [{ title: roleRegex }, { description: roleRegex }, { tags: roleRegex }],
-      });
-    }
-  }
-
-  if (clauses.length === 1) {
-    return clauses[0] as Filter<JobAnnouncementDocument>;
-  }
-
-  return { $and: clauses } as Filter<JobAnnouncementDocument>;
 }
 
 export function buildCompaniesLandingFilter(input: {

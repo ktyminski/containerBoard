@@ -1,68 +1,15 @@
 import maplibregl from "maplibre-gl";
 import { COMPANY_VERIFICATION_STATUS } from "@/lib/company-verification";
-import { withLang, type AppLocale, type AppMessages, formatTemplate } from "@/lib/i18n";
+import { withLang, type AppLocale, type AppMessages } from "@/lib/i18n";
 import type { CompanyMapItem } from "@/types/company";
-import type { JobAnnouncementMapItem, OfferMapItem } from "@/components/unified-main-map/types";
+import type { OfferMapItem } from "@/components/unified-main-map/types";
 import {
   escapeHtml,
   formatCompanySummary,
-  formatSalaryRange,
   getCompanyFallbackColor,
   getCompanyInitial,
   getOfferTypeLabel,
-  hasSalaryRange,
 } from "@/components/unified-main-map/utils";
-
-function announcementPopupCard(
-  announcement: JobAnnouncementMapItem,
-  messages: AppMessages["mapModules"]["announcements"],
-  locale: AppLocale,
-): string {
-  const showSalary = hasSalaryRange({
-    salaryFrom: announcement.salaryFrom,
-    salaryTo: announcement.salaryTo,
-  });
-  const salaryText = showSalary
-    ? formatSalaryRange({
-        salaryFrom: announcement.salaryFrom,
-        salaryTo: announcement.salaryTo,
-        salaryRatePeriod: announcement.salaryRatePeriod,
-        locale,
-        messages,
-        formatTemplate,
-      })
-    : "";
-  const fallbackColor = getCompanyFallbackColor(
-    announcement.companySlug || announcement.companyName,
-  );
-  const detailsUrl = withLang(`/announcements/${announcement.id}`, locale);
-  const logo = announcement.companyLogoUrl
-    ? `<img src="${escapeHtml(announcement.companyLogoUrl)}" alt="${escapeHtml(announcement.companyName)}" style="width:100%;height:100%;object-fit:contain;" />`
-    : `<div style="display:flex;height:100%;width:100%;align-items:center;justify-content:center;background:${fallbackColor};font-size:13px;font-weight:700;color:#fff;">${escapeHtml(getCompanyInitial(announcement.companyName))}</div>`;
-  const popupItemClass = announcement.companyIsPremium
-    ? "company-map-popup-item company-map-popup-item--premium"
-    : "company-map-popup-item";
-  const popupCardClass = announcement.companyIsPremium
-    ? "company-map-popup-card company-map-popup-card--premium"
-    : "company-map-popup-card";
-
-  return `<a href="${detailsUrl}" class="${popupItemClass}">
-    <div class="${popupCardClass}" style="padding:6px 8px;">
-      <div class="company-map-popup-card__row">
-        <div class="company-map-popup-card__logo">${logo}</div>
-        <div class="company-map-popup-card__content" style="line-height:1.15;">
-          <div style="font-size:13px; font-weight:600; color:#f8fafc; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${escapeHtml(announcement.title)}</div>
-          <div style="margin-top:0; font-size:12px; color:#cbd5e1; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${escapeHtml(announcement.companyName)}</div>
-          ${
-            showSalary
-              ? `<div style="margin-top:0; font-size:12px; color:#34d399; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${escapeHtml(salaryText)}</div>`
-              : ""
-          }
-        </div>
-      </div>
-    </div>
-  </a>`;
-}
 
 function offerPopupCard(
   offer: OfferMapItem,
@@ -166,17 +113,6 @@ function createPopup(
     .setLngLat(lngLat)
     .setHTML(wrapPopupBody(body, width))
     .addTo(map);
-}
-
-export function openAnnouncementsPopup(
-  map: maplibregl.Map,
-  announcements: JobAnnouncementMapItem[],
-  messages: AppMessages["mapModules"]["announcements"],
-  locale: AppLocale,
-  lngLat: [number, number],
-): maplibregl.Popup {
-  const body = announcements.map((item) => announcementPopupCard(item, messages, locale)).join("");
-  return createPopup(map, lngLat, body);
 }
 
 export function openOffersPopup(

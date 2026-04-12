@@ -2,6 +2,11 @@ import { ObjectId, type Collection, type Filter } from "mongodb";
 import { getDb } from "@/lib/mongodb";
 import type { GeocodeAddressParts } from "@/lib/geocode-address";
 import {
+  MAX_LISTING_LOCATIONS,
+  normalizeListingLocations,
+  type ListingLocation,
+} from "@/lib/listing-locations";
+import {
   CONTAINER_CONDITIONS,
   CONTAINER_FEATURES,
   CONTAINER_HEIGHTS,
@@ -13,9 +18,13 @@ import {
   type ContainerFeature,
   type ContainerHeight,
   type ContainerSize,
-  type DealType,
+  type Currency,
+  type ListingPrice,
   type ListingStatus,
   type ListingType,
+  type PriceType,
+  type PriceUnit,
+  type TaxMode,
 } from "@/lib/container-listing-types";
 import { escapeRegexPattern } from "@/lib/escape-regex-pattern";
 
@@ -57,6 +66,7 @@ const containerConditionSet = new Set<string>(CONTAINER_CONDITIONS);
 export type ContainerListingDocument = {
   _id: ObjectId;
   type: ListingType;
+  title?: string;
   container?: Container;
   containerType?: string;
   quantity: number;
@@ -66,8 +76,22 @@ export type ContainerListingDocument = {
   locationLng?: number;
   locationAddressLabel?: string;
   locationAddressParts?: GeocodeAddressParts;
+  locations?: ListingLocation[];
+  availableNow?: boolean;
+  availableFromApproximate?: boolean;
   availableFrom: Date;
-  dealType: DealType;
+  pricing?: ListingPrice;
+  priceAmount?: number;
+  priceNegotiable?: boolean;
+  logisticsTransportAvailable?: boolean;
+  logisticsTransportIncluded?: boolean;
+  logisticsTransportFreeDistanceKm?: number;
+  logisticsUnloadingAvailable?: boolean;
+  logisticsUnloadingIncluded?: boolean;
+  logisticsComment?: string;
+  hasCscPlate?: boolean;
+  hasCscCertification?: boolean;
+  productionYear?: number;
   price?: string;
   description?: string;
   companyName: string;
@@ -92,9 +116,17 @@ export type ContainerInquiryDocument = {
   createdAt: Date;
 };
 
+export type ContainerListingFavoriteDocument = {
+  _id: ObjectId;
+  userId: ObjectId;
+  listingId: ObjectId;
+  createdAt: Date;
+};
+
 export type ContainerListingItem = {
   id: string;
   type: ListingType;
+  title?: string;
   container: Container;
   quantity: number;
   locationCity: string;
@@ -103,8 +135,22 @@ export type ContainerListingItem = {
   locationLng: number | null;
   locationAddressLabel?: string;
   locationAddressParts?: GeocodeAddressParts;
+  locations?: ListingLocation[];
+  availableNow: boolean;
+  availableFromApproximate: boolean;
   availableFrom: string;
-  dealType: DealType;
+  pricing?: ListingPrice;
+  priceAmount?: number;
+  priceNegotiable: boolean;
+  logisticsTransportAvailable: boolean;
+  logisticsTransportIncluded: boolean;
+  logisticsTransportFreeDistanceKm?: number;
+  logisticsUnloadingAvailable: boolean;
+  logisticsUnloadingIncluded: boolean;
+  logisticsComment?: string;
+  hasCscPlate: boolean;
+  hasCscCertification: boolean;
+  productionYear?: number;
   price?: string;
   description?: string;
   companyName: string;
@@ -116,6 +162,7 @@ export type ContainerListingItem = {
   expiresAt: string;
   isExpired: boolean;
   canRefresh: boolean;
+  isFavorite?: boolean;
 };
 
 export type ContainerListingMapPoint = {
@@ -259,25 +306,48 @@ export async function getContainerInquiriesCollection(): Promise<Collection<Cont
   return db.collection<ContainerInquiryDocument>("container_inquiries");
 }
 
+export async function getContainerListingFavoritesCollection(): Promise<
+  Collection<ContainerListingFavoriteDocument>
+> {
+  const db = await getDb();
+  return db.collection<ContainerListingFavoriteDocument>("container_listing_favorites");
+}
+
 export async function ensureContainerListingsIndexes(): Promise<void> {
   if (!indexesReadyPromise) {
     indexesReadyPromise = (async () => {
       const listings = await getContainerListingsCollection();
       const inquiries = await getContainerInquiriesCollection();
+      const favorites = await getContainerListingFavoritesCollection();
 
       await listings.createIndex({ status: 1, expiresAt: 1, createdAt: -1 });
       await listings.createIndex({ createdByUserId: 1, createdAt: -1 });
-      await listings.createIndex({ type: 1, "container.type": 1, dealType: 1, createdAt: -1 });
-      await listings.createIndex({ type: 1, containerType: 1, dealType: 1, createdAt: -1 });
+      await listings.createIndex({ type: 1, "container.type": 1, createdAt: -1 });
+      await listings.createIndex({ type: 1, containerType: 1, createdAt: -1 });
+      await listings.createIndex({ title: 1 });
       await listings.createIndex({ "container.size": 1, "container.height": 1, "container.type": 1 });
       await listings.createIndex({ "container.condition": 1 });
       await listings.createIndex({ "container.features": 1 });
+      await listings.createIndex({ priceAmount: 1 });
+      await listings.createIndex({ priceNegotiable: 1, priceAmount: 1 });
+      await listings.createIndex({ "pricing.type": 1, "pricing.original.unit": 1, "pricing.original.currency": 1 });
+      await listings.createIndex({ "pricing.original.taxMode": 1, "pricing.original.negotiable": 1 });
+      await listings.createIndex({ "pricing.normalized.net.amountPln": 1 });
+      await listings.createIndex({ "pricing.normalized.net.amountEur": 1 });
+      await listings.createIndex({ "pricing.normalized.net.amountUsd": 1 });
+      await listings.createIndex({ hasCscPlate: 1, hasCscCertification: 1, productionYear: 1 });
       await listings.createIndex({ locationCity: 1, locationCountry: 1 });
       await listings.createIndex({ locationLat: 1, locationLng: 1 });
+      await listings.createIndex({ "locations.locationCity": 1, "locations.locationCountry": 1 });
+      await listings.createIndex({ "locations.locationLat": 1, "locations.locationLng": 1 });
       await listings.createIndex({ expiresAt: 1 });
 
       await inquiries.createIndex({ listingId: 1, createdAt: -1 });
       await inquiries.createIndex({ createdByUserId: 1, createdAt: -1 });
+
+      await favorites.createIndex({ userId: 1, listingId: 1 }, { unique: true });
+      await favorites.createIndex({ userId: 1, createdAt: -1 });
+      await favorites.createIndex({ listingId: 1 });
     })();
   }
 
@@ -304,26 +374,80 @@ export function mapContainerListingToItem(doc: ContainerListingDocument): Contai
   const now = Date.now();
   const expiresAtMs = doc.expiresAt.getTime();
   const isExpired = doc.status === LISTING_STATUS.EXPIRED || expiresAtMs <= now;
+  const pricing = doc.pricing;
+  const normalizedOriginalAmount =
+    typeof pricing?.original.amount === "number" && Number.isFinite(pricing.original.amount)
+      ? pricing.original.amount
+      : undefined;
+  const normalizedNegotiable = pricing?.original.negotiable === true || doc.priceNegotiable === true;
+  const logisticsTransportIncluded =
+    doc.logisticsTransportAvailable === true && doc.logisticsTransportIncluded === true;
+  const logisticsTransportFreeDistanceKm =
+    logisticsTransportIncluded &&
+    typeof doc.logisticsTransportFreeDistanceKm === "number" &&
+    Number.isFinite(doc.logisticsTransportFreeDistanceKm) &&
+    doc.logisticsTransportFreeDistanceKm > 0
+      ? Math.trunc(doc.logisticsTransportFreeDistanceKm)
+      : undefined;
+  const resolvedLocations = normalizeListingLocations({
+    locations: doc.locations,
+    fallback: {
+      locationLat: doc.locationLat,
+      locationLng: doc.locationLng,
+      locationCity: doc.locationCity,
+      locationCountry: doc.locationCountry,
+      locationAddressLabel: doc.locationAddressLabel,
+      locationAddressParts: doc.locationAddressParts,
+      isPrimary: true,
+    },
+    max: MAX_LISTING_LOCATIONS,
+  });
+  const primaryLocation = resolvedLocations[0];
 
   return {
     id: doc._id.toHexString(),
     type: doc.type,
+    title: doc.title,
     container: resolveContainerFromDocument(doc),
     quantity: doc.quantity,
-    locationCity: doc.locationCity,
-    locationCountry: doc.locationCountry,
+    locationCity: primaryLocation?.locationCity ?? doc.locationCity,
+    locationCountry: primaryLocation?.locationCountry ?? doc.locationCountry,
     locationLat:
-      typeof doc.locationLat === "number" && Number.isFinite(doc.locationLat)
+      primaryLocation?.locationLat ??
+      (typeof doc.locationLat === "number" && Number.isFinite(doc.locationLat)
         ? doc.locationLat
-        : null,
+        : null),
     locationLng:
-      typeof doc.locationLng === "number" && Number.isFinite(doc.locationLng)
+      primaryLocation?.locationLng ??
+      (typeof doc.locationLng === "number" && Number.isFinite(doc.locationLng)
         ? doc.locationLng
-        : null,
-    locationAddressLabel: doc.locationAddressLabel,
-    locationAddressParts: doc.locationAddressParts,
+        : null),
+    locationAddressLabel: primaryLocation?.locationAddressLabel ?? doc.locationAddressLabel,
+    locationAddressParts: primaryLocation?.locationAddressParts ?? doc.locationAddressParts,
+    ...(resolvedLocations.length > 0 ? { locations: resolvedLocations } : {}),
+    availableNow: doc.availableNow === true,
+    availableFromApproximate: doc.availableFromApproximate === true,
     availableFrom: doc.availableFrom.toISOString(),
-    dealType: doc.dealType,
+    pricing,
+    priceAmount:
+      normalizedOriginalAmount ??
+      (typeof doc.priceAmount === "number" && Number.isFinite(doc.priceAmount)
+        ? doc.priceAmount
+        : undefined),
+    priceNegotiable: normalizedNegotiable,
+    logisticsTransportAvailable: doc.logisticsTransportAvailable === true,
+    logisticsTransportIncluded,
+    logisticsTransportFreeDistanceKm,
+    logisticsUnloadingAvailable: doc.logisticsUnloadingAvailable === true,
+    logisticsUnloadingIncluded:
+      doc.logisticsUnloadingAvailable === true && doc.logisticsUnloadingIncluded === true,
+    logisticsComment: doc.logisticsComment?.trim() || undefined,
+    hasCscPlate: doc.hasCscPlate === true,
+    hasCscCertification: doc.hasCscCertification === true,
+    productionYear:
+      typeof doc.productionYear === "number" && Number.isFinite(doc.productionYear)
+        ? doc.productionYear
+        : undefined,
     price: doc.price,
     description: doc.description,
     companyName: doc.companyName,
@@ -340,35 +464,70 @@ export function mapContainerListingToItem(doc: ContainerListingDocument): Contai
   };
 }
 
-export function mapContainerListingToMapPoint(
-  doc: Pick<ContainerListingDocument, "_id" | "type" | "locationLat" | "locationLng">,
-): ContainerListingMapPoint {
-  return {
-    id: doc._id.toHexString(),
-    type: doc.type,
-    locationLat:
-      typeof doc.locationLat === "number" && Number.isFinite(doc.locationLat)
-        ? doc.locationLat
-        : null,
-    locationLng:
-      typeof doc.locationLng === "number" && Number.isFinite(doc.locationLng)
-        ? doc.locationLng
-        : null,
+export function mapContainerListingToMapPoints(
+  doc: Pick<ContainerListingDocument, "_id" | "type" | "locationLat" | "locationLng" | "locations">,
+): ContainerListingMapPoint[] {
+  const listingId = doc._id.toHexString();
+  const points: ContainerListingMapPoint[] = [];
+  const seenCoordinates = new Set<string>();
+
+  const appendPoint = (lat: unknown, lng: unknown) => {
+    if (
+      typeof lat !== "number" ||
+      !Number.isFinite(lat) ||
+      typeof lng !== "number" ||
+      !Number.isFinite(lng)
+    ) {
+      return;
+    }
+
+    const key = `${lat.toFixed(6)}:${lng.toFixed(6)}`;
+    if (seenCoordinates.has(key)) {
+      return;
+    }
+    seenCoordinates.add(key);
+    points.push({
+      id: listingId,
+      type: doc.type,
+      locationLat: lat,
+      locationLng: lng,
+    });
   };
+
+  for (const location of doc.locations ?? []) {
+    appendPoint(location.locationLat, location.locationLng);
+  }
+
+  if (points.length === 0) {
+    appendPoint(doc.locationLat, doc.locationLng);
+  }
+
+  return points;
 }
 
 export function buildContainerListingsFilter(input: {
   q?: string;
   type?: ListingType;
-  containerSize?: ContainerSize;
-  containerHeight?: ContainerHeight;
-  containerType?: Container["type"];
-  containerFeature?: ContainerFeature;
-  containerCondition?: ContainerCondition;
+  containerSizes?: ContainerSize[];
+  containerHeights?: ContainerHeight[];
+  containerTypes?: Container["type"][];
+  containerFeatures?: ContainerFeature[];
+  containerConditions?: ContainerCondition[];
+  priceMin?: number;
+  priceMax?: number;
+  priceCurrency?: Currency;
+  priceUnit?: PriceUnit;
+  priceType?: PriceType;
+  priceTaxMode?: TaxMode;
+  priceNegotiable?: boolean;
+  logisticsTransportAvailable?: boolean;
+  logisticsUnloadingAvailable?: boolean;
+  hasCscPlate?: boolean;
+  hasCscCertification?: boolean;
+  productionYear?: number;
   locationLat?: number;
   locationLng?: number;
   radiusKm?: number;
-  dealType?: DealType;
   city?: string;
   country?: string;
   status?: ListingStatus;
@@ -395,48 +554,207 @@ export function buildContainerListingsFilter(input: {
     filter.type = input.type;
   }
 
-  if (input.containerSize) {
-    const sizeConditions: Filter<ContainerListingDocument>[] = [
-      { "container.size": input.containerSize } as Filter<ContainerListingDocument>,
-    ];
-    if (input.containerSize === 20) {
-      sizeConditions.push({ containerType: "20DV" });
-    } else if (input.containerSize === 40) {
-      sizeConditions.push({ containerType: { $in: ["40DV", "40HC", "reefer", "open_top", "flat_rack", "other"] } });
-    }
-    andConditions.push(sizeConditions.length === 1 ? sizeConditions[0] : { $or: sizeConditions });
+  if (input.containerSizes && input.containerSizes.length > 0) {
+    const sizeConditions = input.containerSizes.map((size) => {
+      const oneSizeConditions: Filter<ContainerListingDocument>[] = [
+        { "container.size": size } as Filter<ContainerListingDocument>,
+      ];
+      if (size === 20) {
+        oneSizeConditions.push({ containerType: "20DV" });
+      } else if (size === 40) {
+        oneSizeConditions.push({
+          containerType: { $in: ["40DV", "40HC", "reefer", "open_top", "flat_rack", "other"] },
+        });
+      }
+
+      return oneSizeConditions.length === 1
+        ? oneSizeConditions[0]
+        : ({ $or: oneSizeConditions } as Filter<ContainerListingDocument>);
+    });
+
+    andConditions.push(
+      sizeConditions.length === 1
+        ? sizeConditions[0]
+        : ({ $or: sizeConditions } as Filter<ContainerListingDocument>),
+    );
   }
 
-  if (input.containerHeight) {
-    const heightConditions: Filter<ContainerListingDocument>[] = [
-      { "container.height": input.containerHeight } as Filter<ContainerListingDocument>,
-    ];
-    if (input.containerHeight === "standard") {
-      heightConditions.push({ containerType: { $in: ["20DV", "40DV", "reefer", "open_top", "flat_rack", "other"] } });
+  if (input.containerHeights && input.containerHeights.length > 0) {
+    const heightConditions = input.containerHeights.map((height) => {
+      const oneHeightConditions: Filter<ContainerListingDocument>[] = [
+        { "container.height": height } as Filter<ContainerListingDocument>,
+      ];
+      if (height === "standard") {
+        oneHeightConditions.push({
+          containerType: { $in: ["20DV", "40DV", "reefer", "open_top", "flat_rack", "other"] },
+        });
+      } else {
+        oneHeightConditions.push({ containerType: "40HC" });
+      }
+
+      return oneHeightConditions.length === 1
+        ? oneHeightConditions[0]
+        : ({ $or: oneHeightConditions } as Filter<ContainerListingDocument>);
+    });
+
+    andConditions.push(
+      heightConditions.length === 1
+        ? heightConditions[0]
+        : ({ $or: heightConditions } as Filter<ContainerListingDocument>),
+    );
+  }
+
+  if (input.containerTypes && input.containerTypes.length > 0) {
+    const typeConditions = input.containerTypes.map((containerType) => {
+      const oneTypeConditions: Filter<ContainerListingDocument>[] = [
+        { "container.type": containerType } as Filter<ContainerListingDocument>,
+      ];
+      if (containerType === "dry") {
+        oneTypeConditions.push({ containerType: { $in: ["20DV", "40DV", "40HC", "other"] } });
+      } else if (["reefer", "open_top", "flat_rack"].includes(containerType)) {
+        oneTypeConditions.push({ containerType });
+      }
+
+      return oneTypeConditions.length === 1
+        ? oneTypeConditions[0]
+        : ({ $or: oneTypeConditions } as Filter<ContainerListingDocument>);
+    });
+
+    andConditions.push(
+      typeConditions.length === 1
+        ? typeConditions[0]
+        : ({ $or: typeConditions } as Filter<ContainerListingDocument>),
+    );
+  }
+
+  if (input.containerFeatures && input.containerFeatures.length > 0) {
+    andConditions.push({
+      "container.features": { $in: input.containerFeatures },
+    } as Filter<ContainerListingDocument>);
+  }
+
+  if (input.containerConditions && input.containerConditions.length > 0) {
+    const includesCargoWorthyFallback = input.containerConditions.includes("cargo_worthy");
+    if (includesCargoWorthyFallback) {
+      andConditions.push({
+        $or: [
+          { "container.condition": { $in: input.containerConditions } },
+          { "container.condition": { $nin: CONTAINER_CONDITIONS } },
+        ],
+      } as Filter<ContainerListingDocument>);
     } else {
-      heightConditions.push({ containerType: "40HC" });
+      andConditions.push({
+        "container.condition": { $in: input.containerConditions },
+      } as Filter<ContainerListingDocument>);
     }
-    andConditions.push(heightConditions.length === 1 ? heightConditions[0] : { $or: heightConditions });
   }
 
-  if (input.containerType) {
-    const typeConditions: Filter<ContainerListingDocument>[] = [
-      { "container.type": input.containerType } as Filter<ContainerListingDocument>,
-    ];
-    if (input.containerType === "dry") {
-      typeConditions.push({ containerType: { $in: ["20DV", "40DV", "40HC", "other"] } });
-    } else if (["reefer", "open_top", "flat_rack"].includes(input.containerType)) {
-      typeConditions.push({ containerType: input.containerType });
+  if (input.priceNegotiable === true) {
+    andConditions.push({
+      $or: [
+        { "pricing.original.negotiable": true },
+        { priceNegotiable: true },
+      ],
+    } as Filter<ContainerListingDocument>);
+  }
+
+  if (input.logisticsTransportAvailable === true) {
+    andConditions.push({
+      $or: [
+        { logisticsTransportAvailable: true },
+        { logisticsTransportIncluded: true },
+      ],
+    } as Filter<ContainerListingDocument>);
+  }
+
+  if (input.logisticsUnloadingAvailable === true) {
+    andConditions.push({
+      $or: [
+        { logisticsUnloadingAvailable: true },
+        { logisticsUnloadingIncluded: true },
+      ],
+    } as Filter<ContainerListingDocument>);
+  }
+
+  if (input.priceType) {
+    filter["pricing.type"] = input.priceType;
+  }
+
+  if (input.priceCurrency) {
+    filter["pricing.original.currency"] = input.priceCurrency;
+  }
+
+  if (input.priceUnit === "per_month") {
+    filter["pricing.original.unit"] = "per_month";
+  } else if (input.priceUnit === "per_container") {
+    andConditions.push({
+      $or: [
+        { "pricing.original.unit": "per_container" },
+        { "pricing.original.unit": { $exists: false } } as Filter<ContainerListingDocument>,
+        { "pricing.original.unit": null } as Filter<ContainerListingDocument>,
+      ],
+    } as Filter<ContainerListingDocument>);
+  }
+
+  if (input.hasCscPlate === true) {
+    filter.hasCscPlate = true;
+  }
+
+  if (input.hasCscCertification === true) {
+    filter.hasCscCertification = true;
+  }
+
+  if (
+    typeof input.productionYear === "number" &&
+    Number.isFinite(input.productionYear) &&
+    input.productionYear >= 1900 &&
+    input.productionYear <= 2100
+  ) {
+    andConditions.push({
+      productionYear: { $gte: Math.trunc(input.productionYear) },
+    } as Filter<ContainerListingDocument>);
+  }
+
+  if (
+    typeof input.priceMin === "number" ||
+    typeof input.priceMax === "number"
+  ) {
+    const compareTaxMode = input.priceTaxMode === "gross" ? "gross" : "net";
+    const normalizedComparedField =
+      input.priceCurrency === "EUR"
+        ? `pricing.normalized.${compareTaxMode}.amountEur`
+        : input.priceCurrency === "USD"
+          ? `pricing.normalized.${compareTaxMode}.amountUsd`
+          : `pricing.normalized.${compareTaxMode}.amountPln`;
+    const priceAmountFilter: { $gte?: number; $lte?: number } = {};
+    if (typeof input.priceMin === "number" && Number.isFinite(input.priceMin)) {
+      priceAmountFilter.$gte = input.priceMin;
     }
-    andConditions.push(typeConditions.length === 1 ? typeConditions[0] : { $or: typeConditions });
-  }
+    if (typeof input.priceMax === "number" && Number.isFinite(input.priceMax)) {
+      priceAmountFilter.$lte = input.priceMax;
+    }
 
-  if (input.containerFeature) {
-    andConditions.push({ "container.features": input.containerFeature } as Filter<ContainerListingDocument>);
-  }
+    if (priceAmountFilter.$gte !== undefined || priceAmountFilter.$lte !== undefined) {
+      const rangeConditions: Filter<ContainerListingDocument>[] = [
+        { [normalizedComparedField]: priceAmountFilter } as Filter<ContainerListingDocument>,
+      ];
 
-  if (input.containerCondition) {
-    andConditions.push({ "container.condition": input.containerCondition } as Filter<ContainerListingDocument>);
+      const canUseLegacyPriceFallback =
+        (input.priceCurrency ?? "PLN") === "PLN" &&
+        (input.priceUnit === undefined || input.priceUnit === "per_container") &&
+        input.priceTaxMode !== "gross";
+      if (canUseLegacyPriceFallback) {
+        rangeConditions.push({
+          priceAmount: priceAmountFilter,
+        } as Filter<ContainerListingDocument>);
+      }
+
+      andConditions.push(
+        rangeConditions.length === 1
+          ? rangeConditions[0]
+          : ({ $or: rangeConditions } as Filter<ContainerListingDocument>),
+      );
+    }
   }
 
   if (
@@ -455,38 +773,82 @@ export function buildContainerListingsFilter(input: {
     });
 
     andConditions.push({
-      locationLat: { $gte: minLat, $lte: maxLat },
-      locationLng: { $gte: minLng, $lte: maxLng },
+      $or: [
+        {
+          locationLat: { $gte: minLat, $lte: maxLat },
+          locationLng: { $gte: minLng, $lte: maxLng },
+        } as Filter<ContainerListingDocument>,
+        {
+          locations: {
+            $elemMatch: {
+              locationLat: { $gte: minLat, $lte: maxLat },
+              locationLng: { $gte: minLng, $lte: maxLng },
+            },
+          },
+        } as Filter<ContainerListingDocument>,
+      ],
     } as Filter<ContainerListingDocument>);
   }
 
-  if (input.dealType) {
-    filter.dealType = input.dealType;
-  }
+  const normalizedCity = input.city?.trim();
+  const normalizedCountry = input.country?.trim();
+  const cityPattern = normalizedCity
+    ? new RegExp(`^${escapeRegexPattern(normalizedCity)}$`, "i")
+    : null;
+  const countryPattern = normalizedCountry
+    ? new RegExp(`^${escapeRegexPattern(normalizedCountry)}$`, "i")
+    : null;
 
-  if (input.city?.trim()) {
-    filter.locationCity = {
-      $regex: new RegExp(`^${escapeRegexPattern(input.city.trim())}$`, "i"),
-    };
-  }
+  if (cityPattern && countryPattern) {
+    andConditions.push({
+      $or: [
+        {
+          locationCity: cityPattern,
+          locationCountry: countryPattern,
+        } as Filter<ContainerListingDocument>,
+        {
+          locations: {
+            $elemMatch: {
+              locationCity: cityPattern,
+              locationCountry: countryPattern,
+            },
+          },
+        } as Filter<ContainerListingDocument>,
+      ],
+    } as Filter<ContainerListingDocument>);
+  } else {
+    if (cityPattern) {
+      andConditions.push({
+        $or: [
+          { locationCity: cityPattern } as Filter<ContainerListingDocument>,
+          { "locations.locationCity": cityPattern } as Filter<ContainerListingDocument>,
+        ],
+      } as Filter<ContainerListingDocument>);
+    }
 
-  if (input.country?.trim()) {
-    filter.locationCountry = {
-      $regex: new RegExp(`^${escapeRegexPattern(input.country.trim())}$`, "i"),
-    };
+    if (countryPattern) {
+      andConditions.push({
+        $or: [
+          { locationCountry: countryPattern } as Filter<ContainerListingDocument>,
+          { "locations.locationCountry": countryPattern } as Filter<ContainerListingDocument>,
+        ],
+      } as Filter<ContainerListingDocument>);
+    }
   }
 
   if (input.q?.trim()) {
     const pattern = new RegExp(escapeRegexPattern(input.q.trim()), "i");
     andConditions.push({
       $or: [
+        { title: pattern },
         { companyName: pattern },
         { description: pattern },
         { locationCity: pattern },
         { locationCountry: pattern },
+        { "locations.locationCity": pattern },
+        { "locations.locationCountry": pattern },
         { "container.type": pattern } as Filter<ContainerListingDocument>,
         { containerType: pattern },
-        { dealType: pattern },
       ],
     });
   }
@@ -499,3 +861,4 @@ export function buildContainerListingsFilter(input: {
 
   return filter;
 }
+

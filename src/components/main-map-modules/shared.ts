@@ -1,11 +1,4 @@
-import {
-  JOB_CONTRACT_TYPES,
-  JOB_WORK_MODELS,
-  type JobContractType,
-  type JobWorkModel,
-} from "@/lib/job-announcement";
-
-export type MainMapView = "announcements" | "offers" | "companies";
+export type MainMapView = "offers" | "companies";
 export type SearchBBox = [number, number, number, number];
 export type SharedMapViewport = {
   center: [number, number];
@@ -25,12 +18,9 @@ export const DEFAULT_MAP_VIEWPORT: SharedMapViewport = {
 
 export const DISTANCE_OPTIONS = [10, 20, 25, 30, 35, 50, 100] as const;
 export type DistanceOption = (typeof DISTANCE_OPTIONS)[number];
-export const CONTRACT_TYPE_OPTIONS: JobContractType[] = [...JOB_CONTRACT_TYPES];
-export const WORK_MODEL_OPTIONS: JobWorkModel[] = [...JOB_WORK_MODELS];
 
 export function parseMainMapView(value: string | undefined): MainMapView | null {
   if (
-    value === "announcements" ||
     value === "offers" ||
     value === "companies"
   ) {

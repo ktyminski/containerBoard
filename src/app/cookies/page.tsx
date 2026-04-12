@@ -52,86 +52,87 @@ export default async function CookiesPage({ searchParams }: CookiesPageProps) {
     >
       <div className="space-y-8">
         <section className="space-y-3">
-          <h2 className="text-base font-semibold text-slate-100">1. Informacje ogólne</h2>
+          <h2 className="text-base font-semibold text-neutral-100">1. Informacje ogÃ³lne</h2>
           <ol className="list-decimal space-y-2 pl-5">
             <li>
-              Niniejsza Polityka cookies określa zasady wykorzystywania plików cookies na
-              platformie ContainerBoard dostępnej pod adresem <strong>containerboard.pl</strong>.
+              Niniejsza Polityka cookies okreÅ›la zasady wykorzystywania plikÃ³w cookies na
+              platformie ContainerBoard dostÄ™pnej pod adresem <strong>containerboard.pl</strong>.
             </li>
             <li>
               Administratorem danych jest <strong>ContainerBoard Karol Tymi&#324;ski 5842785961</strong>,
               e-mail: <strong>hello@containerboard.pl</strong>.
             </li>
             <li>
-              Platforma wykorzystuje wyłącznie niezbędne pliki cookies, wymagane do jej
-              prawidłowego działania.
+              Platforma wykorzystuje wyÅ‚Ä…cznie niezbÄ™dne pliki cookies, wymagane do jej
+              prawidÅ‚owego dziaÅ‚ania.
             </li>
           </ol>
         </section>
 
         <section className="space-y-3">
-          <h2 className="text-base font-semibold text-slate-100">2. Czym są pliki cookies</h2>
+          <h2 className="text-base font-semibold text-neutral-100">2. Czym sÄ… pliki cookies</h2>
           <ol className="list-decimal space-y-2 pl-5">
-            <li>Pliki cookies to niewielkie pliki tekstowe zapisywane na urządzeniu użytkownika.</li>
+            <li>Pliki cookies to niewielkie pliki tekstowe zapisywane na urzÄ…dzeniu uÅ¼ytkownika.</li>
             <li>
-              Umożliwiają one prawidłowe działanie strony oraz zapamiętywanie podstawowych
-              informacji o użytkowniku.
+              UmoÅ¼liwiajÄ… one prawidÅ‚owe dziaÅ‚anie strony oraz zapamiÄ™tywanie podstawowych
+              informacji o uÅ¼ytkowniku.
             </li>
           </ol>
         </section>
 
         <section className="space-y-3">
-          <h2 className="text-base font-semibold text-slate-100">3. Jakie cookies wykorzystujemy</h2>
+          <h2 className="text-base font-semibold text-neutral-100">3. Jakie cookies wykorzystujemy</h2>
           <p>
-            Platforma ContainerBoard wykorzystuje wyłącznie cookies niezbędne (techniczne), w
-            szczególności do:
+            Platforma ContainerBoard wykorzystuje wyÅ‚Ä…cznie cookies niezbÄ™dne (techniczne), w
+            szczegÃ³lnoÅ›ci do:
           </p>
           <ul className="list-disc space-y-1 pl-5">
-            <li>utrzymania sesji użytkownika,</li>
-            <li>zapewnienia poprawnego działania formularzy,</li>
-            <li>zapewnienia bezpieczeństwa (np. ochrona przed nadużyciami),</li>
-            <li>zapamiętywania podstawowych ustawień technicznych.</li>
+            <li>utrzymania sesji uÅ¼ytkownika,</li>
+            <li>zapewnienia poprawnego dziaÅ‚ania formularzy,</li>
+            <li>zapewnienia bezpieczeÅ„stwa (np. ochrona przed naduÅ¼yciami),</li>
+            <li>zapamiÄ™tywania podstawowych ustawieÅ„ technicznych.</li>
           </ul>
-          <p>Cookies te nie służą do śledzenia użytkownika ani do celów marketingowych.</p>
+          <p>Cookies te nie sÅ‚uÅ¼Ä… do Å›ledzenia uÅ¼ytkownika ani do celÃ³w marketingowych.</p>
         </section>
 
         <section className="space-y-3">
-          <h2 className="text-base font-semibold text-slate-100">4. Cookies podmiotów trzecich</h2>
+          <h2 className="text-base font-semibold text-neutral-100">4. Cookies podmiotÃ³w trzecich</h2>
           <ol className="list-decimal space-y-2 pl-5">
             <li>
-              Platforma nie wykorzystuje cookies marketingowych ani analitycznych podmiotów
+              Platforma nie wykorzystuje cookies marketingowych ani analitycznych podmiotÃ³w
               trzecich.
             </li>
             <li>
-              W przypadku wprowadzenia takich narzędzi w przyszłości, polityka cookies zostanie
+              W przypadku wprowadzenia takich narzÄ™dzi w przyszÅ‚oÅ›ci, polityka cookies zostanie
               odpowiednio zaktualizowana.
             </li>
           </ol>
         </section>
 
         <section className="space-y-3">
-          <h2 className="text-base font-semibold text-slate-100">5. Zarządzanie cookies</h2>
+          <h2 className="text-base font-semibold text-neutral-100">5. ZarzÄ…dzanie cookies</h2>
           <ol className="list-decimal space-y-2 pl-5">
             <li>
-              Użytkownik może zarządzać plikami cookies za pomocą ustawień swojej przeglądarki.
+              UÅ¼ytkownik moÅ¼e zarzÄ…dzaÄ‡ plikami cookies za pomocÄ… ustawieÅ„ swojej przeglÄ…darki.
             </li>
             <li>
-              Ograniczenie stosowania cookies może wpłynąć na niektóre funkcjonalności platformy.
+              Ograniczenie stosowania cookies moÅ¼e wpÅ‚ynÄ…Ä‡ na niektÃ³re funkcjonalnoÅ›ci platformy.
             </li>
           </ol>
         </section>
 
         <section className="space-y-3">
-          <h2 className="text-base font-semibold text-slate-100">6. Zmiany polityki cookies</h2>
+          <h2 className="text-base font-semibold text-neutral-100">6. Zmiany polityki cookies</h2>
           <ol className="list-decimal space-y-2 pl-5">
-            <li>Polityka cookies może być aktualizowana.</li>
-            <li>Nowa wersja obowiązuje od momentu jej opublikowania na stronie.</li>
+            <li>Polityka cookies moÅ¼e byÄ‡ aktualizowana.</li>
+            <li>Nowa wersja obowiÄ…zuje od momentu jej opublikowania na stronie.</li>
           </ol>
         </section>
       </div>
     </StaticPageFrame>
   );
 }
+
 
 
 

@@ -9,6 +9,8 @@
     "lint": "eslint",
     "seed": "node --env-file=.env.local scripts/seed.mjs",
     "seed:containers:europe": "node --env-file=.env.local scripts/seed-containers-europe.mjs",
+    "seed:containers:reset-model": "node --env-file=.env.local scripts/reset-seed-containers-model.mjs",
+    "migrate:containers:logistics-unloading": "node --env-file=.env.local scripts/migrate-logistics-loading-to-unloading.mjs",
     "seed:real-companies": "node --env-file=.env.local scripts/seed-real-companies.mjs",
     "seed:landing-companies": "node --env-file=.env.local scripts/seed-landing-companies.mjs",
     "create:master-admin": "node --env-file=.env.local scripts/create-master-admin.mjs"

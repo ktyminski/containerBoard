@@ -24,9 +24,7 @@ function getFirstParam(value: string | string[] | undefined): string | undefined
 }
 
 function getViewLabel(messages: ReturnType<typeof getMessages>, view: MainMapView): string {
-  return view === "announcements"
-    ? messages.mapModules.tabs.announcements
-    : view === "offers"
+  return view === "offers"
       ? messages.mapModules.tabs.offers
       : messages.mapModules.tabs.companies;
 }

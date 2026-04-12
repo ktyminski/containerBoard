@@ -33,7 +33,7 @@ export function ShowMoreItems({
             type="button"
             className={
               buttonClassName ??
-              "inline-flex cursor-pointer rounded-md border border-slate-700 px-3 py-2 text-sm font-medium text-slate-200 transition-colors hover:border-slate-500"
+              "inline-flex cursor-pointer rounded-md border border-neutral-700 px-3 py-2 text-sm font-medium text-neutral-200 transition-colors hover:border-neutral-500"
             }
             onClick={() => setShowAll(true)}
           >
@@ -44,3 +44,4 @@ export function ShowMoreItems({
     </div>
   );
 }
+

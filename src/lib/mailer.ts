@@ -1,7 +1,5 @@
 import { getEnv } from "@/lib/env";
 import {
-  buildAnnouncementPublishedMail,
-  buildAnnouncementApplicationMail,
   buildClaimDecisionMail,
   buildClaimSubmittedMail,
   buildEmailVerificationMail,
@@ -194,59 +192,6 @@ export async function sendClaimRejectedEmail(input: {
     approved: false,
     companyName: input.companyName,
     name: input.name,
-  });
-  return sendMail({
-    to: input.to,
-    subject: template.subject,
-    text: template.text,
-    html: template.html,
-  });
-}
-
-export async function sendAnnouncementApplicationEmail(input: {
-  to: string[];
-  announcementTitle: string;
-  companyName: string;
-  locationLabel: string;
-  applicantName: string;
-  applicantEmail: string;
-  applicantPhone?: string;
-  applicantMessage: string;
-  cvFilename?: string;
-  cvAttachment?: SendMailAttachment;
-}): Promise<SendMailResult> {
-  const template = buildAnnouncementApplicationMail({
-    announcementTitle: input.announcementTitle,
-    companyName: input.companyName,
-    locationLabel: input.locationLabel,
-    applicantName: input.applicantName,
-    applicantEmail: input.applicantEmail,
-    applicantPhone: input.applicantPhone,
-    applicantMessage: input.applicantMessage,
-    cvFilename: input.cvFilename,
-  });
-
-  return sendMail({
-    to: input.to,
-    subject: template.subject,
-    text: template.text,
-    html: template.html,
-    attachments: input.cvAttachment ? [input.cvAttachment] : undefined,
-  });
-}
-
-export async function sendAnnouncementPublishedEmail(input: {
-  to: string;
-  name?: string;
-  announcementTitle: string;
-  companyName: string;
-  announcementUrl?: string;
-}): Promise<SendMailResult> {
-  const template = buildAnnouncementPublishedMail({
-    name: input.name,
-    announcementTitle: input.announcementTitle,
-    companyName: input.companyName,
-    announcementUrl: input.announcementUrl,
   });
   return sendMail({
     to: input.to,

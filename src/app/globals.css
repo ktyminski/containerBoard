@@ -1,8 +1,8 @@
 @import "tailwindcss";
 
 :root {
-  --background: #f3f8ff;
-  --foreground: #0f172a;
+  --background: #e5e5e5;
+  --foreground: #171717;
 }
 
 @theme inline {
@@ -14,8 +14,8 @@
 
 body {
   background:
-    radial-gradient(circle at 8% 0%, rgba(147, 197, 253, 0.26), transparent 42%),
-    radial-gradient(circle at 92% 8%, rgba(125, 211, 252, 0.22), transparent 45%),
+    radial-gradient(circle at 8% 0%, rgba(163, 163, 163, 0.2), transparent 42%),
+    radial-gradient(circle at 92% 8%, rgba(115, 115, 115, 0.16), transparent 45%),
     var(--background);
   color: var(--foreground);
   font-family: var(--font-geist-sans), sans-serif;
@@ -26,14 +26,14 @@ body {
   min-width: 320px;
 }
 
-input[class*="bg-slate-950"]:-webkit-autofill,
-input[class*="bg-slate-950"]:-webkit-autofill:hover,
-input[class*="bg-slate-950"]:-webkit-autofill:focus {
+input[class*="bg-neutral-950"]:-webkit-autofill,
+input[class*="bg-neutral-950"]:-webkit-autofill:hover,
+input[class*="bg-neutral-950"]:-webkit-autofill:focus {
   -webkit-box-shadow: 0 0 0 1000px #ffffff inset;
   box-shadow: 0 0 0 1000px #ffffff inset;
-  -webkit-text-fill-color: #0f172a;
-  caret-color: #0f172a;
-  border-color: #93c5fd;
+  -webkit-text-fill-color: #171717;
+  caret-color: #171717;
+  border-color: #a3a3a3;
   transition: background-color 9999s ease-in-out 0s;
 }
 
@@ -41,37 +41,85 @@ button:not(:disabled) {
   cursor: pointer;
 }
 
-/* Global light + blue overrides for existing dark utility classes */
-[class*="bg-slate-950"],
-[class*="bg-slate-900"],
-[class*="bg-slate-800"] {
+*:focus {
+  outline: none;
+}
+
+input:not([type="checkbox"]):not([type="radio"]):focus,
+textarea:focus,
+select:focus,
+.listing-kind-option:focus {
+  outline: none;
+  box-shadow: none;
+}
+
+html.user-is-tabbing input:not([type="checkbox"]):not([type="radio"]):focus,
+html.user-is-tabbing textarea:focus {
+  outline: 2px solid #000000;
+  outline-offset: 0;
+}
+
+html.user-is-tabbing input[type="checkbox"]:focus,
+html.user-is-tabbing input[type="radio"]:focus {
+  outline: 2px solid #000000;
+  outline-offset: 2px;
+}
+
+html.user-is-tabbing button:focus:not(.listing-kind-option),
+html.user-is-tabbing summary:focus {
+  outline: 2px solid #000000;
+  outline-offset: 0;
+}
+
+html.user-is-tabbing select:focus {
+  outline: 1px solid #000000;
+  outline-offset: 0;
+  box-shadow: none;
+}
+
+html.user-is-tabbing .multi-checkbox-summary:focus {
+  outline: none;
+  box-shadow: inset 0 0 0 2px #000000;
+}
+
+html.user-is-tabbing .listing-kind-option:focus {
+  outline: none;
+  box-shadow: inset 0 0 0 2px #000000;
+  position: relative;
+  z-index: 1;
+}
+
+/* Global light + neutral overrides for existing dark utility classes */
+[class*="bg-neutral-950"],
+[class*="bg-neutral-900"],
+[class*="bg-neutral-800"] {
   background-color: #ffffff !important;
 }
 
-[class*="bg-slate-700"] {
-  background-color: #eff6ff !important;
+[class*="bg-neutral-700"] {
+  background-color: #f5f5f5 !important;
 }
 
-[class*="border-slate-900"],
-[class*="border-slate-800"],
-[class*="border-slate-700"],
-[class*="border-slate-600"] {
-  border-color: #bfdbfe !important;
+[class*="border-neutral-900"],
+[class*="border-neutral-800"],
+[class*="border-neutral-700"],
+[class*="border-neutral-600"] {
+  border-color: #d4d4d4 !important;
 }
 
-[class*="text-slate-100"],
-[class*="text-slate-200"] {
-  color: #0f172a !important;
+[class*="text-neutral-100"],
+[class*="text-neutral-200"] {
+  color: #171717 !important;
 }
 
-[class*="text-slate-300"],
-[class*="text-slate-400"] {
-  color: #334155 !important;
+[class*="text-neutral-300"],
+[class*="text-neutral-400"] {
+  color: #525252 !important;
 }
 
-[class*="text-slate-500"],
-[class*="text-slate-600"] {
-  color: #64748b !important;
+[class*="text-neutral-500"],
+[class*="text-neutral-600"] {
+  color: #737373 !important;
 }
 
 [class*="bg-emerald-500"],
@@ -104,10 +152,10 @@ button:not(:disabled) {
   background-color: #3b82f6 !important;
 }
 
-[class*="hover:border-slate-500"]:hover,
-[class*="hover:border-slate-600"]:hover,
-[class*="hover:border-slate-400"]:hover {
-  border-color: #60a5fa !important;
+[class*="hover:border-neutral-500"]:hover,
+[class*="hover:border-neutral-600"]:hover,
+[class*="hover:border-neutral-400"]:hover {
+  border-color: #a3a3a3 !important;
 }
 
 .company-map-popup .maplibregl-popup-content {
@@ -473,3 +521,4 @@ button:not(:disabled) {
 .container-listings-map .maplibregl-popup {
   z-index: 40;
 }
+

@@ -46,18 +46,18 @@ export function CompanyBranchesList({
           <>
             <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
               <div className="min-w-0">
-                <p className="text-sm font-semibold text-slate-100">{location.label}</p>
-                <p className="mt-1 text-sm text-slate-300">{location.addressText}</p>
-                {location.note ? <p className="mt-1 text-xs text-slate-400">{location.note}</p> : null}
+                <p className="text-sm font-semibold text-neutral-100">{location.label}</p>
+                <p className="mt-1 text-sm text-neutral-300">{location.addressText}</p>
+                {location.note ? <p className="mt-1 text-xs text-neutral-400">{location.note}</p> : null}
               </div>
               {(location.phone || location.email) ? (
                 <div className="grid gap-2 text-left sm:min-w-[220px] sm:justify-items-end sm:text-right">
                   {location.phone ? (
                     <div>
-                      <p className="text-[11px] uppercase tracking-wide text-slate-300">{phoneLabel}</p>
+                      <p className="text-[11px] uppercase tracking-wide text-neutral-300">{phoneLabel}</p>
                       <a
                         href={`tel:${location.phone.replace(/\s+/g, "")}`}
-                        className="text-sm font-semibold text-slate-100 transition-colors hover:text-sky-300"
+                        className="text-sm font-semibold text-neutral-100 transition-colors hover:text-sky-300"
                       >
                         {location.phone}
                       </a>
@@ -65,10 +65,10 @@ export function CompanyBranchesList({
                   ) : null}
                   {location.email ? (
                     <div>
-                      <p className="text-[11px] uppercase tracking-wide text-slate-300">{emailLabel}</p>
+                      <p className="text-[11px] uppercase tracking-wide text-neutral-300">{emailLabel}</p>
                       <a
                         href={`mailto:${location.email}`}
-                        className="break-all text-sm font-semibold text-slate-100 transition-colors hover:text-sky-300"
+                        className="break-all text-sm font-semibold text-neutral-100 transition-colors hover:text-sky-300"
                       >
                         {location.email}
                       </a>
@@ -82,7 +82,7 @@ export function CompanyBranchesList({
                 {location.photos.map((photo) => (
                   <div
                     key={photo.id}
-                    className="group relative h-28 overflow-hidden rounded-md border border-slate-800"
+                    className="group relative h-28 overflow-hidden rounded-md border border-neutral-800"
                   >
                     <Image
                       src={photo.url}
@@ -104,7 +104,7 @@ export function CompanyBranchesList({
               key={`${location.label}-${location.addressText}-${index}`}
               type="button"
               onClick={() => onLocationClick(index)}
-              className="cursor-pointer rounded-lg border border-slate-800 bg-slate-950/80 p-4 text-left transition-colors hover:border-sky-400/60"
+              className="cursor-pointer rounded-lg border border-neutral-800 bg-neutral-950/80 p-4 text-left transition-colors hover:border-sky-400/60"
             >
               {content}
             </button>
@@ -114,7 +114,7 @@ export function CompanyBranchesList({
         return (
           <article
             key={`${location.label}-${location.addressText}-${index}`}
-            className="rounded-lg border border-slate-800 bg-slate-950/80 p-4"
+            className="rounded-lg border border-neutral-800 bg-neutral-950/80 p-4"
           >
             {content}
           </article>
@@ -123,7 +123,7 @@ export function CompanyBranchesList({
       {!showAll && hiddenCount > 0 ? (
         <button
           type="button"
-          className="inline-flex w-fit cursor-pointer rounded-md border border-slate-700 px-3 py-2 text-sm font-medium text-slate-200 transition-colors hover:border-slate-500"
+          className="inline-flex w-fit cursor-pointer rounded-md border border-neutral-700 px-3 py-2 text-sm font-medium text-neutral-200 transition-colors hover:border-neutral-500"
           onClick={() => setShowAll(true)}
         >
           {showMoreLabel} ({hiddenCount})
@@ -132,3 +132,4 @@ export function CompanyBranchesList({
     </div>
   );
 }
+

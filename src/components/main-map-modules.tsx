@@ -390,7 +390,6 @@ export function MainMapModules({
             companyCreateMessages={companyCreateMessages}
             verifiedLabel={verifiedLabel}
             operatingAreaLabels={messages.filters.operatingAreas}
-            announcementsMessages={messages.announcements}
             offersMessages={messages.offers}
             companiesListMessages={messages.companiesList}
             showOnMapLabel={mapMessages.showOnMapShort}
@@ -417,9 +416,9 @@ export function MainMapModules({
         topContent={
           <div className="grid gap-3 lg:hidden">
             <label className="grid gap-1">
-              <span className="text-xs font-medium text-slate-300">{messages.filters.locationLabel}</span>
+              <span className="text-xs font-medium text-neutral-300">{messages.filters.locationLabel}</span>
               <input
-                className="h-10 w-full rounded-lg border border-slate-700 bg-slate-950 px-3 text-sm text-slate-100 placeholder:text-slate-500 focus:border-slate-500 focus:outline-none"
+                className="h-10 w-full rounded-lg border border-neutral-700 bg-neutral-950 px-3 text-sm text-neutral-100 placeholder:text-neutral-500 focus:border-neutral-500 focus:outline-none"
                 placeholder={messages.filters.locationPlaceholder}
                 value={draftLocationInput}
                 onChange={(event) => {
@@ -428,16 +427,16 @@ export function MainMapModules({
               />
             </label>
             <label className="grid gap-1">
-              <span className="text-xs font-medium text-slate-300">{messages.filters.distanceLabel}</span>
+              <span className="text-xs font-medium text-neutral-300">{messages.filters.distanceLabel}</span>
               <select
-                className="h-10 w-full rounded-lg border border-slate-700 bg-slate-950 px-3 text-sm text-slate-100 focus:border-slate-500 focus:outline-none [color-scheme:dark]"
+                className="h-10 w-full rounded-lg border border-neutral-700 bg-neutral-950 px-3 text-sm text-neutral-100 focus:border-neutral-500 focus:outline-none [color-scheme:dark]"
                 value={String(draftDistanceKm)}
                 onChange={(event) => {
                   setDraftDistanceKm(Number(event.target.value) as DistanceOption);
                 }}
               >
                 {DISTANCE_OPTIONS.map((option) => (
-                  <option key={option} value={option} className="bg-slate-950 text-slate-100">
+                  <option key={option} value={option} className="bg-neutral-950 text-neutral-100">
                     {messages.filters.distanceOption.replace("{distance}", String(option))}
                   </option>
                 ))}
@@ -471,3 +470,4 @@ export function MainMapModules({
     </div>
   );
 }
+

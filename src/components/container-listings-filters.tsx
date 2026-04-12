@@ -1,0 +1,891 @@
+"use client";
+
+import {
+  memo,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type FocusEvent,
+  type KeyboardEvent as ReactKeyboardEvent,
+  type ReactNode,
+  type RefObject,
+  type SelectHTMLAttributes,
+} from "react";
+import { useFormContext, useWatch } from "react-hook-form";
+import {
+  PRICE_CURRENCY_LABEL,
+  PRICE_TAX_MODES,
+  PRICE_TAX_MODE_LABEL,
+  type Currency,
+} from "@/lib/container-listing-types";
+import {
+  AUTO_APPLY_FILTERS_DEBOUNCE_MS,
+  AUTO_APPLY_TYPED_FILTERS_DEBOUNCE_MS,
+  CONTAINER_CONDITION_COLOR_TOKENS,
+  CONTAINER_CONDITION_OPTIONS,
+  CONTAINER_FEATURE_OPTIONS,
+  CONTAINER_HEIGHT_OPTIONS,
+  CONTAINER_SIZE_OPTIONS,
+  CONTAINER_TYPE_OPTIONS,
+  LISTING_KIND_OPTIONS,
+  LOCATION_RADIUS_OPTIONS,
+  SORT_OPTIONS,
+  areNonLocationFiltersEqual,
+  pickNonLocationFilters,
+  shouldUseTypedDebounce,
+  toggleMultiValue,
+  toNormalizedArray,
+  type AppliedFilters,
+  type FiltersFormValues,
+  type MultiFilterKey,
+  type NonLocationFilters,
+} from "@/components/container-listings-shared";
+
+const PRICE_FILTER_CURRENCIES: Currency[] = ["EUR", "PLN", "USD"];
+
+type SelectWithChevronProps = SelectHTMLAttributes<HTMLSelectElement> & {
+  wrapperClassName?: string;
+};
+
+function SelectWithChevron({
+  className,
+  children,
+  wrapperClassName,
+  ...selectProps
+}: SelectWithChevronProps) {
+  return (
+    <div className={`relative min-w-0 ${wrapperClassName ?? ""}`}>
+      <select
+        {...selectProps}
+        className={`h-10 w-full min-w-0 appearance-none rounded-md border border-neutral-300 bg-white px-3 pr-10 text-sm text-neutral-900 transition ${className ?? ""}`}
+      >
+        {children}
+      </select>
+      <svg
+        viewBox="0 0 20 20"
+        aria-hidden="true"
+        className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-neutral-500"
+        fill="none"
+      >
+        <path
+          d="M5 7.5L10 12.5L15 7.5"
+          stroke="currentColor"
+          strokeWidth="1.75"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        />
+      </svg>
+    </div>
+  );
+}
+
+function handleCheckboxEnterToggle(
+  event: ReactKeyboardEvent<HTMLInputElement>,
+) {
+  if (event.key !== "Enter") {
+    return;
+  }
+  event.preventDefault();
+  event.currentTarget.click();
+}
+
+type MultiCheckboxFilterProps<T extends string> = {
+  label: string;
+  emptyLabel?: string;
+  values: T[];
+  options: Array<{ value: T; label: string }>;
+  getOptionAccentClassName?: (value: T) => string | undefined;
+  onToggle: (value: T) => void;
+  onClear: () => void;
+  onOpenChange?: (isOpen: boolean) => void;
+  className?: string;
+  dropdownClassName?: string;
+};
+
+function MultiCheckboxFilter<T extends string>({
+  label,
+  emptyLabel = "Dowolne",
+  values,
+  options,
+  getOptionAccentClassName,
+  onToggle,
+  onClear,
+  onOpenChange,
+  className,
+  dropdownClassName,
+}: MultiCheckboxFilterProps<T>) {
+  const detailsRef = useRef<HTMLDetailsElement | null>(null);
+  const selectedCount = values.length;
+  const singleSelectedOption =
+    selectedCount === 1
+      ? (options.find((option) => option.value === values[0])?.label ??
+        values[0])
+      : null;
+  const selectedSummaryLabel =
+    selectedCount === 0
+      ? emptyLabel
+      : selectedCount === 1
+        ? (singleSelectedOption ?? "1 wybrane")
+        : `${selectedCount} wybrane`;
+
+  useEffect(() => {
+    const handlePointerDown = (event: PointerEvent) => {
+      const detailsElement = detailsRef.current;
+      if (!detailsElement || !detailsElement.open) {
+        return;
+      }
+
+      const target = event.target;
+      if (!(target instanceof Node)) {
+        return;
+      }
+
+      if (detailsElement.contains(target)) {
+        return;
+      }
+
+      detailsElement.removeAttribute("open");
+    };
+
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key !== "Escape") {
+        return;
+      }
+      detailsRef.current?.removeAttribute("open");
+    };
+
+    document.addEventListener("pointerdown", handlePointerDown);
+    document.addEventListener("keydown", handleKeyDown);
+
+    return () => {
+      document.removeEventListener("pointerdown", handlePointerDown);
+      document.removeEventListener("keydown", handleKeyDown);
+    };
+  }, []);
+
+  return (
+    <details
+      ref={detailsRef}
+      className={className ?? "relative"}
+      onToggle={(event) => {
+        onOpenChange?.(event.currentTarget.open);
+      }}
+    >
+      <summary
+        className={`multi-checkbox-summary flex h-full min-h-12 w-full cursor-pointer list-none items-center justify-between gap-2 rounded-md border px-3 py-2 text-sm [&::-webkit-details-marker]:hidden ${
+          selectedCount > 0
+            ? "border-sky-400 bg-sky-100 text-neutral-900 shadow-[0_0_0_1px_rgba(56,189,248,0.15)]"
+            : "border-neutral-300 bg-white text-neutral-900"
+        }`}
+      >
+        <span className="flex min-w-0 flex-1 flex-col">
+          <span
+            className={`truncate text-xs ${
+              selectedCount > 0
+                ? "font-semibold text-neutral-900"
+                : "text-neutral-600"
+            }`}
+            title={label}
+          >
+            {label}
+          </span>
+          <span
+            className={`truncate text-left ${
+              selectedCount > 0
+                ? "text-sm font-medium text-neutral-800"
+                : "text-sm text-neutral-500"
+            }`}
+            title={selectedSummaryLabel}
+          >
+            {selectedSummaryLabel}
+          </span>
+        </span>
+        <svg
+          viewBox="0 0 20 20"
+          aria-hidden="true"
+          className="h-4 w-4 shrink-0 text-neutral-500"
+          fill="none"
+        >
+          <path
+            d="M5 7.5L10 12.5L15 7.5"
+            stroke="currentColor"
+            strokeWidth="1.75"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          />
+        </svg>
+      </summary>
+      <div
+        className={`absolute left-0 top-full z-40 mt-1 w-72 rounded-md border border-neutral-300 bg-white p-2 shadow-lg ${dropdownClassName ?? ""}`}
+      >
+        <div className="max-h-64 space-y-1 overflow-y-auto pr-1">
+          {options.map((option) => {
+            const accentClassName = getOptionAccentClassName?.(option.value);
+            return (
+              <label
+                key={option.value}
+                className="flex cursor-pointer items-center gap-2 rounded-md px-2 py-1.5 text-sm text-neutral-700 hover:bg-neutral-100"
+              >
+                <input
+                  type="checkbox"
+                  checked={values.includes(option.value)}
+                  onChange={() => {
+                    onToggle(option.value);
+                  }}
+                  onKeyDown={handleCheckboxEnterToggle}
+                  className="h-4 w-4 rounded border-neutral-400 text-neutral-700 focus:ring-neutral-400"
+                />
+                {accentClassName ? (
+                  <span
+                    aria-hidden="true"
+                    className={`h-2.5 w-2.5 shrink-0 rounded-full border ${accentClassName}`}
+                  />
+                ) : null}
+                <span>{option.label}</span>
+              </label>
+            );
+          })}
+        </div>
+        <button
+          type="button"
+          onClick={onClear}
+          className="mt-2 w-full rounded-md border border-neutral-300 bg-white px-3 py-1.5 text-xs font-medium text-neutral-700 hover:border-neutral-400 hover:bg-neutral-100"
+        >
+          Wyczysc
+        </button>
+      </div>
+    </details>
+  );
+}
+
+type ContainerListingsFiltersProps = {
+  children: ReactNode;
+  locationControlsRef: RefObject<HTMLDivElement | null>;
+  appliedFilters: AppliedFilters;
+  restoreAppliedLocationOnBlur: (
+    event: FocusEvent<HTMLInputElement | HTMLSelectElement>,
+  ) => void;
+  isResolvingLocation: boolean;
+  locationFilterError: string | null;
+  onApplyNonLocationFilters: (nextFilters: NonLocationFilters) => void;
+  clearAllFilters: () => void;
+};
+
+function ContainerListingsFiltersComponent({
+  children,
+  locationControlsRef,
+  appliedFilters,
+  restoreAppliedLocationOnBlur,
+  isResolvingLocation,
+  locationFilterError,
+  onApplyNonLocationFilters,
+  clearAllFilters,
+}: ContainerListingsFiltersProps) {
+  const { register, setValue, control } = useFormContext<FiltersFormValues>();
+  const [openMultiFilters, setOpenMultiFilters] = useState<
+    Record<MultiFilterKey, boolean>
+  >({
+    sizes: false,
+    heights: false,
+    types: false,
+    conditions: false,
+    features: false,
+  });
+
+  const isAnyMultiFilterOpen = useMemo(
+    () => Object.values(openMultiFilters).some(Boolean),
+    [openMultiFilters],
+  );
+
+  const listingKind = useWatch({ control, name: "listingKind" }) ?? "all";
+  const selectedContainerSizes =
+    useWatch({ control, name: "containerSizes" }) ?? [];
+  const selectedContainerHeights =
+    useWatch({ control, name: "containerHeights" }) ?? [];
+  const selectedContainerTypes =
+    useWatch({ control, name: "containerTypes" }) ?? [];
+  const selectedContainerConditions =
+    useWatch({ control, name: "containerConditions" }) ?? [];
+  const selectedContainerFeatures =
+    useWatch({ control, name: "containerFeatures" }) ?? [];
+  const priceNegotiableOnlyValue =
+    useWatch({ control, name: "priceNegotiableOnly" }) ?? false;
+  const logisticsTransportOnlyValue =
+    useWatch({ control, name: "logisticsTransportOnly" }) ?? false;
+  const logisticsUnloadingOnlyValue =
+    useWatch({ control, name: "logisticsUnloadingOnly" }) ?? false;
+  const hasCscPlateOnlyValue =
+    useWatch({ control, name: "hasCscPlateOnly" }) ?? false;
+  const hasCscCertificationOnlyValue =
+    useWatch({ control, name: "hasCscCertificationOnly" }) ?? false;
+  const priceCurrencyValue =
+    useWatch({ control, name: "priceCurrency" }) ?? "EUR";
+  const priceTaxModeValue =
+    useWatch({ control, name: "priceTaxMode" }) ?? "net";
+  const priceMinInputValue = useWatch({ control, name: "priceMinInput" }) ?? "";
+  const priceMaxInputValue = useWatch({ control, name: "priceMaxInput" }) ?? "";
+  const productionYearInputValue =
+    useWatch({ control, name: "productionYearInput" }) ?? "";
+  const cityValue = useWatch({ control, name: "city" }) ?? "";
+  const countryValue = useWatch({ control, name: "country" }) ?? "";
+  const sortPresetValue = useWatch({ control, name: "sortPreset" }) ?? "newest";
+
+  const draftNonLocationFilters = useMemo<NonLocationFilters>(() => {
+    const normalizedPriceMinInput = priceMinInputValue.trim();
+    const normalizedPriceMaxInput = priceMaxInputValue.trim();
+    const hasPriceRange =
+      normalizedPriceMinInput.length > 0 || normalizedPriceMaxInput.length > 0;
+
+    return {
+      listingKind,
+      containerSizes: toNormalizedArray(selectedContainerSizes),
+      containerHeights: toNormalizedArray(selectedContainerHeights),
+      containerTypes: toNormalizedArray(selectedContainerTypes),
+      containerConditions: toNormalizedArray(selectedContainerConditions),
+      containerFeatures: toNormalizedArray(selectedContainerFeatures),
+      priceNegotiableOnly: priceNegotiableOnlyValue,
+      logisticsTransportOnly: logisticsTransportOnlyValue,
+      logisticsUnloadingOnly: logisticsUnloadingOnlyValue,
+      hasCscPlateOnly: hasCscPlateOnlyValue,
+      hasCscCertificationOnly: hasCscCertificationOnlyValue,
+      priceType: "all",
+      priceUnit: "all",
+      priceCurrency: priceCurrencyValue === "all" ? "EUR" : priceCurrencyValue,
+      priceTaxMode: hasPriceRange ? priceTaxModeValue : "net",
+      priceMinInput: normalizedPriceMinInput,
+      priceMaxInput: normalizedPriceMaxInput,
+      productionYearInput: productionYearInputValue,
+      city: cityValue,
+      country: countryValue,
+      sortPreset: sortPresetValue,
+    };
+  }, [
+    listingKind,
+    selectedContainerSizes,
+    selectedContainerHeights,
+    selectedContainerTypes,
+    selectedContainerConditions,
+    selectedContainerFeatures,
+    priceNegotiableOnlyValue,
+    logisticsTransportOnlyValue,
+    logisticsUnloadingOnlyValue,
+    hasCscPlateOnlyValue,
+    hasCscCertificationOnlyValue,
+    priceCurrencyValue,
+    priceTaxModeValue,
+    priceMinInputValue,
+    priceMaxInputValue,
+    productionYearInputValue,
+    cityValue,
+    countryValue,
+    sortPresetValue,
+  ]);
+
+  useEffect(() => {
+    if (isAnyMultiFilterOpen) {
+      return;
+    }
+
+    const appliedNonLocationFilters = pickNonLocationFilters(appliedFilters);
+    if (
+      areNonLocationFiltersEqual(
+        draftNonLocationFilters,
+        appliedNonLocationFilters,
+      )
+    ) {
+      return;
+    }
+
+    const debounceMs = shouldUseTypedDebounce(
+      draftNonLocationFilters,
+      appliedNonLocationFilters,
+    )
+      ? AUTO_APPLY_TYPED_FILTERS_DEBOUNCE_MS
+      : AUTO_APPLY_FILTERS_DEBOUNCE_MS;
+
+    const timeoutId = window.setTimeout(() => {
+      onApplyNonLocationFilters(draftNonLocationFilters);
+    }, debounceMs);
+
+    return () => {
+      window.clearTimeout(timeoutId);
+    };
+  }, [
+    appliedFilters,
+    draftNonLocationFilters,
+    isAnyMultiFilterOpen,
+    onApplyNonLocationFilters,
+  ]);
+
+  const isLocationApplied = appliedFilters.locationQuery.trim().length > 0;
+  const hasPriceRangeFilter =
+    priceMinInputValue.trim().length > 0 ||
+    priceMaxInputValue.trim().length > 0;
+  const isPriceFilterApplied = hasPriceRangeFilter;
+
+  return (
+    <>
+      <input type="hidden" {...register("listingKind")} />
+      <section className="sticky top-[4.5rem] z-30 rounded-md border border-neutral-300 bg-neutral-50/95 p-3 shadow-sm backdrop-blur supports-[backdrop-filter]:bg-neutral-50/90">
+        <div className="grid gap-2 grid-cols-[minmax(100px,0.85fr)_minmax(100px,0.85fr)_minmax(100px,1fr)_minmax(100px,1fr)_minmax(360px,3fr)]">
+          <MultiCheckboxFilter
+            label="Rozmiar"
+            values={selectedContainerSizes}
+            options={CONTAINER_SIZE_OPTIONS}
+            onOpenChange={(isOpen) => {
+              setOpenMultiFilters((current) => ({ ...current, sizes: isOpen }));
+            }}
+            onToggle={(value) => {
+              setValue(
+                "containerSizes",
+                toggleMultiValue(selectedContainerSizes, value),
+                {
+                  shouldDirty: true,
+                  shouldTouch: true,
+                },
+              );
+            }}
+            onClear={() => {
+              setValue("containerSizes", [], {
+                shouldDirty: true,
+                shouldTouch: true,
+              });
+            }}
+          />
+
+          <MultiCheckboxFilter
+            label="Wysokosc"
+            values={selectedContainerHeights}
+            options={CONTAINER_HEIGHT_OPTIONS}
+            onOpenChange={(isOpen) => {
+              setOpenMultiFilters((current) => ({
+                ...current,
+                heights: isOpen,
+              }));
+            }}
+            onToggle={(value) => {
+              setValue(
+                "containerHeights",
+                toggleMultiValue(selectedContainerHeights, value),
+                {
+                  shouldDirty: true,
+                  shouldTouch: true,
+                },
+              );
+            }}
+            onClear={() => {
+              setValue("containerHeights", [], {
+                shouldDirty: true,
+                shouldTouch: true,
+              });
+            }}
+          />
+
+          <MultiCheckboxFilter
+            label="Typ"
+            values={selectedContainerTypes}
+            options={CONTAINER_TYPE_OPTIONS}
+            onOpenChange={(isOpen) => {
+              setOpenMultiFilters((current) => ({ ...current, types: isOpen }));
+            }}
+            onToggle={(value) => {
+              setValue(
+                "containerTypes",
+                toggleMultiValue(selectedContainerTypes, value),
+                {
+                  shouldDirty: true,
+                  shouldTouch: true,
+                },
+              );
+            }}
+            onClear={() => {
+              setValue("containerTypes", [], {
+                shouldDirty: true,
+                shouldTouch: true,
+              });
+            }}
+          />
+
+          <MultiCheckboxFilter
+            label="Stan"
+            values={selectedContainerConditions}
+            options={CONTAINER_CONDITION_OPTIONS}
+            getOptionAccentClassName={(value) => CONTAINER_CONDITION_COLOR_TOKENS[value].dotClassName}
+            onOpenChange={(isOpen) => {
+              setOpenMultiFilters((current) => ({
+                ...current,
+                conditions: isOpen,
+              }));
+            }}
+            onToggle={(value) => {
+              setValue(
+                "containerConditions",
+                toggleMultiValue(selectedContainerConditions, value),
+                {
+                  shouldDirty: true,
+                  shouldTouch: true,
+                },
+              );
+            }}
+            onClear={() => {
+              setValue("containerConditions", [], {
+                shouldDirty: true,
+                shouldTouch: true,
+              });
+            }}
+          />
+
+          <div
+            ref={locationControlsRef}
+            className="grid h-full self-stretch gap-2 grid-cols-[minmax(220px,1fr)_minmax(100px,130px)_auto]"
+          >
+            <input
+              {...register("locationInput")}
+              placeholder="Dowolna lokalizacja"
+              className={`h-full min-h-12 w-full rounded-md border px-3 py-2 text-sm text-neutral-900 ${
+                isLocationApplied
+                  ? "border-sky-400 bg-sky-100/70 shadow-[0_0_0_1px_rgba(56,189,248,0.15)]"
+                  : "border-neutral-300 bg-white"
+              }`}
+              onBlur={restoreAppliedLocationOnBlur}
+            />
+            <SelectWithChevron
+              {...register("locationRadiusKmInput")}
+              className={`h-full min-h-12 rounded-md border px-3 py-2 pr-10 ${
+                isLocationApplied
+                  ? "border-sky-400 bg-sky-100/70 text-sky-800 shadow-[0_0_0_1px_rgba(56,189,248,0.15)]"
+                  : "border-neutral-300 bg-white text-neutral-900"
+              }`}
+              onBlur={restoreAppliedLocationOnBlur}
+            >
+              {LOCATION_RADIUS_OPTIONS.map((value) => (
+                <option key={value} value={String(value)}>
+                  +{value} km
+                </option>
+              ))}
+            </SelectWithChevron>
+            <button
+              type="submit"
+              disabled={isResolvingLocation}
+              className="h-full min-h-12 shrink-0 whitespace-nowrap rounded-md border border-rose-500 bg-gradient-to-r from-rose-500 to-fuchsia-500 px-3.5 text-sm font-semibold text-white transition-colors duration-200 hover:from-rose-600 hover:to-fuchsia-600 active:translate-y-px disabled:cursor-not-allowed disabled:opacity-60"
+            >
+              {isResolvingLocation ? "Szukam..." : "Szukaj"}
+            </button>
+          </div>
+        </div>
+        {locationFilterError ? (
+          <p className="mt-2 text-xs text-neutral-600">{locationFilterError}</p>
+        ) : null}
+        {appliedFilters.locationCenter && appliedFilters.locationQuery ? (
+          <p className="mt-2 text-xs text-neutral-600">
+            Filtr lokalizacji: +{appliedFilters.locationRadiusKm} km od &quot;
+            {appliedFilters.locationQuery}
+            &quot;.
+          </p>
+        ) : null}
+      </section>
+
+      <div className="grid items-start gap-4 lg:grid-cols-[280px_minmax(0,1fr)]">
+        <aside className="h-fit min-w-0 rounded-md border border-neutral-300 bg-neutral-50/95 p-4 shadow-sm lg:sticky lg:top-[11rem] lg:z-20 lg:max-h-[calc(100dvh-12rem)] lg:overflow-y-auto">
+          <div className="grid gap-3">
+            <label className="grid gap-1 text-sm">
+              <span className="text-neutral-600">Sortowanie</span>
+              <SelectWithChevron
+                {...register("sortPreset")}
+                className={`rounded-md border px-3 py-2 text-neutral-900 ${
+                  sortPresetValue !== "newest"
+                    ? "border-sky-400 bg-sky-100/70 shadow-[0_0_0_1px_rgba(56,189,248,0.15)]"
+                    : "border-neutral-300 bg-white"
+                }`}
+              >
+                {SORT_OPTIONS.map((option) => (
+                  <option key={option.value} value={option.value}>
+                    {option.label}
+                  </option>
+                ))}
+              </SelectWithChevron>
+            </label>
+
+            <div className="border-t border-neutral-300" aria-hidden="true" />
+
+            <div className="grid gap-1 text-sm">
+              <span className="text-neutral-600">Rodzaj ogloszenia</span>
+              <div className="grid w-full grid-cols-1 overflow-hidden rounded-md border border-neutral-300 text-sm">
+                {LISTING_KIND_OPTIONS.map((option) => (
+                  <button
+                    key={option.value}
+                    type="button"
+                    onClick={() => {
+                      setValue("listingKind", option.value, {
+                        shouldDirty: true,
+                        shouldTouch: true,
+                      });
+                    }}
+                    className={`listing-kind-option ${
+                      listingKind === option.value
+                        ? option.value === "wanted"
+                          ? "w-full border-b border-neutral-300 bg-amber-500 px-3 py-2 text-left font-semibold text-white shadow-[0_8px_20px_-12px_rgba(245,158,11,0.9)] last:border-b-0"
+                          : "w-full border-b border-neutral-300 bg-[#0c3466] px-3 py-2 text-left font-semibold text-white shadow-[0_8px_20px_-12px_rgba(12,52,102,0.95)] last:border-b-0"
+                        : option.value === "wanted"
+                          ? "w-full border-b border-neutral-300 bg-amber-50 px-3 py-2 text-left text-amber-900 transition-colors hover:bg-amber-100 last:border-b-0"
+                          : "w-full border-b border-neutral-300 bg-white px-3 py-2 text-left text-neutral-700 transition-colors hover:bg-neutral-100 last:border-b-0"
+                    }`}
+                  >
+                    {option.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <div className="grid gap-1 text-sm">
+              <span className="text-neutral-600">Cecha</span>
+              <MultiCheckboxFilter
+                label="Cecha"
+                values={selectedContainerFeatures}
+                options={CONTAINER_FEATURE_OPTIONS}
+                onOpenChange={(isOpen) => {
+                  setOpenMultiFilters((current) => ({
+                    ...current,
+                    features: isOpen,
+                  }));
+                }}
+                onToggle={(value) => {
+                  setValue(
+                    "containerFeatures",
+                    toggleMultiValue(selectedContainerFeatures, value),
+                    {
+                      shouldDirty: true,
+                      shouldTouch: true,
+                    },
+                  );
+                }}
+                onClear={() => {
+                  setValue("containerFeatures", [], {
+                    shouldDirty: true,
+                    shouldTouch: true,
+                  });
+                }}
+                className="relative"
+                dropdownClassName="w-full"
+              />
+            </div>
+
+            <div className="grid gap-1 text-sm">
+              <label
+                className={`inline-flex items-center gap-2 rounded-md border px-3 py-2 text-sm ${
+                  priceNegotiableOnlyValue
+                    ? "border-sky-400 bg-sky-100/70 text-sky-900 shadow-[0_0_0_1px_rgba(56,189,248,0.15)]"
+                    : "border-neutral-300 bg-white text-neutral-700"
+                }`}
+              >
+                <input
+                  type="checkbox"
+                  {...register("priceNegotiableOnly")}
+                  onKeyDown={handleCheckboxEnterToggle}
+                  className="h-4 w-4 rounded border-neutral-400 text-neutral-700 focus:ring-neutral-400"
+                />
+                <span>Cena do negocjacji</span>
+              </label>
+            </div>
+
+            <div className="grid gap-1 text-sm">
+              <span className="text-neutral-600">Logistyka</span>
+              <div className="grid gap-2">
+                <label
+                  className={`inline-flex items-center gap-2 rounded-md border px-3 py-2 text-sm ${
+                    logisticsTransportOnlyValue
+                      ? "border-sky-400 bg-sky-100/70 text-sky-900 shadow-[0_0_0_1px_rgba(56,189,248,0.15)]"
+                      : "border-neutral-300 bg-white text-neutral-700"
+                  }`}
+                >
+                  <input
+                    type="checkbox"
+                    {...register("logisticsTransportOnly")}
+                    onKeyDown={handleCheckboxEnterToggle}
+                    className="h-4 w-4 rounded border-neutral-400 text-neutral-700 focus:ring-neutral-400"
+                  />
+                  <span>+ transport</span>
+                </label>
+                <label
+                  className={`inline-flex items-center gap-2 rounded-md border px-3 py-2 text-sm ${
+                    logisticsUnloadingOnlyValue
+                      ? "border-sky-400 bg-sky-100/70 text-sky-900 shadow-[0_0_0_1px_rgba(56,189,248,0.15)]"
+                      : "border-neutral-300 bg-white text-neutral-700"
+                  }`}
+                >
+                  <input
+                    type="checkbox"
+                    {...register("logisticsUnloadingOnly")}
+                    onKeyDown={handleCheckboxEnterToggle}
+                    className="h-4 w-4 rounded border-neutral-400 text-neutral-700 focus:ring-neutral-400"
+                  />
+                  <span>+ rozladunek / HDS</span>
+                </label>
+              </div>
+            </div>
+
+            <div className="grid gap-1 text-sm">
+              <span className="text-neutral-600">Cena</span>
+              <div
+                className={`grid gap-2 rounded-md border p-3 transition-colors ${
+                  isPriceFilterApplied
+                    ? "border-sky-400 bg-sky-100/70 shadow-[0_0_0_1px_rgba(56,189,248,0.15)]"
+                    : "border-neutral-300 bg-white"
+                }`}
+              >
+                <div className="grid gap-2 sm:grid-cols-2">
+                  <label className="grid gap-1">
+                    <span className="text-xs text-neutral-500">Waluta</span>
+                    <SelectWithChevron
+                      {...register("priceCurrency")}
+                      className="h-10 rounded-md border border-neutral-300 bg-white px-3 py-2 pr-10 text-neutral-900"
+                    >
+                      {PRICE_FILTER_CURRENCIES.map((currency) => (
+                        <option key={currency} value={currency}>
+                          {PRICE_CURRENCY_LABEL[currency]}
+                        </option>
+                      ))}
+                    </SelectWithChevron>
+                  </label>
+                  <label className="grid gap-1">
+                    <span className="text-xs text-neutral-500">Wariant</span>
+                    <SelectWithChevron
+                      {...register("priceTaxMode")}
+                      className="h-10 rounded-md border border-neutral-300 bg-white px-3 py-2 pr-10 text-neutral-900"
+                    >
+                      {PRICE_TAX_MODES.map((priceTaxMode) => (
+                        <option key={priceTaxMode} value={priceTaxMode}>
+                          {PRICE_TAX_MODE_LABEL[priceTaxMode]}
+                        </option>
+                      ))}
+                    </SelectWithChevron>
+                  </label>
+                </div>
+
+                <div className="grid gap-2 sm:grid-cols-2">
+                  <label className="grid gap-1">
+                    <span className="text-xs text-neutral-500">Min</span>
+                    <input
+                      type="number"
+                      min={0}
+                      step="0.01"
+                      inputMode="decimal"
+                      {...register("priceMinInput")}
+                      className={`w-full min-w-0 rounded-md border px-3 py-2 text-neutral-900 ${
+                        hasPriceRangeFilter
+                          ? "border-sky-400 bg-sky-100/70 shadow-[0_0_0_1px_rgba(56,189,248,0.15)]"
+                          : "border-neutral-300 bg-white"
+                      }`}
+                      placeholder="od"
+                    />
+                  </label>
+                  <label className="grid gap-1">
+                    <span className="text-xs text-neutral-500">Max</span>
+                    <input
+                      type="number"
+                      min={0}
+                      step="0.01"
+                      inputMode="decimal"
+                      {...register("priceMaxInput")}
+                      className={`w-full min-w-0 rounded-md border px-3 py-2 text-neutral-900 ${
+                        hasPriceRangeFilter
+                          ? "border-sky-400 bg-sky-100/70 shadow-[0_0_0_1px_rgba(56,189,248,0.15)]"
+                          : "border-neutral-300 bg-white"
+                      }`}
+                      placeholder="do"
+                    />
+                  </label>
+                </div>
+              </div>
+            </div>
+
+            <div className="grid gap-1 text-sm">
+              <label className="grid min-w-0 gap-1">
+                <span className="text-neutral-600">Rok produkcji od</span>
+                <input
+                  type="number"
+                  min={1900}
+                  max={2100}
+                  step={1}
+                  inputMode="numeric"
+                  {...register("productionYearInput")}
+                  className={`w-full min-w-0 rounded-md border px-3 py-2 text-neutral-900 ${
+                    productionYearInputValue.trim().length > 0
+                      ? "border-sky-400 bg-sky-100/70 shadow-[0_0_0_1px_rgba(56,189,248,0.15)]"
+                      : "border-neutral-300 bg-white"
+                  }`}
+                  placeholder="np. 2018"
+                />
+              </label>
+            </div>
+
+            <div className="grid gap-1 text-sm">
+              <span className="text-neutral-600">Certyfikacja</span>
+              <div className="grid gap-2">
+                <label
+                  className={`inline-flex items-center gap-2 rounded-md border px-3 py-2 text-sm ${
+                    hasCscPlateOnlyValue
+                      ? "border-sky-400 bg-sky-100/70 text-sky-900 shadow-[0_0_0_1px_rgba(56,189,248,0.15)]"
+                      : "border-neutral-300 bg-white text-neutral-700"
+                  }`}
+                >
+                  <input
+                    type="checkbox"
+                    {...register("hasCscPlateOnly")}
+                    onKeyDown={handleCheckboxEnterToggle}
+                    className="h-4 w-4 rounded border-neutral-400 text-neutral-700 focus:ring-neutral-400"
+                  />
+                  <span>Tabliczka CSC</span>
+                </label>
+                <label
+                  className={`inline-flex items-center gap-2 rounded-md border px-3 py-2 text-sm ${
+                    hasCscCertificationOnlyValue
+                      ? "border-sky-400 bg-sky-100/70 text-sky-900 shadow-[0_0_0_1px_rgba(56,189,248,0.15)]"
+                      : "border-neutral-300 bg-white text-neutral-700"
+                  }`}
+                >
+                  <input
+                    type="checkbox"
+                    {...register("hasCscCertificationOnly")}
+                    onKeyDown={handleCheckboxEnterToggle}
+                    className="h-4 w-4 rounded border-neutral-400 text-neutral-700 focus:ring-neutral-400"
+                  />
+                  <span>Certyfikacja CSC</span>
+                </label>
+              </div>
+            </div>
+
+            <button
+              type="button"
+              onClick={() => {
+                clearAllFilters();
+                setOpenMultiFilters({
+                  sizes: false,
+                  heights: false,
+                  types: false,
+                  conditions: false,
+                  features: false,
+                });
+              }}
+              className="rounded-md border border-neutral-500 bg-neutral-300 px-3 py-2 text-sm font-semibold text-neutral-900 shadow-[0_6px_14px_-10px_rgba(15,23,42,0.65)] transition-colors hover:bg-neutral-400"
+            >
+              Wyczysc wszystkie filtry
+            </button>
+          </div>
+        </aside>
+
+        {children}
+      </div>
+    </>
+  );
+}
+
+export const ContainerListingsFilters = memo(ContainerListingsFiltersComponent);
+
+
+
+
+
+
+

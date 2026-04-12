@@ -57,20 +57,20 @@ export default async function ContactPage({ searchParams }: ContactPageProps) {
         <p>{page.pointTwo}</p>
         <p>{page.pointThree}</p>
       </div>
-      <div className="mt-6 space-y-4 border-t border-slate-800/70 pt-5">
+      <div className="mt-6 space-y-4 border-t border-neutral-800/70 pt-5">
         <a
           href={`mailto:${contactEmail}`}
           className="inline-flex items-center text-sm font-semibold text-sky-300 hover:text-sky-200"
         >
           {contactEmail}
         </a>
-        <div className="flex items-center gap-2 text-slate-300">
+        <div className="flex items-center gap-2 text-neutral-300">
           <a
             href="https://www.linkedin.com/"
             target="_blank"
             rel="noreferrer noopener"
             aria-label={messages.footer.linkedinAria}
-            className="rounded-md border border-slate-700 p-2.5 transition hover:border-slate-500 hover:text-slate-100"
+            className="rounded-md border border-neutral-700 p-2.5 transition hover:border-neutral-500 hover:text-neutral-100"
           >
             <LinkedInIcon />
           </a>
@@ -79,7 +79,7 @@ export default async function ContactPage({ searchParams }: ContactPageProps) {
             target="_blank"
             rel="noreferrer noopener"
             aria-label={messages.footer.facebookAria}
-            className="rounded-md border border-slate-700 p-2.5 transition hover:border-slate-500 hover:text-slate-100"
+            className="rounded-md border border-neutral-700 p-2.5 transition hover:border-neutral-500 hover:text-neutral-100"
           >
             <FacebookIcon />
           </a>
@@ -88,7 +88,7 @@ export default async function ContactPage({ searchParams }: ContactPageProps) {
             target="_blank"
             rel="noreferrer noopener"
             aria-label={messages.footer.instagramAria}
-            className="rounded-md border border-slate-700 p-2.5 transition hover:border-slate-500 hover:text-slate-100"
+            className="rounded-md border border-neutral-700 p-2.5 transition hover:border-neutral-500 hover:text-neutral-100"
           >
             <InstagramIcon />
           </a>
@@ -97,4 +97,5 @@ export default async function ContactPage({ searchParams }: ContactPageProps) {
     </StaticPageFrame>
   );
 }
+
 

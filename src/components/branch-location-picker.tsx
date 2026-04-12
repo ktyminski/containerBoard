@@ -187,12 +187,13 @@ export function BranchLocationPicker({
 
   return (
     <div className="grid gap-2">
-      <p className="text-center text-xs text-slate-300">{messages.branchLocationHint}</p>
+      <p className="text-center text-xs text-neutral-300">{messages.branchLocationHint}</p>
 
       <div
         ref={mapContainerRef}
-        className="h-56 w-full overflow-hidden rounded-md border border-slate-700/80"
+        className="h-56 w-full overflow-hidden rounded-md border border-neutral-700/80"
       />
     </div>
   );
 }
+

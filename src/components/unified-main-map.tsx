@@ -3,10 +3,8 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { NAV_HISTORY_STACK_KEY } from "@/components/in-app-navigation-history-tracker";
 import type { Map as MapLibreMap } from "maplibre-gl";
-import { useToast } from "@/components/toast-provider";
-import { AnnouncementsList, CompaniesList, OffersList } from "@/components/unified-main-map/list-sections";
+import { CompaniesList, OffersList } from "@/components/unified-main-map/list-sections";
 import {
-  openAnnouncementsPopup,
   openCompaniesPopup,
   openOffersPopup,
 } from "@/components/unified-main-map/popups";
@@ -14,10 +12,7 @@ import {
   EMPTY_COMMUNICATION_LANGUAGES,
   EMPTY_COMPANY_CATEGORIES,
   EMPTY_COMPANY_SPECIALIZATIONS,
-  EMPTY_CONTRACT_TYPES,
   EMPTY_OPERATING_AREAS,
-  EMPTY_WORK_MODELS,
-  type JobAnnouncementMapItem,
   type OfferMapItem,
   type UnifiedMainMapProps,
 } from "@/components/unified-main-map/types";
@@ -35,15 +30,12 @@ export function UnifiedMainMap({
   companyCreateMessages,
   verifiedLabel,
   operatingAreaLabels,
-  announcementsMessages,
   offersMessages,
   companiesListMessages,
   showOnMapLabel,
   initialMobilePane = "list",
   activeMapView,
   keyword = "",
-  contractTypes,
-  workModels,
   operatingAreas,
   communicationLanguages,
   companyCategories,
@@ -54,12 +46,9 @@ export function UnifiedMainMap({
   mapViewport,
   onMapViewportChange,
 }: UnifiedMainMapProps) {
-  const toast = useToast();
   const [mobilePane, setMobilePane] = useState<"list" | "map">(initialMobilePane);
   const listScrollContainerRef = useRef<HTMLDivElement | null>(null);
 
-  const activeContractTypes = contractTypes ?? EMPTY_CONTRACT_TYPES;
-  const activeWorkModels = workModels ?? EMPTY_WORK_MODELS;
   const activeOperatingAreas = operatingAreas ?? EMPTY_OPERATING_AREAS;
   const activeCommunicationLanguages =
     communicationLanguages ?? EMPTY_COMMUNICATION_LANGUAGES;
@@ -68,12 +57,6 @@ export function UnifiedMainMap({
     companySpecializations ?? EMPTY_COMPANY_SPECIALIZATIONS;
 
   const {
-    announcementsItems,
-    announcementsError,
-    announcementsLoading,
-    announcementsLoaded,
-    announcementsHasMore,
-    pendingFavoriteId,
     offersItems,
     offersError,
     offersLoading,
@@ -84,40 +67,23 @@ export function UnifiedMainMap({
     companiesLoading,
     companiesLoaded,
     companiesHasMore,
-    announcementsByIdRef,
     offersByIdRef,
     companiesByIdRef,
-    loadAnnouncements,
     loadOffers,
     loadCompanies,
-    toggleFavorite,
-    reportAnnouncementsError,
     reportOffersError,
     reportCompaniesError,
     abortAll,
   } = useUnifiedMainMapData({
-    locale,
-    announcementsMessages,
     offersMessages,
     mapMessages,
     keyword,
-    contractTypes: activeContractTypes,
-    workModels: activeWorkModels,
     operatingAreas: activeOperatingAreas,
     communicationLanguages: activeCommunicationLanguages,
     companyCategories: activeCompanyCategories,
     companySpecializations: activeCompanySpecializations,
     locationBbox,
-    onFavoriteAddedNotice: (message) => {
-      toast.success(message);
-    },
   });
-
-  const renderAnnouncementsPopup = useCallback(
-    (map: MapLibreMap, items: JobAnnouncementMapItem[], lngLat: [number, number]) =>
-      openAnnouncementsPopup(map, items, announcementsMessages, locale, lngLat),
-    [announcementsMessages, locale],
-  );
 
   const renderOffersPopup = useCallback(
     (map: MapLibreMap, items: OfferMapItem[], lngLat: [number, number]) =>
@@ -151,10 +117,8 @@ export function UnifiedMainMap({
     isMapReady,
     mapError,
     resizeMap,
-    setAnnouncementsSource,
     setOffersSource,
     setCompaniesSource,
-    focusAnnouncementOnMap,
     focusOfferOnMap,
     focusCompanyOnMap,
   } = useUnifiedMainMapEngine({
@@ -166,23 +130,15 @@ export function UnifiedMainMap({
     onMapViewportChange,
     onLocationFilterRelease,
     mapRenderErrorMessage: mapMessages.mapRenderError,
-    announcementsUnknownError: announcementsMessages.unknownError,
     offersUnknownError: offersMessages.unknownError,
     companiesUnknownError: mapMessages.unknownError,
-    announcementsByIdRef,
     offersByIdRef,
     companiesByIdRef,
-    renderAnnouncementsPopup,
     renderOffersPopup,
     renderCompaniesPopup,
-    onAnnouncementsError: reportAnnouncementsError,
     onOffersError: reportOffersError,
     onCompaniesError: reportCompaniesError,
   });
-
-  useEffect(() => {
-    setAnnouncementsSource(announcementsItems);
-  }, [announcementsItems, setAnnouncementsSource]);
 
   useEffect(() => {
     setOffersSource(offersItems);
@@ -221,11 +177,6 @@ export function UnifiedMainMap({
       return;
     }
 
-    if (activeMapView === "announcements") {
-      void loadAnnouncements();
-      return;
-    }
-
     if (activeMapView === "offers") {
       void loadOffers();
       return;
@@ -236,7 +187,6 @@ export function UnifiedMainMap({
     activeMapView,
     isMapReady,
     isActive,
-    loadAnnouncements,
     loadCompanies,
     loadOffers,
   ]);
@@ -261,31 +211,23 @@ export function UnifiedMainMap({
   }, [isActive, isMapReady, mobilePane, resizeMap]);
 
   const activeError =
-    activeMapView === "announcements"
-      ? announcementsError
-      : activeMapView === "offers"
+    activeMapView === "offers"
         ? offersError
         : companiesError;
 
   const activeLoading =
-    activeMapView === "announcements"
-      ? announcementsLoading
-      : activeMapView === "offers"
+    activeMapView === "offers"
         ? offersLoading
         : companiesLoading;
 
   const activeHasMore =
-    activeMapView === "announcements"
-      ? announcementsHasMore
-      : activeMapView === "offers"
+    activeMapView === "offers"
         ? offersHasMore
         : companiesHasMore;
 
   const activeViewConfig = UNIFIED_MAP_VIEW_CONFIG[activeMapView];
   const activeLoadingLabel =
-    activeMapView === "announcements"
-      ? announcementsMessages.loading
-      : activeMapView === "offers"
+    activeMapView === "offers"
         ? offersMessages.loading
         : companiesListMessages.loading;
   const isCompaniesMapView = activeMapView === "companies";
@@ -294,20 +236,20 @@ export function UnifiedMainMap({
   const mobileListLabel = mapMessages.mobileListToggle;
   const shellClassName = isCompaniesMapView
     ? "relative flex h-full min-h-0 flex-col border border-sky-200 bg-gradient-to-b from-sky-50 via-blue-50 to-sky-100/80"
-    : "relative flex h-full min-h-0 flex-col border border-slate-800 bg-slate-950/40";
+    : "relative flex h-full min-h-0 flex-col border border-neutral-800 bg-neutral-950/40";
   const listPaneSurfaceClass = isCompaniesMapView
     ? "bg-[linear-gradient(180deg,rgba(239,246,255,0.97)_0%,rgba(224,242,254,0.95)_100%)] lg:border-r lg:border-sky-200 lg:bg-[linear-gradient(180deg,rgba(239,246,255,0.94)_0%,rgba(224,242,254,0.90)_100%)]"
-    : "bg-slate-900 lg:border-r lg:border-slate-800 lg:bg-slate-900/70";
-  const loadingOverlayClass = isCompaniesMapView ? "bg-sky-100/70" : "bg-slate-900/70";
+    : "bg-neutral-900 lg:border-r lg:border-neutral-800 lg:bg-neutral-900/70";
+  const loadingOverlayClass = isCompaniesMapView ? "bg-sky-100/70" : "bg-neutral-900/70";
   const loadingCardClass = isCompaniesMapView
     ? "border-sky-200 bg-white/90"
-    : "border-slate-700 bg-slate-950/90";
-  const loadingTextClass = isCompaniesMapView ? "text-slate-700" : "text-slate-200";
-  const mapLoadingOverlayClass = isCompaniesMapView ? "bg-sky-100/80" : "bg-slate-900/95";
-  const mobileMapLoadingOverlayClass = isCompaniesMapView ? "bg-sky-100/70" : "bg-slate-900/70";
+    : "border-neutral-700 bg-neutral-950/90";
+  const loadingTextClass = isCompaniesMapView ? "text-neutral-700" : "text-neutral-200";
+  const mapLoadingOverlayClass = isCompaniesMapView ? "bg-sky-100/80" : "bg-neutral-900/95";
+  const mobileMapLoadingOverlayClass = isCompaniesMapView ? "bg-sky-100/70" : "bg-neutral-900/70";
   const hasMoreClass = isCompaniesMapView
     ? "border-t border-sky-200 bg-sky-50/90 px-3 py-2 text-xs text-sky-800"
-    : "border-t border-slate-800 px-3 py-2 text-xs text-amber-300";
+    : "border-t border-neutral-800 px-3 py-2 text-xs text-amber-300";
 
   const setMobilePaneWithUrl = useCallback((nextPane: "list" | "map") => {
     if (typeof window === "undefined") {
@@ -352,26 +294,6 @@ export function UnifiedMainMap({
         >
           <div className="flex min-h-full flex-col p-3">
             {mapError ? <p className="mt-2 text-sm text-red-300">{mapError}</p> : null}
-            {activeMapView === "announcements" ? (
-              <AnnouncementsList
-                scrollContainerRef={listScrollContainerRef}
-                locale={locale}
-                messages={announcementsMessages}
-                showOnMapLabel={showOnMapLabel}
-                items={announcementsItems}
-                isLoading={activeLoading}
-                hasLoaded={announcementsLoaded}
-                error={activeError}
-                pendingFavoriteId={pendingFavoriteId}
-                onToggleFavorite={(announcementId, isFavorite) => {
-                  void toggleFavorite(announcementId, isFavorite);
-                }}
-                onFocusMap={(item) => {
-                  setMobilePaneWithUrl("map");
-                  focusAnnouncementOnMap(item);
-                }}
-              />
-            ) : null}
             {activeMapView === "offers" ? (
               <OffersList
                 scrollContainerRef={listScrollContainerRef}
@@ -413,7 +335,7 @@ export function UnifiedMainMap({
             <div className={`pointer-events-none absolute inset-0 z-30 flex items-center justify-center ${loadingOverlayClass}`}>
               <div className={`inline-flex items-center gap-2 rounded-md border px-3 py-2 ${loadingCardClass}`}>
                 <div
-                  className={`h-6 w-6 animate-spin rounded-full border-2 border-slate-500 ${activeViewConfig.spinnerTopBorderClass}`}
+                  className={`h-6 w-6 animate-spin rounded-full border-2 border-neutral-500 ${activeViewConfig.spinnerTopBorderClass}`}
                   aria-label={activeLoadingLabel}
                   role="status"
                 />
@@ -429,7 +351,7 @@ export function UnifiedMainMap({
             {!isMapReady ? (
               <div className={`absolute inset-0 z-10 flex items-center justify-center ${mapLoadingOverlayClass}`}>
                 <div
-                  className={`h-8 w-8 animate-spin rounded-full border-2 border-slate-500 ${activeViewConfig.spinnerTopBorderClass}`}
+                  className={`h-8 w-8 animate-spin rounded-full border-2 border-neutral-500 ${activeViewConfig.spinnerTopBorderClass}`}
                   aria-label={mapMessages.loading}
                   role="status"
                 />
@@ -439,7 +361,7 @@ export function UnifiedMainMap({
               <div className={`absolute inset-0 z-10 flex items-center justify-center lg:hidden ${mobileMapLoadingOverlayClass}`}>
                 <div className={`inline-flex items-center gap-2 rounded-md border px-3 py-2 ${loadingCardClass}`}>
                   <div
-                    className={`h-6 w-6 animate-spin rounded-full border-2 border-slate-500 ${activeViewConfig.spinnerTopBorderClass}`}
+                    className={`h-6 w-6 animate-spin rounded-full border-2 border-neutral-500 ${activeViewConfig.spinnerTopBorderClass}`}
                     aria-label={activeLoadingLabel}
                     role="status"
                   />
@@ -487,7 +409,6 @@ export function UnifiedMainMap({
         <p className={hasMoreClass}>
           {resolveTooManyResultsLabel({
             activeMapView,
-            announcementsMessages,
             offersMessages,
             mapMessages,
           })}
@@ -496,3 +417,5 @@ export function UnifiedMainMap({
     </section>
   );
 }
+
+

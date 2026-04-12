@@ -64,14 +64,14 @@ export function MainMapMoreFiltersDialog({
   }
 
   return (
-    <div className="relative z-10 my-auto flex max-h-[calc(100dvh-2rem)] w-full max-w-2xl flex-col overflow-hidden rounded-xl border border-slate-700 bg-slate-900 shadow-2xl">
-      <div className="shrink-0 border-b border-slate-800 px-4 py-3">
-        <p className="text-sm font-semibold text-slate-100">{title}</p>
-        <p className="mt-1 text-xs text-slate-400">{subtitle}</p>
+    <div className="relative z-10 my-auto flex max-h-[calc(100dvh-2rem)] w-full max-w-2xl flex-col overflow-hidden rounded-xl border border-neutral-700 bg-neutral-900 shadow-2xl">
+      <div className="shrink-0 border-b border-neutral-800 px-4 py-3">
+        <p className="text-sm font-semibold text-neutral-100">{title}</p>
+        <p className="mt-1 text-xs text-neutral-400">{subtitle}</p>
       </div>
 
       {topContent ? (
-        <div className="shrink-0 border-b border-slate-800 px-4 py-3 lg:hidden">
+        <div className="shrink-0 border-b border-neutral-800 px-4 py-3 lg:hidden">
           {topContent}
         </div>
       ) : null}
@@ -89,7 +89,7 @@ export function MainMapMoreFiltersDialog({
             return (
               <div
                 key={section.id}
-                className={`grid self-start gap-2 p-3 rounded-lg border border-slate-800 bg-slate-950/60 ${
+                className={`grid self-start gap-2 p-3 rounded-lg border border-neutral-800 bg-neutral-950/60 ${
                   section.groups && section.groups.length > 0
                     ? "md:col-span-2"
                     : ""
@@ -102,16 +102,16 @@ export function MainMapMoreFiltersDialog({
                     aria-expanded={!isCollapsed}
                     onClick={() => toggleSection(section.id)}
                   >
-                    <span className="text-sm font-medium text-slate-200">
+                    <span className="text-sm font-medium text-neutral-200">
                       {section.title}
                     </span>
-                    <span className="flex items-center gap-2 text-xs text-slate-400">
+                    <span className="flex items-center gap-2 text-xs text-neutral-400">
                       <span>
                         {section.activeFiltersLabel ?? "Active filters"}:{" "}
                         {section.selectedValues.length}
                       </span>
                       <svg
-                        className={`h-4 w-4 shrink-0 text-slate-500 transition-transform ${
+                        className={`h-4 w-4 shrink-0 text-neutral-500 transition-transform ${
                           isCollapsed ? "rotate-0" : "rotate-180"
                         }`}
                         viewBox="0 0 20 20"
@@ -129,7 +129,7 @@ export function MainMapMoreFiltersDialog({
                     </span>
                   </button>
                 ) : (
-                  <p className="text-sm font-medium text-slate-200">
+                  <p className="text-sm font-medium text-neutral-200">
                     {section.title}
                   </p>
                 )}
@@ -139,9 +139,9 @@ export function MainMapMoreFiltersDialog({
                       {section.groups.map((group) => (
                         <div
                           key={`${section.id}-${group.id}`}
-                          className="grid gap-2 rounded-md border border-slate-800/80 bg-slate-950/70 p-2.5"
+                          className="grid gap-2 rounded-md border border-neutral-800/80 bg-neutral-950/70 p-2.5"
                         >
-                          <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-400">
+                          <p className="text-[11px] font-semibold uppercase tracking-wide text-neutral-400">
                             {group.title}
                           </p>
                           {group.options.length > 0 ? (
@@ -149,11 +149,11 @@ export function MainMapMoreFiltersDialog({
                               {group.options.map((option) => (
                                 <label
                                   key={`${section.id}-${group.id}-${option.value}`}
-                                  className="flex cursor-pointer items-center gap-2 px-1.5 py-1 text-sm text-slate-300"
+                                  className="flex cursor-pointer items-center gap-2 px-1.5 py-1 text-sm text-neutral-300"
                                 >
                                   <input
                                     type="checkbox"
-                                    className="h-4 w-4 shrink-0 cursor-pointer rounded border-slate-600 bg-slate-950 text-sky-500 accent-sky-400 [color-scheme:dark]"
+                                    className="h-4 w-4 shrink-0 cursor-pointer rounded border-neutral-600 bg-neutral-950 text-sky-500 accent-sky-400 [color-scheme:dark]"
                                     checked={section.selectedValues.includes(
                                       option.value,
                                     )}
@@ -166,7 +166,7 @@ export function MainMapMoreFiltersDialog({
                               ))}
                             </div>
                           ) : (
-                            <p className="text-xs text-slate-500">
+                            <p className="text-xs text-neutral-500">
                               {group.emptyMessage ??
                                 section.emptyMessage ??
                                 "-"}
@@ -179,11 +179,11 @@ export function MainMapMoreFiltersDialog({
                     section.options.map((option) => (
                       <label
                         key={`${section.id}-${option.value}`}
-                        className="flex cursor-pointer items-center gap-2 text-sm text-slate-300"
+                        className="flex cursor-pointer items-center gap-2 text-sm text-neutral-300"
                       >
                         <input
                           type="checkbox"
-                          className="h-4 w-4 shrink-0 cursor-pointer rounded border-slate-600 bg-slate-950 text-sky-500 accent-sky-400 [color-scheme:dark]"
+                          className="h-4 w-4 shrink-0 cursor-pointer rounded border-neutral-600 bg-neutral-950 text-sky-500 accent-sky-400 [color-scheme:dark]"
                           checked={section.selectedValues.includes(
                             option.value,
                           )}
@@ -195,7 +195,7 @@ export function MainMapMoreFiltersDialog({
                       </label>
                     ))
                   ) : (
-                    <p className="text-xs text-slate-500">
+                    <p className="text-xs text-neutral-500">
                       {section.emptyMessage ?? "-"}
                     </p>
                   )
@@ -206,10 +206,10 @@ export function MainMapMoreFiltersDialog({
         </div>
       </div>
 
-      <div className="shrink-0 flex items-center justify-between border-t border-slate-800 px-4 py-3">
+      <div className="shrink-0 flex items-center justify-between border-t border-neutral-800 px-4 py-3">
         <button
           type="button"
-          className="rounded-md border border-slate-700 px-3 py-2 text-sm text-slate-200 hover:border-slate-500"
+          className="rounded-md border border-neutral-700 px-3 py-2 text-sm text-neutral-200 hover:border-neutral-500"
           onClick={onClear}
         >
           {clearLabel}
@@ -217,14 +217,14 @@ export function MainMapMoreFiltersDialog({
         <div className="flex items-center gap-2">
           <button
             type="button"
-            className="rounded-md border border-slate-700 px-3 py-2 text-sm text-slate-200 hover:border-slate-500"
+            className="rounded-md border border-neutral-700 px-3 py-2 text-sm text-neutral-200 hover:border-neutral-500"
             onClick={onCancel}
           >
             {cancelLabel}
           </button>
           <button
             type="button"
-            className="rounded-md bg-sky-500 px-3 py-2 text-sm font-medium text-slate-950 hover:bg-sky-400"
+            className="rounded-md bg-sky-500 px-3 py-2 text-sm font-medium text-neutral-950 hover:bg-sky-400"
             onClick={onSave}
           >
             {saveLabel}
@@ -234,3 +234,4 @@ export function MainMapMoreFiltersDialog({
     </div>
   );
 }
+

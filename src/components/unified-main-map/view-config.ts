@@ -7,10 +7,6 @@ export type UnifiedMapViewConfig = {
 };
 
 export const UNIFIED_MAP_VIEW_CONFIG: Record<ActiveMapView, UnifiedMapViewConfig> = {
-  announcements: {
-    spinnerTopBorderClass: "border-t-sky-400",
-    borderHoverClass: "hover:border-sky-300/60",
-  },
   offers: {
     spinnerTopBorderClass: "border-t-amber-300",
     borderHoverClass: "hover:border-amber-300/60",
@@ -23,13 +19,9 @@ export const UNIFIED_MAP_VIEW_CONFIG: Record<ActiveMapView, UnifiedMapViewConfig
 
 export function resolveTooManyResultsLabel(input: {
   activeMapView: ActiveMapView;
-  announcementsMessages: AppMessages["mapModules"]["announcements"];
   offersMessages: AppMessages["mapModules"]["offers"];
   mapMessages: AppMessages["map"];
 }): string {
-  if (input.activeMapView === "announcements") {
-    return input.announcementsMessages.tooManyResults;
-  }
   if (input.activeMapView === "offers") {
     return input.offersMessages.tooManyResults;
   }

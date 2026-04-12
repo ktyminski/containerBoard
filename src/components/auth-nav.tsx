@@ -36,14 +36,11 @@ export async function AuthNav({ locale, roleMessages }: AuthNavProps) {
     );
   }
 
+  const myListingsHref = withLang("/containers/mine", locale);
+  const companyPanelHref = withLang("/companies/panel", locale);
+
   return (
     <div className="flex min-w-0 flex-nowrap items-center justify-end gap-2 text-sm whitespace-nowrap">
-      <Link
-        href={withLang("/containers/mine", locale)}
-        className="hidden h-9 shrink-0 items-center rounded-md border border-[#2f639a] bg-[#082650]/80 px-3 text-sm text-[#e2efff] whitespace-nowrap transition hover:border-[#4e86c3] hover:bg-[#0c3466] md:inline-flex"
-      >
-        Moje kontenery
-      </Link>
       {user.role === USER_ROLE.ADMIN ? (
         <Link
           href={withLang("/admin", locale)}
@@ -52,6 +49,12 @@ export async function AuthNav({ locale, roleMessages }: AuthNavProps) {
           Admin
         </Link>
       ) : null}
+      <Link
+        href={myListingsHref}
+        className="hidden h-9 shrink-0 items-center rounded-md border border-[#2f639a] bg-[#082650]/80 px-3 text-sm text-[#dbeafe] whitespace-nowrap transition hover:border-[#4e86c3] hover:bg-[#0c3466] md:inline-flex"
+      >
+        Moje ogloszenia
+      </Link>
       <UserAccountMenu
         userName={user.name}
         accountTypeLabel="Rola"
@@ -64,10 +67,10 @@ export async function AuthNav({ locale, roleMessages }: AuthNavProps) {
         blockedCompanyLabel="Firma zablokowana"
         adminPanelLabel={user.role === USER_ROLE.ADMIN ? "Admin" : undefined}
         adminPanelHref={user.role === USER_ROLE.ADMIN ? withLang("/admin", locale) : undefined}
-        companyPanelLabel={undefined}
-        companyPanelHref={undefined}
-        myListingsLabel="Moje kontenery"
-        myListingsHref={withLang("/containers/mine", locale)}
+        companyPanelLabel="Panel firmy"
+        companyPanelHref={companyPanelHref}
+        myListingsLabel="Moje ogloszenia"
+        myListingsHref={myListingsHref}
         settingsLabel="Ustawienia"
         settingsHref={withLang("/settings", locale)}
         logoutLabel="Wyloguj"

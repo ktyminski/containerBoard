@@ -67,10 +67,10 @@ export function CompanyOwnershipClaimButton({
   };
 
   return (
-    <section className="rounded-xl border border-slate-800 bg-slate-900/50 p-4">
+    <section className="rounded-xl border border-neutral-800 bg-neutral-900/50 p-4">
       <button
         type="button"
-        className="text-xs text-slate-400 transition hover:text-slate-200 disabled:cursor-default disabled:text-emerald-300"
+        className="text-xs text-neutral-400 transition hover:text-neutral-200 disabled:cursor-default disabled:text-emerald-300"
         onClick={() => {
           setIsConfirmOpen(true);
         }}
@@ -84,9 +84,9 @@ export function CompanyOwnershipClaimButton({
       </button>
 
       {status === "unauthorized" ? (
-        <p className="mt-1 text-xs text-slate-500">
+        <p className="mt-1 text-xs text-neutral-500">
           {messages.unauthorizedText}{" "}
-          <Link href={withLang("/login", locale)} className="text-slate-300 hover:text-slate-100">
+          <Link href={withLang("/login", locale)} className="text-neutral-300 hover:text-neutral-100">
             {messages.loginCta}
           </Link>
         </p>
@@ -94,22 +94,22 @@ export function CompanyOwnershipClaimButton({
 
       {isConfirmOpen ? (
         <div
-          className="fixed inset-0 z-[70] flex items-center justify-center overflow-y-auto [&>div:not(.fixed)]:my-auto [&>div:not(.fixed)]:max-h-[calc(100dvh-2rem)] [&>div:not(.fixed)]:!overflow-y-auto bg-slate-950/75 p-4"
+          className="fixed inset-0 z-[70] flex items-center justify-center overflow-y-auto [&>div:not(.fixed)]:my-auto [&>div:not(.fixed)]:max-h-[calc(100dvh-2rem)] [&>div:not(.fixed)]:!overflow-y-auto bg-neutral-950/75 p-4"
           role="dialog"
           aria-modal="true"
         >
-          <div className="w-full max-w-md rounded-xl border border-slate-700 bg-slate-900 p-4 shadow-2xl">
-            <h3 className="text-sm font-semibold text-slate-100">{messages.dialogTitle}</h3>
-            <p className="mt-2 text-xs leading-5 text-slate-300">
+          <div className="w-full max-w-md rounded-xl border border-neutral-700 bg-neutral-900 p-4 shadow-2xl">
+            <h3 className="text-sm font-semibold text-neutral-100">{messages.dialogTitle}</h3>
+            <p className="mt-2 text-xs leading-5 text-neutral-300">
               {messages.dialogConfirmText}
             </p>
-            <p className="mt-2 text-xs leading-5 text-slate-400">
+            <p className="mt-2 text-xs leading-5 text-neutral-400">
               {messages.dialogLimitText}
             </p>
             <div className="mt-4 flex justify-end gap-2">
               <button
                 type="button"
-                className="rounded-md border border-slate-700 px-3 py-1.5 text-xs text-slate-300 hover:border-slate-500"
+                className="rounded-md border border-neutral-700 px-3 py-1.5 text-xs text-neutral-300 hover:border-neutral-500"
                 onClick={() => {
                   setIsConfirmOpen(false);
                 }}
@@ -134,5 +134,6 @@ export function CompanyOwnershipClaimButton({
     </section>
   );
 }
+
 
 

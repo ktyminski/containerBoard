@@ -1,11 +1,10 @@
 import maplibregl from "maplibre-gl";
-import { JOB_RATE_PERIOD, type JobRatePeriod } from "@/lib/job-announcement";
 import { OFFER_TYPE, type OfferType } from "@/lib/offer-type";
 import type { AppLocale, AppMessages } from "@/lib/i18n";
 import type { CompanyMapItem } from "@/types/company";
 import type { CompanyCategory } from "@/types/company-category";
 import { toCityCountryLocationLabel } from "@/lib/location-label";
-import type { JobAnnouncementMapItem, OfferMapItem, ActiveMapView } from "@/components/unified-main-map/types";
+import type { OfferMapItem, ActiveMapView } from "@/components/unified-main-map/types";
 import { ALL_MAP_LAYER_IDS, VIEW_LAYER_IDS } from "@/components/unified-main-map/types";
 
 const COMPANY_FALLBACK_COLORS = [
@@ -27,22 +26,6 @@ export const CATEGORY_META: Record<CompanyCategory, { background: string }> = {
   "staffing-agency": { background: "#881337" },
   other: { background: "#ca8a04" },
 };
-
-export function toAnnouncementFeatureCollection(
-  items: JobAnnouncementMapItem[],
-): GeoJSON.Feature<GeoJSON.Point>[] {
-  return items.map((item) => ({
-    type: "Feature",
-    geometry: {
-      type: "Point",
-      coordinates: item.mainPoint,
-    },
-    properties: {
-      id: item.id,
-      companyIsPremium: item.companyIsPremium === true,
-    },
-  }));
-}
 
 export function toOfferFeatureCollection(
   items: OfferMapItem[],
@@ -217,75 +200,6 @@ export function toIntlLocale(locale: AppLocale): string {
     return "uk-UA";
   }
   return "pl-PL";
-}
-
-export function formatSalaryRange(input: {
-  salaryFrom?: number;
-  salaryTo?: number;
-  salaryRatePeriod: JobRatePeriod;
-  locale: AppLocale;
-  messages: AppMessages["mapModules"]["announcements"];
-  formatTemplate: (template: string, values: Record<string, string>) => string;
-}): string {
-  const fromValue =
-    typeof input.salaryFrom === "number" &&
-    Number.isFinite(input.salaryFrom) &&
-    input.salaryFrom > 0
-      ? input.salaryFrom
-      : undefined;
-  const toValue =
-    typeof input.salaryTo === "number" &&
-    Number.isFinite(input.salaryTo) &&
-    input.salaryTo > 0
-      ? input.salaryTo
-      : undefined;
-
-  if (fromValue === undefined && toValue === undefined) {
-    return "-";
-  }
-
-  const formatter = new Intl.NumberFormat(toIntlLocale(input.locale), {
-    maximumFractionDigits: 0,
-  });
-  const suffix =
-    input.salaryRatePeriod === JOB_RATE_PERIOD.HOURLY
-      ? input.messages.salarySuffixHourly
-      : input.messages.salarySuffixMonthly;
-
-  if (fromValue !== undefined && toValue !== undefined) {
-    return input.formatTemplate(input.messages.salaryRangeTemplate, {
-      from: formatter.format(fromValue),
-      to: formatter.format(toValue),
-      suffix,
-    });
-  }
-
-  if (fromValue !== undefined) {
-    return input.formatTemplate(input.messages.salaryFromTemplate, {
-      value: formatter.format(fromValue),
-      suffix,
-    });
-  }
-
-  return input.formatTemplate(input.messages.salaryToTemplate, {
-    value: formatter.format(toValue as number),
-    suffix,
-  });
-}
-
-export function hasSalaryRange(input: {
-  salaryFrom?: number;
-  salaryTo?: number;
-}): boolean {
-  const fromValue =
-    typeof input.salaryFrom === "number" &&
-    Number.isFinite(input.salaryFrom) &&
-    input.salaryFrom > 0;
-  const toValue =
-    typeof input.salaryTo === "number" &&
-    Number.isFinite(input.salaryTo) &&
-    input.salaryTo > 0;
-  return fromValue || toValue;
 }
 
 export function toShortLocationLabel(input: {

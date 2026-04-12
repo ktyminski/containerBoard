@@ -1,4 +1,4 @@
-﻿import type { ReactNode } from "react";
+import type { ReactNode } from "react";
 import Link from "next/link";
 import { SmartBackButton } from "@/components/smart-back-button";
 import { withLang, type AppLocale } from "@/lib/i18n";
@@ -40,7 +40,7 @@ export function StaticPageFrame({
           <SmartBackButton
             label={backLabel}
             fallbackHref={withLang(backHref, locale)}
-            className="inline-flex w-fit items-center gap-2 rounded-md border border-slate-700 px-3 py-2 text-sm text-slate-200 transition-colors hover:border-slate-500"
+            className="inline-flex w-fit items-center gap-2 rounded-md border border-neutral-700 px-3 py-2 text-sm text-neutral-200 transition-colors hover:border-neutral-500"
           />
           {mapLabel ? (
             <Link
@@ -52,9 +52,9 @@ export function StaticPageFrame({
             </Link>
           ) : null}
         </div>
-        <article className="rounded-xl border border-slate-800 bg-slate-900/70 p-6">
-          <h1 className="text-2xl font-semibold text-slate-100 sm:text-3xl">{title}</h1>
-          <div className="mt-4 space-y-4 text-sm leading-6 text-slate-300">
+        <article className="rounded-xl border border-neutral-800 bg-neutral-900/70 p-6">
+          <h1 className="text-2xl font-semibold text-neutral-100 sm:text-3xl">{title}</h1>
+          <div className="mt-4 space-y-4 text-sm leading-6 text-neutral-300">
             <p>{intro}</p>
             {children}
           </div>
@@ -76,4 +76,5 @@ export function StaticPageFrame({
     </section>
   );
 }
+
 

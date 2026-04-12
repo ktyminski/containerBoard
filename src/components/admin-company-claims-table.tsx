@@ -95,17 +95,17 @@ export function AdminCompanyClaimsTable({
   };
 
   if (isLoading) {
-    return <p className="text-sm text-slate-300">{messages.loading}</p>;
+    return <p className="text-sm text-neutral-300">{messages.loading}</p>;
   }
 
   return (
     <>
-      <div className="rounded-xl border border-slate-800 bg-slate-900/60 p-4">
+      <div className="rounded-xl border border-neutral-800 bg-neutral-900/60 p-4">
       <div className="mb-3 flex items-center justify-between">
-        <h2 className="text-lg font-semibold text-slate-100">{messages.title}</h2>
+        <h2 className="text-lg font-semibold text-neutral-100">{messages.title}</h2>
         <button
           type="button"
-          className="rounded-md border border-slate-700 px-3 py-1 text-sm text-slate-200 hover:border-slate-500"
+          className="rounded-md border border-neutral-700 px-3 py-1 text-sm text-neutral-200 hover:border-neutral-500"
           onClick={() => {
             void loadClaims();
           }}
@@ -116,12 +116,12 @@ export function AdminCompanyClaimsTable({
 
       {error ? <p className="mb-3 text-sm text-red-300">{error}</p> : null}
       {items.length === 0 ? (
-        <p className="text-sm text-slate-400">{messages.empty}</p>
+        <p className="text-sm text-neutral-400">{messages.empty}</p>
       ) : (
         <div className="overflow-auto">
           <table className="w-full min-w-[860px] text-left text-sm">
             <thead>
-              <tr className="text-slate-400">
+              <tr className="text-neutral-400">
                 <th className="pb-2">{messages.company}</th>
                 <th className="pb-2">{messages.requester}</th>
                 <th className="pb-2">{messages.role}</th>
@@ -131,8 +131,8 @@ export function AdminCompanyClaimsTable({
             </thead>
             <tbody>
               {items.map((claim) => (
-                <tr key={claim.id} className="border-t border-slate-800 align-middle">
-                  <td className="py-2 text-slate-100">
+                <tr key={claim.id} className="border-t border-neutral-800 align-middle">
+                  <td className="py-2 text-neutral-100">
                     <Link
                       href={withLang(`/companies/${claim.company.slug}`, locale)}
                       className="hover:text-sky-300"
@@ -140,16 +140,16 @@ export function AdminCompanyClaimsTable({
                       {claim.company.name}
                     </Link>
                   </td>
-                  <td className="py-2 text-slate-300">
+                  <td className="py-2 text-neutral-300">
                     <p>{claim.user.name}</p>
-                    <p className="text-xs text-slate-400">{claim.user.email}</p>
+                    <p className="text-xs text-neutral-400">{claim.user.email}</p>
                   </td>
                   <td className="py-2">
-                    <span className="rounded-md bg-slate-800 px-2 py-1 text-xs text-slate-200">
+                    <span className="rounded-md bg-neutral-800 px-2 py-1 text-xs text-neutral-200">
                       {roleMessages[claim.user.role]}
                     </span>
                   </td>
-                  <td className="py-2 text-slate-400">
+                  <td className="py-2 text-neutral-400">
                     {new Date(claim.createdAt).toLocaleString(locale)}
                   </td>
                   <td className="py-2">
@@ -189,13 +189,13 @@ export function AdminCompanyClaimsTable({
       </div>
       {approveConfirm ? (
         <div
-          className="fixed inset-0 z-[70] flex items-center justify-center overflow-y-auto [&>div:not(.fixed)]:my-auto [&>div:not(.fixed)]:max-h-[calc(100dvh-2rem)] [&>div:not(.fixed)]:!overflow-y-auto bg-slate-950/75 p-4"
+          className="fixed inset-0 z-[70] flex items-center justify-center overflow-y-auto [&>div:not(.fixed)]:my-auto [&>div:not(.fixed)]:max-h-[calc(100dvh-2rem)] [&>div:not(.fixed)]:!overflow-y-auto bg-neutral-950/75 p-4"
           role="dialog"
           aria-modal="true"
         >
-          <div className="w-full max-w-md rounded-xl border border-slate-700 bg-slate-900 p-4 shadow-2xl">
-            <h3 className="text-sm font-semibold text-slate-100">{messages.confirmApproveTitle}</h3>
-            <p className="mt-2 text-xs leading-5 text-slate-300">
+          <div className="w-full max-w-md rounded-xl border border-neutral-700 bg-neutral-900 p-4 shadow-2xl">
+            <h3 className="text-sm font-semibold text-neutral-100">{messages.confirmApproveTitle}</h3>
+            <p className="mt-2 text-xs leading-5 text-neutral-300">
               {messages.confirmApproveText
                 .replace("{company}", approveConfirm.companyName)
                 .replace("{user}", approveConfirm.userName)}
@@ -203,7 +203,7 @@ export function AdminCompanyClaimsTable({
             <div className="mt-4 flex justify-end gap-2">
               <button
                 type="button"
-                className="rounded-md border border-slate-700 px-3 py-1.5 text-xs text-slate-300 hover:border-slate-500"
+                className="rounded-md border border-neutral-700 px-3 py-1.5 text-xs text-neutral-300 hover:border-neutral-500"
                 onClick={() => {
                   setApproveConfirm(null);
                 }}
@@ -229,5 +229,6 @@ export function AdminCompanyClaimsTable({
     </>
   );
 }
+
 
 

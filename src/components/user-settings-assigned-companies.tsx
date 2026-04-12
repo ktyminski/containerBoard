@@ -65,9 +65,9 @@ export function UserSettingsAssignedCompanies({
   };
 
   return (
-    <section className="rounded-xl border border-slate-800 bg-slate-900/60 p-5">
-      <h2 className="text-lg font-semibold text-slate-100">{messages.assignedCompaniesTitle}</h2>
-      <p className="mt-2 text-sm text-slate-300">{messages.assignedCompaniesHint}</p>
+    <section className="rounded-xl border border-neutral-800 bg-neutral-900/60 p-5">
+      <h2 className="text-lg font-semibold text-neutral-100">{messages.assignedCompaniesTitle}</h2>
+      <p className="mt-2 text-sm text-neutral-300">{messages.assignedCompaniesHint}</p>
       {assignedCompanies.length > 0 ? (
         <ul className="mt-4 grid gap-2">
           {assignedCompanies.map((company) => (
@@ -77,7 +77,7 @@ export function UserSettingsAssignedCompanies({
                 className={
                   company.isBlocked
                     ? "inline-flex items-center gap-2 rounded-md border border-rose-700 px-3 py-2 text-sm text-rose-200 hover:border-rose-500"
-                    : "inline-flex items-center rounded-md border border-slate-700 px-3 py-2 text-sm text-slate-200 hover:border-slate-500"
+                    : "inline-flex items-center rounded-md border border-neutral-700 px-3 py-2 text-sm text-neutral-200 hover:border-neutral-500"
                 }
               >
                 {company.name}
@@ -106,7 +106,7 @@ export function UserSettingsAssignedCompanies({
           ))}
         </ul>
       ) : (
-        <p className="mt-4 text-sm text-slate-400">{messages.noCompanies}</p>
+        <p className="mt-4 text-sm text-neutral-400">{messages.noCompanies}</p>
       )}
 
       {confirmCompany ? (
@@ -115,17 +115,17 @@ export function UserSettingsAssignedCompanies({
           role="dialog"
           aria-modal="true"
         >
-          <div className="w-full max-w-md rounded-xl border border-slate-700 bg-slate-900 p-4 shadow-2xl">
-            <h3 className="text-sm font-semibold text-slate-100">
+          <div className="w-full max-w-md rounded-xl border border-neutral-700 bg-neutral-900 p-4 shadow-2xl">
+            <h3 className="text-sm font-semibold text-neutral-100">
               {messages.detachCompanyConfirmTitle}
             </h3>
-            <p className="mt-2 text-xs leading-5 text-slate-300">
+            <p className="mt-2 text-xs leading-5 text-neutral-300">
               {messages.detachCompanyConfirmText.replace("{company}", confirmCompany.name)}
             </p>
             <div className="mt-4 flex justify-end gap-2">
               <button
                 type="button"
-                className="rounded-md border border-slate-700 px-3 py-1.5 text-xs text-slate-300 hover:border-slate-500"
+                className="rounded-md border border-neutral-700 px-3 py-1.5 text-xs text-neutral-300 hover:border-neutral-500"
                 onClick={() => {
                   setConfirmCompany(null);
                 }}
@@ -152,5 +152,6 @@ export function UserSettingsAssignedCompanies({
     </section>
   );
 }
+
 
 

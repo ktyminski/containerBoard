@@ -109,9 +109,9 @@ export function MapLocationPicker({
     <div className="grid gap-2">
       <div
         ref={mapContainerRef}
-        className={`w-full overflow-hidden rounded-md border border-slate-700 ${mapClassName ?? "h-56"}`}
+        className={`w-full overflow-hidden rounded-md border border-neutral-700 ${mapClassName ?? "h-56"}`}
       />
-      {labels.hint ? <p className="text-xs text-slate-300">{labels.hint}</p> : null}
+      {labels.hint ? <p className="text-xs text-neutral-300">{labels.hint}</p> : null}
     </div>
   );
 }

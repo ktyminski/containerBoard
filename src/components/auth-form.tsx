@@ -223,11 +223,11 @@ export function AuthForm({
   };
 
   return (
-    <div className="w-full max-w-md rounded-xl border border-slate-800 bg-slate-900/70 p-6">
-      <h1 className="text-2xl font-semibold text-slate-100">
+    <div className="w-full max-w-md rounded-xl border border-neutral-800 bg-neutral-900/70 p-6">
+      <h1 className="text-2xl font-semibold text-neutral-100">
         {mode === "login" ? messages.loginTitle : messages.registerTitle}
       </h1>
-      <p className="mt-1 text-sm text-slate-400">
+      <p className="mt-1 text-sm text-neutral-400">
         {mode === "login" ? messages.loginSubtitle : messages.registerSubtitle}
       </p>
 
@@ -240,7 +240,7 @@ export function AuthForm({
         {mode === "register" ? (
           <>
             <input
-              className="mt-4 w-full rounded-md border border-slate-700 bg-slate-950 px-3 py-2 text-sm text-slate-100"
+              className="mt-4 w-full rounded-md border border-neutral-700 bg-neutral-950 px-3 py-2 text-sm text-neutral-100"
               placeholder={messages.namePlaceholder}
               {...register("name", {
                 required: messages.requiredField,
@@ -255,7 +255,7 @@ export function AuthForm({
         ) : null}
 
         <input
-          className="mt-3 w-full rounded-md border border-slate-700 bg-slate-950 px-3 py-2 text-sm text-slate-100"
+          className="mt-3 w-full rounded-md border border-neutral-700 bg-neutral-950 px-3 py-2 text-sm text-neutral-100"
           placeholder={messages.emailPlaceholder}
           type="email"
           {...register("email", {
@@ -271,7 +271,7 @@ export function AuthForm({
         ) : null}
 
         <input
-          className="mt-3 w-full rounded-md border border-slate-700 bg-slate-950 px-3 py-2 text-sm text-slate-100"
+          className="mt-3 w-full rounded-md border border-neutral-700 bg-neutral-950 px-3 py-2 text-sm text-neutral-100"
           placeholder={messages.passwordPlaceholder}
           type="password"
           {...register("password", {
@@ -295,10 +295,10 @@ export function AuthForm({
         ) : null}
 
         {mode === "register" ? (
-          <label className="mt-3 flex items-start gap-2 text-xs text-slate-300">
+          <label className="mt-3 flex items-start gap-2 text-xs text-neutral-300">
             <input
               type="checkbox"
-              className="mt-0.5 h-4 w-4 rounded border-slate-600 bg-slate-950 text-sky-400 focus:ring-sky-500"
+              className="mt-0.5 h-4 w-4 rounded border-neutral-600 bg-neutral-950 text-sky-400 focus:ring-sky-500"
               {...register("legalConsent", {
                 validate: (value) => value || messages.legalConsentRequired,
               })}
@@ -338,7 +338,7 @@ export function AuthForm({
 
         <button
           type="submit"
-          className="mt-4 w-full rounded-md bg-sky-500 px-3 py-2 text-sm font-medium text-slate-950 hover:bg-sky-400 disabled:opacity-60"
+          className="mt-4 w-full rounded-md bg-sky-500 px-3 py-2 text-sm font-medium text-neutral-950 hover:bg-sky-400 disabled:opacity-60"
           disabled={isSubmitting}
         >
           {isSubmitting
@@ -351,12 +351,12 @@ export function AuthForm({
 
       <a
         href={`/api/auth/google/start?next=${encodeURIComponent(withLang(next, locale))}`}
-        className="mt-3 block w-full rounded-md border border-slate-700 bg-slate-950 px-3 py-2 text-center text-sm text-slate-200 hover:border-slate-500"
+        className="mt-3 block w-full rounded-md border border-neutral-700 bg-neutral-950 px-3 py-2 text-center text-sm text-neutral-200 hover:border-neutral-500"
       >
         {messages.continueWithGoogle}
       </a>
 
-      <p className="mt-4 text-sm text-slate-400">
+      <p className="mt-4 text-sm text-neutral-400">
         {mode === "login" ? messages.noAccount : messages.hasAccount}{" "}
         <Link
           href={
@@ -372,3 +372,4 @@ export function AuthForm({
     </div>
   );
 }
+

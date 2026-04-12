@@ -1,4 +1,4 @@
-﻿import { cookies } from "next/headers";
+import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { SESSION_COOKIE_NAME } from "@/lib/auth-session";
 import { getCurrentUserFromToken } from "@/lib/auth-user";
@@ -186,13 +186,13 @@ export default async function EditCompanyPage({ params, searchParams }: EditComp
         <SmartBackButton
           label={messages.companyDetails.back}
           hideWhenNoHistory
-          className="inline-flex w-fit items-center gap-2 rounded-md border border-slate-700 px-3 py-2 text-sm text-slate-200 transition-colors hover:border-slate-500"
+          className="inline-flex w-fit items-center gap-2 rounded-md border border-neutral-700 px-3 py-2 text-sm text-neutral-200 transition-colors hover:border-neutral-500"
         />
         <header>
-          <h1 className="text-2xl font-semibold text-slate-100 sm:text-3xl">
+          <h1 className="text-2xl font-semibold text-neutral-100 sm:text-3xl">
             {messages.companyDetails.editCompany}
           </h1>
-          <p className="mt-1 text-xs text-slate-400">{messages.companyCreate.requiredFieldsHint}</p>
+          <p className="mt-1 text-xs text-neutral-400">{messages.companyCreate.requiredFieldsHint}</p>
         </header>
 
         <NewCompanyForm
@@ -216,4 +216,5 @@ export default async function EditCompanyPage({ params, searchParams }: EditComp
     </section>
   );
 }
+
 

@@ -13,13 +13,9 @@ import {
 } from "@/components/map-shared";
 import type {
   ActiveMapView,
-  JobAnnouncementMapItem,
   OfferMapItem,
 } from "@/components/unified-main-map/types";
 import {
-  ANNOUNCEMENTS_CLUSTER_LAYER_ID,
-  ANNOUNCEMENTS_POINT_LAYER_ID,
-  ANNOUNCEMENTS_SOURCE_ID,
   COMPANIES_CLUSTER_LAYER_ID,
   COMPANIES_POINT_LAYER_ID,
   COMPANIES_SOURCE_ID,
@@ -36,7 +32,6 @@ import {
   ensureCategoryIcons,
   matchByIds,
   setViewLayerVisibility,
-  toAnnouncementFeatureCollection,
   toCompanyFeatureCollection,
   toOfferFeatureCollection,
 } from "@/components/unified-main-map/utils";
@@ -53,17 +48,10 @@ type UseUnifiedMainMapEngineParams = {
   onMapViewportChange?: (viewport: SharedMapViewport) => void;
   onLocationFilterRelease?: () => void;
   mapRenderErrorMessage: string;
-  announcementsUnknownError: string;
   offersUnknownError: string;
   companiesUnknownError: string;
-  announcementsByIdRef: MutableRefObject<Map<string, JobAnnouncementMapItem>>;
   offersByIdRef: MutableRefObject<Map<string, OfferMapItem>>;
   companiesByIdRef: MutableRefObject<Map<string, CompanyMapItem>>;
-  renderAnnouncementsPopup: (
-    map: maplibregl.Map,
-    items: JobAnnouncementMapItem[],
-    lngLat: [number, number],
-  ) => maplibregl.Popup;
   renderOffersPopup: (
     map: maplibregl.Map,
     items: OfferMapItem[],
@@ -74,7 +62,6 @@ type UseUnifiedMainMapEngineParams = {
     items: CompanyMapItem[],
     lngLat: [number, number],
   ) => maplibregl.Popup;
-  onAnnouncementsError: (message: string) => void;
   onOffersError: (message: string) => void;
   onCompaniesError: (message: string) => void;
 };
@@ -84,10 +71,8 @@ type UseUnifiedMainMapEngineResult = {
   isMapReady: boolean;
   mapError: string | null;
   resizeMap: () => void;
-  setAnnouncementsSource: (items: JobAnnouncementMapItem[]) => void;
   setOffersSource: (items: OfferMapItem[]) => void;
   setCompaniesSource: (items: CompanyMapItem[]) => void;
-  focusAnnouncementOnMap: (item: JobAnnouncementMapItem) => void;
   focusOfferOnMap: (item: OfferMapItem) => void;
   focusCompanyOnMap: (item: CompanyMapItem) => void;
 };
@@ -164,16 +149,12 @@ export function useUnifiedMainMapEngine(
     onMapViewportChange,
     onLocationFilterRelease,
     mapRenderErrorMessage,
-    announcementsUnknownError,
     offersUnknownError,
     companiesUnknownError,
-    announcementsByIdRef,
     offersByIdRef,
     companiesByIdRef,
-    renderAnnouncementsPopup,
     renderOffersPopup,
     renderCompaniesPopup,
-    onAnnouncementsError,
     onOffersError,
     onCompaniesError,
   } = params;
@@ -232,23 +213,6 @@ export function useUnifiedMainMapEngine(
   useEffect(() => {
     activeMapViewRef.current = activeMapView;
   }, [activeMapView]);
-
-  const setAnnouncementsSource = useCallback((items: JobAnnouncementMapItem[]) => {
-    const map = mapRef.current;
-    if (!map) {
-      return;
-    }
-
-    const source = map.getSource(ANNOUNCEMENTS_SOURCE_ID) as GeoJSONSource | undefined;
-    if (!source) {
-      return;
-    }
-
-    source.setData({
-      type: "FeatureCollection",
-      features: toAnnouncementFeatureCollection(items),
-    });
-  }, []);
 
   const setOffersSource = useCallback((items: OfferMapItem[]) => {
     const map = mapRef.current;
@@ -321,84 +285,11 @@ export function useUnifiedMainMapEngine(
       }
 
       applyBaseMapLanguage(map, localeRef.current, [
-        ANNOUNCEMENTS_SOURCE_ID,
         OFFERS_SOURCE_ID,
         COMPANIES_SOURCE_ID,
       ]);
 
       await ensureCategoryIcons(map);
-
-      map.addSource(ANNOUNCEMENTS_SOURCE_ID, {
-        type: "geojson",
-        data: { type: "FeatureCollection", features: [] },
-        cluster: true,
-        clusterRadius: 22,
-        clusterMaxZoom: 12,
-      });
-
-      map.addLayer({
-        id: ANNOUNCEMENTS_CLUSTER_LAYER_ID,
-        type: "circle",
-        source: ANNOUNCEMENTS_SOURCE_ID,
-        filter: ["has", "point_count"],
-        paint: {
-          "circle-color": "#38bdf8",
-          "circle-radius": ["step", ["get", "point_count"], 18, 10, 24, 30, 30],
-          "circle-stroke-width": 1,
-          "circle-stroke-color": "#ffffff",
-        },
-      });
-
-      map.addLayer({
-        id: "announcements-cluster-count",
-        type: "symbol",
-        source: ANNOUNCEMENTS_SOURCE_ID,
-        filter: ["has", "point_count"],
-        layout: {
-          "text-field": ["get", "point_count_abbreviated"],
-          "text-size": 12,
-          "text-anchor": "center",
-          "text-justify": "center",
-          "text-allow-overlap": true,
-          "text-ignore-placement": true,
-        },
-        paint: {
-          "text-color": "#0f172a",
-        },
-      });
-
-      map.addLayer({
-        id: ANNOUNCEMENTS_POINT_LAYER_ID,
-        type: "circle",
-        source: ANNOUNCEMENTS_SOURCE_ID,
-        filter: ["!", ["has", "point_count"]],
-        paint: {
-          "circle-color": [
-            "case",
-            ["==", ["get", "companyIsPremium"], true],
-            "#7dd3fc",
-            "#38bdf8",
-          ],
-          "circle-radius": [
-            "case",
-            ["==", ["get", "companyIsPremium"], true],
-            8.5,
-            7,
-          ],
-          "circle-stroke-width": [
-            "case",
-            ["==", ["get", "companyIsPremium"], true],
-            2.6,
-            1.5,
-          ],
-          "circle-stroke-color": [
-            "case",
-            ["==", ["get", "companyIsPremium"], true],
-            "#fcd34d",
-            "#ffffff",
-          ],
-        },
-      });
 
       map.addSource(OFFERS_SOURCE_ID, {
         type: "geojson",
@@ -525,54 +416,6 @@ export function useUnifiedMainMapEngine(
 
       setViewLayerVisibility(map, activeMapViewRef.current);
       setIsMapReady(true);
-    });
-
-    map.on("click", ANNOUNCEMENTS_CLUSTER_LAYER_ID, (event) => {
-      const feature = map
-        .queryRenderedFeatures(event.point, { layers: [ANNOUNCEMENTS_CLUSTER_LAYER_ID] })
-        .at(0);
-      if (!feature || feature.geometry?.type !== "Point") {
-        return;
-      }
-
-      const clusterId = feature.properties?.cluster_id as number | undefined;
-      if (clusterId === undefined) {
-        return;
-      }
-
-      const source = map.getSource(ANNOUNCEMENTS_SOURCE_ID) as GeoJSONSource | undefined;
-      if (!source) {
-        return;
-      }
-
-      void source
-        .getClusterLeaves(clusterId, MAX_CLUSTER_POPUP_ITEMS, 0)
-        .then((clusterFeatures) => {
-          const ids = clusterFeatures
-            .map((item) => String(item.properties?.id ?? ""))
-            .filter(Boolean);
-          const matchingItems = matchByIds(ids, announcementsByIdRef.current);
-          const geometry = feature.geometry as GeoJSON.Point;
-          popupRef.current?.remove();
-          popupRef.current = renderAnnouncementsPopup(
-            map,
-            matchingItems,
-            geometry.coordinates as [number, number],
-          );
-        })
-        .catch(() => {
-          onAnnouncementsError(announcementsUnknownError);
-        });
-    });
-
-    map.on("click", ANNOUNCEMENTS_POINT_LAYER_ID, (event) => {
-      const ids = map
-        .queryRenderedFeatures(event.point, { layers: [ANNOUNCEMENTS_POINT_LAYER_ID] })
-        .map((feature) => String(feature.properties?.id ?? ""))
-        .filter(Boolean);
-      const matchingItems = matchByIds(ids, announcementsByIdRef.current);
-      popupRef.current?.remove();
-      popupRef.current = renderAnnouncementsPopup(map, matchingItems, [event.lngLat.lng, event.lngLat.lat]);
     });
 
     map.on("click", OFFERS_CLUSTER_LAYER_ID, (event) => {
@@ -737,17 +580,13 @@ export function useUnifiedMainMapEngine(
       setIsMapReady(false);
     };
   }, [
-    announcementsByIdRef,
-    announcementsUnknownError,
     companiesByIdRef,
     companiesUnknownError,
     mapRenderErrorMessage,
     offersByIdRef,
     offersUnknownError,
-    onAnnouncementsError,
     onCompaniesError,
     onOffersError,
-    renderAnnouncementsPopup,
     renderCompaniesPopup,
     renderOffersPopup,
   ]);
@@ -758,11 +597,7 @@ export function useUnifiedMainMapEngine(
       return;
     }
 
-    applyBaseMapLanguage(map, locale, [
-      ANNOUNCEMENTS_SOURCE_ID,
-      OFFERS_SOURCE_ID,
-      COMPANIES_SOURCE_ID,
-    ]);
+    applyBaseMapLanguage(map, locale, [OFFERS_SOURCE_ID, COMPANIES_SOURCE_ID]);
   }, [locale]);
 
   useEffect(() => {
@@ -828,30 +663,6 @@ export function useUnifiedMainMapEngine(
     );
   }, [isActive, locationBbox]);
 
-  const focusAnnouncementOnMap = useCallback(
-    (item: JobAnnouncementMapItem) => {
-      const map = mapRef.current;
-      if (!map) {
-        return;
-      }
-
-      try {
-        map.flyTo({
-          center: item.mainPoint,
-          zoom: FOCUS_ZOOM,
-          duration: FOCUS_FLYTO_DURATION_MS,
-          essential: true,
-        });
-      } catch {
-        map.jumpTo({ center: item.mainPoint, zoom: FOCUS_ZOOM });
-      }
-
-      popupRef.current?.remove();
-      popupRef.current = renderAnnouncementsPopup(map, [item], item.mainPoint);
-    },
-    [renderAnnouncementsPopup],
-  );
-
   const focusOfferOnMap = useCallback(
     (item: OfferMapItem) => {
       const map = mapRef.current;
@@ -905,10 +716,8 @@ export function useUnifiedMainMapEngine(
     isMapReady,
     mapError,
     resizeMap,
-    setAnnouncementsSource,
     setOffersSource,
     setCompaniesSource,
-    focusAnnouncementOnMap,
     focusOfferOnMap,
     focusCompanyOnMap,
   };

@@ -1,4 +1,4 @@
-﻿import type { Metadata } from "next";
+import type { Metadata } from "next";
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { MyContainerListings } from "@/components/my-container-listings";
@@ -28,4 +28,3 @@ export default async function MyContainersPage() {
     </main>
   );
 }
-

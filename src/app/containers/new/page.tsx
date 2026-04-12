@@ -1,4 +1,4 @@
-﻿import type { Metadata } from "next";
+import type { Metadata } from "next";
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { ContainerListingForm } from "@/components/container-listing-form";
@@ -38,8 +38,8 @@ export default async function NewContainerPage({ searchParams }: NewContainerPag
   return (
     <main className="mx-auto w-full max-w-5xl px-4 py-6 sm:px-6">
       <header className="mb-4">
-        <h1 className="text-2xl font-semibold text-slate-100">Dodaj kontener</h1>
-        <p className="mt-1 text-sm text-slate-300">Prosty formularz publikacji kontenera (wygasa po 14 dniach).</p>
+        <h1 className="text-2xl font-semibold text-neutral-100">Dodaj kontener</h1>
+        <p className="mt-1 text-sm text-neutral-300">Prosty formularz publikacji kontenera (wygasa po 14 dniach).</p>
       </header>
 
       <ContainerListingForm
@@ -48,11 +48,12 @@ export default async function NewContainerPage({ searchParams }: NewContainerPag
         submitMethod="POST"
         submitLabel="Publikuj kontener"
         successMessage="Kontener opublikowany"
-        backHref="/containers/mine"
-        backLabel="Powrot do moich kontenerow"
+        backHref="/list"
+        backLabel="Powrot do listy kontenerow"
         initialValues={kind ? { type: kind } : undefined}
       />
     </main>
   );
 }
+
 

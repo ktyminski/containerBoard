@@ -41,9 +41,9 @@ export default async function AdminPage({ searchParams }: AdminPageProps) {
 
   return (
     <main className="mx-auto flex w-full max-w-6xl flex-col gap-6 px-4 py-6 sm:px-6">
-      <header className="rounded-xl border border-slate-800 bg-slate-900/60 p-5">
+      <header className="rounded-xl border border-neutral-800 bg-neutral-900/60 p-5">
         <h1 className="text-2xl font-semibold sm:text-3xl">Panel administratora</h1>
-        <p className="mt-2 text-sm text-slate-300">Zarzadzaj kontenerami i uzytkownikami.</p>
+        <p className="mt-2 text-sm text-neutral-300">Zarzadzaj kontenerami i uzytkownikami.</p>
       </header>
       <AdminPanelTabs
         locale={locale}
@@ -54,3 +54,4 @@ export default async function AdminPage({ searchParams }: AdminPageProps) {
     </main>
   );
 }
+

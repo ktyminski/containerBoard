@@ -1,32 +1,35 @@
 "use client";
 
-import Link from "next/link";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { useForm } from "react-hook-form";
+import { memo, useCallback, useEffect, useMemo, useRef, useState, type FocusEvent } from "react";
+import { FormProvider, useForm } from "react-hook-form";
 import maplibregl, { type GeoJSONSource } from "maplibre-gl";
+import { usePathname, useSearchParams } from "next/navigation";
 import { MAP_STYLE_URL } from "@/components/map-shared";
+import { ContainerListingsFilters } from "@/components/container-listings-filters";
+import { ContainerListingsResults } from "@/components/container-listings-results";
+import { useToast } from "@/components/toast-provider";
+import {
+  FILTER_FORM_DEFAULTS,
+  LISTING_TYPE_LABEL,
+  areNonLocationFiltersEqual,
+  pickNonLocationFilters,
+  type AppliedFilters,
+  type FiltersFormValues,
+  type ListingKind,
+  type NonLocationFilters,
+} from "@/components/container-listings-shared";
+import {
+  buildAppliedBaseFromFormValues,
+  buildContainersApiUrl,
+  getContainerListingLocationLabel,
+  getCoordinateKey,
+} from "@/components/container-listings-utils";
 import type {
   ContainerListingItem,
   ContainerListingMapPoint,
 } from "@/lib/container-listings";
 import {
-  CONTAINER_CONDITIONS,
-  CONTAINER_CONDITION_LABEL,
-  CONTAINER_FEATURES,
-  CONTAINER_FEATURE_LABEL,
-  CONTAINER_HEIGHTS,
-  CONTAINER_HEIGHT_LABEL,
-  CONTAINER_SIZES,
-  CONTAINER_TYPES,
-  DEAL_TYPES,
-  CONTAINER_TYPE_LABEL,
   getContainerShortLabel,
-  type ContainerCondition,
-  type ContainerFeature,
-  type ContainerHeight,
-  type ContainerSize,
-  type ContainerType,
-  type DealType,
   type ListingType,
 } from "@/lib/container-listing-types";
 
@@ -70,40 +73,9 @@ type GeocodeSearchApiResponse = {
 
 type ContainerListingsBoardProps = {
   isLoggedIn: boolean;
-  initialKind?: "all" | ListingType;
-};
-
-type SortPreset = "newest" | "quantity_desc" | "quantity_asc" | "available_asc";
-type FormContainerSize = "all" | "10" | "20" | "40" | "45" | "53";
-type FormLocationRadiusKm = "20" | "50" | "100" | "200";
-
-type FiltersFormValues = {
-  locationInput: string;
-  locationRadiusKmInput: FormLocationRadiusKm;
-  containerSize: FormContainerSize;
-  containerHeight: "all" | ContainerHeight;
-  containerType: "all" | ContainerType;
-  containerCondition: "all" | ContainerCondition;
-  containerFeature: "all" | ContainerFeature;
-  dealType: "all" | DealType;
-  city: string;
-  country: string;
-  sortPreset: SortPreset;
-};
-
-type AppliedFilters = {
-  locationQuery: string;
-  locationCenter: { lat: number; lng: number } | null;
-  locationRadiusKm: FormLocationRadiusKm;
-  containerSize: FormContainerSize;
-  containerHeight: "all" | ContainerHeight;
-  containerType: "all" | ContainerType;
-  containerCondition: "all" | ContainerCondition;
-  containerFeature: "all" | ContainerFeature;
-  dealType: "all" | DealType;
-  city: string;
-  country: string;
-  sortPreset: SortPreset;
+  initialKind?: ListingKind;
+  initialTab?: "all" | "favorites";
+  initialMine?: boolean;
 };
 
 type MapFeature = {
@@ -130,75 +102,100 @@ const MAP_POINT_LAYER_ID = "containers-list-points";
 const MAX_CLUSTER_POPUP_ITEMS = 24;
 const MAX_POPUP_VISIBLE_ITEMS = 20;
 const DEFAULT_MAP_CENTER: [number, number] = [19.1451, 51.9194];
-const LOCATION_RADIUS_OPTIONS = [20, 50, 100, 200] as const;
-type LocationRadiusKm = (typeof LOCATION_RADIUS_OPTIONS)[number];
+const LIST_PAGE_SIZE = 20;
+const GUEST_FAVORITES_STORAGE_KEY = "container-listing-favorites-v1";
 
-const LISTING_TYPE_LABEL: Record<ListingType, string> = {
-  available: "Oferta",
-  wanted: "Buy request",
-};
-
-const DEAL_TYPE_LABEL: Record<DealType, string> = {
-  sale: "Sprzedaz",
-  rent: "Wynajem",
-  one_way: "One way",
-  long_term: "Wspolpraca dlugoterminowa",
-};
-
-const SORT_OPTIONS: Array<{ value: SortPreset; label: string }> = [
-  { value: "newest", label: "Najnowsze" },
-  { value: "quantity_desc", label: "Ilosc malejaco" },
-  { value: "quantity_asc", label: "Ilosc rosnaco" },
-  { value: "available_asc", label: "Najblizsza dostepnosc" },
-];
 const DARK_BLUE_CTA_BASE_CLASS =
   "border border-[#2f639a] bg-[linear-gradient(180deg,#082650_0%,#0c3466_100%)] text-[#e2efff] transition hover:border-[#67c7ff] hover:text-white";
-const FILTER_FORM_DEFAULTS: FiltersFormValues = {
-  locationInput: "",
-  locationRadiusKmInput: "50",
-  containerSize: "all",
-  containerHeight: "all",
-  containerType: "all",
-  containerCondition: "all",
-  containerFeature: "all",
-  dealType: "all",
-  city: "",
-  country: "",
-  sortPreset: "newest",
-};
 
-function getLocationLabel(item: ContainerListingItem): string {
-  const label = item.locationAddressLabel?.trim();
-  if (label) {
-    return label;
+function normalizeFavoriteListingIds(input: unknown): string[] {
+  if (!Array.isArray(input)) {
+    return [];
   }
 
-  const city =
-    item.locationAddressParts?.city?.trim() || item.locationCity.trim();
-  const country =
-    item.locationAddressParts?.country?.trim() || item.locationCountry.trim();
-  const combined = [city, country].filter(Boolean).join(", ");
-  return combined || "Nie podano lokalizacji";
+  const unique = new Set<string>();
+  const output: string[] = [];
+
+  for (const value of input) {
+    if (typeof value !== "string") {
+      continue;
+    }
+    const normalized = value.trim().toLowerCase();
+    if (!/^[a-f0-9]{24}$/.test(normalized) || unique.has(normalized)) {
+      continue;
+    }
+    unique.add(normalized);
+    output.push(normalized);
+  }
+
+  return output;
 }
 
-function getCoordinateKey(lat: number, lng: number): string {
-  return `${lat.toFixed(6)}:${lng.toFixed(6)}`;
+function readGuestFavoriteListingIds(): string[] {
+  if (typeof window === "undefined") {
+    return [];
+  }
+
+  try {
+    const raw = window.localStorage.getItem(GUEST_FAVORITES_STORAGE_KEY);
+    if (!raw) {
+      return [];
+    }
+
+    return normalizeFavoriteListingIds(JSON.parse(raw));
+  } catch {
+    return [];
+  }
 }
 
-function getSortParams(preset: SortPreset): {
-  sortBy: string;
-  sortDir: "asc" | "desc";
-} {
-  if (preset === "quantity_desc") {
-    return { sortBy: "quantity", sortDir: "desc" };
+function writeGuestFavoriteListingIds(ids: string[]): void {
+  if (typeof window === "undefined") {
+    return;
   }
-  if (preset === "quantity_asc") {
-    return { sortBy: "quantity", sortDir: "asc" };
+
+  try {
+    window.localStorage.setItem(
+      GUEST_FAVORITES_STORAGE_KEY,
+      JSON.stringify(normalizeFavoriteListingIds(ids)),
+    );
+  } catch {
+    // Ignore storage write errors in private mode/blocked storage.
   }
-  if (preset === "available_asc") {
-    return { sortBy: "availableFrom", sortDir: "asc" };
+}
+
+async function copyTextToClipboard(value: string): Promise<boolean> {
+  if (
+    typeof navigator !== "undefined" &&
+    navigator.clipboard &&
+    typeof navigator.clipboard.writeText === "function"
+  ) {
+    try {
+      await navigator.clipboard.writeText(value);
+      return true;
+    } catch {
+      // Fallback below.
+    }
   }
-  return { sortBy: "createdAt", sortDir: "desc" };
+
+  if (typeof document === "undefined") {
+    return false;
+  }
+
+  try {
+    const textarea = document.createElement("textarea");
+    textarea.value = value;
+    textarea.setAttribute("readonly", "");
+    textarea.style.position = "absolute";
+    textarea.style.left = "-9999px";
+    document.body.append(textarea);
+    textarea.select();
+    textarea.setSelectionRange(0, textarea.value.length);
+    const copied = document.execCommand("copy");
+    textarea.remove();
+    return copied;
+  } catch {
+    return false;
+  }
 }
 
 function fitMapToPoints(
@@ -265,7 +262,7 @@ function buildMapPopupListNode(
 
     const location = document.createElement("p");
     location.className = "company-map-popup-card__summary";
-    location.textContent = getLocationLabel(item);
+    location.textContent = getContainerListingLocationLabel(item);
 
     const meta = document.createElement("p");
     meta.className = "company-map-popup-card__summary";
@@ -330,7 +327,7 @@ function setSourceData(map: maplibregl.Map, data: MapFeatureCollection): void {
   }
 }
 
-function ListingsMap({
+const ListingsMap = memo(function ListingsMap({
   items,
   isVisible,
 }: {
@@ -342,7 +339,6 @@ function ListingsMap({
   const popupRef = useRef<maplibregl.Popup | null>(null);
   const popupRequestSeqRef = useRef(0);
   const hasAutoFittedViewRef = useRef(false);
-  const itemsByIdRef = useRef<Map<string, ContainerListingMapPoint>>(new Map());
   const itemsByCoordinateRef = useRef<Map<string, ContainerListingMapPoint[]>>(
     new Map(),
   );
@@ -416,11 +412,9 @@ function ListingsMap({
   }, []);
 
   useEffect(() => {
-    const nextById = new Map<string, ContainerListingMapPoint>();
     const nextByCoordinate = new Map<string, ContainerListingMapPoint[]>();
 
     for (const item of points) {
-      nextById.set(item.id, item);
       if (item.locationLat === null || item.locationLng === null) {
         continue;
       }
@@ -431,7 +425,6 @@ function ListingsMap({
       nextByCoordinate.set(key, grouped);
     }
 
-    itemsByIdRef.current = nextById;
     itemsByCoordinateRef.current = nextByCoordinate;
     featureCollectionRef.current = featureCollection;
   }, [featureCollection, points]);
@@ -635,25 +628,32 @@ function ListingsMap({
         }
 
         const listingId = String(feature.properties?.id ?? "");
-        const clickedItem = itemsByIdRef.current.get(listingId);
-        if (
-          !clickedItem ||
-          clickedItem.locationLat === null ||
-          clickedItem.locationLng === null
-        ) {
+        const coordinates = (feature.geometry as GeoJSON.Point)
+          .coordinates as [number, number];
+        const clickedLng = Number(coordinates[0]);
+        const clickedLat = Number(coordinates[1]);
+        if (!Number.isFinite(clickedLng) || !Number.isFinite(clickedLat)) {
           return;
         }
 
-        const key = getCoordinateKey(
-          clickedItem.locationLat,
-          clickedItem.locationLng,
-        );
-        const clickedLng = clickedItem.locationLng;
-        const clickedLat = clickedItem.locationLat;
+        const key = getCoordinateKey(clickedLat, clickedLng);
         const grouped = (
-          itemsByCoordinateRef.current.get(key) ?? [clickedItem]
+          itemsByCoordinateRef.current.get(key) ?? [
+            {
+              id: listingId,
+              type:
+                feature.properties?.type === "wanted" ? "wanted" : "available",
+              locationLat: clickedLat,
+              locationLng: clickedLng,
+            } satisfies ContainerListingMapPoint,
+          ]
         ).slice();
-        const groupedIds = grouped.map((item) => item.id);
+        const groupedIds = grouped
+          .map((item) => item.id)
+          .filter(Boolean);
+        if (groupedIds.length === 0 && listingId) {
+          groupedIds.push(listingId);
+        }
 
         void loadPopupDetailsByIds(groupedIds).then((details) => {
           if (requestSeq !== popupRequestSeqRef.current || details.length === 0) {
@@ -751,12 +751,19 @@ function ListingsMap({
       />
     </div>
   );
-}
+});
+ListingsMap.displayName = "ListingsMap";
 
 export function ContainerListingsBoard({
   isLoggedIn,
   initialKind = "all",
+  initialTab = "all",
+  initialMine = false,
 }: ContainerListingsBoardProps) {
+  const toast = useToast();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
+
   const [items, setItems] = useState<ContainerListingItem[]>([]);
   const [mapItems, setMapItems] = useState<ContainerListingMapPoint[]>([]);
   const [hasLoadedMapDataOnce, setHasLoadedMapDataOnce] = useState(false);
@@ -766,50 +773,203 @@ export function ContainerListingsBoard({
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [total, setTotal] = useState(0);
+  const [activeTab, setActiveTab] = useState<"all" | "favorites">(initialTab);
+  const [pendingFavoriteId, setPendingFavoriteId] = useState<string | null>(null);
+  const [hasAnyFavorites, setHasAnyFavorites] = useState(false);
+  const [hasResolvedFavoritesVisibility, setHasResolvedFavoritesVisibility] = useState(false);
+  const [favoritesPresenceRefreshVersion, setFavoritesPresenceRefreshVersion] = useState(0);
+  const [guestFavoriteListingIds, setGuestFavoriteListingIds] = useState<string[]>([]);
+  const [hasHydratedGuestFavorites, setHasHydratedGuestFavorites] = useState(isLoggedIn);
 
   const [isMapOpen, setIsMapOpen] = useState(true);
+  const locationControlsRef = useRef<HTMLDivElement | null>(null);
+  const resultsTopRef = useRef<HTMLDivElement | null>(null);
+  const hasSeenFirstAppliedFiltersRef = useRef(false);
 
   const [isResolvingLocation, setIsResolvingLocation] = useState(false);
   const [locationFilterError, setLocationFilterError] = useState<string | null>(null);
-  const [type, setType] = useState<"all" | ListingType>(initialKind);
-  const {
-    register,
-    handleSubmit,
-    reset,
-    getValues,
-  } = useForm<FiltersFormValues>({
-    defaultValues: FILTER_FORM_DEFAULTS,
+
+  const formMethods = useForm<FiltersFormValues>({
+    defaultValues: {
+      ...FILTER_FORM_DEFAULTS,
+      listingKind: initialKind,
+    },
   });
+  const { handleSubmit, reset, getValues, setValue } = formMethods;
 
   const [appliedFilters, setAppliedFilters] = useState<AppliedFilters>({
+    listingKind: initialKind,
     locationQuery: "",
     locationCenter: null,
     locationRadiusKm: FILTER_FORM_DEFAULTS.locationRadiusKmInput,
-    containerSize: FILTER_FORM_DEFAULTS.containerSize,
-    containerHeight: FILTER_FORM_DEFAULTS.containerHeight,
-    containerType: FILTER_FORM_DEFAULTS.containerType,
-    containerCondition: FILTER_FORM_DEFAULTS.containerCondition,
-    containerFeature: FILTER_FORM_DEFAULTS.containerFeature,
-    dealType: FILTER_FORM_DEFAULTS.dealType,
+    containerSizes: FILTER_FORM_DEFAULTS.containerSizes,
+    containerHeights: FILTER_FORM_DEFAULTS.containerHeights,
+    containerTypes: FILTER_FORM_DEFAULTS.containerTypes,
+    containerConditions: FILTER_FORM_DEFAULTS.containerConditions,
+    containerFeatures: FILTER_FORM_DEFAULTS.containerFeatures,
+    priceNegotiableOnly: FILTER_FORM_DEFAULTS.priceNegotiableOnly,
+    logisticsTransportOnly: FILTER_FORM_DEFAULTS.logisticsTransportOnly,
+    logisticsUnloadingOnly: FILTER_FORM_DEFAULTS.logisticsUnloadingOnly,
+    hasCscPlateOnly: FILTER_FORM_DEFAULTS.hasCscPlateOnly,
+    hasCscCertificationOnly: FILTER_FORM_DEFAULTS.hasCscCertificationOnly,
+    priceType: FILTER_FORM_DEFAULTS.priceType,
+    priceUnit: FILTER_FORM_DEFAULTS.priceUnit,
+    priceCurrency: FILTER_FORM_DEFAULTS.priceCurrency,
+    priceTaxMode: FILTER_FORM_DEFAULTS.priceTaxMode,
+    priceMinInput: FILTER_FORM_DEFAULTS.priceMinInput,
+    priceMaxInput: FILTER_FORM_DEFAULTS.priceMaxInput,
+    productionYearInput: FILTER_FORM_DEFAULTS.productionYearInput,
     city: FILTER_FORM_DEFAULTS.city,
     country: FILTER_FORM_DEFAULTS.country,
     sortPreset: FILTER_FORM_DEFAULTS.sortPreset,
   });
+  const isFavoritesTab = activeTab === "favorites";
+  const shouldShowFavoritesToggle = hasResolvedFavoritesVisibility && hasAnyFavorites;
+  const guestFavoriteListingIdSet = useMemo(
+    () => new Set(guestFavoriteListingIds),
+    [guestFavoriteListingIds],
+  );
+  const localFavoriteIdsForApi = useMemo(
+    () => (isLoggedIn ? [] : guestFavoriteListingIds),
+    [guestFavoriteListingIds, isLoggedIn],
+  );
+
+  const isLocationApplied = appliedFilters.locationQuery.trim().length > 0;
+
+  const redirectToLogin = useCallback(() => {
+    const query = searchParams.toString();
+    const nextPath = query ? `${pathname}?${query}` : pathname;
+    window.location.href = `/login?next=${encodeURIComponent(nextPath)}`;
+  }, [pathname, searchParams]);
+
+  useEffect(() => {
+    if (isLoggedIn) {
+      setHasHydratedGuestFavorites(true);
+      setGuestFavoriteListingIds([]);
+      setHasResolvedFavoritesVisibility(false);
+      return;
+    }
+
+    setGuestFavoriteListingIds(readGuestFavoriteListingIds());
+    setHasHydratedGuestFavorites(true);
+    setHasResolvedFavoritesVisibility(true);
+  }, [isLoggedIn]);
+
+  useEffect(() => {
+    if (isLoggedIn || !hasHydratedGuestFavorites) {
+      return;
+    }
+
+    setHasAnyFavorites(guestFavoriteListingIds.length > 0);
+  }, [guestFavoriteListingIds, hasHydratedGuestFavorites, isLoggedIn]);
+
+  useEffect(() => {
+    if (!isLoggedIn) {
+      return;
+    }
+
+    const controller = new AbortController();
+    const params = new URLSearchParams({
+      favorites: "1",
+      page: "1",
+      pageSize: "1",
+      sortBy: "createdAt",
+      sortDir: "desc",
+    });
+    if (initialMine) {
+      params.set("mine", "1");
+    }
+
+    async function resolveFavoritesVisibility() {
+      try {
+        const response = await fetch(`/api/containers?${params.toString()}`, {
+          cache: "no-store",
+          signal: controller.signal,
+        });
+        const data = (await response.json().catch(() => null)) as ContainersListApiResponse | null;
+        if (!response.ok || controller.signal.aborted) {
+          return;
+        }
+        setHasAnyFavorites((data?.meta?.total ?? 0) > 0);
+      } catch {
+        if (!controller.signal.aborted) {
+          setHasAnyFavorites(false);
+        }
+      } finally {
+        if (!controller.signal.aborted) {
+          setHasResolvedFavoritesVisibility(true);
+        }
+      }
+    }
+
+    void resolveFavoritesVisibility();
+    return () => {
+      controller.abort();
+    };
+  }, [favoritesPresenceRefreshVersion, initialMine, isLoggedIn]);
+
+  useEffect(() => {
+    if (activeTab !== "favorites" || !hasResolvedFavoritesVisibility || hasAnyFavorites) {
+      return;
+    }
+
+    setActiveTab("all");
+    setPage(1);
+  }, [activeTab, hasAnyFavorites, hasResolvedFavoritesVisibility]);
+
+  const restoreAppliedLocationOnBlur = useCallback(
+    (event: FocusEvent<HTMLInputElement | HTMLSelectElement>) => {
+      if (!isLocationApplied) {
+        return;
+      }
+
+      const nextFocused = event.relatedTarget;
+      if (nextFocused instanceof Node && locationControlsRef.current?.contains(nextFocused)) {
+        return;
+      }
+
+      const currentLocationInput = getValues("locationInput").trim();
+      const currentRadius = getValues("locationRadiusKmInput");
+      if (currentLocationInput !== appliedFilters.locationQuery) {
+        setValue("locationInput", appliedFilters.locationQuery, {
+          shouldDirty: false,
+          shouldTouch: true,
+        });
+      }
+      if (currentRadius !== appliedFilters.locationRadiusKm) {
+        setValue("locationRadiusKmInput", appliedFilters.locationRadiusKm, {
+          shouldDirty: false,
+          shouldTouch: true,
+        });
+      }
+    },
+    [
+      appliedFilters.locationQuery,
+      appliedFilters.locationRadiusKm,
+      getValues,
+      isLocationApplied,
+      setValue,
+    ],
+  );
+
+  const applyNonLocationFilters = useCallback((nextFilters: NonLocationFilters) => {
+    setPage(1);
+    setAppliedFilters((current) => {
+      const currentNonLocationFilters = pickNonLocationFilters(current);
+      if (areNonLocationFiltersEqual(nextFilters, currentNonLocationFilters)) {
+        return current;
+      }
+
+      return {
+        ...current,
+        ...nextFilters,
+      };
+    });
+  }, []);
 
   const submitFilters = handleSubmit(async (values) => {
     const trimmedLocationQuery = values.locationInput.trim();
-    const nextBase: Omit<AppliedFilters, "locationCenter" | "locationQuery"> = {
-      locationRadiusKm: values.locationRadiusKmInput,
-      containerSize: values.containerSize,
-      containerHeight: values.containerHeight,
-      containerType: values.containerType,
-      containerCondition: values.containerCondition,
-      containerFeature: values.containerFeature,
-      dealType: values.dealType,
-      city: values.city,
-      country: values.country,
-      sortPreset: values.sortPreset,
-    };
+    const nextBase = buildAppliedBaseFromFormValues(values);
 
     setPage(1);
     setLocationFilterError(null);
@@ -862,7 +1022,9 @@ export function ContainerListingsBoard({
         locationCenter: { lat: data.item.lat, lng: data.item.lng },
       });
     } catch {
-      setLocationFilterError("Nie udalo sie ustalic punktu na mapie. Uzywam dopasowania tekstowego.");
+      setLocationFilterError(
+        "Nie udalo sie ustalic punktu na mapie. Uzywam dopasowania tekstowego.",
+      );
       setAppliedFilters({
         ...nextBase,
         locationQuery: trimmedLocationQuery,
@@ -873,105 +1035,60 @@ export function ContainerListingsBoard({
     }
   });
 
-  const requestUrl = useMemo(() => {
-    const { sortBy, sortDir } = getSortParams(appliedFilters.sortPreset);
-    const params = new URLSearchParams({
-      page: String(page),
-      pageSize: "20",
-      sortBy,
-      sortDir,
-    });
+  const requestUrl = useMemo(
+    () =>
+      buildContainersApiUrl({
+        appliedFilters,
+        page,
+        favoritesOnly: isFavoritesTab,
+        localFavoriteIds: localFavoriteIdsForApi,
+        mineOnly: initialMine,
+      }),
+    [appliedFilters, initialMine, isFavoritesTab, localFavoriteIdsForApi, page],
+  );
 
-    if (appliedFilters.locationCenter) {
-      params.set("locationLat", appliedFilters.locationCenter.lat.toFixed(6));
-      params.set("locationLng", appliedFilters.locationCenter.lng.toFixed(6));
-      params.set("radiusKm", appliedFilters.locationRadiusKm);
-    } else if (appliedFilters.locationQuery) {
-      params.set("q", appliedFilters.locationQuery);
-    }
-    if (type !== "all") {
-      params.set("type", type);
-    }
-    if (appliedFilters.containerSize !== "all") {
-      params.set("containerSize", appliedFilters.containerSize);
-    }
-    if (appliedFilters.containerHeight !== "all") {
-      params.set("containerHeight", appliedFilters.containerHeight);
-    }
-    if (appliedFilters.containerType !== "all") {
-      params.set("containerType", appliedFilters.containerType);
-    }
-    if (appliedFilters.containerCondition !== "all") {
-      params.set("containerCondition", appliedFilters.containerCondition);
-    }
-    if (appliedFilters.containerFeature !== "all") {
-      params.set("containerFeature", appliedFilters.containerFeature);
-    }
-    if (appliedFilters.dealType !== "all") {
-      params.set("dealType", appliedFilters.dealType);
-    }
-    if (appliedFilters.city.trim()) {
-      params.set("city", appliedFilters.city.trim());
-    }
-    if (appliedFilters.country.trim()) {
-      params.set("country", appliedFilters.country.trim());
-    }
-
-    return `/api/containers?${params.toString()}`;
-  }, [
-    appliedFilters,
-    page,
-    type,
-  ]);
-
-  const mapRequestUrl = useMemo(() => {
-    const params = new URLSearchParams({
-      view: "map",
-      all: "1",
-    });
-
-    if (appliedFilters.locationCenter) {
-      params.set("locationLat", appliedFilters.locationCenter.lat.toFixed(6));
-      params.set("locationLng", appliedFilters.locationCenter.lng.toFixed(6));
-      params.set("radiusKm", appliedFilters.locationRadiusKm);
-    } else if (appliedFilters.locationQuery) {
-      params.set("q", appliedFilters.locationQuery);
-    }
-    if (type !== "all") {
-      params.set("type", type);
-    }
-    if (appliedFilters.containerSize !== "all") {
-      params.set("containerSize", appliedFilters.containerSize);
-    }
-    if (appliedFilters.containerHeight !== "all") {
-      params.set("containerHeight", appliedFilters.containerHeight);
-    }
-    if (appliedFilters.containerType !== "all") {
-      params.set("containerType", appliedFilters.containerType);
-    }
-    if (appliedFilters.containerCondition !== "all") {
-      params.set("containerCondition", appliedFilters.containerCondition);
-    }
-    if (appliedFilters.containerFeature !== "all") {
-      params.set("containerFeature", appliedFilters.containerFeature);
-    }
-    if (appliedFilters.dealType !== "all") {
-      params.set("dealType", appliedFilters.dealType);
-    }
-    if (appliedFilters.city.trim()) {
-      params.set("city", appliedFilters.city.trim());
-    }
-    if (appliedFilters.country.trim()) {
-      params.set("country", appliedFilters.country.trim());
-    }
-
-    return `/api/containers?${params.toString()}`;
-  }, [
-    appliedFilters,
-    type,
-  ]);
+  const mapRequestUrl = useMemo(
+    () =>
+      buildContainersApiUrl({
+        appliedFilters,
+        mapView: true,
+        favoritesOnly: isFavoritesTab,
+        localFavoriteIds: localFavoriteIdsForApi,
+        mineOnly: initialMine,
+      }),
+    [appliedFilters, initialMine, isFavoritesTab, localFavoriteIdsForApi],
+  );
 
   useEffect(() => {
+    if (!hasSeenFirstAppliedFiltersRef.current) {
+      hasSeenFirstAppliedFiltersRef.current = true;
+      return;
+    }
+
+    const targetElement = resultsTopRef.current;
+    if (!targetElement) {
+      return;
+    }
+
+    const targetTop = targetElement.getBoundingClientRect().top + window.scrollY;
+    const shouldScrollToResults = window.scrollY > targetTop - 140;
+    if (!shouldScrollToResults) {
+      return;
+    }
+
+    window.requestAnimationFrame(() => {
+      targetElement.scrollIntoView({
+        behavior: "smooth",
+        block: "start",
+      });
+    });
+  }, [appliedFilters]);
+
+  useEffect(() => {
+    if (!isLoggedIn && !hasHydratedGuestFavorites) {
+      return;
+    }
+
     const controller = new AbortController();
 
     async function loadContainers() {
@@ -991,8 +1108,16 @@ export function ContainerListingsBoard({
           return;
         }
 
+        const baseItems = data.items ?? [];
+        const nextItems = isLoggedIn
+          ? baseItems
+          : baseItems.map((item) => ({
+              ...item,
+              isFavorite: guestFavoriteListingIdSet.has(item.id),
+            }));
+
         setError(null);
-        setItems(data.items ?? []);
+        setItems(nextItems);
         setTotalPages(data.meta?.totalPages ?? 1);
         setTotal(data.meta?.total ?? 0);
       } catch (loadError) {
@@ -1000,9 +1125,7 @@ export function ContainerListingsBoard({
           return;
         }
         setError(
-          loadError instanceof Error
-            ? loadError.message
-            : "Nie udalo sie zaladowac kontenerow",
+          loadError instanceof Error ? loadError.message : "Nie udalo sie zaladowac kontenerow",
         );
       } finally {
         if (!controller.signal.aborted) {
@@ -1016,9 +1139,18 @@ export function ContainerListingsBoard({
     return () => {
       controller.abort();
     };
-  }, [requestUrl]);
+  }, [
+    guestFavoriteListingIdSet,
+    hasHydratedGuestFavorites,
+    isLoggedIn,
+    requestUrl,
+  ]);
 
   useEffect(() => {
+    if (!isLoggedIn && !hasHydratedGuestFavorites) {
+      return;
+    }
+
     const controller = new AbortController();
 
     async function loadMapContainers() {
@@ -1051,427 +1183,257 @@ export function ContainerListingsBoard({
     return () => {
       controller.abort();
     };
-  }, [mapRequestUrl]);
+  }, [hasHydratedGuestFavorites, isLoggedIn, mapRequestUrl]);
 
-  function clearSidebarFilters() {
-    const current = getValues();
-    reset({
-      ...current,
-      containerSize: "all",
-      containerHeight: "all",
-      containerType: "all",
-      containerCondition: "all",
-      containerFeature: "all",
-      dealType: "all",
-      city: "",
-      country: "",
-      sortPreset: "newest",
+  const clearAllFilters = useCallback(() => {
+    reset(FILTER_FORM_DEFAULTS);
+    setAppliedFilters({
+      listingKind: "all",
+      locationQuery: "",
+      locationCenter: null,
+      locationRadiusKm: FILTER_FORM_DEFAULTS.locationRadiusKmInput,
+      containerSizes: [],
+      containerHeights: [],
+      containerTypes: [],
+      containerConditions: [],
+      containerFeatures: [],
+      priceNegotiableOnly: false,
+      logisticsTransportOnly: false,
+      logisticsUnloadingOnly: false,
+      hasCscPlateOnly: false,
+      hasCscCertificationOnly: false,
+      priceType: "all",
+      priceUnit: "all",
+      priceCurrency: FILTER_FORM_DEFAULTS.priceCurrency,
+      priceTaxMode: FILTER_FORM_DEFAULTS.priceTaxMode,
+      priceMinInput: FILTER_FORM_DEFAULTS.priceMinInput,
+      priceMaxInput: FILTER_FORM_DEFAULTS.priceMaxInput,
+      productionYearInput: FILTER_FORM_DEFAULTS.productionYearInput,
+      city: FILTER_FORM_DEFAULTS.city,
+      country: FILTER_FORM_DEFAULTS.country,
+      sortPreset: FILTER_FORM_DEFAULTS.sortPreset,
     });
+    setPage(1);
     setLocationFilterError(null);
-  }
+  }, [reset]);
 
-  function renderPaginationControls(extraClassName?: string) {
-    const className = [
-      "flex items-center justify-end gap-2",
-      extraClassName ?? "",
-    ]
-      .join(" ")
-      .trim();
+  const goToPreviousPage = useCallback(() => {
+    setPage((current) => Math.max(1, current - 1));
+  }, []);
 
-    return (
-      <div className={className}>
-        <button
-          type="button"
-          disabled={page <= 1}
-          onClick={() => setPage((current) => Math.max(1, current - 1))}
-          className="rounded-md border border-sky-200 px-3 py-1.5 text-sm text-slate-700 disabled:cursor-not-allowed disabled:opacity-50"
-        >
-          Poprzednia
-        </button>
-        <span className="text-xs text-slate-500">
-          {page} / {totalPages}
-        </span>
-        <button
-          type="button"
-          disabled={page >= totalPages}
-          onClick={() =>
-            setPage((current) => Math.min(totalPages, current + 1))
-          }
-          className="rounded-md border border-sky-200 px-3 py-1.5 text-sm text-slate-700 disabled:cursor-not-allowed disabled:opacity-50"
-        >
-          Nastepna
-        </button>
-      </div>
-    );
-  }
+  const goToNextPage = useCallback(() => {
+    setPage((current) => Math.min(totalPages, current + 1));
+  }, [totalPages]);
+
+  const handleTabChange = useCallback(
+    (nextTab: "all" | "favorites") => {
+      if (nextTab === activeTab) {
+        return;
+      }
+
+      setActiveTab(nextTab);
+      setPage(1);
+    },
+    [activeTab],
+  );
+
+  const removeListingFromFavoritesView = useCallback((listingId: string) => {
+    setItems((current) => current.filter((item) => item.id !== listingId));
+    setMapItems((current) => current.filter((item) => item.id !== listingId));
+    setTotal((currentTotal) => {
+      const nextTotal = Math.max(0, currentTotal - 1);
+      const nextTotalPages = Math.max(1, Math.ceil(nextTotal / LIST_PAGE_SIZE));
+      setTotalPages(nextTotalPages);
+      setPage((currentPage) => Math.min(currentPage, nextTotalPages));
+      if (!isLoggedIn && nextTotal === 0) {
+        setHasAnyFavorites(false);
+      }
+      return nextTotal;
+    });
+  }, [isLoggedIn]);
+
+  const handleToggleFavorite = useCallback(
+    async (listingId: string, isFavorite: boolean) => {
+      if (pendingFavoriteId) {
+        return;
+      }
+
+      if (!isLoggedIn) {
+        const normalizedListingId = listingId.trim().toLowerCase();
+        const nextGuestFavoriteIds = isFavorite
+          ? guestFavoriteListingIds.filter((id) => id !== normalizedListingId)
+          : Array.from(new Set([...guestFavoriteListingIds, normalizedListingId]));
+
+        setGuestFavoriteListingIds(nextGuestFavoriteIds);
+        writeGuestFavoriteListingIds(nextGuestFavoriteIds);
+        if (isFavoritesTab && isFavorite) {
+          removeListingFromFavoritesView(listingId);
+        } else {
+          setItems((current) =>
+            current.map((item) =>
+              item.id === listingId ? { ...item, isFavorite: !isFavorite } : item,
+            ),
+          );
+        }
+        if (!isFavorite) {
+          toast.success("Dodano oferte do ulubionych.");
+        }
+        return;
+      }
+
+      setPendingFavoriteId(listingId);
+      setItems((current) =>
+        current.map((item) =>
+          item.id === listingId ? { ...item, isFavorite: !isFavorite } : item,
+        ),
+      );
+
+      try {
+        const response = await fetch(`/api/containers/${listingId}/favorite`, {
+          method: isFavorite ? "DELETE" : "POST",
+        });
+
+        if (response.status === 401) {
+          redirectToLogin();
+          return;
+        }
+
+        if (!response.ok) {
+          const payload = (await response.json().catch(() => null)) as { error?: string } | null;
+          throw new Error(payload?.error ?? "Nie udalo sie zaktualizowac ulubionych.");
+        }
+
+        const payload = (await response.json().catch(() => null)) as {
+          isFavorite?: boolean;
+        } | null;
+        const nextIsFavorite =
+          typeof payload?.isFavorite === "boolean" ? payload.isFavorite : !isFavorite;
+
+        if (nextIsFavorite === true) {
+          setHasAnyFavorites(true);
+          toast.success("Dodano oferte do ulubionych.");
+          return;
+        }
+
+        if (isFavoritesTab) {
+          removeListingFromFavoritesView(listingId);
+        } else {
+          setItems((current) =>
+            current.map((item) =>
+              item.id === listingId ? { ...item, isFavorite: false } : item,
+            ),
+          );
+        }
+        setFavoritesPresenceRefreshVersion((current) => current + 1);
+      } catch (favoriteError) {
+        setItems((current) =>
+          current.map((item) =>
+            item.id === listingId ? { ...item, isFavorite } : item,
+          ),
+        );
+        setError(
+          favoriteError instanceof Error
+            ? favoriteError.message
+            : "Nie udalo sie zaktualizowac ulubionych.",
+        );
+      } finally {
+        setPendingFavoriteId(null);
+      }
+    },
+    [
+      guestFavoriteListingIds,
+      isFavoritesTab,
+      isLoggedIn,
+      pendingFavoriteId,
+      removeListingFromFavoritesView,
+      redirectToLogin,
+      toast,
+    ],
+  );
+
+  const handleCopyListingLink = useCallback(
+    async (listingId: string) => {
+      const listingUrl = new URL(`/containers/${listingId}`, window.location.origin).toString();
+      const copied = await copyTextToClipboard(listingUrl);
+
+      if (copied) {
+        toast.info("Link do ogloszenia zostal skopiowany.");
+        return;
+      }
+
+      toast.error("Nie udalo sie skopiowac linku.");
+    },
+    [toast],
+  );
 
   return (
-    <form
-      onSubmit={submitFilters}
-      className="grid gap-4"
-    >
-      <section className="w-full">
-        <div className="relative overflow-visible">
+    <FormProvider {...formMethods}>
+      <form onSubmit={submitFilters} className="grid gap-4">
+        <section className="w-full">
+          <div className="relative overflow-visible">
+            <div
+              id="containers-listings-map-panel"
+              className={`w-full transition-[max-height,opacity] duration-300 ease-out ${
+                isMapOpen
+                  ? "max-h-[520px] overflow-visible opacity-100"
+                  : "pointer-events-none max-h-0 overflow-hidden opacity-0"
+              }`}
+            >
+              <ListingsMap items={hasLoadedMapDataOnce ? mapItems : items} isVisible={isMapOpen} />
+            </div>
+          </div>
           <div
-            id="containers-listings-map-panel"
-            className={`w-full transition-[max-height,opacity] duration-300 ease-out ${
-              isMapOpen
-                ? "max-h-[520px] overflow-visible opacity-100"
-                : "pointer-events-none max-h-0 overflow-hidden opacity-0"
+            className={`pointer-events-none relative z-10 flex justify-center ${
+              isMapOpen ? "-mt-2.5" : "mt-1"
             }`}
           >
-            <ListingsMap
-              items={hasLoadedMapDataOnce ? mapItems : items}
-              isVisible={isMapOpen}
-            />
+            <button
+              type="button"
+              onClick={() => setIsMapOpen((current) => !current)}
+              aria-expanded={isMapOpen}
+              aria-controls="containers-listings-map-panel"
+              className={`pointer-events-auto inline-flex min-h-10 items-center rounded-md px-5 text-sm font-semibold shadow-[0_10px_24px_-12px_rgba(5,36,79,0.8)] ${DARK_BLUE_CTA_BASE_CLASS}`}
+            >
+              {isMapOpen ? "Zwin mape" : "Rozwin mape"}
+            </button>
           </div>
-        </div>
-        <div
-          className={`pointer-events-none relative z-10 flex justify-center ${
-            isMapOpen ? "-mt-2.5" : "mt-1"
-          }`}
-        >
-          <button
-            type="button"
-            onClick={() => setIsMapOpen((current) => !current)}
-            aria-expanded={isMapOpen}
-            aria-controls="containers-listings-map-panel"
-            className={`pointer-events-auto inline-flex min-h-10 items-center rounded-full px-5 text-sm font-semibold shadow-[0_10px_24px_-12px_rgba(5,36,79,0.8)] ${DARK_BLUE_CTA_BASE_CLASS}`}
-          >
-            {isMapOpen ? "Zwin mape" : "Rozwin mape"}
-          </button>
-        </div>
-      </section>
-
-      <div className="mx-auto grid w-full max-w-[1400px] gap-4 px-4 sm:px-6">
-        <section className="sticky top-[4.5rem] z-30 rounded-2xl border border-sky-200 bg-white/95 p-3 shadow-sm backdrop-blur supports-[backdrop-filter]:bg-white/88">
-          <div className="grid gap-2 lg:grid-cols-[290px_110px_120px_130px_minmax(0,1fr)]">
-            <div className="inline-flex rounded-md border border-sky-200 bg-sky-50 p-1 text-sm">
-              <button
-                type="button"
-                onClick={() => {
-                  setType("all");
-                  setPage(1);
-                }}
-                className={
-                  type === "all"
-                    ? `rounded px-3 py-1 font-medium ${DARK_BLUE_CTA_BASE_CLASS}`
-                    : "rounded border border-transparent px-3 py-1 text-slate-700 hover:border-sky-200 hover:bg-sky-100"
-                }
-              >
-                Wszystkie
-              </button>
-              <button
-                type="button"
-                onClick={() => {
-                  setType("available");
-                  setPage(1);
-                }}
-                className={
-                  type === "available"
-                    ? `rounded px-3 py-1 font-medium ${DARK_BLUE_CTA_BASE_CLASS}`
-                    : "rounded border border-transparent px-3 py-1 text-slate-700 hover:border-sky-200 hover:bg-sky-100"
-                }
-              >
-                Sell / Oferty
-              </button>
-              <button
-                type="button"
-                onClick={() => {
-                  setType("wanted");
-                  setPage(1);
-                }}
-                className={
-                  type === "wanted"
-                    ? `rounded px-3 py-1 font-medium ${DARK_BLUE_CTA_BASE_CLASS}`
-                    : "rounded border border-transparent px-3 py-1 text-slate-700 hover:border-sky-200 hover:bg-sky-100"
-                }
-              >
-                Buy request
-              </button>
-            </div>
-
-            <select
-              {...register("containerSize")}
-              className="rounded-md border border-sky-200 bg-white px-3 py-2 text-sm text-slate-900"
-            >
-              <option value="all">Rozmiar</option>
-              {CONTAINER_SIZES.map((value) => (
-                <option key={value} value={String(value)}>
-                  {value} ft
-                </option>
-              ))}
-            </select>
-
-            <select
-              {...register("containerHeight")}
-              className="rounded-md border border-sky-200 bg-white px-3 py-2 text-sm text-slate-900"
-            >
-              <option value="all">Wysokosc</option>
-              {CONTAINER_HEIGHTS.map((value) => (
-                <option key={value} value={value}>
-                  {CONTAINER_HEIGHT_LABEL[value]}
-                </option>
-              ))}
-            </select>
-
-            <select
-              {...register("containerType")}
-              className="rounded-md border border-sky-200 bg-white px-3 py-2 text-sm text-slate-900"
-            >
-              <option value="all">Typ kontenera</option>
-              {CONTAINER_TYPES.map((value) => (
-                <option key={value} value={value}>
-                  {CONTAINER_TYPE_LABEL[value]}
-                </option>
-              ))}
-            </select>
-
-            <div className="flex overflow-hidden rounded-md border border-sky-200 bg-white">
-              <input
-                {...register("locationInput")}
-                placeholder="Dowolna lokalizacja"
-                className="w-full border-0 bg-transparent px-3 py-2 text-sm text-slate-900 outline-none"
-              />
-              <div className="flex items-center gap-1 border-l border-sky-200 bg-slate-50 px-2">
-                <span className="text-[11px] font-medium uppercase tracking-wide text-slate-500">
-                  +km
-                </span>
-                <select
-                  {...register("locationRadiusKmInput")}
-                  className="min-w-[84px] border-0 bg-transparent py-2 pl-1 pr-0 text-sm text-slate-900 outline-none"
-                >
-                  {LOCATION_RADIUS_OPTIONS.map((value) => (
-                    <option key={value} value={String(value)}>
-                      +{value} km
-                    </option>
-                  ))}
-                </select>
-              </div>
-              <button
-                type="submit"
-                disabled={isResolvingLocation}
-                className="shrink-0 whitespace-nowrap border-l border-rose-500 bg-gradient-to-r from-rose-500 to-fuchsia-500 px-3.5 py-2 text-sm font-semibold text-white transition-colors duration-200 hover:from-rose-600 hover:to-fuchsia-600 active:translate-y-px disabled:cursor-not-allowed disabled:opacity-60"
-              >
-                {isResolvingLocation ? "Szukam..." : "Szukaj"}
-              </button>
-            </div>
-          </div>
-          {locationFilterError ? (
-            <p className="mt-2 text-xs text-amber-700">{locationFilterError}</p>
-          ) : null}
-          {appliedFilters.locationCenter && appliedFilters.locationQuery ? (
-            <p className="mt-2 text-xs text-slate-600">
-              Filtr lokalizacji: +{appliedFilters.locationRadiusKm} km od &quot;{appliedFilters.locationQuery}&quot;.
-            </p>
-          ) : null}
         </section>
-        
-        <div className="grid gap-4 lg:grid-cols-[280px_minmax(0,1fr)]">
-          <aside className="h-fit rounded-2xl border border-sky-200 bg-white/95 p-4 shadow-sm lg:sticky lg:top-[11rem] lg:z-20">
-            <h2 className="text-lg font-semibold text-slate-900">Filtry</h2>
 
-            <div className="mt-3 grid gap-3">
-              <label className="grid gap-1 text-sm">
-                <span className="text-slate-600">Transakcja</span>
-                <select
-                  {...register("dealType")}
-                  className="rounded-md border border-sky-200 bg-white px-3 py-2 text-slate-900"
-                >
-                  <option value="all">Wszystkie</option>
-                  {DEAL_TYPES.map((value) => (
-                    <option key={value} value={value}>
-                      {DEAL_TYPE_LABEL[value]}
-                    </option>
-                  ))}
-                </select>
-              </label>
-
-              <label className="grid gap-1 text-sm">
-                <span className="text-slate-600">Stan kontenera</span>
-                <select
-                  {...register("containerCondition")}
-                  className="rounded-md border border-sky-200 bg-white px-3 py-2 text-slate-900"
-                >
-                  <option value="all">Wszystkie</option>
-                  {CONTAINER_CONDITIONS.map((value) => (
-                    <option key={value} value={value}>
-                      {CONTAINER_CONDITION_LABEL[value]}
-                    </option>
-                  ))}
-                </select>
-              </label>
-
-              <label className="grid gap-1 text-sm">
-                <span className="text-slate-600">Cecha</span>
-                <select
-                  {...register("containerFeature")}
-                  className="rounded-md border border-sky-200 bg-white px-3 py-2 text-slate-900"
-                >
-                  <option value="all">Wszystkie</option>
-                  {CONTAINER_FEATURES.map((value) => (
-                    <option key={value} value={value}>
-                      {CONTAINER_FEATURE_LABEL[value]}
-                    </option>
-                  ))}
-                </select>
-              </label>
-
-              <label className="grid gap-1 text-sm">
-                <span className="text-slate-600">Miasto</span>
-                <input
-                  {...register("city")}
-                  placeholder="np. Gdansk"
-                  className="rounded-md border border-sky-200 bg-white px-3 py-2 text-slate-900"
-                />
-              </label>
-
-              <label className="grid gap-1 text-sm">
-                <span className="text-slate-600">Kraj</span>
-                <input
-                  {...register("country")}
-                  placeholder="np. Polska"
-                  className="rounded-md border border-sky-200 bg-white px-3 py-2 text-slate-900"
-                />
-              </label>
-
-              <label className="grid gap-1 text-sm">
-                <span className="text-slate-600">Sortowanie</span>
-                <select
-                  {...register("sortPreset")}
-                  className="rounded-md border border-sky-200 bg-white px-3 py-2 text-slate-900"
-                >
-                  {SORT_OPTIONS.map((option) => (
-                    <option key={option.value} value={option.value}>
-                      {option.label}
-                    </option>
-                  ))}
-                </select>
-              </label>
-
-              <button
-                type="button"
-                onClick={clearSidebarFilters}
-                className="rounded-md border border-sky-200 px-3 py-2 text-sm font-medium text-slate-700 hover:border-sky-400"
-              >
-                Wyczysc filtry boczne
-              </button>
+        <div className="mx-auto grid w-full max-w-[1400px] gap-4 px-4 sm:px-6">
+          <ContainerListingsFilters
+            locationControlsRef={locationControlsRef}
+            appliedFilters={appliedFilters}
+            restoreAppliedLocationOnBlur={restoreAppliedLocationOnBlur}
+            isResolvingLocation={isResolvingLocation}
+            locationFilterError={locationFilterError}
+            onApplyNonLocationFilters={applyNonLocationFilters}
+            clearAllFilters={clearAllFilters}
+          >
+            <div ref={resultsTopRef} className="scroll-mt-36">
+              <ContainerListingsResults
+                items={items}
+                total={total}
+                page={page}
+                totalPages={totalPages}
+                isLoading={isLoading}
+                error={error}
+                activeTab={activeTab}
+                showFavoritesToggle={shouldShowFavoritesToggle}
+                darkBlueCtaClass={DARK_BLUE_CTA_BASE_CLASS}
+                pendingFavoriteId={pendingFavoriteId}
+                onTabChange={handleTabChange}
+                onToggleFavorite={handleToggleFavorite}
+                onCopyListingLink={handleCopyListingLink}
+                onPreviousPage={goToPreviousPage}
+                onNextPage={goToNextPage}
+              />
             </div>
-          </aside>
-
-          <section className="grid gap-3">
-            <div className="flex flex-wrap items-center justify-between gap-2 rounded-2xl border border-sky-200 bg-white/95 p-3 shadow-sm">
-              <p className="text-sm text-slate-700">
-                Wyniki wyszukiwania:{" "}
-                <span className="font-semibold">{total}</span>
-              </p>
-              <div className="flex items-center gap-4">
-                <p className="text-xs text-slate-500">
-                  Strona {page} z {totalPages}
-                </p>
-                {renderPaginationControls()}
-              </div>
-            </div>
-
-            <div className="relative rounded-2xl border border-sky-200 bg-white/95 p-3 shadow-sm">
-              {error ? <p className="text-sm text-rose-600">{error}</p> : null}
-              {isLoading ? (
-                <div className="pointer-events-none absolute inset-0 z-10 flex items-center justify-center rounded-2xl bg-white/60 backdrop-blur-[1px]">
-                  <span
-                    className="h-7 w-7 animate-spin rounded-full border-2 border-slate-300 border-t-slate-500"
-                    aria-label="Ladowanie kontenerow"
-                  />
-                </div>
-              ) : null}
-
-              {!isLoading && items.length === 0 ? (
-                <p className="text-sm text-slate-500">
-                  Brak kontenerow dla aktualnych filtrow.
-                </p>
-              ) : null}
-
-              <ul className="space-y-3">
-                {items.map((item) => (
-                  <li
-                    key={item.id}
-                    className="rounded-xl border border-sky-100 bg-white p-4 shadow-sm transition-colors hover:bg-slate-50/80"
-                  >
-                    <div className="flex flex-wrap items-start justify-between gap-3">
-                      <div>
-                        <p className="text-xs uppercase tracking-wide text-slate-500">
-                          {item.companyName}
-                        </p>
-                        <h3 className="mt-1 text-xl font-semibold text-slate-900">
-                          {getContainerShortLabel(item.container)} -{" "}
-                          {LISTING_TYPE_LABEL[item.type]}
-                        </h3>
-                        <p className="mt-1 text-sm text-slate-600">
-                          {getLocationLabel(item)}
-                        </p>
-                      </div>
-                      <span
-                        className={
-                          item.type === "available"
-                            ? "rounded-md border border-slate-300 bg-slate-100 px-2 py-1 text-xs font-medium text-slate-700"
-                            : "rounded-md border border-stone-300 bg-stone-100 px-2 py-1 text-xs font-medium text-stone-700"
-                        }
-                      >
-                        {LISTING_TYPE_LABEL[item.type]}
-                      </span>
-                    </div>
-
-                    <div className="mt-3 grid gap-2 text-sm text-slate-700 sm:grid-cols-2 lg:grid-cols-4">
-                      <p>
-                        Ilosc:{" "}
-                        <span className="font-medium text-slate-900">
-                          {item.quantity}
-                        </span>
-                      </p>
-                      <p>
-                        Transakcja:{" "}
-                        <span className="font-medium text-slate-900">
-                          {DEAL_TYPE_LABEL[item.dealType]}
-                        </span>
-                      </p>
-                      <p>
-                        Dostepny od:{" "}
-                        <span className="font-medium text-slate-900">
-                          {new Date(item.availableFrom).toLocaleDateString(
-                            "pl-PL",
-                          )}
-                        </span>
-                      </p>
-                      <p>
-                        Wygasa:{" "}
-                        <span className="font-medium text-slate-900">
-                          {new Date(item.expiresAt).toLocaleDateString("pl-PL")}
-                        </span>
-                      </p>
-                    </div>
-
-                    {item.description ? (
-                      <p className="mt-3 line-clamp-2 text-sm text-slate-600">
-                        {item.description}
-                      </p>
-                    ) : null}
-
-                    <div className="mt-3 flex items-center justify-end">
-                      <Link
-                        href={`/containers/${item.id}`}
-                        className={`rounded-md px-3 py-2 text-sm font-medium ${DARK_BLUE_CTA_BASE_CLASS}`}
-                      >
-                        Szczegoly i zapytanie
-                      </Link>
-                    </div>
-                  </li>
-                ))}
-              </ul>
-
-              {renderPaginationControls("mt-4")}
-            </div>
-          </section>
+          </ContainerListingsFilters>
         </div>
-      </div>
-    </form>
+      </form>
+    </FormProvider>
   );
 }
+
+
+

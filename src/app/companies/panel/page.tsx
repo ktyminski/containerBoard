@@ -1,4 +1,4 @@
-﻿import Image from "next/image";
+import Image from "next/image";
 import Link from "next/link";
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
@@ -100,8 +100,8 @@ export default async function CompanyPanelPage({ searchParams }: CompanyPanelPag
     <section className="relative overflow-hidden bg-[linear-gradient(180deg,#ffffff_0%,#f8fafc_100%)]">
       <main className="relative mx-auto flex w-full max-w-5xl flex-col gap-6 px-4 py-6 sm:px-6">
       <header>
-        <h1 className="text-2xl font-semibold text-slate-900 sm:text-3xl">{panelMessages.title}</h1>
-        <p className="mt-2 text-sm text-slate-600">{panelMessages.subtitle}</p>
+        <h1 className="text-2xl font-semibold text-neutral-900 sm:text-3xl">{panelMessages.title}</h1>
+        <p className="mt-2 text-sm text-neutral-600">{panelMessages.subtitle}</p>
       </header>
 
       {shouldShowBlockedNotice ? (
@@ -123,20 +123,20 @@ export default async function CompanyPanelPage({ searchParams }: CompanyPanelPag
       ) : null}
 
       {ownedCompanies.length === 0 ? (
-        <section className="rounded-xl border border-slate-300 bg-slate-100 p-5">
-          <h2 className="text-lg font-semibold text-slate-800">{panelMessages.noCompaniesTitle}</h2>
-          <p className="mt-2 text-sm text-slate-700">{panelMessages.noCompaniesText}</p>
+        <section className="rounded-xl border border-neutral-300 bg-neutral-100 p-5">
+          <h2 className="text-lg font-semibold text-neutral-800">{panelMessages.noCompaniesTitle}</h2>
+          <p className="mt-2 text-sm text-neutral-700">{panelMessages.noCompaniesText}</p>
           <div className="mt-4 flex flex-wrap items-center gap-2">
             <VerifiedActionLink
               href={withLang("/companies/new", locale)}
               label={panelMessages.addCompany}
-              className="rounded-md bg-slate-800 px-4 py-2 text-sm font-medium text-white hover:bg-slate-700"
+              className="rounded-md bg-neutral-800 px-4 py-2 text-sm font-medium text-white hover:bg-neutral-700"
               requiresEmailVerification={addCompanyBlocked}
               blockedMessage={addCompanyBlockedMessage}
             />
             <Link
               href={withLang("/maps", locale)}
-              className="rounded-md border border-slate-400 bg-white px-4 py-2 text-sm text-slate-800 hover:bg-slate-50"
+              className="rounded-md border border-neutral-400 bg-white px-4 py-2 text-sm text-neutral-800 hover:bg-neutral-50"
             >
               {panelMessages.backToMap}
             </Link>
@@ -168,7 +168,7 @@ export default async function CompanyPanelPage({ searchParams }: CompanyPanelPag
             return (
               <article
                 key={companyId}
-                className="overflow-hidden rounded-xl border border-slate-300 bg-[#eef2f7]"
+                className="overflow-hidden rounded-xl border border-neutral-300 bg-[#eef2f7]"
               >
                 <div className="relative aspect-[4/1] w-full">
                   {backgroundUrl ? (
@@ -182,7 +182,7 @@ export default async function CompanyPanelPage({ searchParams }: CompanyPanelPag
                   ) : (
                     <div className="h-full w-full" style={{ backgroundImage: backgroundFallbackGradient }} />
                   )}
-                  <div className="absolute inset-0 bg-gradient-to-t from-slate-950 via-slate-900/70 to-transparent" />
+                  <div className="absolute inset-0 bg-gradient-to-t from-neutral-950 via-neutral-900/70 to-transparent" />
                   <div className="absolute inset-x-4 bottom-4 flex items-end gap-3">
                     <div
                       className={`relative h-12 w-12 rounded-lg border border-[#cbd5e1] bg-[#0b1730] sm:h-12 sm:w-12 md:h-20 md:w-20 lg:h-28 lg:w-28 ${
@@ -245,18 +245,18 @@ export default async function CompanyPanelPage({ searchParams }: CompanyPanelPag
                 </div>
 
                 <div className="grid gap-4 p-5">
-                  <p className="whitespace-pre-wrap text-sm text-slate-700">{company.description}</p>
+                  <p className="whitespace-pre-wrap text-sm text-neutral-700">{company.description}</p>
 
                   <div className="flex flex-wrap items-center gap-2">
                     <Link
                       href={withLang(`/companies/${company.slug}`, locale)}
-                      className="rounded-md border border-slate-400 bg-white px-3 py-2 text-sm text-slate-800 transition-colors hover:bg-slate-50"
+                      className="rounded-md border border-neutral-400 bg-white px-3 py-2 text-sm text-neutral-800 transition-colors hover:bg-neutral-50"
                     >
                       {panelMessages.previewCompany}
                     </Link>
                     <Link
                       href={withLang(`/companies/${company.slug}/edit`, locale)}
-                      className="rounded-md border border-slate-400 bg-white px-3 py-2 text-sm text-slate-800 transition-colors hover:bg-slate-50"
+                      className="rounded-md border border-neutral-400 bg-white px-3 py-2 text-sm text-neutral-800 transition-colors hover:bg-neutral-50"
                     >
                       {panelMessages.editCompany}
                     </Link>
@@ -281,7 +281,7 @@ export default async function CompanyPanelPage({ searchParams }: CompanyPanelPag
                       messages={panelMessages}
                       initialReason={deletionReason}
                       isAlreadyRequested={isDeletionRequested}
-                      triggerClassName="cursor-pointer text-xs text-slate-600 underline decoration-slate-500 underline-offset-2 transition-colors hover:text-slate-800 hover:decoration-slate-700"
+                      triggerClassName="cursor-pointer text-xs text-neutral-600 underline decoration-neutral-500 underline-offset-2 transition-colors hover:text-neutral-800 hover:decoration-neutral-700"
                     />
                   </div>
                 </div>
@@ -294,7 +294,7 @@ export default async function CompanyPanelPage({ searchParams }: CompanyPanelPag
       <div>
         <Link
           href={withLang("/maps", locale)}
-          className="rounded-md border border-slate-400 bg-white px-4 py-2 text-sm text-slate-800 hover:bg-slate-50"
+          className="rounded-md border border-neutral-400 bg-white px-4 py-2 text-sm text-neutral-800 hover:bg-neutral-50"
         >
           {panelMessages.backToMap}
         </Link>
@@ -303,4 +303,6 @@ export default async function CompanyPanelPage({ searchParams }: CompanyPanelPag
     </section>
   );
 }
+
+
 

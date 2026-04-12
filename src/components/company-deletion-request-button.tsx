@@ -140,22 +140,22 @@ export function CompanyDeletionRequestButton({
 
       {isModalOpen ? (
         <div
-          className="fixed inset-0 z-[70] flex items-center justify-center overflow-y-auto [&>div:not(.fixed)]:my-auto [&>div:not(.fixed)]:max-h-[calc(100dvh-2rem)] [&>div:not(.fixed)]:!overflow-y-auto bg-slate-950/80 p-4"
+          className="fixed inset-0 z-[70] flex items-center justify-center overflow-y-auto [&>div:not(.fixed)]:my-auto [&>div:not(.fixed)]:max-h-[calc(100dvh-2rem)] [&>div:not(.fixed)]:!overflow-y-auto bg-neutral-950/80 p-4"
           role="dialog"
           aria-modal="true"
         >
-          <div className="w-full max-w-lg rounded-xl border border-slate-700 bg-slate-900 p-5 shadow-2xl">
-            <h3 className="text-base font-semibold text-slate-100">
+          <div className="w-full max-w-lg rounded-xl border border-neutral-700 bg-neutral-900 p-5 shadow-2xl">
+            <h3 className="text-base font-semibold text-neutral-100">
               {isAlreadyRequested
                 ? messages.deletionRequestEditModalTitle
                 : messages.deletionRequestModalTitle}
             </h3>
-            <p className="mt-1 text-xs text-slate-400">{messages.deletionRequestModalHint}</p>
+            <p className="mt-1 text-xs text-neutral-400">{messages.deletionRequestModalHint}</p>
 
             <label className="mt-4 grid gap-1 text-sm">
-              <span className="text-slate-300">{messages.deletionRequestReasonLabel}</span>
+              <span className="text-neutral-300">{messages.deletionRequestReasonLabel}</span>
               <textarea
-                className="min-h-28 rounded-md border border-slate-700 bg-slate-950 px-3 py-2 text-slate-100"
+                className="min-h-28 rounded-md border border-neutral-700 bg-neutral-950 px-3 py-2 text-neutral-100"
                 value={reason}
                 onChange={(event) => {
                   setReason(event.target.value);
@@ -163,7 +163,7 @@ export function CompanyDeletionRequestButton({
                 maxLength={MAX_REASON_LENGTH}
                 placeholder={messages.deletionRequestReasonPlaceholder}
               />
-              <p className="text-xs text-slate-500">
+              <p className="text-xs text-neutral-500">
                 {formatTemplate(messages.deletionRequestReasonLimits, {
                   min: MIN_REASON_LENGTH,
                   max: MAX_REASON_LENGTH,
@@ -174,7 +174,7 @@ export function CompanyDeletionRequestButton({
             <div className="mt-4 flex items-center justify-end gap-2">
               <button
                 type="button"
-                className="cursor-pointer rounded-md border border-slate-700 px-3 py-2 text-sm text-slate-200 hover:border-slate-500"
+                className="cursor-pointer rounded-md border border-neutral-700 px-3 py-2 text-sm text-neutral-200 hover:border-neutral-500"
                 onClick={() => {
                   setIsModalOpen(false);
                 }}
@@ -217,5 +217,6 @@ export function CompanyDeletionRequestButton({
     </>
   );
 }
+
 
 

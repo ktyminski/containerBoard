@@ -1,4 +1,4 @@
-﻿import type { Metadata } from "next";
+import type { Metadata } from "next";
 import Image from "next/image";
 import Link from "next/link";
 import { cache } from "react";
@@ -266,7 +266,7 @@ export default async function CompanyDetailsPage({
     company.facebookUrl || company.instagramUrl || company.linkedinUrl,
   );
   const socialIconButtonClass =
-    "inline-flex h-[54px] w-[54px] items-center justify-center rounded-full border border-slate-200/30 bg-slate-900/65 text-slate-100 backdrop-blur transition-colors hover:border-sky-300/70 hover:bg-sky-500/25 hover:text-white";
+    "inline-flex h-[54px] w-[54px] items-center justify-center rounded-full border border-neutral-200/30 bg-neutral-900/65 text-neutral-100 backdrop-blur transition-colors hover:border-sky-300/70 hover:bg-sky-500/25 hover:text-white";
   const organizationSchema = {
     "@context": "https://schema.org",
     "@type": "Organization",
@@ -305,7 +305,7 @@ export default async function CompanyDetailsPage({
       <SmartBackButton
         label={messages.companyDetails.back}
         fallbackHref={fallbackBackHref}
-        className="inline-flex w-fit cursor-pointer items-center gap-2 rounded-md border border-slate-700 px-3 py-2 text-sm text-slate-200 transition-colors hover:border-slate-500"
+        className="inline-flex w-fit cursor-pointer items-center gap-2 rounded-md border border-neutral-700 px-3 py-2 text-sm text-neutral-200 transition-colors hover:border-neutral-500"
       />
         {canEdit ? (
           <div>
@@ -318,8 +318,8 @@ export default async function CompanyDetailsPage({
           </div>
         ) : null}
 
-        <section className="overflow-hidden rounded-xl border border-slate-800 bg-slate-900/60">
-          <div className="relative aspect-[4/1] w-full overflow-hidden bg-slate-950">
+        <section className="overflow-hidden rounded-xl border border-neutral-800 bg-neutral-900/60">
+          <div className="relative aspect-[4/1] w-full overflow-hidden bg-neutral-950">
             {backgroundUrl ? (
               <Image
                 src={withMediaVersion(backgroundUrl)}
@@ -331,7 +331,7 @@ export default async function CompanyDetailsPage({
             ) : (
               <div className="h-full w-full" style={{ backgroundImage: backgroundFallbackGradient }} />
             )}
-            <div className="absolute inset-0 bg-gradient-to-t from-slate-950 via-slate-900/70 to-transparent" />
+            <div className="absolute inset-0 bg-gradient-to-t from-neutral-950 via-neutral-900/70 to-transparent" />
             {hasSocialLinks ? (
               <div className="absolute right-5 top-1/2 z-20 hidden -translate-y-1/2 flex-col items-center gap-2 md:flex">
                 {company.facebookUrl ? (
@@ -371,7 +371,7 @@ export default async function CompanyDetailsPage({
             ) : null}
             <div className="absolute inset-x-4 bottom-6 z-10 flex items-end gap-3 sm:bottom-8">
               <div
-                className={`relative h-12 w-12 rounded-lg border-2 border-slate-700 bg-slate-950 shadow-lg sm:h-12 sm:w-12 md:h-24 md:w-24 lg:h-32 lg:w-32 ${
+                className={`relative h-12 w-12 rounded-lg border-2 border-neutral-700 bg-neutral-950 shadow-lg sm:h-12 sm:w-12 md:h-24 md:w-24 lg:h-32 lg:w-32 ${
                   isPremium ? "overflow-visible" : "overflow-hidden"
                 }`}
               >
@@ -396,7 +396,7 @@ export default async function CompanyDetailsPage({
                 </div>
                 {isPremium ? (
                   <span
-                    className="absolute left-0 top-0 z-20 inline-flex h-5 w-5 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full border border-amber-400/80 bg-slate-950/90 text-amber-300 shadow-[0_0_10px_rgba(245,158,11,0.35)] md:h-6 md:w-6"
+                    className="absolute left-0 top-0 z-20 inline-flex h-5 w-5 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full border border-amber-400/80 bg-neutral-950/90 text-amber-300 shadow-[0_0_10px_rgba(245,158,11,0.35)] md:h-6 md:w-6"
                     aria-hidden="true"
                   >
                     <svg viewBox="0 0 20 20" className="h-3.5 w-3.5 md:h-4 md:w-4" aria-hidden="true">
@@ -441,7 +441,7 @@ export default async function CompanyDetailsPage({
             </div>
           </div>
           {hasSocialLinks ? (
-            <div className="flex items-center justify-center gap-2 border-t border-slate-800/70 bg-slate-950/60 px-4 py-3 md:hidden">
+            <div className="flex items-center justify-center gap-2 border-t border-neutral-800/70 bg-neutral-950/60 px-4 py-3 md:hidden">
               {company.facebookUrl ? (
                 <a
                   href={company.facebookUrl}
@@ -477,7 +477,7 @@ export default async function CompanyDetailsPage({
               ) : null}
             </div>
           ) : null}
-          <div className="grid gap-5 p-5 text-sm text-slate-200">
+          <div className="grid gap-5 p-5 text-sm text-neutral-200">
             <section className="grid gap-5 md:grid-cols-[minmax(0,1.65fr)_minmax(0,1fr)]">
               <div className="grid gap-2">
                 <p className="whitespace-pre-wrap">
@@ -486,10 +486,10 @@ export default async function CompanyDetailsPage({
                 {companyCommunicationLanguages.length > 0 ? (
                   <>
                     <div className="py-2">
-                      <div className="border-t border-slate-800" />
+                      <div className="border-t border-neutral-800" />
                     </div>
                     <p>
-                      <span className="text-slate-400">{messages.companyCreate.communicationLanguagesTitle}: </span>
+                      <span className="text-neutral-400">{messages.companyCreate.communicationLanguagesTitle}: </span>
                       {companyCommunicationLanguages
                         .map((language) => messages.companyCreate.communicationLanguages[language])
                         .join(", ")}
@@ -500,7 +500,7 @@ export default async function CompanyDetailsPage({
                 {companySpecializations.length > 0 ? (
                   <div>
                     <p>
-                      <span className="text-slate-400">{messages.companyCreate.specializationsTitle}: </span>
+                      <span className="text-neutral-400">{messages.companyCreate.specializationsTitle}: </span>
                     </p>
                     <div className="mt-2 flex flex-wrap gap-2">
                       {companySpecializations.map((specialization) => (
@@ -517,7 +517,7 @@ export default async function CompanyDetailsPage({
                 {companyBenefits.length > 0 ? (
                   <div>
                     <p>
-                      <span className="text-slate-400">{messages.companyCreate.benefitsTitle}: </span>
+                      <span className="text-neutral-400">{messages.companyCreate.benefitsTitle}: </span>
                     </p>
                     <div className="mt-2 flex flex-wrap gap-2">
                       {companyBenefits.map((benefit) => (
@@ -533,39 +533,39 @@ export default async function CompanyDetailsPage({
                 ) : null}
               </div>
 
-              <aside className="h-fit rounded-xl border border-slate-700/80 bg-slate-950/70 p-4">
+              <aside className="h-fit rounded-xl border border-neutral-700/80 bg-neutral-950/70 p-4">
                 <div className="grid gap-2">
                   {companyPhone ? (
-                    <div className="rounded-lg border border-slate-800 bg-slate-900/60 p-3">
-                      <p className="text-[11px] uppercase tracking-wide text-slate-400">
+                    <div className="rounded-lg border border-neutral-800 bg-neutral-900/60 p-3">
+                      <p className="text-[11px] uppercase tracking-wide text-neutral-400">
                         {messages.companyDetails.phoneLabel}
                       </p>
                       <a
                         href={`tel:${companyPhone.replace(/\s+/g, "")}`}
-                        className="mt-1 inline-flex text-sm text-slate-100 transition-colors hover:text-sky-300"
+                        className="mt-1 inline-flex text-sm text-neutral-100 transition-colors hover:text-sky-300"
                       >
                         {companyPhone}
                       </a>
                     </div>
                   ) : null}
-                  <div className="rounded-lg border border-slate-800 bg-slate-900/60 p-3">
-                    <p className="text-[11px] uppercase tracking-wide text-slate-400">
+                  <div className="rounded-lg border border-neutral-800 bg-neutral-900/60 p-3">
+                    <p className="text-[11px] uppercase tracking-wide text-neutral-400">
                       {messages.companyDetails.emailLabel}
                     </p>
                     {company.email ? (
                       <a
                         href={`mailto:${company.email}`}
-                        className="mt-1 inline-flex text-sm text-slate-100 transition-colors hover:text-sky-300"
+                        className="mt-1 inline-flex text-sm text-neutral-100 transition-colors hover:text-sky-300"
                       >
                         {company.email}
                       </a>
                     ) : (
-                      <p className="mt-1 text-sm text-slate-500">-</p>
+                      <p className="mt-1 text-sm text-neutral-500">-</p>
                     )}
                   </div>
                   {company.website ? (
-                    <div className="rounded-lg border border-slate-800 bg-slate-900/60 p-3">
-                      <p className="text-[11px] uppercase tracking-wide text-slate-400">
+                    <div className="rounded-lg border border-neutral-800 bg-neutral-900/60 p-3">
+                      <p className="text-[11px] uppercase tracking-wide text-neutral-400">
                         {messages.companyDetails.websiteLabel}
                       </p>
                       <a
@@ -579,21 +579,21 @@ export default async function CompanyDetailsPage({
                     </div>
                   ) : null}
                 </div>
-                <div className="mt-2 rounded-lg border border-slate-800 bg-slate-900/60 p-3">
-                  <p className="text-[11px] uppercase tracking-wide text-slate-400">
+                <div className="mt-2 rounded-lg border border-neutral-800 bg-neutral-900/60 p-3">
+                  <p className="text-[11px] uppercase tracking-wide text-neutral-400">
                     {messages.companyDetails.operatingAreaLabel}
                   </p>
-                  <p className="mt-1 text-sm text-slate-100">{operatingAreaLabel}</p>
+                  <p className="mt-1 text-sm text-neutral-100">{operatingAreaLabel}</p>
                   {company.operatingAreaDetails ? (
-                    <p className="mt-1 text-xs text-slate-300">{company.operatingAreaDetails}</p>
+                    <p className="mt-1 text-xs text-neutral-300">{company.operatingAreaDetails}</p>
                   ) : null}
                 </div>
                 {company.nip ? (
-                  <div className="mt-2 rounded-lg border border-slate-800 bg-slate-900/60 p-3">
-                    <p className="text-[11px] uppercase tracking-wide text-slate-400">
+                  <div className="mt-2 rounded-lg border border-neutral-800 bg-neutral-900/60 p-3">
+                    <p className="text-[11px] uppercase tracking-wide text-neutral-400">
                       {messages.companyDetails.nipLabel}
                     </p>
-                    <p className="mt-1 text-sm text-slate-100">{company.nip}</p>
+                    <p className="mt-1 text-sm text-neutral-100">{company.nip}</p>
                   </div>
                 ) : null}
               </aside>
@@ -615,12 +615,12 @@ export default async function CompanyDetailsPage({
             />
 
             {companyPhotos.length > 0 ? (
-              <section className="grid gap-3 border-t border-slate-800 pt-5">
+              <section className="grid gap-3 border-t border-neutral-800 pt-5">
                 <div className="grid grid-cols-2 gap-3 md:grid-cols-3">
                   {companyPhotos.map((photo) => (
                     <div
                       key={photo.id}
-                      className="group relative h-36 overflow-hidden rounded-lg border border-slate-800 md:h-44"
+                      className="group relative h-36 overflow-hidden rounded-lg border border-neutral-800 md:h-44"
                     >
                       <Image
                         src={photo.url}
@@ -636,7 +636,7 @@ export default async function CompanyDetailsPage({
             ) : null}
 
             {!company.createdByUserId ? (
-              <section className="border-t border-slate-800 pt-5">
+              <section className="border-t border-neutral-800 pt-5">
                 <CompanyOwnershipClaimButton
                   companyId={companyId}
                   locale={locale}
@@ -650,7 +650,7 @@ export default async function CompanyDetailsPage({
         <div>
           <Link
             href={withLang("/maps", locale)}
-            className="rounded-md border border-slate-700 px-4 py-2 text-sm text-slate-200 hover:border-slate-500"
+            className="rounded-md border border-neutral-700 px-4 py-2 text-sm text-neutral-200 hover:border-neutral-500"
           >
             {messages.companyDetails.backToMap}
           </Link>
@@ -659,4 +659,6 @@ export default async function CompanyDetailsPage({
     </section>
   );
 }
+
+
 

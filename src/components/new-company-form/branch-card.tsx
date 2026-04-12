@@ -122,9 +122,9 @@ export function BranchCard({
   };
 
   return (
-    <div className="grid gap-3 rounded-lg border border-slate-500/60 bg-slate-700/35 p-3">
+    <div className="grid gap-3 rounded-lg border border-neutral-500/60 bg-neutral-700/35 p-3">
       <div className="flex items-center justify-between">
-        <p className="text-sm font-medium text-slate-200">
+        <p className="text-sm font-medium text-neutral-200">
           {index === 0
             ? messages.mainBranchTitle
             : `${messages.branchesTitle} #${index + 1}`}
@@ -141,9 +141,9 @@ export function BranchCard({
       </div>
 
       <label className="mx-auto grid w-full gap-1 text-sm md:w-[70%]">
-        <span className="text-slate-300">{messages.branchLabel}*</span>
+        <span className="text-neutral-300">{messages.branchLabel}*</span>
         <input
-          className="rounded-md border border-slate-300 bg-slate-100/85 px-3 py-2 text-slate-800 placeholder:text-[#94a3b8]"
+          className="rounded-md border border-neutral-300 bg-neutral-100/85 px-3 py-2 text-neutral-800 placeholder:text-[#94a3b8]"
           {...register(`branches.${index}.label`, {
             required: messages.requiredField,
             minLength: { value: 1, message: messages.requiredField },
@@ -154,9 +154,9 @@ export function BranchCard({
       </label>
 
       <label className="mx-auto grid w-full gap-1 text-sm md:w-[70%]">
-        <span className="text-slate-300">{messages.branchNote}</span>
+        <span className="text-neutral-300">{messages.branchNote}</span>
         <input
-          className="rounded-md border border-slate-300 bg-slate-100/85 px-3 py-2 text-slate-800 placeholder:text-[#94a3b8]"
+          className="rounded-md border border-neutral-300 bg-neutral-100/85 px-3 py-2 text-neutral-800 placeholder:text-[#94a3b8]"
           {...register(`branches.${index}.note`, {
             maxLength: { value: 200, message: messages.validationError },
           })}
@@ -164,10 +164,10 @@ export function BranchCard({
       </label>
 
       <label className="mx-auto grid w-full gap-1 text-sm md:w-[70%]">
-        <span className="text-slate-300">{messages.branchAddress}*</span>
-        <div className="flex overflow-hidden rounded-md border border-slate-300 bg-slate-100/85">
+        <span className="text-neutral-300">{messages.branchAddress}*</span>
+        <div className="flex overflow-hidden rounded-md border border-neutral-300 bg-neutral-100/85">
           <input
-            className="w-full bg-transparent px-3 py-2 text-slate-800 outline-none"
+            className="w-full bg-transparent px-3 py-2 text-neutral-800 outline-none"
             {...register(`branches.${index}.addressText`, {
               required: messages.requiredField,
               minLength: { value: 1, message: messages.requiredField },
@@ -182,7 +182,7 @@ export function BranchCard({
           />
           <button
             type="button"
-            className="cursor-pointer border-l border-slate-300 px-3 text-xs text-slate-700 hover:bg-slate-200/70 disabled:cursor-not-allowed disabled:opacity-60"
+            className="cursor-pointer border-l border-neutral-300 px-3 text-xs text-neutral-700 hover:bg-neutral-200/70 disabled:cursor-not-allowed disabled:opacity-60"
             onClick={() => {
               void locateByAddress();
             }}
@@ -191,9 +191,9 @@ export function BranchCard({
             {isLocating ? messages.branchLocationSearching : messages.branchLocationFind}
           </button>
         </div>
-        <p className="text-xs text-slate-400">{messages.branchAddressNoPrefixHint}</p>
+        <p className="text-xs text-neutral-400">{messages.branchAddressNoPrefixHint}</p>
         {branchAddressError ? <p className="text-xs text-red-300">{branchAddressError}</p> : null}
-        {locationStatus ? <p className="text-xs text-slate-600">{locationStatus}</p> : null}
+        {locationStatus ? <p className="text-xs text-neutral-600">{locationStatus}</p> : null}
       </label>
 
       <input
@@ -246,7 +246,7 @@ export function BranchCard({
       <div className="grid gap-3">
         <button
           type="button"
-          className="cursor-pointer text-sm text-slate-700 hover:text-slate-900"
+          className="cursor-pointer text-sm text-neutral-700 hover:text-neutral-900"
           onClick={() => {
             const nextUseCustomDetails = !Boolean(branch?.useCustomDetails);
             if (!nextUseCustomDetails) {
@@ -278,9 +278,9 @@ export function BranchCard({
         {branch?.useCustomDetails ? (
           <div className="grid gap-3 md:grid-cols-2">
             <label className="grid gap-1 text-sm">
-              <span className="text-slate-300">{messages.branchPhone}</span>
+              <span className="text-neutral-300">{messages.branchPhone}</span>
               <input
-                className="rounded-md border border-slate-300 bg-slate-100/85 px-3 py-2 text-slate-800 placeholder:text-[#94a3b8]"
+                className="rounded-md border border-neutral-300 bg-neutral-100/85 px-3 py-2 text-neutral-800 placeholder:text-[#94a3b8]"
                 {...register(`branches.${index}.phone`, {
                   validate: (value) =>
                     !value.trim() || PHONE_REGEX.test(value) || messages.invalidPhone,
@@ -293,9 +293,9 @@ export function BranchCard({
             </label>
 
             <label className="grid gap-1 text-sm">
-              <span className="text-slate-300">{messages.branchEmail}</span>
+              <span className="text-neutral-300">{messages.branchEmail}</span>
               <input
-                className="rounded-md border border-slate-300 bg-slate-100/85 px-3 py-2 text-slate-800 placeholder:text-[#94a3b8]"
+                className="rounded-md border border-neutral-300 bg-neutral-100/85 px-3 py-2 text-neutral-800 placeholder:text-[#94a3b8]"
                 {...register(`branches.${index}.email`, {
                   validate: (value) =>
                     !value.trim() ||
@@ -310,12 +310,13 @@ export function BranchCard({
             </label>
           </div>
         ) : (
-          <p className="text-center text-xs text-slate-300">{messages.additionalData}</p>
+          <p className="text-center text-xs text-neutral-300">{messages.additionalData}</p>
         )}
       </div>
 
     </div>
   );
 }
+
 
 

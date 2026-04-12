@@ -88,9 +88,9 @@ export function HomeMapPreviewMap({
           isActive
         />
       ) : (
-        <div className="absolute inset-0 z-10 flex items-center justify-center bg-slate-900/95">
+        <div className="absolute inset-0 z-10 flex items-center justify-center bg-neutral-900/95">
           <div
-            className="h-8 w-8 animate-spin rounded-full border-2 border-slate-500 border-t-sky-400"
+            className="h-8 w-8 animate-spin rounded-full border-2 border-neutral-500 border-t-sky-400"
             aria-label={messages.loading}
             role="status"
           />
@@ -99,3 +99,4 @@ export function HomeMapPreviewMap({
     </div>
   );
 }
+

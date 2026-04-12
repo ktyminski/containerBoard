@@ -50,14 +50,6 @@ function htmlButton(url: string, label: string): string {
   return `<table role="presentation" cellpadding="0" cellspacing="0" border="0" style="Margin:0 0 16px 0;"><tr><td bgcolor="${MAIL_COLORS.buttonBackground}" style="background-color:${MAIL_COLORS.buttonBackground};border-radius:6px;"><a href="${safeUrl}" style="display:inline-block;padding:11px 18px;font-family:Arial,Helvetica,sans-serif;font-size:14px;font-weight:700;line-height:18px;color:#ffffff;text-decoration:none;">${safeLabel}</a></td></tr></table>`;
 }
 
-function htmlInfoPanel(contentHtml: string): string {
-  return `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" bgcolor="${MAIL_COLORS.panelBackground}" style="Margin:0 0 16px 0;background-color:${MAIL_COLORS.panelBackground};border:1px solid ${MAIL_COLORS.panelBorder};border-radius:6px;"><tr><td style="padding:14px;font-family:Arial,Helvetica,sans-serif;font-size:14px;line-height:21px;color:${MAIL_COLORS.text};">${contentHtml}</td></tr></table>`;
-}
-
-function htmlLabeledValue(label: string, value: string): string {
-  return `<strong>${escapeHtml(label)}:</strong> ${escapeHtml(value)}`;
-}
-
 function renderTextLayout(input: {
   intro?: string;
   sections: string[];
@@ -297,84 +289,6 @@ export function buildClaimDecisionMail(input: {
         htmlParagraphRaw(
           `Twoje zgłoszenie przejęcia firmy "<strong>${escapeHtml(input.companyName)}</strong>" zostało <strong>${escapeHtml(decision)}</strong>.`,
         ) + htmlParagraph(outcomeText),
-    }),
-  };
-}
-
-export function buildAnnouncementApplicationMail(input: {
-  announcementTitle: string;
-  companyName: string;
-  locationLabel: string;
-  applicantName: string;
-  applicantEmail: string;
-  applicantPhone?: string;
-  applicantMessage: string;
-  cvFilename?: string;
-}): MailTemplateContent {
-  const applicantMessage = input.applicantMessage.trim();
-  const safeApplicantMessage = applicantMessage
-    ? escapeHtml(applicantMessage).replaceAll("\n", "<br/>")
-    : "Brak";
-  const safeCvFilename = input.cvFilename?.trim() || "Brak";
-  const subject = `Nowa aplikacja: ${input.announcementTitle}`;
-
-  return {
-    subject,
-    text: renderTextLayout({
-      sections: [
-        `Nowa aplikacja na ogłoszenie "${input.announcementTitle}".`,
-        `Firma: ${input.companyName}\nLokalizacja ogłoszenia: ${input.locationLabel}`,
-        `Dane kandydata:\n- Imię i nazwisko: ${input.applicantName}\n- Email: ${input.applicantEmail}\n- Telefon: ${input.applicantPhone?.trim() || "Brak"}\n- CV: ${safeCvFilename}`,
-        `Wiadomość:\n${applicantMessage || "Brak"}`,
-      ],
-    }),
-    html: renderHtmlLayout({
-      preheader: `Nowa aplikacja na ogłoszenie "${input.announcementTitle}".`,
-      title: "Nowa aplikacja kandydata",
-      contentHtml:
-        htmlParagraphRaw(
-          `Ogłoszenie: <strong>${escapeHtml(input.announcementTitle)}</strong>`,
-        ) +
-        htmlInfoPanel(
-          `${htmlLabeledValue("Firma", input.companyName)}<br/>${htmlLabeledValue("Lokalizacja ogłoszenia", input.locationLabel)}`,
-        ) +
-        htmlInfoPanel(
-          `${htmlLabeledValue("Imię i nazwisko", input.applicantName)}<br/>${htmlLabeledValue("Email", input.applicantEmail)}<br/>${htmlLabeledValue("Telefon", input.applicantPhone?.trim() || "Brak")}<br/>${htmlLabeledValue("CV", safeCvFilename)}`,
-        ) +
-        htmlParagraphRaw(`<strong>Wiadomość:</strong><br/>${safeApplicantMessage}`),
-    }),
-  };
-}
-
-export function buildAnnouncementPublishedMail(input: {
-  name?: string;
-  announcementTitle: string;
-  companyName: string;
-  announcementUrl?: string;
-}): MailTemplateContent {
-  const intro = greeting(input.name);
-  const subject = `Potwierdzenie publikacji ogłoszenia: ${input.announcementTitle}`;
-
-  return {
-    subject,
-    text: renderTextLayout({
-      intro,
-      sections: [
-        `Twoje ogłoszenie "${input.announcementTitle}" dla firmy "${input.companyName}" zostało opublikowane.`,
-        ...(input.announcementUrl ? [`Link do ogłoszenia: ${input.announcementUrl}`] : []),
-      ],
-    }),
-    html: renderHtmlLayout({
-      preheader: "Twoje ogłoszenie zostało opublikowane.",
-      title: subject,
-      intro,
-      contentHtml:
-        htmlParagraphRaw(
-          `Twoje ogłoszenie "<strong>${escapeHtml(input.announcementTitle)}</strong>" dla firmy "<strong>${escapeHtml(input.companyName)}</strong>" zostało opublikowane.`,
-        ) +
-        (input.announcementUrl
-          ? htmlButton(input.announcementUrl, "Przejdź do ogłoszenia")
-          : ""),
     }),
   };
 }

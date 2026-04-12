@@ -76,16 +76,16 @@ function getBusinessesCityCopy(locale: AppLocale, cityName: string, radiusKm: nu
       metaDescription: `Sieh dir aktive Logistik-, Transport- und Speditionsunternehmen in ${cityName} an.`,
       heroTitle: `Logistik-, Transport- und Speditionsunternehmen - ${cityName}`,
       heroIntro: `Auswahl aktiver Logistik-, Transport- und Speditionsunternehmen rund um ${cityName}. Die Seite konzentriert sich auf Unternehmen in einem Umkreis von etwa ${radiusKm} km um das Stadtzentrum.`,
-      openMapLabel: "Volle Kartenansicht öffnen",
+      openMapLabel: "Volle Kartenansicht Ã¶ffnen",
     };
   }
 
   return {
     metaTitle: `Firmy logistyczne, transportowe i spedycyjne - ${cityName}`,
-    metaDescription: `Sprawdź aktywne firmy logistyczne, transportowe i spedycyjne w mieście ${cityName}.`,
+    metaDescription: `SprawdÅº aktywne firmy logistyczne, transportowe i spedycyjne w mieÅ›cie ${cityName}.`,
     heroTitle: `Firmy logistyczne, transportowe i spedycyjne - ${cityName}`,
-    heroIntro: `Zestawienie aktywnych firm logistycznych, transportowych i spedycyjnych w okolicy ${cityName}. Strona koncentruje się na podmiotach z obszaru około ${radiusKm} km od centrum miasta.`,
-    openMapLabel: "Otwórz pełny widok mapy",
+    heroIntro: `Zestawienie aktywnych firm logistycznych, transportowych i spedycyjnych w okolicy ${cityName}. Strona koncentruje siÄ™ na podmiotach z obszaru okoÅ‚o ${radiusKm} km od centrum miasta.`,
+    openMapLabel: "OtwÃ³rz peÅ‚ny widok mapy",
   };
 }
 
@@ -164,8 +164,8 @@ export default async function CompaniesBySegmentPage({
 
   return (
     <main className="mx-auto w-full max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
-      <h1 className="text-2xl font-semibold text-slate-100 sm:text-3xl">{copy.heroTitle}</h1>
-      <p className="mt-3 max-w-4xl text-sm leading-6 text-slate-300">{copy.heroIntro}</p>
+      <h1 className="text-2xl font-semibold text-neutral-100 sm:text-3xl">{copy.heroTitle}</h1>
+      <p className="mt-3 max-w-4xl text-sm leading-6 text-neutral-300">{copy.heroIntro}</p>
       <div className="mt-3">
         <Link href={openMapHref} className="text-sm text-sky-300 hover:text-sky-200">
           {copy.openMapLabel}
@@ -187,6 +187,7 @@ export default async function CompaniesBySegmentPage({
     </main>
   );
 }
+
 
 
 

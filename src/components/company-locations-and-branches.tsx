@@ -52,7 +52,7 @@ export function CompanyLocationsAndBranches({
 
   return (
     <>
-      <section className="grid gap-3 border-t border-slate-800 pt-5">
+      <section className="grid gap-3 border-t border-neutral-800 pt-5">
         <CompanyLocationsMap
           locations={mapLocations}
           labels={{
@@ -63,7 +63,7 @@ export function CompanyLocationsAndBranches({
         />
       </section>
 
-      <section className="grid gap-3 border-t border-slate-800 pt-5">
+      <section className="grid gap-3 border-t border-neutral-800 pt-5">
         <CompanyBranchesList
           locations={locations}
           phoneLabel={labels.phoneLabel}
@@ -78,3 +78,4 @@ export function CompanyLocationsAndBranches({
     </>
   );
 }
+

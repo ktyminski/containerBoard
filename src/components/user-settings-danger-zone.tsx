@@ -50,9 +50,9 @@ export function UserSettingsDangerZone({
   };
 
   return (
-    <section className="rounded-xl border border-slate-800 bg-slate-900/60 p-5">
-      <h2 className="text-lg font-semibold text-slate-100">{messages.deleteAccountTitle}</h2>
-      <p className="mt-2 text-sm text-slate-300">{messages.deleteAccountDescription}</p>
+    <section className="rounded-xl border border-neutral-800 bg-neutral-900/60 p-5">
+      <h2 className="text-lg font-semibold text-neutral-100">{messages.deleteAccountTitle}</h2>
+      <p className="mt-2 text-sm text-neutral-300">{messages.deleteAccountDescription}</p>
       <div className="mt-4 flex justify-end">
         <button
           type="button"
@@ -72,20 +72,20 @@ export function UserSettingsDangerZone({
           role="dialog"
           aria-modal="true"
         >
-          <div className="w-full max-w-md rounded-xl border border-slate-700 bg-slate-900 p-4 shadow-2xl">
-            <h3 className="text-sm font-semibold text-slate-100">
+          <div className="w-full max-w-md rounded-xl border border-neutral-700 bg-neutral-900 p-4 shadow-2xl">
+            <h3 className="text-sm font-semibold text-neutral-100">
               {messages.deleteConfirmTitle}
             </h3>
-            <p className="mt-2 text-xs leading-5 text-slate-300">
+            <p className="mt-2 text-xs leading-5 text-neutral-300">
               {messages.deleteConfirmText}
             </p>
-            <p className="mt-2 text-xs leading-5 text-slate-400">
+            <p className="mt-2 text-xs leading-5 text-neutral-400">
               {messages.deleteConfirmWarning}
             </p>
             <div className="mt-4 flex justify-end gap-2">
               <button
                 type="button"
-                className="rounded-md border border-slate-700 px-3 py-1.5 text-xs text-slate-300 hover:border-slate-500"
+                className="rounded-md border border-neutral-700 px-3 py-1.5 text-xs text-neutral-300 hover:border-neutral-500"
                 onClick={() => {
                   setIsConfirmOpen(false);
                 }}
@@ -110,5 +110,6 @@ export function UserSettingsDangerZone({
     </section>
   );
 }
+
 
 

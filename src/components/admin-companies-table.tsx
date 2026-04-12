@@ -255,16 +255,16 @@ export function AdminCompaniesTable({
   };
 
   if (isInitialLoading && items.length === 0) {
-    return <p className="text-sm text-slate-300">{messages.loading}</p>;
+    return <p className="text-sm text-neutral-300">{messages.loading}</p>;
   }
 
   return (
-    <section className="rounded-xl border border-slate-800 bg-slate-900/60 p-4">
+    <section className="rounded-xl border border-neutral-800 bg-neutral-900/60 p-4">
       <div className="mb-3 flex items-center justify-between">
-        <h2 className="text-lg font-semibold text-slate-100">{messages.title}</h2>
+        <h2 className="text-lg font-semibold text-neutral-100">{messages.title}</h2>
         <button
           type="button"
-          className="rounded-md border border-slate-700 px-3 py-1 text-sm text-slate-200 hover:border-slate-500"
+          className="rounded-md border border-neutral-700 px-3 py-1 text-sm text-neutral-200 hover:border-neutral-500"
           onClick={() => {
             void loadCompanies({ keepData: true });
           }}
@@ -274,10 +274,10 @@ export function AdminCompaniesTable({
         </button>
       </div>
       <div className="mb-3 grid gap-2 md:grid-cols-2 xl:grid-cols-6">
-        <label className="text-xs text-slate-300">
+        <label className="text-xs text-neutral-300">
           {messages.searchLabel}
           <input
-            className="mt-1 w-full rounded-md border border-slate-700 bg-slate-950 px-2 py-1.5 text-sm text-slate-100"
+            className="mt-1 w-full rounded-md border border-neutral-700 bg-neutral-950 px-2 py-1.5 text-sm text-neutral-100"
             placeholder={messages.searchPlaceholder}
             value={searchInput}
             onChange={(event) => {
@@ -286,10 +286,10 @@ export function AdminCompaniesTable({
             }}
           />
         </label>
-        <label className="text-xs text-slate-300">
+        <label className="text-xs text-neutral-300">
           {messages.verificationFilter}
           <select
-            className="mt-1 w-full rounded-md border border-slate-700 bg-slate-950 px-2 py-1.5 text-sm text-slate-100"
+            className="mt-1 w-full rounded-md border border-neutral-700 bg-neutral-950 px-2 py-1.5 text-sm text-neutral-100"
             value={verificationFilter}
             onChange={(event) => {
               setVerificationFilter(
@@ -303,10 +303,10 @@ export function AdminCompaniesTable({
             <option value="not_verified">{statusMessages.not_verified}</option>
           </select>
         </label>
-        <label className="text-xs text-slate-300">
+        <label className="text-xs text-neutral-300">
           {messages.blockFilter}
           <select
-            className="mt-1 w-full rounded-md border border-slate-700 bg-slate-950 px-2 py-1.5 text-sm text-slate-100"
+            className="mt-1 w-full rounded-md border border-neutral-700 bg-neutral-950 px-2 py-1.5 text-sm text-neutral-100"
             value={blockFilter}
             onChange={(event) => {
               setBlockFilter(event.target.value as "all" | "active" | "blocked");
@@ -318,10 +318,10 @@ export function AdminCompaniesTable({
             <option value="blocked">{messages.blocked}</option>
           </select>
         </label>
-        <label className="text-xs text-slate-300">
+        <label className="text-xs text-neutral-300">
           {messages.sortBy}
           <select
-            className="mt-1 w-full rounded-md border border-slate-700 bg-slate-950 px-2 py-1.5 text-sm text-slate-100"
+            className="mt-1 w-full rounded-md border border-neutral-700 bg-neutral-950 px-2 py-1.5 text-sm text-neutral-100"
             value={sortBy}
             onChange={(event) => {
               setSortBy(
@@ -340,10 +340,10 @@ export function AdminCompaniesTable({
             <option value="verificationStatus">{messages.sortStatus}</option>
           </select>
         </label>
-        <label className="text-xs text-slate-300">
+        <label className="text-xs text-neutral-300">
           {messages.sortDir}
           <select
-            className="mt-1 w-full rounded-md border border-slate-700 bg-slate-950 px-2 py-1.5 text-sm text-slate-100"
+            className="mt-1 w-full rounded-md border border-neutral-700 bg-neutral-950 px-2 py-1.5 text-sm text-neutral-100"
             value={sortDir}
             onChange={(event) => {
               setSortDir(event.target.value as "asc" | "desc");
@@ -354,10 +354,10 @@ export function AdminCompaniesTable({
             <option value="asc">{messages.sortAsc}</option>
           </select>
         </label>
-        <label className="text-xs text-slate-300">
+        <label className="text-xs text-neutral-300">
           {messages.pageSize}
           <select
-            className="mt-1 w-full rounded-md border border-slate-700 bg-slate-950 px-2 py-1.5 text-sm text-slate-100"
+            className="mt-1 w-full rounded-md border border-neutral-700 bg-neutral-950 px-2 py-1.5 text-sm text-neutral-100"
             value={pageSize}
             onChange={(event) => {
               setPageSize(Number(event.target.value));
@@ -371,9 +371,9 @@ export function AdminCompaniesTable({
         </label>
       </div>
       {error ? <p className="mb-3 text-sm text-red-300">{error}</p> : null}
-      {isRefreshing ? <p className="mb-3 text-xs text-slate-400">{messages.loading}</p> : null}
+      {isRefreshing ? <p className="mb-3 text-xs text-neutral-400">{messages.loading}</p> : null}
       {items.length === 0 ? (
-        <p className="text-sm text-slate-400">{messages.noResults}</p>
+        <p className="text-sm text-neutral-400">{messages.noResults}</p>
       ) : (
         <div className="overflow-auto">
           <table className="w-full min-w-[1900px] table-fixed text-left text-sm">
@@ -390,7 +390,7 @@ export function AdminCompaniesTable({
               <col className="w-[300px]" />
             </colgroup>
             <thead>
-              <tr className="text-slate-400">
+              <tr className="text-neutral-400">
                 <th className="pb-2">{messages.company}</th>
                 <th className="pb-2">{messages.slug}</th>
                 <th className="pb-2">{messages.nip}</th>
@@ -405,8 +405,8 @@ export function AdminCompaniesTable({
             </thead>
             <tbody>
               {items.map((company) => (
-                <tr key={company.id} className="border-t border-slate-800 align-middle">
-                  <td className="py-2 pr-3 text-slate-100">
+                <tr key={company.id} className="border-t border-neutral-800 align-middle">
+                  <td className="py-2 pr-3 text-neutral-100">
                     <span className="inline-flex items-center gap-2">
                       <Link
                         href={withLang(`/companies/${company.slug}`, locale)}
@@ -428,12 +428,12 @@ export function AdminCompaniesTable({
                       ) : null}
                     </span>
                   </td>
-                  <td className="py-2 pr-3 text-slate-300">
+                  <td className="py-2 pr-3 text-neutral-300">
                     <span className="block truncate" title={company.slug}>
                       {company.slug}
                     </span>
                   </td>
-                  <td className="py-2 pr-3 text-slate-300">
+                  <td className="py-2 pr-3 text-neutral-300">
                     <span className="block truncate" title={company.nip ?? "-"}>
                       {company.nip ?? "-"}
                     </span>
@@ -465,7 +465,7 @@ export function AdminCompaniesTable({
                       className={
                         company.isPremium
                           ? "inline-flex min-w-[150px] justify-center rounded-md border border-amber-600 bg-amber-500/10 px-2 py-1 text-center text-xs text-amber-200 whitespace-nowrap"
-                          : "inline-flex min-w-[150px] justify-center rounded-md border border-slate-700 bg-slate-800/60 px-2 py-1 text-center text-xs text-slate-300 whitespace-nowrap"
+                          : "inline-flex min-w-[150px] justify-center rounded-md border border-neutral-700 bg-neutral-800/60 px-2 py-1 text-center text-xs text-neutral-300 whitespace-nowrap"
                       }
                     >
                       {company.isPremium ? messages.premium : messages.regular}
@@ -492,36 +492,36 @@ export function AdminCompaniesTable({
                             {messages.previewDeletionReason}
                           </button>
                         ) : (
-                          <span className="text-xs text-slate-500">{messages.noDeletionReason}</span>
+                          <span className="text-xs text-neutral-500">{messages.noDeletionReason}</span>
                         )}
                         {company.deletionRequest.requestedAt ? (
-                          <span className="text-xs text-slate-500">
+                          <span className="text-xs text-neutral-500">
                             {messages.deletionRequestedAt}:{" "}
                             {new Date(company.deletionRequest.requestedAt).toLocaleString(locale)}
                           </span>
                         ) : null}
                       </div>
                     ) : (
-                      <span className="inline-flex rounded-md border border-slate-700 bg-slate-800/60 px-2 py-1 text-xs text-slate-300">
+                      <span className="inline-flex rounded-md border border-neutral-700 bg-neutral-800/60 px-2 py-1 text-xs text-neutral-300">
                         {messages.deletionNotRequested}
                       </span>
                     )}
                   </td>
-                  <td className="py-2 pr-3 text-slate-300">
+                  <td className="py-2 pr-3 text-neutral-300">
                     {company.createdBy ? (
                       <div>
                         <p className="truncate" title={company.createdBy.name}>
                           {company.createdBy.name}
                         </p>
-                        <p className="truncate text-xs text-slate-500" title={company.createdBy.email}>
+                        <p className="truncate text-xs text-neutral-500" title={company.createdBy.email}>
                           {company.createdBy.email}
                         </p>
                       </div>
                     ) : (
-                      <span className="text-slate-500">{messages.noCreator}</span>
+                      <span className="text-neutral-500">{messages.noCreator}</span>
                     )}
                   </td>
-                  <td className="py-2 text-slate-400">
+                  <td className="py-2 text-neutral-400">
                     {new Date(company.createdAt).toLocaleString(locale)}
                   </td>
                   <td className="py-2">
@@ -565,7 +565,7 @@ export function AdminCompaniesTable({
                         type="button"
                         className={
                           company.isPremium
-                            ? "min-w-[140px] rounded-md border border-slate-700 px-2 py-1 text-center text-xs text-slate-200 whitespace-nowrap hover:border-slate-500 disabled:opacity-50"
+                            ? "min-w-[140px] rounded-md border border-neutral-700 px-2 py-1 text-center text-xs text-neutral-200 whitespace-nowrap hover:border-neutral-500 disabled:opacity-50"
                             : "min-w-[140px] rounded-md border border-amber-700 px-2 py-1 text-center text-xs text-amber-200 whitespace-nowrap hover:border-amber-500 disabled:opacity-50"
                         }
                         disabled={updatingId === company.id}
@@ -599,7 +599,7 @@ export function AdminCompaniesTable({
         </div>
       )}
       <div className="mt-3 flex items-center justify-between gap-2">
-        <p className="text-xs text-slate-400">
+        <p className="text-xs text-neutral-400">
           {messages.pageInfo
             .replace("{page}", String(meta.page))
             .replace("{totalPages}", String(meta.totalPages))
@@ -608,7 +608,7 @@ export function AdminCompaniesTable({
         <div className="flex items-center gap-2">
           <button
             type="button"
-            className="rounded-md border border-slate-700 px-2 py-1 text-xs text-slate-200 hover:border-slate-500 disabled:opacity-50"
+            className="rounded-md border border-neutral-700 px-2 py-1 text-xs text-neutral-200 hover:border-neutral-500 disabled:opacity-50"
             disabled={page <= 1}
             onClick={() => {
               setPage((current) => Math.max(1, current - 1));
@@ -618,7 +618,7 @@ export function AdminCompaniesTable({
           </button>
           <button
             type="button"
-            className="rounded-md border border-slate-700 px-2 py-1 text-xs text-slate-200 hover:border-slate-500 disabled:opacity-50"
+            className="rounded-md border border-neutral-700 px-2 py-1 text-xs text-neutral-200 hover:border-neutral-500 disabled:opacity-50"
             disabled={page >= meta.totalPages}
             onClick={() => {
               setPage((current) => Math.min(meta.totalPages, current + 1));
@@ -630,27 +630,27 @@ export function AdminCompaniesTable({
       </div>
       {reasonPreview ? (
         <div
-          className="fixed inset-0 z-[70] flex items-center justify-center overflow-y-auto [&>div:not(.fixed)]:my-auto [&>div:not(.fixed)]:max-h-[calc(100dvh-2rem)] [&>div:not(.fixed)]:!overflow-y-auto bg-slate-950/80 p-4"
+          className="fixed inset-0 z-[70] flex items-center justify-center overflow-y-auto [&>div:not(.fixed)]:my-auto [&>div:not(.fixed)]:max-h-[calc(100dvh-2rem)] [&>div:not(.fixed)]:!overflow-y-auto bg-neutral-950/80 p-4"
           role="dialog"
           aria-modal="true"
         >
-          <div className="w-full max-w-xl rounded-xl border border-slate-700 bg-slate-900 p-5 shadow-2xl">
-            <h3 className="text-base font-semibold text-slate-100">
+          <div className="w-full max-w-xl rounded-xl border border-neutral-700 bg-neutral-900 p-5 shadow-2xl">
+            <h3 className="text-base font-semibold text-neutral-100">
               {messages.deletionReasonModalTitle.replace("{company}", reasonPreview.companyName)}
             </h3>
             {reasonPreview.requestedAt ? (
-              <p className="mt-1 text-xs text-slate-400">
+              <p className="mt-1 text-xs text-neutral-400">
                 {messages.deletionRequestedAt}:{" "}
                 {new Date(reasonPreview.requestedAt).toLocaleString(locale)}
               </p>
             ) : null}
-            <p className="mt-3 whitespace-pre-wrap rounded-md border border-slate-800 bg-slate-950 p-3 text-sm text-slate-200">
+            <p className="mt-3 whitespace-pre-wrap rounded-md border border-neutral-800 bg-neutral-950 p-3 text-sm text-neutral-200">
               {reasonPreview.reason || messages.noDeletionReason}
             </p>
             <div className="mt-4 flex justify-end">
               <button
                 type="button"
-                className="cursor-pointer rounded-md border border-slate-700 px-3 py-2 text-sm text-slate-200 hover:border-slate-500"
+                className="cursor-pointer rounded-md border border-neutral-700 px-3 py-2 text-sm text-neutral-200 hover:border-neutral-500"
                 onClick={() => {
                   setReasonPreview(null);
                 }}
@@ -663,21 +663,21 @@ export function AdminCompaniesTable({
       ) : null}
       {deleteConfirm ? (
         <div
-          className="fixed inset-0 z-[70] flex items-center justify-center overflow-y-auto [&>div:not(.fixed)]:my-auto [&>div:not(.fixed)]:max-h-[calc(100dvh-2rem)] [&>div:not(.fixed)]:!overflow-y-auto bg-slate-950/75 p-4"
+          className="fixed inset-0 z-[70] flex items-center justify-center overflow-y-auto [&>div:not(.fixed)]:my-auto [&>div:not(.fixed)]:max-h-[calc(100dvh-2rem)] [&>div:not(.fixed)]:!overflow-y-auto bg-neutral-950/75 p-4"
           role="dialog"
           aria-modal="true"
         >
-          <div className="w-full max-w-md rounded-xl border border-slate-700 bg-slate-900 p-4 shadow-2xl">
-            <h3 className="text-sm font-semibold text-slate-100">
+          <div className="w-full max-w-md rounded-xl border border-neutral-700 bg-neutral-900 p-4 shadow-2xl">
+            <h3 className="text-sm font-semibold text-neutral-100">
               {messages.confirmDeleteTitle}
             </h3>
-            <p className="mt-2 text-xs leading-5 text-slate-300">
+            <p className="mt-2 text-xs leading-5 text-neutral-300">
               {messages.confirmDeleteText.replace("{company}", deleteConfirm.companyName)}
             </p>
             <div className="mt-4 flex justify-end gap-2">
               <button
                 type="button"
-                className="rounded-md border border-slate-700 px-3 py-1.5 text-xs text-slate-300 hover:border-slate-500"
+                className="rounded-md border border-neutral-700 px-3 py-1.5 text-xs text-neutral-300 hover:border-neutral-500"
                 onClick={() => {
                   setDeleteConfirm(null);
                 }}
@@ -701,5 +701,6 @@ export function AdminCompaniesTable({
     </section>
   );
 }
+
 
 

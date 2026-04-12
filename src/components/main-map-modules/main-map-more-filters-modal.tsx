@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import type { ReactNode } from "react";
 import { createPortal } from "react-dom";
@@ -40,7 +40,7 @@ export function MainMapMoreFiltersModal({
   return createPortal(
     <div className="fixed inset-0 z-[70] flex items-center justify-center overflow-y-auto [&>div:not(.fixed)]:my-auto [&>div:not(.fixed)]:max-h-[calc(100dvh-2rem)] [&>div:not(.fixed)]:!overflow-y-auto p-4">
       <div
-        className="fixed inset-0 bg-slate-950/80 backdrop-blur-sm"
+        className="fixed inset-0 bg-neutral-950/80 backdrop-blur-sm"
         aria-hidden="true"
         onClick={onClose}
       />
@@ -60,4 +60,5 @@ export function MainMapMoreFiltersModal({
     document.body,
   );
 }
+
 

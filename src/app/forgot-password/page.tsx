@@ -42,7 +42,7 @@ export default async function ForgotPasswordPage({
   const turnstileSiteKey = getTurnstileSiteKey();
 
   return (
-    <div className="px-4 py-8 text-slate-100 sm:py-10">
+    <div className="px-4 py-8 text-neutral-100 sm:py-10">
       <main className="mx-auto flex w-full max-w-7xl justify-center">
         <ForgotPasswordForm
           locale={locale}
@@ -53,3 +53,4 @@ export default async function ForgotPasswordPage({
     </div>
   );
 }
+

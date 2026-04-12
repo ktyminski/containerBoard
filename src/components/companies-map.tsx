@@ -890,19 +890,19 @@ export function CompaniesMap({
   );
 
   return (
-    <section className="flex h-full min-h-0 flex-col border border-slate-800 bg-slate-950/40">
+    <section className="flex h-full min-h-0 flex-col border border-neutral-800 bg-neutral-950/40">
       {mapOnly ? (
         <div className="relative min-h-0 flex-1 overflow-hidden">
           <div ref={mapContainerRef} className="h-full min-h-0 w-full" />
           {error ? (
-            <div className="absolute left-3 top-3 z-20 rounded-md border border-red-500/50 bg-slate-950/90 px-3 py-2 text-xs text-red-200">
+            <div className="absolute left-3 top-3 z-20 rounded-md border border-red-500/50 bg-neutral-950/90 px-3 py-2 text-xs text-red-200">
               {error}
             </div>
           ) : null}
           {!isMapReady ? (
-            <div className="absolute inset-0 z-10 flex items-center justify-center bg-slate-900/95">
+            <div className="absolute inset-0 z-10 flex items-center justify-center bg-neutral-900/95">
               <div
-                className="h-8 w-8 animate-spin rounded-full border-2 border-slate-500 border-t-sky-400"
+                className="h-8 w-8 animate-spin rounded-full border-2 border-neutral-500 border-t-sky-400"
                 aria-label={messages.loading}
                 role="status"
               />
@@ -911,7 +911,7 @@ export function CompaniesMap({
         </div>
       ) : (
         <div className="grid min-h-0 flex-1 grid-rows-[minmax(0,1fr)_minmax(0,1fr)] gap-0 lg:grid-cols-[minmax(380px,46%)_minmax(0,1fr)] lg:grid-rows-1">
-          <aside className="map-results-scroll order-1 min-h-0 overflow-y-auto overflow-x-hidden border-t border-slate-800 bg-slate-900/70 lg:h-full lg:border-r lg:border-t-0">
+          <aside className="map-results-scroll order-1 min-h-0 overflow-y-auto overflow-x-hidden border-t border-neutral-800 bg-neutral-900/70 lg:h-full lg:border-r lg:border-t-0">
             <div className="flex min-h-full flex-col p-3">
               {error ? <p className="mt-2 text-sm text-red-300">{error}</p> : null}
               <ul className="mt-1 space-y-2 pr-2 text-sm">
@@ -922,8 +922,8 @@ export function CompaniesMap({
                       tabIndex={0}
                       className={`w-full cursor-pointer rounded-md border px-3 py-2 text-left transition ${
                         company.isPremium
-                          ? "border-slate-800 bg-gradient-to-br from-slate-950 via-amber-950/25 to-slate-950 hover:border-amber-300/80"
-                          : "border-slate-800 bg-slate-950 hover:border-sky-400/60"
+                          ? "border-neutral-800 bg-gradient-to-br from-neutral-950 via-amber-950/25 to-neutral-950 hover:border-amber-300/80"
+                          : "border-neutral-800 bg-neutral-950 hover:border-sky-400/60"
                       }`}
                       onClick={() => {
                         focusCompanyOnMap(company);
@@ -937,10 +937,10 @@ export function CompaniesMap({
                     >
                       <div className="flex min-h-[5.25rem] items-center gap-3">
                         <div
-                          className={`relative h-16 w-16 shrink-0 rounded-md border bg-slate-900 ${
+                          className={`relative h-16 w-16 shrink-0 rounded-md border bg-neutral-900 ${
                             company.isPremium
-                              ? "overflow-visible border-slate-800 shadow-[0_0_14px_rgba(245,158,11,0.35)]"
-                              : "overflow-hidden border-slate-800"
+                              ? "overflow-visible border-neutral-800 shadow-[0_0_14px_rgba(245,158,11,0.35)]"
+                              : "overflow-hidden border-neutral-800"
                           }`}
                         >
                           <div className="relative h-full w-full overflow-hidden rounded-[inherit]">
@@ -962,7 +962,7 @@ export function CompaniesMap({
                             )}
                           </div>
                           {company.isPremium ? (
-                            <span className="absolute left-0 top-0 z-10 inline-flex h-5 w-5 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full border border-amber-400/80 bg-slate-950/90 text-amber-300 shadow-[0_0_10px_rgba(245,158,11,0.35)]">
+                            <span className="absolute left-0 top-0 z-10 inline-flex h-5 w-5 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full border border-amber-400/80 bg-neutral-950/90 text-amber-300 shadow-[0_0_10px_rgba(245,158,11,0.35)]">
                               <svg viewBox="0 0 20 20" className="h-3.5 w-3.5" aria-hidden="true">
                                 <path
                                   d="M10 2.9l2.15 4.35 4.8.7-3.47 3.38.82 4.78L10 13.95 5.7 16.1l.82-4.78L3.05 7.95l4.8-.7L10 2.9Z"
@@ -977,7 +977,7 @@ export function CompaniesMap({
                             <span className="inline-flex max-w-full items-center gap-1.5">
                               <span
                                 className={`truncate font-medium ${
-                                  company.isPremium ? "text-amber-100" : "text-slate-100"
+                                  company.isPremium ? "text-amber-100" : "text-neutral-100"
                                 }`}
                               >
                                 {company.name}
@@ -1001,18 +1001,18 @@ export function CompaniesMap({
                               ) : null}
                             </span>
                           </div>
-                          <p className={`truncate text-xs ${company.isPremium ? "text-amber-100/80" : "text-slate-400"}`}>
+                          <p className={`truncate text-xs ${company.isPremium ? "text-amber-100/80" : "text-neutral-400"}`}>
                             {categoryToLabel(messages, company.category)}
                             {company.locationCity ? (
                               <>
                                 {", "}
-                                <strong className={`font-semibold ${company.isPremium ? "text-amber-100" : "text-slate-200"}`}>
+                                <strong className={`font-semibold ${company.isPremium ? "text-amber-100" : "text-neutral-200"}`}>
                                   {company.locationCity}
                                 </strong>
                               </>
                             ) : null}
                           </p>
-                          <p className={`mt-1 truncate text-xs ${company.isPremium ? "text-amber-200/70" : "text-slate-500"}`}>
+                          <p className={`mt-1 truncate text-xs ${company.isPremium ? "text-amber-200/70" : "text-neutral-500"}`}>
                             {formatCompanySummary(
                               company,
                               messages,
@@ -1023,7 +1023,7 @@ export function CompaniesMap({
                           <div className="mt-1 flex items-center gap-3 text-xs font-medium">
                             <a
                               href={withLang(`/companies/${company.slug}`, locale)}
-                              className={`transition ${company.isPremium ? "text-amber-200/90 hover:text-amber-100" : "text-slate-400 hover:text-sky-300"}`}
+                              className={`transition ${company.isPremium ? "text-amber-200/90 hover:text-amber-100" : "text-neutral-400 hover:text-sky-300"}`}
                               onClick={(event) => {
                                 event.stopPropagation();
                               }}
@@ -1035,7 +1035,7 @@ export function CompaniesMap({
                             </a>
                             <button
                               type="button"
-                              className={`transition ${company.isPremium ? "text-amber-200/90 hover:text-amber-100" : "text-slate-400 hover:text-sky-300"}`}
+                              className={`transition ${company.isPremium ? "text-amber-200/90 hover:text-amber-100" : "text-neutral-400 hover:text-sky-300"}`}
                               onClick={(event) => {
                                 event.stopPropagation();
                                 focusCompanyOnMap(company);
@@ -1058,9 +1058,9 @@ export function CompaniesMap({
               className="h-full min-h-0 w-full"
             />
             {!isMapReady ? (
-              <div className="absolute inset-0 z-10 flex items-center justify-center bg-slate-900/95">
+              <div className="absolute inset-0 z-10 flex items-center justify-center bg-neutral-900/95">
                 <div
-                  className="h-8 w-8 animate-spin rounded-full border-2 border-slate-500 border-t-sky-400"
+                  className="h-8 w-8 animate-spin rounded-full border-2 border-neutral-500 border-t-sky-400"
                   aria-label={messages.loading}
                   role="status"
                 />
@@ -1071,13 +1071,15 @@ export function CompaniesMap({
       )}
 
       {hasMore ? (
-        <p className="border-t border-slate-800 px-3 py-2 text-xs text-amber-300">
+        <p className="border-t border-neutral-800 px-3 py-2 text-xs text-amber-300">
           {messages.tooManyResults}
         </p>
       ) : null}
     </section>
   );
 }
+
+
 
 
 

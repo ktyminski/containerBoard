@@ -15,7 +15,7 @@ export function ImageGrid(props: ImageGridProps) {
       {props.items.map((item) => (
         <div
           key={item.id}
-          className="group relative rounded-md border border-slate-700 bg-slate-900/40 p-1"
+          className="group relative rounded-md border border-neutral-700 bg-neutral-900/40 p-1"
         >
           <button
             type="button"
@@ -43,3 +43,4 @@ export function ImageGrid(props: ImageGridProps) {
     </div>
   );
 }
+

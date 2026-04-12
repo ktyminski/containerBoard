@@ -1,4 +1,4 @@
-﻿import { NextRequest, NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { ObjectId } from "mongodb";
 import { z } from "zod";
 import { getCurrentUserFromRequest } from "@/lib/auth-user";
@@ -110,7 +110,6 @@ export async function POST(request: NextRequest, context: RouteContext) {
       "",
       `Firma/ogloszenie: ${listing.companyName}`,
       `Ilosc w ogloszeniu: ${listing.quantity}`,
-      `Typ transakcji: ${listing.dealType}`,
       "",
       "Dane osoby pytajacej:",
       `Imie i nazwisko: ${inquiry.buyerName}`,
@@ -125,8 +124,7 @@ export async function POST(request: NextRequest, context: RouteContext) {
     const htmlMessage = `
       <p>Otrzymales nowe zapytanie do kontenera <strong>${escapeHtml(summaryLine)}</strong>.</p>
       <p><strong>Firma/ogloszenie:</strong> ${escapeHtml(listing.companyName)}<br/>
-      <strong>Ilosc w ogloszeniu:</strong> ${listing.quantity}<br/>
-      <strong>Typ transakcji:</strong> ${escapeHtml(listing.dealType)}</p>
+      <strong>Ilosc w ogloszeniu:</strong> ${listing.quantity}</p>
       <p><strong>Dane osoby pytajacej:</strong><br/>
       <strong>Imie i nazwisko:</strong> ${escapeHtml(inquiry.buyerName)}<br/>
       <strong>Email:</strong> ${escapeHtml(inquiry.buyerEmail)}<br/>

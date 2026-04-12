@@ -43,7 +43,7 @@ export default async function ResetPasswordPage({
   const token = Array.isArray(params.token) ? params.token[0] : params.token ?? "";
 
   return (
-    <div className="px-4 py-8 text-slate-100 sm:py-10">
+    <div className="px-4 py-8 text-neutral-100 sm:py-10">
       <main className="mx-auto flex w-full max-w-7xl justify-center">
         <ResetPasswordForm
           locale={locale}
@@ -55,3 +55,4 @@ export default async function ResetPasswordPage({
     </div>
   );
 }
+

@@ -26,7 +26,7 @@ export function ImageDropzone(props: ImageDropzoneProps) {
     <div
       className={`rounded-md border border-dashed p-4 text-center ${
         isLight
-          ? "border-slate-300 bg-slate-100/85"
+          ? "border-neutral-300 bg-neutral-100/85"
           : "border-[#334155] bg-[#0b1730]"
       }`}
       onDragOver={(event) => {
@@ -37,12 +37,12 @@ export function ImageDropzone(props: ImageDropzoneProps) {
         handleFileList(event.dataTransfer.files);
       }}
     >
-      <p className={`text-sm ${isLight ? "text-slate-800" : "text-[#e2efff]"}`}>{title}</p>
+      <p className={`text-sm ${isLight ? "text-neutral-800" : "text-[#e2efff]"}`}>{title}</p>
       <button
         type="button"
         className={`mt-2 inline-flex h-8 w-8 cursor-pointer items-center justify-center rounded-full border text-lg transition ${
           isLight
-            ? "border-slate-400 text-slate-700 hover:border-slate-500"
+            ? "border-neutral-400 text-neutral-700 hover:border-neutral-500"
             : "border-[#475569] text-[#dbeafe] hover:border-[#64748b]"
         }`}
         aria-label={title}
@@ -52,7 +52,7 @@ export function ImageDropzone(props: ImageDropzoneProps) {
       >
         +
       </button>
-      <p className={`mt-2 text-xs ${isLight ? "text-slate-600" : "text-[#94a3b8]"}`}>{hintText}</p>
+      <p className={`mt-2 text-xs ${isLight ? "text-neutral-600" : "text-[#94a3b8]"}`}>{hintText}</p>
       <input
         ref={fileInputRef}
         type="file"
@@ -67,4 +67,5 @@ export function ImageDropzone(props: ImageDropzoneProps) {
     </div>
   );
 }
+
 

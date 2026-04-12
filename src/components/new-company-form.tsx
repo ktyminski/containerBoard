@@ -824,22 +824,22 @@ export function NewCompanyForm({
                   <span
                     className={`h-3 w-3 rounded-full border transition ${
                       isActive
-                        ? "border-slate-700 bg-slate-700"
+                        ? "border-neutral-700 bg-neutral-700"
                         : isCompleted
-                          ? "border-slate-500 bg-slate-500"
-                          : "border-slate-300 bg-white"
+                          ? "border-neutral-500 bg-neutral-500"
+                          : "border-neutral-300 bg-white"
                     }`}
                   />
-                  <span className="text-[11px] uppercase tracking-wide text-slate-600">
+                  <span className="text-[11px] uppercase tracking-wide text-neutral-600">
                     {messages.stepLabel} {index + 1}
                   </span>
                   <span
                     className={`truncate text-sm ${
                       isActive
-                        ? "text-slate-800"
+                        ? "text-neutral-800"
                         : isCompleted
-                          ? "text-slate-700"
-                          : "text-slate-600"
+                          ? "text-neutral-700"
+                          : "text-neutral-600"
                     }`}
                   >
                     {stepLabel}
@@ -848,7 +848,7 @@ export function NewCompanyForm({
                 {index < steps.length - 1 ? (
                   <span
                     className={`mx-2 h-px flex-1 ${
-                      index < currentStep ? "bg-slate-400" : "bg-slate-300"
+                      index < currentStep ? "bg-neutral-400" : "bg-neutral-300"
                     }`}
                     aria-hidden="true"
                   />
@@ -859,13 +859,13 @@ export function NewCompanyForm({
         </ol>
       </nav>
 
-      <section className="overflow-hidden rounded-xl border border-slate-300 bg-[linear-gradient(180deg,rgba(248,250,252,0.92)_0%,rgba(241,245,249,0.92)_100%)] shadow-[0_12px_34px_-26px_rgba(15,23,42,0.28)]">
+      <section className="overflow-hidden rounded-xl border border-neutral-300 bg-[linear-gradient(180deg,rgba(248,250,252,0.92)_0%,rgba(241,245,249,0.92)_100%)] shadow-[0_12px_34px_-26px_rgba(15,23,42,0.28)]">
       {creationLimitNotice ? (
-        <section className="m-5 rounded-lg border border-slate-300 bg-slate-100 p-4">
-          <h2 className="text-sm font-semibold text-slate-800">
+        <section className="m-5 rounded-lg border border-neutral-300 bg-neutral-100 p-4">
+          <h2 className="text-sm font-semibold text-neutral-800">
             {messages.creationLimitTitle}
           </h2>
-          <p className="mt-2 text-sm whitespace-pre-line text-slate-700">
+          <p className="mt-2 text-sm whitespace-pre-line text-neutral-700">
             {creationLimitNotice}
           </p>
         </section>
@@ -961,12 +961,12 @@ export function NewCompanyForm({
       <div className="grid gap-4 p-4">
         {currentStep === 0 ? (
         <section className="grid gap-4">
-          <h2 className="text-sm font-semibold text-slate-200">{messages.stepMainInfo}</h2>
+          <h2 className="text-sm font-semibold text-neutral-200">{messages.stepMainInfo}</h2>
 
           <label className="mx-auto grid w-full gap-1 text-sm md:w-[70%]">
-            <span className="text-slate-300">{messages.name}*</span>
+            <span className="text-neutral-300">{messages.name}*</span>
             <input
-              className="rounded-md border border-slate-300 bg-slate-100/85 px-3 py-2 text-slate-800 placeholder:text-[#94a3b8]"
+              className="rounded-md border border-neutral-300 bg-neutral-100/85 px-3 py-2 text-neutral-800 placeholder:text-[#94a3b8]"
               {...register("name", {
                 required: messages.requiredField,
                 minLength: { value: 2, message: messages.requiredField },
@@ -982,9 +982,9 @@ export function NewCompanyForm({
           </label>
 
           <label className="mx-auto grid w-full gap-1 text-sm md:w-[70%]">
-            <span className="text-slate-300">{messages.nip}</span>
+            <span className="text-neutral-300">{messages.nip}</span>
             <input
-              className="rounded-md border border-slate-300 bg-slate-100/85 px-3 py-2 text-slate-800 placeholder:text-[#94a3b8]"
+              className="rounded-md border border-neutral-300 bg-neutral-100/85 px-3 py-2 text-neutral-800 placeholder:text-[#94a3b8]"
               placeholder={messages.nipPlaceholder}
               {...register("nip")}
             />
@@ -993,14 +993,14 @@ export function NewCompanyForm({
                 {getFieldMessage(errors.nip?.message)}
               </p>
             ) : (
-              <p className="text-xs text-slate-400">{messages.nipHint}</p>
+              <p className="text-xs text-neutral-400">{messages.nipHint}</p>
             )}
           </label>
 
           <label className="mx-auto grid w-full gap-1 text-sm md:w-[70%]">
-            <span className="text-slate-300">{messages.description}*</span>
+            <span className="text-neutral-300">{messages.description}*</span>
             <textarea
-              className="min-h-28 rounded-md border border-slate-300 bg-slate-100/85 px-3 py-2 text-slate-800 placeholder:text-[#94a3b8]"
+              className="min-h-28 rounded-md border border-neutral-300 bg-neutral-100/85 px-3 py-2 text-neutral-800 placeholder:text-[#94a3b8]"
               placeholder={messages.descriptionPlaceholder}
               {...register("description", {
                 required: messages.requiredField,
@@ -1014,16 +1014,16 @@ export function NewCompanyForm({
                 {getFieldMessage(errors.description?.message)}
               </p>
             ) : (
-              <p className="text-xs text-slate-400">{messages.descriptionHint}</p>
+              <p className="text-xs text-neutral-400">{messages.descriptionHint}</p>
             )}
           </label>
 
-          <div className="mb-2 mt-4 border-t border-slate-700/70" />
+          <div className="mb-2 mt-4 border-t border-neutral-700/70" />
           <div className="grid gap-4">
             <label className="mx-auto grid w-full gap-1 text-sm md:w-[70%]">
-              <span className="text-slate-300">{messages.operatingAreaLabel}*</span>
+              <span className="text-neutral-300">{messages.operatingAreaLabel}*</span>
               <select
-                className="rounded-md border border-slate-300 bg-slate-100/85 px-3 py-2 text-slate-800 placeholder:text-[#94a3b8]"
+                className="rounded-md border border-neutral-300 bg-neutral-100/85 px-3 py-2 text-neutral-800 placeholder:text-[#94a3b8]"
                 {...register("operatingArea", {
                   required: messages.requiredField,
                 })}
@@ -1042,9 +1042,9 @@ export function NewCompanyForm({
             </label>
 
             <label className="mx-auto grid w-full gap-1 text-sm md:w-[70%]">
-              <span className="text-slate-300">{messages.operatingAreaDetailsLabel}</span>
+              <span className="text-neutral-300">{messages.operatingAreaDetailsLabel}</span>
               <textarea
-                className="min-h-24 rounded-md border border-slate-300 bg-slate-100/85 px-3 py-2 text-slate-800 placeholder:text-[#94a3b8]"
+                className="min-h-24 rounded-md border border-neutral-300 bg-neutral-100/85 px-3 py-2 text-neutral-800 placeholder:text-[#94a3b8]"
                 placeholder={messages.operatingAreaDetailsPlaceholder}
                 {...register("operatingAreaDetails", {
                   maxLength: { value: 200, message: messages.operatingAreaDetailsTooLong },
@@ -1055,7 +1055,7 @@ export function NewCompanyForm({
                   {getFieldMessage(errors.operatingAreaDetails?.message)}
                 </p>
               ) : (
-                <p className="text-xs text-slate-400">{messages.operatingAreaDetailsHint}</p>
+                <p className="text-xs text-neutral-400">{messages.operatingAreaDetailsHint}</p>
               )}
             </label>
           </div>
@@ -1064,15 +1064,15 @@ export function NewCompanyForm({
 
       {currentStep === 2 ? (
       <>
-      <h2 className="text-sm font-semibold text-slate-200">{messages.stepAdditional}</h2>
-      <section className="grid gap-3 rounded-lg border border-slate-700/80 bg-slate-900/45 p-3">
+      <h2 className="text-sm font-semibold text-neutral-200">{messages.stepAdditional}</h2>
+      <section className="grid gap-3 rounded-lg border border-neutral-700/80 bg-neutral-900/45 p-3">
         <div>
-          <h2 className="text-sm font-semibold text-slate-200">
+          <h2 className="text-sm font-semibold text-neutral-200">
             {messages.communicationLanguagesTitle}
           </h2>
-          <p className="text-xs text-slate-400">{messages.communicationLanguagesHint}</p>
+          <p className="text-xs text-neutral-400">{messages.communicationLanguagesHint}</p>
         </div>
-        <p className="text-xs text-slate-300">
+        <p className="text-xs text-neutral-300">
           {messages.communicationLanguagesSelectedLabel}:{" "}
           {selectedCommunicationLanguages.length}
         </p>
@@ -1081,7 +1081,7 @@ export function NewCompanyForm({
             {selectedCommunicationLanguageOptions.map((language) => (
               <div
                 key={language.value}
-                className="inline-flex items-center rounded-md border border-slate-300 bg-slate-100 px-3 py-1 text-xs font-medium text-slate-700"
+                className="inline-flex items-center rounded-md border border-neutral-300 bg-neutral-100 px-3 py-1 text-xs font-medium text-neutral-700"
               >
                 {language.label}
               </div>
@@ -1091,7 +1091,7 @@ export function NewCompanyForm({
         <div>
           <button
             type="button"
-            className="cursor-pointer rounded-md border border-slate-300 bg-slate-100/85 px-3 py-2 text-sm text-slate-700 hover:border-slate-400"
+            className="cursor-pointer rounded-md border border-neutral-300 bg-neutral-100/85 px-3 py-2 text-sm text-neutral-700 hover:border-neutral-400"
             onClick={() => setIsCommunicationLanguagesModalOpen(true)}
           >
             {messages.communicationLanguagesOpenModal}
@@ -1099,14 +1099,14 @@ export function NewCompanyForm({
         </div>
       </section>
 
-      <section className="grid gap-3 rounded-lg border border-slate-700/80 bg-slate-900/45 p-3">
+      <section className="grid gap-3 rounded-lg border border-neutral-700/80 bg-neutral-900/45 p-3">
         <div>
-          <h2 className="text-sm font-semibold text-slate-200">
+          <h2 className="text-sm font-semibold text-neutral-200">
             {messages.benefitsTitle}
           </h2>
-          <p className="text-xs text-slate-400">{messages.benefitsHint}</p>
+          <p className="text-xs text-neutral-400">{messages.benefitsHint}</p>
         </div>
-        <p className="text-xs text-slate-300">
+        <p className="text-xs text-neutral-300">
           {messages.benefitsSelectedLabel}: {selectedBenefits.length}
         </p>
         {selectedBenefitOptions.length > 0 ? (
@@ -1114,7 +1114,7 @@ export function NewCompanyForm({
             {selectedBenefitOptions.map((benefit) => (
               <div
                 key={benefit.value}
-                className="inline-flex items-center rounded-md border border-slate-300 bg-slate-100 px-3 py-1 text-xs font-medium text-slate-700"
+                className="inline-flex items-center rounded-md border border-neutral-300 bg-neutral-100 px-3 py-1 text-xs font-medium text-neutral-700"
               >
                 {benefit.label}
               </div>
@@ -1124,7 +1124,7 @@ export function NewCompanyForm({
         <div>
           <button
             type="button"
-            className="cursor-pointer rounded-md border border-slate-300 bg-slate-100/85 px-3 py-2 text-sm text-slate-700 hover:border-slate-400"
+            className="cursor-pointer rounded-md border border-neutral-300 bg-neutral-100/85 px-3 py-2 text-sm text-neutral-700 hover:border-neutral-400"
             onClick={() => setIsBenefitsModalOpen(true)}
           >
             {messages.benefitsOpenModal}
@@ -1132,14 +1132,14 @@ export function NewCompanyForm({
         </div>
       </section>
 
-      <section className="grid gap-3 rounded-lg border border-slate-700/80 bg-slate-900/45 p-3">
+      <section className="grid gap-3 rounded-lg border border-neutral-700/80 bg-neutral-900/45 p-3">
         <div>
-          <h2 className="text-sm font-semibold text-slate-200">
+          <h2 className="text-sm font-semibold text-neutral-200">
             {messages.specializationsTitle}
           </h2>
-          <p className="text-xs text-slate-400">{messages.specializationsHint}</p>
+          <p className="text-xs text-neutral-400">{messages.specializationsHint}</p>
         </div>
-        <p className="text-xs text-slate-300">
+        <p className="text-xs text-neutral-300">
           {messages.specializationsSelectedLabel}: {selectedSpecializations.length}
         </p>
         {selectedSpecializationOptions.length > 0 ? (
@@ -1147,7 +1147,7 @@ export function NewCompanyForm({
             {selectedSpecializationOptions.map((specialization) => (
               <div
                 key={specialization.value}
-                className="inline-flex items-center rounded-md border border-slate-300 bg-slate-100 px-3 py-1 text-xs font-medium text-slate-700"
+                className="inline-flex items-center rounded-md border border-neutral-300 bg-neutral-100 px-3 py-1 text-xs font-medium text-neutral-700"
               >
                 {specialization.label}
               </div>
@@ -1157,7 +1157,7 @@ export function NewCompanyForm({
         <div>
           <button
             type="button"
-            className="cursor-pointer rounded-md border border-slate-300 bg-slate-100/85 px-3 py-2 text-sm text-slate-700 hover:border-slate-400"
+            className="cursor-pointer rounded-md border border-neutral-300 bg-neutral-100/85 px-3 py-2 text-sm text-neutral-700 hover:border-neutral-400"
             onClick={() => setIsSpecializationsModalOpen(true)}
           >
             {messages.specializationsOpenModal}
@@ -1165,10 +1165,10 @@ export function NewCompanyForm({
         </div>
       </section>
 
-      <section className="grid gap-3 rounded-lg border border-slate-700/80 bg-slate-900/45 p-3">
+      <section className="grid gap-3 rounded-lg border border-neutral-700/80 bg-neutral-900/45 p-3">
         <div>
-          <h2 className="text-sm font-semibold text-slate-200">{messages.photosTitle}</h2>
-          <p className="text-xs text-slate-400">
+          <h2 className="text-sm font-semibold text-neutral-200">{messages.photosTitle}</h2>
+          <p className="text-xs text-neutral-400">
             {formatTemplate(messages.imageDropzoneHintWithLimit, {
               maxMb: MAX_PHOTO_MB,
             })}
@@ -1252,7 +1252,7 @@ export function NewCompanyForm({
               return (
               <div
                 key={`initial-photo-${index + 1}`}
-                className="group relative rounded-md border border-slate-700 bg-slate-900/40 p-1"
+                className="group relative rounded-md border border-neutral-700 bg-neutral-900/40 p-1"
               >
                 <button
                   type="button"
@@ -1303,12 +1303,12 @@ export function NewCompanyForm({
         className={currentStep === 1 ? "grid gap-4" : "hidden"}
         aria-hidden={currentStep !== 1}
       >
-      <h2 className="text-sm font-semibold text-slate-200">{messages.stepContact}</h2>
+      <h2 className="text-sm font-semibold text-neutral-200">{messages.stepContact}</h2>
 
       <label className="mx-auto grid w-full gap-1 text-sm md:w-[70%]">
-        <span className="text-slate-300">{messages.phone}</span>
+        <span className="text-neutral-300">{messages.phone}</span>
         <input
-          className="rounded-md border border-slate-300 bg-slate-100/85 px-3 py-2 text-slate-800 placeholder:text-[#94a3b8]"
+          className="rounded-md border border-neutral-300 bg-neutral-100/85 px-3 py-2 text-neutral-800 placeholder:text-[#94a3b8]"
           {...register("phone", {
             validate: {
               format: (value) =>
@@ -1325,9 +1325,9 @@ export function NewCompanyForm({
       </label>
 
       <label className="mx-auto grid w-full gap-1 text-sm md:w-[70%]">
-        <span className="text-slate-300">{messages.email}*</span>
+        <span className="text-neutral-300">{messages.email}*</span>
         <input
-          className="rounded-md border border-slate-300 bg-slate-100/85 px-3 py-2 text-slate-800 placeholder:text-[#94a3b8]"
+          className="rounded-md border border-neutral-300 bg-neutral-100/85 px-3 py-2 text-neutral-800 placeholder:text-[#94a3b8]"
           {...register("email", {
             validate: {
               required: (value) => value.trim().length > 0 || messages.requiredField,
@@ -1345,9 +1345,9 @@ export function NewCompanyForm({
       </label>
 
       <label className="mx-auto grid w-full gap-1 text-sm md:w-[70%]">
-        <span className="text-slate-300">{messages.website}</span>
+        <span className="text-neutral-300">{messages.website}</span>
         <input
-          className="rounded-md border border-slate-300 bg-slate-100/85 px-3 py-2 text-slate-800 placeholder:text-[#94a3b8]"
+          className="rounded-md border border-neutral-300 bg-neutral-100/85 px-3 py-2 text-neutral-800 placeholder:text-[#94a3b8]"
           {...register("website")}
         />
         {getFieldMessage(errors.website?.message) ? (
@@ -1357,15 +1357,15 @@ export function NewCompanyForm({
         ) : null}
       </label>
 
-      <div className="mb-2 mt-4 border-t border-slate-700/70" />
+      <div className="mb-2 mt-4 border-t border-neutral-700/70" />
       <div className="grid gap-4">
         <label className="mx-auto grid w-full gap-1 text-sm md:w-[70%]">
-          <span className="flex items-center gap-2 text-slate-300">
-            <FacebookIcon className="h-4 w-4 text-slate-400" />
+          <span className="flex items-center gap-2 text-neutral-300">
+            <FacebookIcon className="h-4 w-4 text-neutral-400" />
             {messages.facebookUrl}
           </span>
           <input
-            className="rounded-md border border-slate-300 bg-slate-100/85 px-3 py-2 text-slate-800 placeholder:text-[#94a3b8]"
+            className="rounded-md border border-neutral-300 bg-neutral-100/85 px-3 py-2 text-neutral-800 placeholder:text-[#94a3b8]"
             {...register("facebookUrl", {
               validate: (value) =>
                 isValidWebsite(value) || messages.invalidWebsite,
@@ -1380,12 +1380,12 @@ export function NewCompanyForm({
         </label>
 
         <label className="mx-auto grid w-full gap-1 text-sm md:w-[70%]">
-          <span className="flex items-center gap-2 text-slate-300">
-            <InstagramIcon className="h-4 w-4 text-slate-400" />
+          <span className="flex items-center gap-2 text-neutral-300">
+            <InstagramIcon className="h-4 w-4 text-neutral-400" />
             {messages.instagramUrl}
           </span>
           <input
-            className="rounded-md border border-slate-300 bg-slate-100/85 px-3 py-2 text-slate-800 placeholder:text-[#94a3b8]"
+            className="rounded-md border border-neutral-300 bg-neutral-100/85 px-3 py-2 text-neutral-800 placeholder:text-[#94a3b8]"
             placeholder={messages.instagramPlaceholder}
             {...register("instagramUrl", {
               validate: (value) =>
@@ -1400,12 +1400,12 @@ export function NewCompanyForm({
         </label>
 
         <label className="mx-auto grid w-full gap-1 text-sm md:w-[70%]">
-          <span className="flex items-center gap-2 text-slate-300">
-            <LinkedInIcon className="h-4 w-4 text-slate-400" />
+          <span className="flex items-center gap-2 text-neutral-300">
+            <LinkedInIcon className="h-4 w-4 text-neutral-400" />
             {messages.linkedinUrl}
           </span>
           <input
-            className="rounded-md border border-slate-300 bg-slate-100/85 px-3 py-2 text-slate-800 placeholder:text-[#94a3b8]"
+            className="rounded-md border border-neutral-300 bg-neutral-100/85 px-3 py-2 text-neutral-800 placeholder:text-[#94a3b8]"
             placeholder={messages.linkedinPlaceholder}
             {...register("linkedinUrl", {
               validate: (value) =>
@@ -1422,7 +1422,7 @@ export function NewCompanyForm({
 
       <div className="grid gap-3">
         <div className="flex items-center justify-between">
-          <h2 className="text-lg font-semibold text-slate-100">
+          <h2 className="text-lg font-semibold text-neutral-100">
             {messages.branchesTitle}
           </h2>
         </div>
@@ -1460,7 +1460,7 @@ export function NewCompanyForm({
         })}
         <button
           type="button"
-          className="inline-flex w-fit cursor-pointer items-center gap-1 pl-2 text-sm text-slate-700 hover:text-slate-900"
+          className="inline-flex w-fit cursor-pointer items-center gap-1 pl-2 text-sm text-neutral-700 hover:text-neutral-900"
           onClick={addBranch}
         >
           {messages.addBranch}
@@ -1655,22 +1655,22 @@ export function NewCompanyForm({
       {isPostCreateModalOpen ? (
         <div className="fixed inset-0 z-[80] flex items-center justify-center p-4">
           <div
-            className="absolute inset-0 bg-slate-950/85 backdrop-blur-sm"
+            className="absolute inset-0 bg-neutral-950/85 backdrop-blur-sm"
             onClick={closePostCreateModal}
             aria-hidden="true"
           />
-          <div className="relative z-10 w-full max-w-2xl rounded-2xl border border-slate-600/50 bg-slate-950 p-6 shadow-[0_30px_90px_-40px_rgba(15,23,42,0.55)] sm:p-7">
-            <h3 className="text-2xl font-semibold text-slate-100 sm:text-3xl">
+          <div className="relative z-10 w-full max-w-2xl rounded-2xl border border-neutral-600/50 bg-neutral-950 p-6 shadow-[0_30px_90px_-40px_rgba(15,23,42,0.55)] sm:p-7">
+            <h3 className="text-2xl font-semibold text-neutral-100 sm:text-3xl">
               {messages.postCreateModalTitle}
             </h3>
-            <div className="mt-4 space-y-3 text-sm leading-6 text-slate-300 sm:text-base">
+            <div className="mt-4 space-y-3 text-sm leading-6 text-neutral-300 sm:text-base">
               <p>
                 {messages.postCreateModalIntro}
               </p>
               <p>
                 {messages.postCreateModalCollabIntro}
               </p>
-              <ul className="list-disc space-y-1 pl-5 marker:text-slate-400">
+              <ul className="list-disc space-y-1 pl-5 marker:text-neutral-400">
                 <li>{messages.postCreateModalBulletSupport}</li>
                 <li>{messages.postCreateModalBulletCoCreate}</li>
                 <li>{messages.postCreateModalBulletPartner}</li>
@@ -1682,14 +1682,14 @@ export function NewCompanyForm({
             <div className="mt-6 flex flex-wrap justify-end gap-2">
               <button
                 type="button"
-                className="rounded-md border border-slate-700 px-4 py-2 text-sm text-slate-200 hover:border-slate-500"
+                className="rounded-md border border-neutral-700 px-4 py-2 text-sm text-neutral-200 hover:border-neutral-500"
                 onClick={closePostCreateModal}
               >
                 {messages.postCreateModalClose}
               </button>
               <button
                 type="button"
-                className="rounded-md bg-slate-200 px-4 py-2 text-sm font-medium text-slate-900 hover:bg-slate-100"
+                className="rounded-md bg-neutral-200 px-4 py-2 text-sm font-medium text-neutral-900 hover:bg-neutral-100"
                 onClick={() => {
                   setIsPostCreateModalOpen(false);
                   router.push(withLang("/contact", locale));
@@ -1704,5 +1704,6 @@ export function NewCompanyForm({
     </section>
   );
 }
+
 
 

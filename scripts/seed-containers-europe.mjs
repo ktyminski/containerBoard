@@ -13,7 +13,6 @@ const TTL_DAYS = 14;
 const SYSTEM_USER_ID = new ObjectId("0000000000000000000000c0");
 
 const containerTypes = ["20DV", "40DV", "40HC", "reefer", "open_top", "flat_rack", "other"];
-const dealTypes = ["sale", "rent", "one_way", "long_term"];
 
 const companies = [
   "North Harbor Logistics",
@@ -117,7 +116,7 @@ function buildListing(index, now) {
   const street = hub.street;
   const listingType = Math.random() < 0.62 ? "available" : "wanted";
   const containerType = pick(containerTypes);
-  const dealType = pick(dealTypes);
+  const isRentLikePricing = Math.random() < 0.34;
   const quantity = randomInt(1, 120);
   const createdAt = new Date(now.getTime() - randomInt(0, 4) * 24 * 60 * 60 * 1000 - randomInt(0, 720) * 60 * 1000);
   const updatedAt = new Date(createdAt.getTime() + randomInt(5, 96) * 60 * 1000);
@@ -125,7 +124,7 @@ function buildListing(index, now) {
   const expiresAt = new Date(createdAt.getTime() + TTL_DAYS * 24 * 60 * 60 * 1000);
 
   const priceValue =
-    dealType === "rent"
+    isRentLikePricing
       ? `${randomInt(45, 380)} EUR / tydz.`
       : `${randomInt(900, 4200)} EUR`;
 
@@ -145,7 +144,6 @@ function buildListing(index, now) {
       country: hub.country,
     },
     availableFrom,
-    dealType,
     price: priceValue,
     description: `${SEED_PREFIX} ${listingType === "available" ? "Oferta" : "Zapytanie"} ${containerType} w lokalizacji ${hub.city}.`,
     companyName: company,
@@ -168,7 +166,7 @@ async function run() {
 
   await listings.createIndex({ status: 1, expiresAt: 1, createdAt: -1 });
   await listings.createIndex({ createdByUserId: 1, createdAt: -1 });
-  await listings.createIndex({ type: 1, containerType: 1, dealType: 1, createdAt: -1 });
+  await listings.createIndex({ type: 1, containerType: 1, createdAt: -1 });
   await listings.createIndex({ locationCity: 1, locationCountry: 1 });
   await listings.createIndex({ locationLat: 1, locationLng: 1 });
   await listings.createIndex({ expiresAt: 1 });

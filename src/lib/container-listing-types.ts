@@ -1,6 +1,9 @@
 export const LISTING_TYPES = ["available", "wanted"] as const;
-export const DEAL_TYPES = ["sale", "rent", "one_way", "long_term"] as const;
 export const LISTING_STATUSES = ["active", "expired", "closed"] as const;
+export const PRICE_CURRENCIES = ["PLN", "EUR", "USD"] as const;
+export const PRICE_UNITS = ["per_container", "per_month"] as const;
+export const PRICE_TYPES = ["fixed", "starting_from", "request"] as const;
+export const PRICE_TAX_MODES = ["net", "gross"] as const;
 
 export const CONTAINER_SIZES = [10, 20, 40, 45, 53] as const;
 export const CONTAINER_HEIGHTS = ["standard", "HC"] as const;
@@ -49,13 +52,42 @@ export const LISTING_STATUS = {
 } as const;
 
 export type ListingType = (typeof LISTING_TYPES)[number];
-export type DealType = (typeof DEAL_TYPES)[number];
 export type ListingStatus = (typeof LISTING_STATUSES)[number];
+export type Currency = (typeof PRICE_CURRENCIES)[number];
+export type PriceUnit = (typeof PRICE_UNITS)[number];
+export type PriceType = (typeof PRICE_TYPES)[number];
+export type TaxMode = (typeof PRICE_TAX_MODES)[number];
 export type ContainerSize = (typeof CONTAINER_SIZES)[number];
 export type ContainerHeight = (typeof CONTAINER_HEIGHTS)[number];
 export type ContainerType = (typeof CONTAINER_TYPES)[number];
 export type ContainerFeature = (typeof CONTAINER_FEATURES)[number];
 export type ContainerCondition = (typeof CONTAINER_CONDITIONS)[number];
+
+export type ListingPrice = {
+  type: PriceType;
+  original: {
+    amount: number | null;
+    currency: Currency | null;
+    unit: PriceUnit | null;
+    taxMode: TaxMode | null;
+    vatRate: number | null;
+    negotiable: boolean;
+  };
+  normalized: {
+    net: {
+      amountPln: number | null;
+      amountEur: number | null;
+      amountUsd: number | null;
+    };
+    gross: {
+      amountPln: number | null;
+      amountEur: number | null;
+      amountUsd: number | null;
+    };
+    fxDate: string | null;
+    fxSource: string | null;
+  };
+};
 
 export type Container = {
   size: ContainerSize;
@@ -105,8 +137,30 @@ export const CONTAINER_CONDITION_LABEL: Record<ContainerCondition, string> = {
   as_is: "As Is",
 };
 
+export const PRICE_CURRENCY_LABEL: Record<Currency, string> = {
+  PLN: "PLN",
+  EUR: "EUR",
+  USD: "USD",
+};
+
+export const PRICE_UNIT_LABEL: Record<PriceUnit, string> = {
+  per_container: "Za kontener",
+  per_month: "Za miesiac",
+};
+
+export const PRICE_TYPE_LABEL: Record<PriceType, string> = {
+  fixed: "Cena stala",
+  starting_from: "Cena od",
+  request: "Zapytaj o cene",
+};
+
+export const PRICE_TAX_MODE_LABEL: Record<TaxMode, string> = {
+  net: "Netto",
+  gross: "Brutto",
+};
+
 export function getContainerShortLabel(container: Container): string {
-  const sizeLabel = `${container.size}${container.height === "HC" ? "HC" : ""}`;
+  const sizeLabel = `${container.size}'${container.height === "HC" ? "HC" : ""}`;
   const typeLabel = CONTAINER_TYPE_LABEL[container.type];
   return `${sizeLabel} ${typeLabel}`;
 }

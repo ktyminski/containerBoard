@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
@@ -30,9 +30,6 @@ export function AppFooter({ locale, messages }: AppFooterProps) {
           </Link>
           <Link href={withLang("/containers/new", locale)} className="transition hover:text-[#7dd3fc]">
             Dodaj kontener
-          </Link>
-          <Link href={withLang("/containers/mine", locale)} className="transition hover:text-[#7dd3fc]">
-            Moje kontenery
           </Link>
           <Link href={withLang("/privacy-policy", locale)} className="transition hover:text-[#7dd3fc]">
             {messages.privacyPolicy}
