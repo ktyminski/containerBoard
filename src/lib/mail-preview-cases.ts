@@ -1,4 +1,5 @@
 import {
+  buildContainerInquiryMail,
   type MailTemplateContent,
   buildClaimDecisionMail,
   buildClaimSubmittedMail,
@@ -74,6 +75,24 @@ export function getMailPreviewCases(): MailPreviewCase[] {
         approved: false,
         companyName: "Baltic Freight Hub",
         name: "Kamil Nowicki",
+      }),
+    },
+    {
+      id: "container-inquiry",
+      label: "Container inquiry",
+      description: "Zapytanie do ogloszenia kontenerowego (z opcjonalna cena)",
+      mockedRecipient: "sprzedaz@example.com",
+      content: buildContainerInquiryMail({
+        containerLabel: "40' HC",
+        summaryLine: "40' HC | sell | Gdansk, Polska",
+        companyName: "Baltic Containers",
+        listingQuantity: 8,
+        buyerName: "Jan Kowalski",
+        buyerEmail: "jan.kowalski@example.com",
+        buyerPhone: "+48 600 700 800",
+        inquiryMessage: "Prosze o kontakt i warunki dostawy.",
+        requestedQuantity: 3,
+        offeredPrice: "12000 EUR",
       }),
     },
   ];

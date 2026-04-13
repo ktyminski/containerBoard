@@ -55,7 +55,7 @@ export default async function NewCompanyPage({ searchParams }: NewCompanyPagePro
         });
 
   return (
-    <section className="relative overflow-hidden bg-[linear-gradient(180deg,#ffffff_0%,#f8fafc_100%)]">
+    <section className="bg-neutral-100">
       <main className="relative mx-auto flex w-full max-w-5xl flex-col gap-6 px-4 py-6 sm:px-6">
         <header>
           <h1 className="text-2xl font-semibold text-neutral-900 sm:text-3xl">

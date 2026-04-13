@@ -3,11 +3,12 @@
 import { memo, useCallback, useEffect, useMemo, useRef, useState, type FocusEvent } from "react";
 import { FormProvider, useForm } from "react-hook-form";
 import maplibregl, { type GeoJSONSource } from "maplibre-gl";
-import { usePathname, useSearchParams } from "next/navigation";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { MAP_STYLE_URL } from "@/components/map-shared";
 import { ContainerListingsFilters } from "@/components/container-listings-filters";
 import { ContainerListingsResults } from "@/components/container-listings-results";
 import { useToast } from "@/components/toast-provider";
+import { usePageScrollLock } from "@/components/use-page-scroll-lock";
 import {
   FILTER_FORM_DEFAULTS,
   LISTING_TYPE_LABEL,
@@ -104,7 +105,7 @@ const MAX_POPUP_VISIBLE_ITEMS = 20;
 const DEFAULT_MAP_CENTER: [number, number] = [19.1451, 51.9194];
 const LIST_PAGE_SIZE = 20;
 const GUEST_FAVORITES_STORAGE_KEY = "container-listing-favorites-v1";
-
+const OVERLAY_CLOSE_ANIMATION_MS = 280;
 const DARK_BLUE_CTA_BASE_CLASS =
   "border border-[#2f639a] bg-[linear-gradient(180deg,#082650_0%,#0c3466_100%)] text-[#e2efff] transition hover:border-[#67c7ff] hover:text-white";
 
@@ -235,6 +236,8 @@ function fitMapToPoints(
 function buildMapPopupListNode(
   listings: ContainerListingItem[],
   totalItemsCount = listings.length,
+  detailsHrefPrefix = "/containers",
+  detailsQueryString = "",
 ): HTMLElement {
   const scroll = document.createElement("div");
   scroll.className = "company-map-popup-scroll max-h-72 overflow-y-auto pr-1";
@@ -246,7 +249,9 @@ function buildMapPopupListNode(
 
   for (const item of visibleItems) {
     const entry = document.createElement("a");
-    entry.href = `/containers/${item.id}`;
+    entry.href = detailsQueryString
+      ? `${detailsHrefPrefix}/${item.id}?${detailsQueryString}`
+      : `${detailsHrefPrefix}/${item.id}`;
     entry.className = "company-map-popup-item";
 
     const card = document.createElement("article");
@@ -330,9 +335,13 @@ function setSourceData(map: maplibregl.Map, data: MapFeatureCollection): void {
 const ListingsMap = memo(function ListingsMap({
   items,
   isVisible,
+  detailsHrefPrefix,
+  detailsQueryString,
 }: {
   items: ContainerListingMapPoint[];
   isVisible: boolean;
+  detailsHrefPrefix: string;
+  detailsQueryString: string;
 }) {
   const mapContainerRef = useRef<HTMLDivElement | null>(null);
   const mapRef = useRef<maplibregl.Map | null>(null);
@@ -604,6 +613,8 @@ const ListingsMap = memo(function ListingsMap({
                   Number.isFinite(clusterTotalCount)
                     ? Math.max(clusterTotalCount, grouped.length)
                     : grouped.length,
+                  detailsHrefPrefix,
+                  detailsQueryString,
                 ),
               )
               .addTo(map);
@@ -671,7 +682,14 @@ const ListingsMap = memo(function ListingsMap({
             maxWidth: "340px",
           })
             .setLngLat([clickedLng, clickedLat])
-            .setDOMContent(buildMapPopupListNode(details, groupedIds.length))
+            .setDOMContent(
+              buildMapPopupListNode(
+                details,
+                groupedIds.length,
+                detailsHrefPrefix,
+                detailsQueryString,
+              ),
+            )
             .addTo(map);
         });
       });
@@ -687,7 +705,7 @@ const ListingsMap = memo(function ListingsMap({
       map.remove();
       mapRef.current = null;
     };
-  }, [loadPopupDetailsByIds]);
+  }, [detailsHrefPrefix, detailsQueryString, loadPopupDetailsByIds]);
 
   useEffect(() => {
     const map = mapRef.current;
@@ -761,8 +779,14 @@ export function ContainerListingsBoard({
   initialMine = false,
 }: ContainerListingsBoardProps) {
   const toast = useToast();
+  const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
+  const detailsHrefPrefix = pathname.startsWith("/list")
+    ? "/list/containers"
+    : "/containers";
+  const detailsQueryString = searchParams.toString();
+  const isDetailsOverlayRouteActive = pathname.startsWith("/list/containers/");
 
   const [items, setItems] = useState<ContainerListingItem[]>([]);
   const [mapItems, setMapItems] = useState<ContainerListingMapPoint[]>([]);
@@ -782,6 +806,13 @@ export function ContainerListingsBoard({
   const [hasHydratedGuestFavorites, setHasHydratedGuestFavorites] = useState(isLoggedIn);
 
   const [isMapOpen, setIsMapOpen] = useState(true);
+  const [pendingDetailsNavigation, setPendingDetailsNavigation] = useState<{
+    listHref: string;
+  } | null>(null);
+  const [isPendingOverlayClosing, setIsPendingOverlayClosing] = useState(false);
+  const pendingOverlayCloseTimeoutRef = useRef<number | null>(null);
+  const pendingOverlayOpenRafRef = useRef<number | null>(null);
+  const cancelledPendingOverlayListHrefRef = useRef<string | null>(null);
   const locationControlsRef = useRef<HTMLDivElement | null>(null);
   const resultsTopRef = useRef<HTMLDivElement | null>(null);
   const hasSeenFirstAppliedFiltersRef = useRef(false);
@@ -813,8 +844,8 @@ export function ContainerListingsBoard({
     hasCscPlateOnly: FILTER_FORM_DEFAULTS.hasCscPlateOnly,
     hasCscCertificationOnly: FILTER_FORM_DEFAULTS.hasCscCertificationOnly,
     priceType: FILTER_FORM_DEFAULTS.priceType,
-    priceUnit: FILTER_FORM_DEFAULTS.priceUnit,
     priceCurrency: FILTER_FORM_DEFAULTS.priceCurrency,
+    priceDisplayCurrency: FILTER_FORM_DEFAULTS.priceDisplayCurrency,
     priceTaxMode: FILTER_FORM_DEFAULTS.priceTaxMode,
     priceMinInput: FILTER_FORM_DEFAULTS.priceMinInput,
     priceMaxInput: FILTER_FORM_DEFAULTS.priceMaxInput,
@@ -835,12 +866,76 @@ export function ContainerListingsBoard({
   );
 
   const isLocationApplied = appliedFilters.locationQuery.trim().length > 0;
+  const isDetailsOverlayPending = pendingDetailsNavigation !== null;
+  usePageScrollLock(isDetailsOverlayPending && !isDetailsOverlayRouteActive);
+  const currentListHref = useMemo(() => {
+    const params = searchParams.toString();
+    return params ? `${pathname}?${params}` : pathname;
+  }, [pathname, searchParams]);
 
   const redirectToLogin = useCallback(() => {
     const query = searchParams.toString();
     const nextPath = query ? `${pathname}?${query}` : pathname;
     window.location.href = `/login?next=${encodeURIComponent(nextPath)}`;
   }, [pathname, searchParams]);
+
+  useEffect(() => {
+    return () => {
+      if (pendingOverlayCloseTimeoutRef.current !== null) {
+        window.clearTimeout(pendingOverlayCloseTimeoutRef.current);
+      }
+      if (pendingOverlayOpenRafRef.current !== null) {
+        window.cancelAnimationFrame(pendingOverlayOpenRafRef.current);
+      }
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!isDetailsOverlayRouteActive) {
+      return;
+    }
+    if (cancelledPendingOverlayListHrefRef.current) {
+      const cancelledListHref = cancelledPendingOverlayListHrefRef.current;
+      cancelledPendingOverlayListHrefRef.current = null;
+      if (pendingOverlayOpenRafRef.current !== null) {
+        window.cancelAnimationFrame(pendingOverlayOpenRafRef.current);
+        pendingOverlayOpenRafRef.current = null;
+      }
+      if (pendingOverlayCloseTimeoutRef.current !== null) {
+        window.clearTimeout(pendingOverlayCloseTimeoutRef.current);
+        pendingOverlayCloseTimeoutRef.current = null;
+      }
+      setPendingDetailsNavigation(null);
+      setIsPendingOverlayClosing(false);
+      router.replace(cancelledListHref, { scroll: false });
+      return;
+    }
+    if (pendingOverlayCloseTimeoutRef.current !== null) {
+      window.clearTimeout(pendingOverlayCloseTimeoutRef.current);
+      pendingOverlayCloseTimeoutRef.current = null;
+    }
+    if (pendingOverlayOpenRafRef.current !== null) {
+      window.cancelAnimationFrame(pendingOverlayOpenRafRef.current);
+      pendingOverlayOpenRafRef.current = null;
+    }
+    setPendingDetailsNavigation(null);
+    setIsPendingOverlayClosing(false);
+  }, [isDetailsOverlayRouteActive, router]);
+
+  useEffect(() => {
+    if (!isDetailsOverlayPending || isDetailsOverlayRouteActive) {
+      return;
+    }
+
+    const timeoutId = window.setTimeout(() => {
+      setPendingDetailsNavigation(null);
+      setIsPendingOverlayClosing(false);
+    }, 10000);
+
+    return () => {
+      window.clearTimeout(timeoutId);
+    };
+  }, [isDetailsOverlayPending, isDetailsOverlayRouteActive]);
 
   useEffect(() => {
     if (isLoggedIn) {
@@ -1007,7 +1102,7 @@ export function ContainerListingsBoard({
       }
 
       if (!data.item) {
-        setLocationFilterError("Nie znaleziono lokalizacji. Uzywam dopasowania tekstowego.");
+        setLocationFilterError("Nie udalo sie ustalic lokalizacji.");
         setAppliedFilters({
           ...nextBase,
           locationQuery: trimmedLocationQuery,
@@ -1022,9 +1117,7 @@ export function ContainerListingsBoard({
         locationCenter: { lat: data.item.lat, lng: data.item.lng },
       });
     } catch {
-      setLocationFilterError(
-        "Nie udalo sie ustalic punktu na mapie. Uzywam dopasowania tekstowego.",
-      );
+      setLocationFilterError("Nie udalo sie ustalic lokalizacji.");
       setAppliedFilters({
         ...nextBase,
         locationQuery: trimmedLocationQuery,
@@ -1203,8 +1296,8 @@ export function ContainerListingsBoard({
       hasCscPlateOnly: false,
       hasCscCertificationOnly: false,
       priceType: "all",
-      priceUnit: "all",
       priceCurrency: FILTER_FORM_DEFAULTS.priceCurrency,
+      priceDisplayCurrency: FILTER_FORM_DEFAULTS.priceDisplayCurrency,
       priceTaxMode: FILTER_FORM_DEFAULTS.priceTaxMode,
       priceMinInput: FILTER_FORM_DEFAULTS.priceMinInput,
       priceMaxInput: FILTER_FORM_DEFAULTS.priceMaxInput,
@@ -1366,6 +1459,49 @@ export function ContainerListingsBoard({
     [toast],
   );
 
+  const handleOpenDetails = useCallback((targetHref: string) => {
+    const listHref = currentListHref;
+    cancelledPendingOverlayListHrefRef.current = null;
+    if (pendingOverlayCloseTimeoutRef.current !== null) {
+      window.clearTimeout(pendingOverlayCloseTimeoutRef.current);
+      pendingOverlayCloseTimeoutRef.current = null;
+    }
+    if (pendingOverlayOpenRafRef.current !== null) {
+      window.cancelAnimationFrame(pendingOverlayOpenRafRef.current);
+      pendingOverlayOpenRafRef.current = null;
+    }
+    setIsPendingOverlayClosing(false);
+    setPendingDetailsNavigation({ listHref });
+
+    pendingOverlayOpenRafRef.current = window.requestAnimationFrame(() => {
+      pendingOverlayOpenRafRef.current = null;
+      router.push(targetHref, { scroll: false });
+    });
+  }, [currentListHref, router]);
+
+  const cancelPendingDetailsNavigation = useCallback(() => {
+    if (!pendingDetailsNavigation || isPendingOverlayClosing) {
+      return;
+    }
+
+    const { listHref } = pendingDetailsNavigation;
+    cancelledPendingOverlayListHrefRef.current = listHref;
+    if (pendingOverlayOpenRafRef.current !== null) {
+      window.cancelAnimationFrame(pendingOverlayOpenRafRef.current);
+      pendingOverlayOpenRafRef.current = null;
+    }
+    if (pendingOverlayCloseTimeoutRef.current !== null) {
+      window.clearTimeout(pendingOverlayCloseTimeoutRef.current);
+      pendingOverlayCloseTimeoutRef.current = null;
+    }
+    setIsPendingOverlayClosing(true);
+    pendingOverlayCloseTimeoutRef.current = window.setTimeout(() => {
+      setPendingDetailsNavigation(null);
+      setIsPendingOverlayClosing(false);
+      router.replace(listHref, { scroll: false });
+    }, OVERLAY_CLOSE_ANIMATION_MS);
+  }, [isPendingOverlayClosing, pendingDetailsNavigation, router]);
+
   return (
     <FormProvider {...formMethods}>
       <form onSubmit={submitFilters} className="grid gap-4">
@@ -1379,7 +1515,12 @@ export function ContainerListingsBoard({
                   : "pointer-events-none max-h-0 overflow-hidden opacity-0"
               }`}
             >
-              <ListingsMap items={hasLoadedMapDataOnce ? mapItems : items} isVisible={isMapOpen} />
+              <ListingsMap
+                items={hasLoadedMapDataOnce ? mapItems : items}
+                isVisible={isMapOpen}
+                detailsHrefPrefix={detailsHrefPrefix}
+                detailsQueryString={detailsQueryString}
+              />
             </div>
           </div>
           <div
@@ -1426,10 +1567,71 @@ export function ContainerListingsBoard({
                 onCopyListingLink={handleCopyListingLink}
                 onPreviousPage={goToPreviousPage}
                 onNextPage={goToNextPage}
+                onOpenDetails={handleOpenDetails}
+                detailsHrefPrefix={detailsHrefPrefix}
+                detailsQueryString={detailsQueryString}
+                priceDisplayCurrency={appliedFilters.priceDisplayCurrency}
               />
             </div>
           </ContainerListingsFilters>
         </div>
+
+        {isDetailsOverlayPending && !isDetailsOverlayRouteActive ? (
+          <section className="fixed inset-x-0 bottom-0 top-16 z-[35]">
+            <div className="relative z-10 flex h-full justify-end overflow-hidden">
+              <button
+                type="button"
+                onClick={() => {
+                  cancelPendingDetailsNavigation();
+                }}
+                onWheel={(event) => {
+                  event.preventDefault();
+                }}
+                aria-label="Zamknij podglad ogloszenia"
+                className="h-full flex-1"
+              />
+              <div
+                className={`cb-overlay-panel-shell h-full w-full max-w-5xl overflow-y-auto ${
+                  isPendingOverlayClosing ? "cb-overlay-panel-exit" : "cb-overlay-panel-enter"
+                }`}
+              >
+                <div className="grid gap-4 px-4 py-6 sm:px-6">
+                  <div className="flex items-center justify-between gap-2">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        cancelPendingDetailsNavigation();
+                      }}
+                      className="rounded-md border border-neutral-700 px-3 py-2 text-sm text-neutral-200 hover:border-neutral-500"
+                    >
+                      <span className="inline-flex items-center gap-2">
+                        <svg
+                          className="h-4 w-4"
+                          viewBox="0 0 24 24"
+                          fill="none"
+                          stroke="currentColor"
+                          strokeWidth="2"
+                          aria-hidden="true"
+                        >
+                          <path d="M15 18 9 12l6-6" />
+                        </svg>
+                        <span>Powrot do listy</span>
+                      </span>
+                    </button>
+                  </div>
+
+                  <div className="flex min-h-[260px] flex-col items-center justify-center gap-3 text-neutral-600">
+                    <span
+                      className="h-8 w-8 animate-spin rounded-full border-2 border-neutral-300 border-t-neutral-500"
+                      aria-label="Ladowanie szczegolow ogloszenia"
+                    />
+                    <p className="text-sm">Ladowanie szczegolow ogloszenia...</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </section>
+        ) : null}
       </form>
     </FormProvider>
   );

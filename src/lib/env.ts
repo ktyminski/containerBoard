@@ -20,6 +20,10 @@ const envSchema = z.object({
   MAIL_FROM: z.email().optional(),
   MAIL_REPLY_TO: z.email().optional(),
   ADMIN_TOKEN: z.string().min(1).optional(),
+  CRON_SECRET: z.string().min(1).optional(),
+  FX_FALLBACK_PLN_PER_EUR: z.string().min(1).optional(),
+  FX_FALLBACK_PLN_PER_USD: z.string().min(1).optional(),
+  FX_FALLBACK_SOURCE: z.string().min(1).optional(),
   NEXT_PUBLIC_MAP_STYLE_URL: z.url().optional(),
   NEXT_PUBLIC_MAPTILER_API_KEY: z.string().min(1).optional(),
 });

@@ -44,7 +44,8 @@ export default async function ContactPage({ searchParams }: ContactPageProps) {
     <StaticPageFrame
       locale={locale}
       backLabel={messages.companyDetails.back}
-      mapLabel={messages.home.heroPrimaryCta}
+      mapLabel={locale === "pl" ? "PrzejdÅº do ogÅ‚oszeÅ„" : messages.home.whatBrowseAnnouncementsCta}
+      mapHref="/list"
       title={page.title}
       intro={page.intro}
       links={[

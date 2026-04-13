@@ -219,16 +219,16 @@ export function ToastProvider({
   return (
     <ToastContext.Provider value={value}>
       {children}
-      <div className="pointer-events-none fixed inset-x-0 top-16 z-[120] flex justify-end px-3 sm:px-4">
-        <div className="flex w-full max-w-sm flex-col gap-2">
+      <div className="pointer-events-none fixed inset-x-0 top-[4.5rem] z-[120] flex justify-end px-3 sm:px-4">
+        <div className="flex w-full max-w-md flex-col gap-2.5">
           {toasts.map((toast) => (
             <article
               key={toast.id}
               role={toast.variant === "error" ? "alert" : "status"}
               aria-live={toast.variant === "error" ? "assertive" : "polite"}
-              className={`pointer-events-auto rounded-lg border px-3 py-2 shadow-lg backdrop-blur-sm ${TOAST_VARIANT_STYLE[toast.variant]}`}
+              className={`pointer-events-auto rounded-md border px-4 py-3 shadow-xl backdrop-blur ${TOAST_VARIANT_STYLE[toast.variant]}`}
             >
-              <p className="min-w-0 text-sm leading-5 whitespace-pre-line">{toast.message}</p>
+              <p className="min-w-0 text-[15px] leading-6 whitespace-pre-line">{toast.message}</p>
             </article>
           ))}
         </div>

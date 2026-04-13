@@ -128,14 +128,14 @@ export function ImageCropModal({
   }, [fitMode, loadedImageVersion, previewSize.height, previewSize.width, state]);
 
   return (
-    <div className="fixed inset-0 z-[70] flex items-center justify-center overflow-y-auto [&>div:not(.fixed)]:my-auto [&>div:not(.fixed)]:max-h-[calc(100dvh-2rem)] [&>div:not(.fixed)]:!overflow-y-auto bg-black/70 p-4">
-      <div className="w-full max-w-xl rounded-xl border border-neutral-700 bg-neutral-900 p-4">
-        <h3 className="text-lg font-semibold text-neutral-100">{title}</h3>
-        <p className="mt-1 text-xs text-neutral-400">{labels.hint}</p>
+    <div className="fixed inset-0 z-[70] flex items-center justify-center overflow-y-auto bg-neutral-900/45 p-4 [&>div:not(.fixed)]:my-auto [&>div:not(.fixed)]:max-h-[calc(100dvh-2rem)] [&>div:not(.fixed)]:!overflow-y-auto">
+      <div className="w-full max-w-xl rounded-lg border border-neutral-300 bg-white p-4">
+        <h3 className="text-lg font-semibold text-neutral-900">{title}</h3>
+        <p className="mt-1 text-xs text-neutral-600">{labels.hint}</p>
 
         <div
           ref={previewFrameRef}
-          className={`mt-3 overflow-hidden rounded-md border border-neutral-700 bg-neutral-950 p-2 ${
+          className={`mt-3 overflow-hidden rounded-md border border-neutral-300 bg-neutral-100 p-2 ${
             previewFrameClassName ?? ""
           }`}
         >
@@ -148,7 +148,7 @@ export function ImageCropModal({
         </div>
 
         <div className="mt-3 grid gap-3">
-          <label className="grid gap-1 text-sm text-neutral-300">
+          <label className="grid gap-1 text-sm text-neutral-700">
             {labels.zoom}
             <input
               type="range"
@@ -164,7 +164,7 @@ export function ImageCropModal({
             />
           </label>
 
-          <label className="grid gap-1 text-sm text-neutral-300">
+          <label className="grid gap-1 text-sm text-neutral-700">
             {labels.offsetX}
             <input
               type="range"
@@ -180,7 +180,7 @@ export function ImageCropModal({
             />
           </label>
 
-          <label className="grid gap-1 text-sm text-neutral-300">
+          <label className="grid gap-1 text-sm text-neutral-700">
             {labels.offsetY}
             <input
               type="range"
@@ -200,7 +200,7 @@ export function ImageCropModal({
         <div className="mt-4 flex items-center gap-2">
           <button
             type="button"
-            className="cursor-pointer rounded-md bg-sky-500 px-3 py-2 text-sm font-medium text-neutral-950 hover:bg-sky-400"
+            className="cursor-pointer rounded-md bg-neutral-900 px-3 py-2 text-sm font-medium text-white hover:bg-neutral-800"
             onClick={() => {
               void onApply();
             }}
@@ -209,7 +209,7 @@ export function ImageCropModal({
           </button>
           <button
             type="button"
-            className="cursor-pointer rounded-md border border-neutral-700 px-3 py-2 text-sm text-neutral-200 hover:border-neutral-500"
+            className="cursor-pointer rounded-md border border-neutral-300 px-3 py-2 text-sm text-neutral-700 hover:border-neutral-400"
             onClick={onCancel}
           >
             {labels.cancel}

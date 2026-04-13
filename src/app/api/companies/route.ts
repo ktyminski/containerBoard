@@ -9,7 +9,6 @@ import {
   type CompanyImageAsset,
 } from "@/lib/companies";
 import { getCurrentUserFromRequest } from "@/lib/auth-user";
-import { COMPANY_BENEFITS } from "@/lib/company-benefits";
 import {
   processBackgroundUpload,
   processGalleryUpload,
@@ -42,14 +41,6 @@ import {
   COMPANY_CATEGORIES,
   normalizeCompanyCategory,
 } from "@/types/company-category";
-import {
-  COMPANY_COMMUNICATION_LANGUAGES,
-  normalizeCompanyCommunicationLanguages,
-} from "@/types/company-communication-language";
-import {
-  COMPANY_SPECIALIZATIONS,
-  normalizeCompanySpecializations,
-} from "@/types/company-specialization";
 import { logError } from "@/lib/server-logger";
 
 export const runtime = "nodejs";
@@ -90,22 +81,6 @@ const querySchema = z.object({
         .map((entry) => entry.trim().toLowerCase())
         .filter((entry): entry is (typeof COMPANY_OPERATING_AREAS)[number] => allowed.has(entry));
     }),
-  communicationLanguages: z
-    .string()
-    .optional()
-    .transform((value) => {
-      if (!value) {
-        return [];
-      }
-      const allowed = new Set<string>(COMPANY_COMMUNICATION_LANGUAGES);
-      return value
-        .split(",")
-        .map((entry) => entry.trim().toLowerCase())
-        .filter(
-          (entry): entry is (typeof COMPANY_COMMUNICATION_LANGUAGES)[number] =>
-            allowed.has(entry),
-        );
-    }),
   categories: z
     .string()
     .optional()
@@ -119,22 +94,6 @@ const querySchema = z.object({
         .map((entry) => entry.trim().toLowerCase())
         .filter(
           (entry): entry is (typeof COMPANY_CATEGORIES)[number] => allowed.has(entry),
-        );
-    }),
-  specializations: z
-    .string()
-    .optional()
-    .transform((value) => {
-      if (!value) {
-        return [];
-      }
-      const allowed = new Set<string>(COMPANY_SPECIALIZATIONS);
-      return value
-        .split(",")
-        .map((entry) => entry.trim().toLowerCase())
-        .filter(
-          (entry): entry is (typeof COMPANY_SPECIALIZATIONS)[number] =>
-            allowed.has(entry),
         );
     }),
   limit: z.coerce.number().int().min(1).max(500).default(200),
@@ -159,10 +118,6 @@ const createCompanySchema = z.object({
   name: z.string().trim().min(2).max(120),
   description: z.string().trim().min(10).max(5000),
   category: z.string().trim().min(1).max(100),
-  communicationLanguages: z
-    .array(z.enum(COMPANY_COMMUNICATION_LANGUAGES))
-    .max(COMPANY_COMMUNICATION_LANGUAGES.length)
-    .default([]),
   operatingArea: z.enum(COMPANY_OPERATING_AREAS).default("local"),
   operatingAreaDetails: z.string().trim().max(200).optional().or(z.literal("")),
   nip: z.string().trim().max(30).optional().or(z.literal("")),
@@ -172,11 +127,6 @@ const createCompanySchema = z.object({
   facebookUrl: z.string().trim().max(600).optional().or(z.literal("")),
   instagramUrl: z.string().trim().max(600).optional().or(z.literal("")),
   linkedinUrl: z.string().trim().max(600).optional().or(z.literal("")),
-  benefits: z.array(z.enum(COMPANY_BENEFITS)).max(COMPANY_BENEFITS.length).default([]),
-  specializations: z
-    .array(z.enum(COMPANY_SPECIALIZATIONS))
-    .max(COMPANY_SPECIALIZATIONS.length)
-    .default([]),
   branches: z
     .array(
       z.object({
@@ -343,8 +293,6 @@ export async function GET(request: NextRequest) {
       tags,
       categories,
       operatingAreas,
-      communicationLanguages,
-      specializations,
       limit,
     } = query.data;
     const bbox = parseBbox(query.data.bbox);
@@ -364,8 +312,6 @@ export async function GET(request: NextRequest) {
       tags,
       categories,
       operatingAreas,
-      communicationLanguages,
-      specializations,
     });
     const rows = await companies
       .find(filter, {
@@ -377,7 +323,6 @@ export async function GET(request: NextRequest) {
           tags: 1,
           category: 1,
           operatingArea: 1,
-          specializations: 1,
           "logo.size": 1,
           "logo.filename": 1,
           updatedAt: 1,
@@ -502,8 +447,6 @@ export async function POST(request: NextRequest) {
       name: String(formData.get("name") ?? ""),
       description: String(formData.get("description") ?? ""),
       category: String(formData.get("category") ?? ""),
-      communicationLanguages:
-        parseJsonField<unknown[]>(formData.get("communicationLanguages")) ?? [],
       operatingArea: String(formData.get("operatingArea") ?? "local"),
       operatingAreaDetails: String(formData.get("operatingAreaDetails") ?? ""),
       nip: String(formData.get("nip") ?? ""),
@@ -513,8 +456,6 @@ export async function POST(request: NextRequest) {
       facebookUrl: String(formData.get("facebookUrl") ?? ""),
       instagramUrl: String(formData.get("instagramUrl") ?? ""),
       linkedinUrl: String(formData.get("linkedinUrl") ?? ""),
-      benefits: parseJsonField<unknown[]>(formData.get("benefits")) ?? [],
-      specializations: parseJsonField<unknown[]>(formData.get("specializations")) ?? [],
       branches: parseJsonField<unknown[]>(formData.get("branches")) ?? [],
     };
 
@@ -610,13 +551,8 @@ export async function POST(request: NextRequest) {
     const companyId = new ObjectId();
     const slug = await generateUniqueSlug(parsed.data.name);
     const normalizedCategory = normalizeCompanyCategory(parsed.data.category);
-    const communicationLanguages = normalizeCompanyCommunicationLanguages(
-      parsed.data.communicationLanguages,
-    );
     const operatingArea = normalizeCompanyOperatingArea(parsed.data.operatingArea);
     const operatingAreaDetails = parsed.data.operatingAreaDetails?.trim() || undefined;
-    const benefits = Array.from(new Set(parsed.data.benefits));
-    const specializations = normalizeCompanySpecializations(parsed.data.specializations);
     const nip = parsed.data.nip?.trim() || undefined;
 
     const phone = parsed.data.phone?.trim() || undefined;
@@ -775,9 +711,6 @@ export async function POST(request: NextRequest) {
         slug,
         description: parsed.data.description.trim(),
         category: normalizedCategory,
-        ...(communicationLanguages.length > 0
-          ? { communicationLanguages }
-          : {}),
         operatingArea,
         operatingAreaDetails,
         nip,
@@ -794,8 +727,6 @@ export async function POST(request: NextRequest) {
         facebookUrl,
         instagramUrl,
         linkedinUrl,
-        benefits,
-        specializations,
         tags: [],
         services: [],
         locations: parsed.data.branches.map((branch, index) => {

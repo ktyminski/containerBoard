@@ -13,10 +13,7 @@
 }
 
 body {
-  background:
-    radial-gradient(circle at 8% 0%, rgba(163, 163, 163, 0.2), transparent 42%),
-    radial-gradient(circle at 92% 8%, rgba(115, 115, 115, 0.16), transparent 45%),
-    var(--background);
+  background: var(--background);
   color: var(--foreground);
   font-family: var(--font-geist-sans), sans-serif;
 }
@@ -522,3 +519,44 @@ html.user-is-tabbing .listing-kind-option:focus {
   z-index: 40;
 }
 
+@keyframes cb-overlay-panel-slide-in {
+  from {
+    transform: translate3d(100%, 0, 0);
+  }
+  to {
+    transform: translate3d(0, 0, 0);
+  }
+}
+
+@keyframes cb-overlay-panel-slide-out {
+  from {
+    transform: translate3d(0, 0, 0);
+  }
+  to {
+    transform: translate3d(100%, 0, 0);
+  }
+}
+
+.cb-overlay-panel-enter {
+  animation: cb-overlay-panel-slide-in 420ms cubic-bezier(0.22, 1, 0.36, 1) both;
+  will-change: transform;
+}
+
+.cb-overlay-panel-exit {
+  animation: cb-overlay-panel-slide-out 280ms cubic-bezier(0.4, 0, 0.2, 1) both;
+  will-change: transform;
+}
+
+.cb-overlay-panel-shell {
+  background: var(--background);
+  box-shadow: -20px 0 44px -28px rgba(23, 23, 23, 0.5);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .cb-overlay-panel-enter {
+    animation: none !important;
+  }
+  .cb-overlay-panel-exit {
+    animation: none !important;
+  }
+}

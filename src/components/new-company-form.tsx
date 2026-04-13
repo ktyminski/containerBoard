@@ -3,21 +3,16 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useFieldArray, useForm } from "react-hook-form";
-import { COMPANY_BENEFITS } from "@/lib/company-benefits";
 import { COMPANY_OPERATING_AREAS } from "@/lib/company-operating-area";
 import { useToast } from "@/components/toast-provider";
 import { TurnstileWidget } from "@/components/turnstile-widget";
 import type { AppLocale, AppMessages } from "@/lib/i18n";
 import { formatTemplate, LOCALE_HEADER_NAME, withLang } from "@/lib/i18n";
-import { COMPANY_COMMUNICATION_LANGUAGES } from "@/types/company-communication-language";
-import { COMPANY_SPECIALIZATIONS } from "@/types/company-specialization";
 import { BranchCard } from "@/components/new-company-form/branch-card";
 import { CompanyMediaSection } from "@/components/new-company-form/company-media-section";
 import { ImageDropzone } from "@/components/new-company-form/image-dropzone";
 import { ImageGrid } from "@/components/new-company-form/image-grid";
 import { ImageCropModal } from "@/components/new-company-form/image-crop-modal";
-import { SelectOptionModal } from "@/components/new-company-form/select-option-modal";
-import { useCompanyFormWizard } from "@/components/new-company-form/use-company-form-wizard";
 import { useCompanyMediaState } from "@/components/new-company-form/use-company-media-state";
 import { FacebookIcon, InstagramIcon, LinkedInIcon } from "@/components/social-icons";
 import {
@@ -74,7 +69,6 @@ const MAX_LOGO_MB = 3;
 const MAX_BACKGROUND_MB = 6;
 const MAX_PHOTO_MB = 6;
 const MAX_TOTAL_IMAGES_MB = 14;
-const TOTAL_FORM_STEPS = 3;
 const EMPTY_STRING_ARRAY: string[] = [];
 const EMPTY_NUMBER_ARRAY: number[] = [];
 
@@ -129,49 +123,6 @@ function buildCreationLimitNotice(input: {
   return parts.join("\n");
 }
 
-function parseStepFromSearchParam(stepParam: string | null, totalSteps: number): number | null {
-  if (!stepParam) {
-    return null;
-  }
-
-  const parsedStep = Number.parseInt(stepParam, 10);
-  if (!Number.isFinite(parsedStep)) {
-    return null;
-  }
-
-  if (parsedStep < 1 || parsedStep > Math.max(totalSteps, 1)) {
-    return null;
-  }
-
-  return parsedStep - 1;
-}
-
-function readStepFromCurrentUrl(totalSteps: number): number | null {
-  if (typeof window === "undefined") {
-    return null;
-  }
-
-  const params = new URLSearchParams(window.location.search);
-  return parseStepFromSearchParam(params.get("step"), totalSteps);
-}
-
-function writeStepToCurrentUrl(stepIndex: number, mode: "push" | "replace"): void {
-  if (typeof window === "undefined") {
-    return;
-  }
-
-  const nextUrl = new URL(window.location.href);
-  nextUrl.searchParams.set("step", String(stepIndex + 1));
-  const nextHref = `${nextUrl.pathname}${nextUrl.search}${nextUrl.hash}`;
-
-  if (mode === "replace") {
-    window.history.replaceState(null, "", nextHref);
-    return;
-  }
-
-  window.history.pushState(null, "", nextHref);
-}
-
 export function NewCompanyForm({
   locale,
   messages,
@@ -213,22 +164,9 @@ export function NewCompanyForm({
   } = useCompanyMediaState();
   const stableInitialPhotoUrls = initialPhotoUrls ?? EMPTY_STRING_ARRAY;
   const stableInitialPhotoBytes = initialPhotoBytes ?? EMPTY_NUMBER_ARRAY;
-  const [isBenefitsModalOpen, setIsBenefitsModalOpen] = useState(false);
-  const [isCommunicationLanguagesModalOpen, setIsCommunicationLanguagesModalOpen] =
-    useState(false);
-  const [isSpecializationsModalOpen, setIsSpecializationsModalOpen] = useState(false);
   const [isPostCreateModalOpen, setIsPostCreateModalOpen] = useState(false);
   const [turnstileToken, setTurnstileToken] = useState("");
   const [turnstileRefreshKey, setTurnstileRefreshKey] = useState(0);
-  const {
-    currentStep,
-    setCurrentStep,
-    hasVisitedContactStep,
-    setHasVisitedContactStep,
-    isLastStep,
-  } = useCompanyFormWizard(TOTAL_FORM_STEPS);
-  const stepNavRef = useRef<HTMLElement | null>(null);
-  const previousStepRef = useRef<number | null>(null);
   const mediaCleanupRef = useRef<{
     logo: ImageItem | null;
     background: ImageItem | null;
@@ -251,7 +189,6 @@ export function NewCompanyForm({
     return {
       name: "",
       description: "",
-      communicationLanguages: [],
       operatingArea: "local",
       operatingAreaDetails: "",
       nip: "",
@@ -261,8 +198,6 @@ export function NewCompanyForm({
       facebookUrl: "",
       instagramUrl: "",
       linkedinUrl: "",
-      benefits: [],
-      specializations: [],
       branches: [createEmptyBranch(messages.mainBranchTitle)],
     };
   }, [initialValues, messages.mainBranchTitle]);
@@ -274,7 +209,6 @@ export function NewCompanyForm({
     register,
     reset,
     setValue,
-    trigger,
     watch,
     formState: { errors, isSubmitting, touchedFields, isSubmitted },
   } = useForm<NewCompanyFormValues>({
@@ -287,22 +221,6 @@ export function NewCompanyForm({
     name: "branches",
   });
 
-  const companyBenefitOptions = useMemo(
-    () =>
-      COMPANY_BENEFITS.map((value) => ({
-        value,
-        label: messages.benefitsOptions[value],
-      })),
-    [messages.benefitsOptions],
-  );
-  const companySpecializationOptions = useMemo(
-    () =>
-      COMPANY_SPECIALIZATIONS.map((value) => ({
-        value,
-        label: messages.specializationsOptions[value],
-      })),
-    [messages.specializationsOptions],
-  );
   const operatingAreaOptions = useMemo(
     () =>
       COMPANY_OPERATING_AREAS.map((value) => ({
@@ -311,48 +229,9 @@ export function NewCompanyForm({
       })),
     [messages.operatingAreas],
   );
-  const communicationLanguageOptions = useMemo(
-    () =>
-      COMPANY_COMMUNICATION_LANGUAGES.map((value) => ({
-        value,
-        label: messages.communicationLanguages[value],
-      })),
-    [messages.communicationLanguages],
-  );
 
   const watchedBranches = watch("branches");
   const watchedCompanyName = watch("name");
-  const watchedBenefits = watch("benefits");
-  const watchedCommunicationLanguages = watch("communicationLanguages");
-  const watchedSpecializations = watch("specializations");
-  const selectedBenefits = useMemo(
-    () => watchedBenefits ?? [],
-    [watchedBenefits],
-  );
-  const selectedCommunicationLanguages = useMemo(
-    () => watchedCommunicationLanguages ?? [],
-    [watchedCommunicationLanguages],
-  );
-  const selectedSpecializations = useMemo(
-    () => watchedSpecializations ?? [],
-    [watchedSpecializations],
-  );
-  const selectedCommunicationLanguageOptions = useMemo(() => {
-    const selectedSet = new Set(selectedCommunicationLanguages);
-    return communicationLanguageOptions.filter((language) =>
-      selectedSet.has(language.value),
-    );
-  }, [communicationLanguageOptions, selectedCommunicationLanguages]);
-  const selectedBenefitOptions = useMemo(() => {
-    const selectedSet = new Set(selectedBenefits);
-    return companyBenefitOptions.filter((benefit) => selectedSet.has(benefit.value));
-  }, [companyBenefitOptions, selectedBenefits]);
-  const selectedSpecializationOptions = useMemo(() => {
-    const selectedSet = new Set(selectedSpecializations);
-    return companySpecializationOptions.filter((specialization) =>
-      selectedSet.has(specialization.value),
-    );
-  }, [companySpecializationOptions, selectedSpecializations]);
   const creationLimitNotice = useMemo(() => {
     if (!companyCreationLimit?.isLimited) {
       return null;
@@ -366,10 +245,6 @@ export function NewCompanyForm({
       nextAllowedAt: companyCreationLimit.nextAllowedAt,
     });
   }, [companyCreationLimit, locale, messages]);
-  const steps = useMemo(
-    () => [messages.stepMainInfo, messages.stepContact, messages.stepAdditional],
-    [messages.stepAdditional, messages.stepContact, messages.stepMainInfo],
-  );
   const visibleInitialPhotoCount = keptInitialPhotoIndexes.length;
   const normalizedInitialLogoBytes =
     Number.isFinite(initialLogoBytes) && initialLogoBytes > 0 ? initialLogoBytes : 0;
@@ -444,67 +319,6 @@ export function NewCompanyForm({
   ]);
 
   useEffect(() => {
-    if (currentStep === 1) {
-      setHasVisitedContactStep(true);
-    }
-  }, [currentStep, setHasVisitedContactStep]);
-
-  useEffect(() => {
-    const stepFromUrl = readStepFromCurrentUrl(TOTAL_FORM_STEPS);
-    const initialStep = stepFromUrl ?? 0;
-    if (initialStep !== currentStep) {
-      setCurrentStep(initialStep);
-    }
-    writeStepToCurrentUrl(initialStep, "replace");
-
-    const handlePopState = () => {
-      const nextStep = readStepFromCurrentUrl(TOTAL_FORM_STEPS) ?? 0;
-      setCurrentStep(nextStep);
-      writeStepToCurrentUrl(nextStep, "replace");
-    };
-
-    window.addEventListener("popstate", handlePopState);
-    return () => {
-      window.removeEventListener("popstate", handlePopState);
-    };
-    // We intentionally initialize sync once on mount; next updates are handled in goToStepWithHistory/popstate.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [setCurrentStep]);
-
-  useEffect(() => {
-    if (previousStepRef.current === null) {
-      previousStepRef.current = currentStep;
-      return;
-    }
-
-    if (previousStepRef.current === currentStep) {
-      return;
-    }
-    previousStepRef.current = currentStep;
-
-    if (typeof window === "undefined") {
-      return;
-    }
-
-    const target = stepNavRef.current;
-    if (!target) {
-      return;
-    }
-
-    const prefersReducedMotion =
-      window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-    const frame = window.requestAnimationFrame(() => {
-      const HEADER_OFFSET = 88;
-      const targetTop = target.getBoundingClientRect().top + window.scrollY - HEADER_OFFSET;
-      window.scrollTo({
-        top: Math.max(0, targetTop),
-        behavior: prefersReducedMotion ? "auto" : "smooth",
-      });
-    });
-    return () => window.cancelAnimationFrame(frame);
-  }, [currentStep]);
-
-  useEffect(() => {
     mediaCleanupRef.current = {
       logo,
       background,
@@ -539,91 +353,6 @@ export function NewCompanyForm({
 
   const removeBranch = (index: number) => {
     remove(index);
-  };
-
-  const validateStepBeforeAdvance = async (stepIndex: number) => {
-    if (stepIndex === 0) {
-      setValue("name", getValues("name"), { shouldTouch: true });
-      setValue("description", getValues("description"), { shouldTouch: true });
-      const isStepValid = await trigger([
-        "name",
-        "nip",
-        "operatingArea",
-        "description",
-        "operatingAreaDetails",
-      ]);
-      if (!isStepValid) {
-        toast.warning(messages.validationError);
-        return false;
-      }
-    }
-
-    if (stepIndex === 1) {
-      setValue("phone", getValues("phone"), { shouldTouch: true });
-      setValue("email", getValues("email"), { shouldTouch: true });
-      const isStepValid = await trigger([
-        "website",
-        "facebookUrl",
-        "instagramUrl",
-        "linkedinUrl",
-        "phone",
-        "email",
-        "branches",
-      ]);
-      if (!isStepValid) {
-        toast.warning(messages.validationError);
-        return false;
-      }
-    }
-
-    return true;
-  };
-
-  const goToStepWithHistory = (stepIndex: number, historyMode: "push" | "replace" = "push") => {
-    const maxStep = Math.max(steps.length - 1, 0);
-    const normalizedStep = Math.min(Math.max(stepIndex, 0), maxStep);
-    if (normalizedStep === currentStep) {
-      if (historyMode === "replace") {
-        writeStepToCurrentUrl(normalizedStep, "replace");
-      }
-      return;
-    }
-
-    setCurrentStep(normalizedStep);
-    writeStepToCurrentUrl(normalizedStep, historyMode);
-  };
-
-  const goToStep = async (index: number) => {
-    if (index < 0 || index >= steps.length || index === currentStep) {
-      return;
-    }
-
-    if (index < currentStep) {
-      goToStepWithHistory(index);
-      return;
-    }
-
-    for (let stepIndex = currentStep; stepIndex < index; stepIndex += 1) {
-      const isStepValid = await validateStepBeforeAdvance(stepIndex);
-      if (!isStepValid) {
-        return;
-      }
-    }
-
-    goToStepWithHistory(index);
-  };
-
-  const goToNextStep = async () => {
-    if (currentStep >= steps.length - 1) {
-      return;
-    }
-
-    const isStepValid = await validateStepBeforeAdvance(currentStep);
-    if (!isStepValid) {
-      return;
-    }
-
-    goToStepWithHistory(Math.min(currentStep + 1, steps.length - 1));
   };
 
   const closePostCreateModal = () => {
@@ -665,10 +394,6 @@ export function NewCompanyForm({
       formData.set("name", values.name);
       formData.set("description", values.description);
       formData.set("category", "other");
-      formData.set(
-        "communicationLanguages",
-        JSON.stringify(values.communicationLanguages),
-      );
       formData.set("operatingArea", values.operatingArea);
       formData.set("operatingAreaDetails", values.operatingAreaDetails);
       formData.set("nip", values.nip);
@@ -678,8 +403,6 @@ export function NewCompanyForm({
       formData.set("facebookUrl", values.facebookUrl);
       formData.set("instagramUrl", values.instagramUrl);
       formData.set("linkedinUrl", values.linkedinUrl);
-      formData.set("benefits", JSON.stringify(values.benefits));
-      formData.set("specializations", JSON.stringify(values.specializations));
       formData.set("branches", JSON.stringify(values.branches));
       if (httpMethod === "POST") {
         formData.set("turnstileToken", turnstileToken);
@@ -772,7 +495,6 @@ export function NewCompanyForm({
         setIsInitialLogoRemoved(false);
         setIsInitialBackgroundRemoved(false);
         setKeptInitialPhotoIndexes(stableInitialPhotoUrls.map((_, index) => index));
-        goToStepWithHistory(0, "replace");
         reset(defaultValues);
       }
 
@@ -802,64 +524,7 @@ export function NewCompanyForm({
 
   return (
     <section className="grid gap-3 sm:gap-4">
-      <nav ref={stepNavRef} aria-label={messages.stepLabel} className="px-1">
-        <ol className="flex items-start">
-          {steps.map((stepLabel, index) => {
-            const isActive = index === currentStep;
-            const isCompleted = index < currentStep;
-            const isClickable = index <= currentStep + 1;
-            return (
-              <li key={stepLabel} className="flex min-w-0 flex-1 items-center">
-                <button
-                  type="button"
-                  aria-current={isActive ? "step" : undefined}
-                  className={`group flex min-w-0 flex-col items-start gap-1 text-left transition ${
-                    isClickable ? "cursor-pointer" : "cursor-not-allowed opacity-70"
-                  }`}
-                  disabled={!isClickable}
-                  onClick={() => {
-                    void goToStep(index);
-                  }}
-                >
-                  <span
-                    className={`h-3 w-3 rounded-full border transition ${
-                      isActive
-                        ? "border-neutral-700 bg-neutral-700"
-                        : isCompleted
-                          ? "border-neutral-500 bg-neutral-500"
-                          : "border-neutral-300 bg-white"
-                    }`}
-                  />
-                  <span className="text-[11px] uppercase tracking-wide text-neutral-600">
-                    {messages.stepLabel} {index + 1}
-                  </span>
-                  <span
-                    className={`truncate text-sm ${
-                      isActive
-                        ? "text-neutral-800"
-                        : isCompleted
-                          ? "text-neutral-700"
-                          : "text-neutral-600"
-                    }`}
-                  >
-                    {stepLabel}
-                  </span>
-                </button>
-                {index < steps.length - 1 ? (
-                  <span
-                    className={`mx-2 h-px flex-1 ${
-                      index < currentStep ? "bg-neutral-400" : "bg-neutral-300"
-                    }`}
-                    aria-hidden="true"
-                  />
-                ) : null}
-              </li>
-            );
-          })}
-        </ol>
-      </nav>
-
-      <section className="overflow-hidden rounded-xl border border-neutral-300 bg-[linear-gradient(180deg,rgba(248,250,252,0.92)_0%,rgba(241,245,249,0.92)_100%)] shadow-[0_12px_34px_-26px_rgba(15,23,42,0.28)]">
+      <section className="overflow-hidden rounded-lg border border-neutral-300 bg-neutral-100/95 shadow-sm">
       {creationLimitNotice ? (
         <section className="m-5 rounded-lg border border-neutral-300 bg-neutral-100 p-4">
           <h2 className="text-sm font-semibold text-neutral-800">
@@ -959,14 +624,13 @@ export function NewCompanyForm({
       />
 
       <div className="grid gap-4 p-4">
-        {currentStep === 0 ? (
         <section className="grid gap-4">
-          <h2 className="text-sm font-semibold text-neutral-200">{messages.stepMainInfo}</h2>
+          <h2 className="text-sm font-semibold text-neutral-800">{messages.stepMainInfo}</h2>
 
           <label className="mx-auto grid w-full gap-1 text-sm md:w-[70%]">
-            <span className="text-neutral-300">{messages.name}*</span>
+            <span className="text-neutral-700">{messages.name}*</span>
             <input
-              className="rounded-md border border-neutral-300 bg-neutral-100/85 px-3 py-2 text-neutral-800 placeholder:text-[#94a3b8]"
+              className="rounded-md border border-neutral-300 bg-white px-3 py-2 text-neutral-800 placeholder:text-neutral-400"
               {...register("name", {
                 required: messages.requiredField,
                 minLength: { value: 2, message: messages.requiredField },
@@ -982,9 +646,9 @@ export function NewCompanyForm({
           </label>
 
           <label className="mx-auto grid w-full gap-1 text-sm md:w-[70%]">
-            <span className="text-neutral-300">{messages.nip}</span>
+            <span className="text-neutral-700">{messages.nip}</span>
             <input
-              className="rounded-md border border-neutral-300 bg-neutral-100/85 px-3 py-2 text-neutral-800 placeholder:text-[#94a3b8]"
+              className="rounded-md border border-neutral-300 bg-white px-3 py-2 text-neutral-800 placeholder:text-neutral-400"
               placeholder={messages.nipPlaceholder}
               {...register("nip")}
             />
@@ -998,9 +662,9 @@ export function NewCompanyForm({
           </label>
 
           <label className="mx-auto grid w-full gap-1 text-sm md:w-[70%]">
-            <span className="text-neutral-300">{messages.description}*</span>
+            <span className="text-neutral-700">{messages.description}*</span>
             <textarea
-              className="min-h-28 rounded-md border border-neutral-300 bg-neutral-100/85 px-3 py-2 text-neutral-800 placeholder:text-[#94a3b8]"
+              className="min-h-28 rounded-md border border-neutral-300 bg-white px-3 py-2 text-neutral-800 placeholder:text-neutral-400"
               placeholder={messages.descriptionPlaceholder}
               {...register("description", {
                 required: messages.requiredField,
@@ -1018,12 +682,12 @@ export function NewCompanyForm({
             )}
           </label>
 
-          <div className="mb-2 mt-4 border-t border-neutral-700/70" />
+          <div className="mb-2 mt-4 border-t border-neutral-300" />
           <div className="grid gap-4">
             <label className="mx-auto grid w-full gap-1 text-sm md:w-[70%]">
-              <span className="text-neutral-300">{messages.operatingAreaLabel}*</span>
+              <span className="text-neutral-700">{messages.operatingAreaLabel}*</span>
               <select
-                className="rounded-md border border-neutral-300 bg-neutral-100/85 px-3 py-2 text-neutral-800 placeholder:text-[#94a3b8]"
+                className="rounded-md border border-neutral-300 bg-white px-3 py-2 text-neutral-800 placeholder:text-neutral-400"
                 {...register("operatingArea", {
                   required: messages.requiredField,
                 })}
@@ -1042,9 +706,9 @@ export function NewCompanyForm({
             </label>
 
             <label className="mx-auto grid w-full gap-1 text-sm md:w-[70%]">
-              <span className="text-neutral-300">{messages.operatingAreaDetailsLabel}</span>
+              <span className="text-neutral-700">{messages.operatingAreaDetailsLabel}</span>
               <textarea
-                className="min-h-24 rounded-md border border-neutral-300 bg-neutral-100/85 px-3 py-2 text-neutral-800 placeholder:text-[#94a3b8]"
+                className="min-h-24 rounded-md border border-neutral-300 bg-white px-3 py-2 text-neutral-800 placeholder:text-neutral-400"
                 placeholder={messages.operatingAreaDetailsPlaceholder}
                 {...register("operatingAreaDetails", {
                   maxLength: { value: 200, message: messages.operatingAreaDetailsTooLong },
@@ -1060,114 +724,10 @@ export function NewCompanyForm({
             </label>
           </div>
         </section>
-        ) : null}
 
-      {currentStep === 2 ? (
-      <>
-      <h2 className="text-sm font-semibold text-neutral-200">{messages.stepAdditional}</h2>
-      <section className="grid gap-3 rounded-lg border border-neutral-700/80 bg-neutral-900/45 p-3">
+      <section className="grid gap-3 rounded-lg border border-neutral-300 bg-neutral-50 p-3">
         <div>
-          <h2 className="text-sm font-semibold text-neutral-200">
-            {messages.communicationLanguagesTitle}
-          </h2>
-          <p className="text-xs text-neutral-400">{messages.communicationLanguagesHint}</p>
-        </div>
-        <p className="text-xs text-neutral-300">
-          {messages.communicationLanguagesSelectedLabel}:{" "}
-          {selectedCommunicationLanguages.length}
-        </p>
-        {selectedCommunicationLanguageOptions.length > 0 ? (
-          <div className="flex flex-wrap gap-2">
-            {selectedCommunicationLanguageOptions.map((language) => (
-              <div
-                key={language.value}
-                className="inline-flex items-center rounded-md border border-neutral-300 bg-neutral-100 px-3 py-1 text-xs font-medium text-neutral-700"
-              >
-                {language.label}
-              </div>
-            ))}
-          </div>
-        ) : null}
-        <div>
-          <button
-            type="button"
-            className="cursor-pointer rounded-md border border-neutral-300 bg-neutral-100/85 px-3 py-2 text-sm text-neutral-700 hover:border-neutral-400"
-            onClick={() => setIsCommunicationLanguagesModalOpen(true)}
-          >
-            {messages.communicationLanguagesOpenModal}
-          </button>
-        </div>
-      </section>
-
-      <section className="grid gap-3 rounded-lg border border-neutral-700/80 bg-neutral-900/45 p-3">
-        <div>
-          <h2 className="text-sm font-semibold text-neutral-200">
-            {messages.benefitsTitle}
-          </h2>
-          <p className="text-xs text-neutral-400">{messages.benefitsHint}</p>
-        </div>
-        <p className="text-xs text-neutral-300">
-          {messages.benefitsSelectedLabel}: {selectedBenefits.length}
-        </p>
-        {selectedBenefitOptions.length > 0 ? (
-          <div className="flex flex-wrap gap-2">
-            {selectedBenefitOptions.map((benefit) => (
-              <div
-                key={benefit.value}
-                className="inline-flex items-center rounded-md border border-neutral-300 bg-neutral-100 px-3 py-1 text-xs font-medium text-neutral-700"
-              >
-                {benefit.label}
-              </div>
-            ))}
-          </div>
-        ) : null}
-        <div>
-          <button
-            type="button"
-            className="cursor-pointer rounded-md border border-neutral-300 bg-neutral-100/85 px-3 py-2 text-sm text-neutral-700 hover:border-neutral-400"
-            onClick={() => setIsBenefitsModalOpen(true)}
-          >
-            {messages.benefitsOpenModal}
-          </button>
-        </div>
-      </section>
-
-      <section className="grid gap-3 rounded-lg border border-neutral-700/80 bg-neutral-900/45 p-3">
-        <div>
-          <h2 className="text-sm font-semibold text-neutral-200">
-            {messages.specializationsTitle}
-          </h2>
-          <p className="text-xs text-neutral-400">{messages.specializationsHint}</p>
-        </div>
-        <p className="text-xs text-neutral-300">
-          {messages.specializationsSelectedLabel}: {selectedSpecializations.length}
-        </p>
-        {selectedSpecializationOptions.length > 0 ? (
-          <div className="flex flex-wrap gap-2">
-            {selectedSpecializationOptions.map((specialization) => (
-              <div
-                key={specialization.value}
-                className="inline-flex items-center rounded-md border border-neutral-300 bg-neutral-100 px-3 py-1 text-xs font-medium text-neutral-700"
-              >
-                {specialization.label}
-              </div>
-            ))}
-          </div>
-        ) : null}
-        <div>
-          <button
-            type="button"
-            className="cursor-pointer rounded-md border border-neutral-300 bg-neutral-100/85 px-3 py-2 text-sm text-neutral-700 hover:border-neutral-400"
-            onClick={() => setIsSpecializationsModalOpen(true)}
-          >
-            {messages.specializationsOpenModal}
-          </button>
-        </div>
-      </section>
-
-      <section className="grid gap-3 rounded-lg border border-neutral-700/80 bg-neutral-900/45 p-3">
-        <div>
-          <h2 className="text-sm font-semibold text-neutral-200">{messages.photosTitle}</h2>
+          <h2 className="text-sm font-semibold text-neutral-800">{messages.photosTitle}</h2>
           <p className="text-xs text-neutral-400">
             {formatTemplate(messages.imageDropzoneHintWithLimit, {
               maxMb: MAX_PHOTO_MB,
@@ -1179,6 +739,7 @@ export function NewCompanyForm({
           hintText={formatTemplate(messages.imageDropzoneHintWithLimit, {
             maxMb: MAX_PHOTO_MB,
           })}
+          variant="light"
           onFilesAdded={(files) => {
             const imageFiles = files.filter((file) => file.type.startsWith("image/"));
             if (imageFiles.length !== files.length) {
@@ -1252,7 +813,7 @@ export function NewCompanyForm({
               return (
               <div
                 key={`initial-photo-${index + 1}`}
-                className="group relative rounded-md border border-neutral-700 bg-neutral-900/40 p-1"
+                className="group relative rounded-md border border-neutral-300 bg-white p-1"
               >
                 <button
                   type="button"
@@ -1295,20 +856,14 @@ export function NewCompanyForm({
           />
         ) : null}
       </section>
-      </>
-      ) : null}
 
-      {currentStep === 1 || hasVisitedContactStep ? (
-      <section
-        className={currentStep === 1 ? "grid gap-4" : "hidden"}
-        aria-hidden={currentStep !== 1}
-      >
-      <h2 className="text-sm font-semibold text-neutral-200">{messages.stepContact}</h2>
+      <section className="grid gap-4 border-t border-neutral-300 pt-4">
+      <h2 className="text-sm font-semibold text-neutral-800">{messages.stepContact}</h2>
 
       <label className="mx-auto grid w-full gap-1 text-sm md:w-[70%]">
-        <span className="text-neutral-300">{messages.phone}</span>
+        <span className="text-neutral-700">{messages.phone}</span>
         <input
-          className="rounded-md border border-neutral-300 bg-neutral-100/85 px-3 py-2 text-neutral-800 placeholder:text-[#94a3b8]"
+          className="rounded-md border border-neutral-300 bg-white px-3 py-2 text-neutral-800 placeholder:text-neutral-400"
           {...register("phone", {
             validate: {
               format: (value) =>
@@ -1325,9 +880,9 @@ export function NewCompanyForm({
       </label>
 
       <label className="mx-auto grid w-full gap-1 text-sm md:w-[70%]">
-        <span className="text-neutral-300">{messages.email}*</span>
+        <span className="text-neutral-700">{messages.email}*</span>
         <input
-          className="rounded-md border border-neutral-300 bg-neutral-100/85 px-3 py-2 text-neutral-800 placeholder:text-[#94a3b8]"
+          className="rounded-md border border-neutral-300 bg-white px-3 py-2 text-neutral-800 placeholder:text-neutral-400"
           {...register("email", {
             validate: {
               required: (value) => value.trim().length > 0 || messages.requiredField,
@@ -1345,9 +900,9 @@ export function NewCompanyForm({
       </label>
 
       <label className="mx-auto grid w-full gap-1 text-sm md:w-[70%]">
-        <span className="text-neutral-300">{messages.website}</span>
+        <span className="text-neutral-700">{messages.website}</span>
         <input
-          className="rounded-md border border-neutral-300 bg-neutral-100/85 px-3 py-2 text-neutral-800 placeholder:text-[#94a3b8]"
+          className="rounded-md border border-neutral-300 bg-white px-3 py-2 text-neutral-800 placeholder:text-neutral-400"
           {...register("website")}
         />
         {getFieldMessage(errors.website?.message) ? (
@@ -1357,15 +912,15 @@ export function NewCompanyForm({
         ) : null}
       </label>
 
-      <div className="mb-2 mt-4 border-t border-neutral-700/70" />
+      <div className="mb-2 mt-4 border-t border-neutral-300" />
       <div className="grid gap-4">
         <label className="mx-auto grid w-full gap-1 text-sm md:w-[70%]">
-          <span className="flex items-center gap-2 text-neutral-300">
+          <span className="flex items-center gap-2 text-neutral-700">
             <FacebookIcon className="h-4 w-4 text-neutral-400" />
             {messages.facebookUrl}
           </span>
           <input
-            className="rounded-md border border-neutral-300 bg-neutral-100/85 px-3 py-2 text-neutral-800 placeholder:text-[#94a3b8]"
+            className="rounded-md border border-neutral-300 bg-white px-3 py-2 text-neutral-800 placeholder:text-neutral-400"
             {...register("facebookUrl", {
               validate: (value) =>
                 isValidWebsite(value) || messages.invalidWebsite,
@@ -1380,12 +935,12 @@ export function NewCompanyForm({
         </label>
 
         <label className="mx-auto grid w-full gap-1 text-sm md:w-[70%]">
-          <span className="flex items-center gap-2 text-neutral-300">
+          <span className="flex items-center gap-2 text-neutral-700">
             <InstagramIcon className="h-4 w-4 text-neutral-400" />
             {messages.instagramUrl}
           </span>
           <input
-            className="rounded-md border border-neutral-300 bg-neutral-100/85 px-3 py-2 text-neutral-800 placeholder:text-[#94a3b8]"
+            className="rounded-md border border-neutral-300 bg-white px-3 py-2 text-neutral-800 placeholder:text-neutral-400"
             placeholder={messages.instagramPlaceholder}
             {...register("instagramUrl", {
               validate: (value) =>
@@ -1400,12 +955,12 @@ export function NewCompanyForm({
         </label>
 
         <label className="mx-auto grid w-full gap-1 text-sm md:w-[70%]">
-          <span className="flex items-center gap-2 text-neutral-300">
+          <span className="flex items-center gap-2 text-neutral-700">
             <LinkedInIcon className="h-4 w-4 text-neutral-400" />
             {messages.linkedinUrl}
           </span>
           <input
-            className="rounded-md border border-neutral-300 bg-neutral-100/85 px-3 py-2 text-neutral-800 placeholder:text-[#94a3b8]"
+            className="rounded-md border border-neutral-300 bg-white px-3 py-2 text-neutral-800 placeholder:text-neutral-400"
             placeholder={messages.linkedinPlaceholder}
             {...register("linkedinUrl", {
               validate: (value) =>
@@ -1452,7 +1007,7 @@ export function NewCompanyForm({
                 branchPhoneTouched={Boolean(touchedFields.branches?.[index]?.phone)}
                 branchEmailTouched={Boolean(touchedFields.branches?.[index]?.email)}
                 isSubmitted={isSubmitted}
-                isVisible={currentStep === 1}
+                isVisible
                 onRemoveBranch={removeBranch}
               />
             </div>
@@ -1468,9 +1023,8 @@ export function NewCompanyForm({
         </button>
       </div>
       </section>
-      ) : null}
 
-      {isLastStep && httpMethod === "POST" && turnstileSiteKey ? (
+      {httpMethod === "POST" && turnstileSiteKey ? (
         <TurnstileWidget
           siteKey={turnstileSiteKey}
           onTokenChange={setTurnstileToken}
@@ -1479,42 +1033,20 @@ export function NewCompanyForm({
       ) : null}
 
       <div className="mt-4 flex flex-wrap items-center justify-end gap-2">
-        {currentStep > 0 ? (
-          <button
-            type="button"
-            className="cursor-pointer rounded-md border border-[#94a3b8] bg-white px-4 py-2 text-sm font-medium text-[#0f172a] transition hover:bg-[#f1f5f9]"
-            onClick={() => goToStepWithHistory(currentStep - 1)}
-          >
-            {messages.previousStep}
-          </button>
-        ) : null}
-
-        {isLastStep ? (
-          <button
-            type="button"
-            className="cursor-pointer rounded-md bg-[#111827] px-4 py-2 text-sm font-medium text-white transition hover:bg-[#1f2937] disabled:opacity-60"
-            disabled={isSubmitting || companyCreationLimit?.isLimited}
-            onClick={() => {
-              void handleSubmit(onSubmit)();
-            }}
-          >
-            {isSubmitting
-              ? messages.submitting
-              : companyCreationLimit?.isLimited
-                ? messages.creationLimitButton
-                : messages.submit}
-          </button>
-        ) : (
-          <button
-            type="button"
-            className="cursor-pointer rounded-md bg-[#111827] px-4 py-2 text-sm font-medium text-white transition hover:bg-[#1f2937]"
-            onClick={() => {
-              void goToNextStep();
-            }}
-          >
-            {messages.nextStep}
-          </button>
-        )}
+        <button
+          type="button"
+          className="cursor-pointer rounded-md bg-[#111827] px-4 py-2 text-sm font-medium text-white transition hover:bg-[#1f2937] disabled:opacity-60"
+          disabled={isSubmitting || companyCreationLimit?.isLimited}
+          onClick={() => {
+            void handleSubmit(onSubmit)();
+          }}
+        >
+          {isSubmitting
+            ? messages.submitting
+            : companyCreationLimit?.isLimited
+              ? messages.creationLimitButton
+              : messages.submit}
+        </button>
       </div>
       </div>
       </section>
@@ -1621,37 +1153,6 @@ export function NewCompanyForm({
           }}
         />
       ) : null}
-      <SelectOptionModal
-        isOpen={isBenefitsModalOpen}
-        title={messages.benefitsModalTitle}
-        subtitle={messages.benefitsHint}
-        closeLabel={messages.benefitsModalClose}
-        options={companyBenefitOptions}
-        register={register}
-        fieldName="benefits"
-        onClose={() => setIsBenefitsModalOpen(false)}
-      />
-      <SelectOptionModal
-        isOpen={isCommunicationLanguagesModalOpen}
-        title={messages.communicationLanguagesModalTitle}
-        subtitle={messages.communicationLanguagesHint}
-        closeLabel={messages.communicationLanguagesModalClose}
-        options={communicationLanguageOptions}
-        register={register}
-        fieldName="communicationLanguages"
-        onClose={() => setIsCommunicationLanguagesModalOpen(false)}
-      />
-      <SelectOptionModal
-        isOpen={isSpecializationsModalOpen}
-        title={messages.specializationsModalTitle}
-        subtitle={messages.specializationsHint}
-        closeLabel={messages.specializationsModalClose}
-        options={companySpecializationOptions}
-        register={register}
-        fieldName="specializations"
-        onClose={() => setIsSpecializationsModalOpen(false)}
-      />
-
       {isPostCreateModalOpen ? (
         <div className="fixed inset-0 z-[80] flex items-center justify-center p-4">
           <div
@@ -1704,6 +1205,8 @@ export function NewCompanyForm({
     </section>
   );
 }
+
+
 
 
 

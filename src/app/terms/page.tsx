@@ -42,7 +42,8 @@ export default async function TermsPage({ searchParams }: TermsPageProps) {
     <StaticPageFrame
       locale={locale}
       backLabel={messages.companyDetails.back}
-      mapLabel={messages.home.heroPrimaryCta}
+      mapLabel={locale === "pl" ? "PrzejdÅº do ogÅ‚oszeÅ„" : messages.home.whatBrowseAnnouncementsCta}
+      mapHref="/list"
       title={page.title}
       intro={page.intro}
       links={[
@@ -59,8 +60,8 @@ export default async function TermsPage({ searchParams }: TermsPageProps) {
               dostÄ™pnej pod adresem <strong>containerboard.pl</strong>.
             </li>
             <li>
-              Operatorem platformy jest <strong>ContainerBoard Karol Tymi&#324;ski 5842785961</strong>,
-              z siedzibÄ… w <strong>Gda&#324;sku, Andrzeja Struga 4</strong>.
+              Operatorem platformy jest <strong>ContainerBoard Karol TymiÅ„ski 5842785961</strong>,
+              z siedzibÄ… w <strong>GdaÅ„sku, Andrzeja Struga 4</strong>.
             </li>
             <li>
               Platforma ContainerBoard umoÅ¼liwia uÅ¼ytkownikom:
@@ -85,8 +86,8 @@ export default async function TermsPage({ searchParams }: TermsPageProps) {
               <strong>UÅ¼ytkownik</strong> - kaÅ¼da osoba korzystajÄ…ca z Platformy.
             </li>
             <li>
-              <strong>TreÅ›ci</strong> - wszelkie informacje publikowane przez UÅ¼ytkownika (np.
-              opisy, oferty, dane firm, ogÅ‚oszenia).
+              <strong>TreÅ›ci</strong> - wszelkie informacje publikowane przez UÅ¼ytkownika (np. opisy,
+              oferty, dane firm, ogÅ‚oszenia).
             </li>
             <li>
               <strong>Operator</strong> - wÅ‚aÅ›ciciel i administrator Platformy.
@@ -107,9 +108,7 @@ export default async function TermsPage({ searchParams }: TermsPageProps) {
                 <li>niezgodnych z prawem,</li>
                 <li>naruszajÄ…cych prawa osÃ³b trzecich,</li>
                 <li>wprowadzajÄ…cych w bÅ‚Ä…d,</li>
-                <li>
-                  zawierajÄ…cych spam lub treÅ›ci reklamowe niezgodne z przeznaczeniem Platformy.
-                </li>
+                <li>zawierajÄ…cych spam lub treÅ›ci reklamowe niezgodne z przeznaczeniem Platformy.</li>
               </ul>
             </li>
             <li>UÅ¼ytkownik zobowiÄ…zuje siÄ™ do podawania prawdziwych i aktualnych informacji.</li>
@@ -153,9 +152,7 @@ export default async function TermsPage({ searchParams }: TermsPageProps) {
                 <li>rzetelnoÅ›ci UÅ¼ytkownikÃ³w.</li>
               </ul>
             </li>
-            <li>
-              Wszelkie relacje pomiÄ™dzy UÅ¼ytkownikami odbywajÄ… siÄ™ na ich wÅ‚asnÄ… odpowiedzialnoÅ›Ä‡.
-            </li>
+            <li>Wszelkie relacje pomiÄ™dzy UÅ¼ytkownikami odbywajÄ… siÄ™ na ich wÅ‚asnÄ… odpowiedzialnoÅ›Ä‡.</li>
           </ol>
         </section>
 
@@ -170,19 +167,13 @@ export default async function TermsPage({ searchParams }: TermsPageProps) {
                 <li>szkody wynikajÄ…ce z korzystania z Platformy.</li>
               </ul>
             </li>
-            <li>
-              Operator nie gwarantuje ciÄ…gÅ‚oÅ›ci dziaÅ‚ania Platformy ani braku bÅ‚Ä™dÃ³w technicznych.
-            </li>
-            <li>
-              Platforma moÅ¼e byÄ‡ czasowo niedostÄ™pna z przyczyn technicznych lub rozwojowych.
-            </li>
+            <li>Operator nie gwarantuje ciÄ…gÅ‚oÅ›ci dziaÅ‚ania Platformy ani braku bÅ‚Ä™dÃ³w technicznych.</li>
+            <li>Platforma moÅ¼e byÄ‡ czasowo niedostÄ™pna z przyczyn technicznych lub rozwojowych.</li>
           </ol>
         </section>
 
         <section className="space-y-3">
-          <h2 className="text-base font-semibold text-neutral-100">
-            7. Zmiany platformy i regulaminu
-          </h2>
+          <h2 className="text-base font-semibold text-neutral-100">7. Zmiany platformy i regulaminu</h2>
           <ol className="list-decimal space-y-2 pl-5">
             <li>
               Operator zastrzega sobie prawo do:
@@ -221,10 +212,3 @@ export default async function TermsPage({ searchParams }: TermsPageProps) {
     </StaticPageFrame>
   );
 }
-
-
-
-
-
-
-

@@ -81,6 +81,14 @@ export default async function EditContainerPage({ params }: EditContainerPagePro
           containerCondition: listingItem.container.condition,
           hasCscPlate: listingItem.hasCscPlate,
           hasCscCertification: listingItem.hasCscCertification,
+          cscValidToMonth:
+            typeof listingItem.cscValidToMonth === "number"
+              ? String(listingItem.cscValidToMonth)
+              : "",
+          cscValidToYear:
+            typeof listingItem.cscValidToYear === "number"
+              ? String(listingItem.cscValidToYear)
+              : "",
           productionYear:
             typeof listingItem.productionYear === "number"
               ? String(listingItem.productionYear)
@@ -114,12 +122,11 @@ export default async function EditContainerPage({ params }: EditContainerPagePro
           priceType: listingItem.pricing?.type ?? "fixed",
           priceValueAmount:
             typeof listingItem.pricing?.original.amount === "number"
-              ? String(listingItem.pricing.original.amount)
+              ? String(Math.round(listingItem.pricing.original.amount))
               : typeof listingItem.priceAmount === "number"
-                ? String(listingItem.priceAmount)
+                ? String(Math.round(listingItem.priceAmount))
                 : "",
           priceCurrency: listingItem.pricing?.original.currency ?? "PLN",
-          priceUnit: listingItem.pricing?.original.unit ?? "per_container",
           priceTaxMode: listingItem.pricing?.original.taxMode ?? "net",
           priceVatRate:
             typeof listingItem.pricing?.original.vatRate === "number"

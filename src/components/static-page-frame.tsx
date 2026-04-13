@@ -31,16 +31,12 @@ export function StaticPageFrame({
 }: StaticPageFrameProps) {
   return (
     <section className="relative overflow-hidden">
-      <div className="pointer-events-none absolute inset-0" aria-hidden="true">
-        <div className="absolute -left-24 top-6 h-56 w-56 rounded-full bg-sky-500/10 blur-3xl" />
-        <div className="absolute right-[-4rem] top-20 h-64 w-64 rounded-full bg-cyan-400/10 blur-3xl" />
-      </div>
       <main className="relative mx-auto flex w-full max-w-4xl flex-col gap-6 px-4 py-10 sm:px-6">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <SmartBackButton
             label={backLabel}
             fallbackHref={withLang(backHref, locale)}
-            className="inline-flex w-fit items-center gap-2 rounded-md border border-neutral-700 px-3 py-2 text-sm text-neutral-200 transition-colors hover:border-neutral-500"
+            className="inline-flex w-fit items-center gap-2 rounded-md border border-neutral-500 bg-white px-3 py-2 text-sm text-neutral-700 transition-colors hover:border-neutral-700 hover:bg-neutral-100"
           />
           {mapLabel ? (
             <Link
@@ -48,7 +44,7 @@ export function StaticPageFrame({
               className="inline-flex items-center gap-2 rounded-md border border-sky-700 px-3 py-2 text-sm text-sky-200 transition-colors hover:border-sky-500"
             >
               <span>{mapLabel}</span>
-              <span aria-hidden="true">→</span>
+              <span aria-hidden="true">&rarr;</span>
             </Link>
           ) : null}
         </div>
@@ -76,5 +72,3 @@ export function StaticPageFrame({
     </section>
   );
 }
-
-

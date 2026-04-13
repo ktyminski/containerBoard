@@ -42,7 +42,8 @@ export default async function PrivacyPolicyPage({ searchParams }: PrivacyPolicyP
     <StaticPageFrame
       locale={locale}
       backLabel={messages.companyDetails.back}
-      mapLabel={messages.home.heroPrimaryCta}
+      mapLabel={locale === "pl" ? "PrzejdÅº do ogÅ‚oszeÅ„" : messages.home.whatBrowseAnnouncementsCta}
+      mapHref="/list"
       title={page.title}
       intro={page.intro}
       links={[
@@ -56,18 +57,13 @@ export default async function PrivacyPolicyPage({ searchParams }: PrivacyPolicyP
           <ol className="list-decimal space-y-2 pl-5">
             <li>
               Niniejsza Polityka prywatnoÅ›ci okreÅ›la zasady przetwarzania danych osobowych
-              uÅ¼ytkownikÃ³w platformy ContainerBoard dostÄ™pnej pod adresem{" "}
-              <strong>containerboard.pl</strong>.
+              uÅ¼ytkownikÃ³w platformy ContainerBoard dostÄ™pnej pod adresem <strong>containerboard.pl</strong>.
             </li>
             <li>
-              Administratorem danych osobowych jest{" "}
-              <strong>ContainerBoard Karol Tymi&#324;ski 5842785961</strong>, z siedzibÄ… w{" "}
-              <strong>Gda&#324;sku, Andrzeja Struga 4</strong>, e-mail:{" "}
-              <strong>hello@containerboard.pl</strong>.
+              Administratorem danych osobowych jest <strong>ContainerBoard Karol TymiÅ„ski 5842785961</strong>,
+              z siedzibÄ… w <strong>GdaÅ„sku, Andrzeja Struga 4</strong>, e-mail: <strong>hello@containerboard.pl</strong>.
             </li>
-            <li>
-              Dbamy o ochronÄ™ prywatnoÅ›ci uÅ¼ytkownikÃ³w oraz bezpieczeÅ„stwo przetwarzanych danych.
-            </li>
+            <li>Dbamy o ochronÄ™ prywatnoÅ›ci uÅ¼ytkownikÃ³w oraz bezpieczeÅ„stwo przetwarzanych danych.</li>
           </ol>
         </section>
 
@@ -86,9 +82,7 @@ export default async function PrivacyPolicyPage({ searchParams }: PrivacyPolicyP
               </ul>
             </div>
             <div className="space-y-2">
-              <h3 className="text-sm font-semibold text-neutral-200">
-                2.2 Dane zbierane automatycznie:
-              </h3>
+              <h3 className="text-sm font-semibold text-neutral-200">2.2 Dane zbierane automatycznie:</h3>
               <ul className="list-disc space-y-1 pl-5">
                 <li>adres IP,</li>
                 <li>dane przeglÄ…darki i urzÄ…dzenia,</li>
@@ -111,16 +105,11 @@ export default async function PrivacyPolicyPage({ searchParams }: PrivacyPolicyP
         </section>
 
         <section className="space-y-3">
-          <h2 className="text-base font-semibold text-neutral-100">
-            4. Podstawa prawna przetwarzania
-          </h2>
+          <h2 className="text-base font-semibold text-neutral-100">4. Podstawa prawna przetwarzania</h2>
           <p>Dane przetwarzane sÄ… na podstawie:</p>
           <ul className="list-disc space-y-2 pl-5">
             <li>art. 6 ust. 1 lit. b RODO - realizacja usÅ‚ug,</li>
-            <li>
-              art. 6 ust. 1 lit. f RODO - prawnie uzasadniony interes (bezpieczeÅ„stwo, rozwÃ³j
-              platformy),
-            </li>
+            <li>art. 6 ust. 1 lit. f RODO - prawnie uzasadniony interes (bezpieczeÅ„stwo, rozwÃ³j platformy),</li>
             <li>art. 6 ust. 1 lit. a RODO - zgoda (jeÅ›li dotyczy).</li>
           </ul>
         </section>
@@ -171,9 +160,7 @@ export default async function PrivacyPolicyPage({ searchParams }: PrivacyPolicyP
         <section className="space-y-3">
           <h2 className="text-base font-semibold text-neutral-100">8. BezpieczeÅ„stwo danych</h2>
           <ol className="list-decimal space-y-2 pl-5">
-            <li>
-              Stosujemy Å›rodki techniczne i organizacyjne zapewniajÄ…ce ochronÄ™ danych.
-            </li>
+            <li>Stosujemy Å›rodki techniczne i organizacyjne zapewniajÄ…ce ochronÄ™ danych.</li>
             <li>DostÄ™p do danych majÄ… wyÅ‚Ä…cznie upowaÅ¼nione osoby.</li>
           </ol>
         </section>
@@ -187,9 +174,7 @@ export default async function PrivacyPolicyPage({ searchParams }: PrivacyPolicyP
         </section>
 
         <section className="space-y-3">
-          <h2 className="text-base font-semibold text-neutral-100">
-            10. Zmiany polityki prywatnoÅ›ci
-          </h2>
+          <h2 className="text-base font-semibold text-neutral-100">10. Zmiany polityki prywatnoÅ›ci</h2>
           <ol className="list-decimal space-y-2 pl-5">
             <li>Polityka prywatnoÅ›ci moÅ¼e byÄ‡ aktualizowana.</li>
             <li>Nowa wersja obowiÄ…zuje od momentu publikacji na stronie.</li>
@@ -199,10 +184,3 @@ export default async function PrivacyPolicyPage({ searchParams }: PrivacyPolicyP
     </StaticPageFrame>
   );
 }
-
-
-
-
-
-
-

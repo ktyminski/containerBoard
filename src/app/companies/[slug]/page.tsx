@@ -10,7 +10,6 @@ import { SmartBackButton } from "@/components/smart-back-button";
 import { FacebookIcon, InstagramIcon, LinkedInIcon } from "@/components/social-icons";
 import { SESSION_COOKIE_NAME } from "@/lib/auth-session";
 import { getCurrentUserFromToken } from "@/lib/auth-user";
-import { COMPANY_BENEFITS, type CompanyBenefit } from "@/lib/company-benefits";
 import { normalizeCompanyOperatingArea } from "@/lib/company-operating-area";
 import {
   COMPANY_VERIFICATION_STATUS,
@@ -34,11 +33,6 @@ import {
   getCompanyInitial,
 } from "@/lib/company-logo-fallback";
 import { USER_ROLE } from "@/lib/user-roles";
-import { normalizeCompanyCommunicationLanguages } from "@/types/company-communication-language";
-import {
-  COMPANY_SPECIALIZATIONS,
-  type CompanySpecialization,
-} from "@/types/company-specialization";
 
 type CompanyDetailsPageProps = {
   params: Promise<{ slug: string }>;
@@ -52,8 +46,6 @@ const COMPANY_PAGE_PROJECTION = {
   createdByUserId: 1,
   description: 1,
   category: 1,
-  communicationLanguage: 1,
-  communicationLanguages: 1,
   operatingArea: 1,
   operatingAreaDetails: 1,
   nip: 1,
@@ -66,8 +58,6 @@ const COMPANY_PAGE_PROJECTION = {
   facebookUrl: 1,
   instagramUrl: 1,
   linkedinUrl: 1,
-  benefits: 1,
-  specializations: 1,
   tags: 1,
   services: 1,
   "logo.size": 1,
@@ -241,19 +231,6 @@ export default async function CompanyDetailsPage({
     })
     .filter((location): location is NonNullable<typeof location> => location !== null);
 
-  const specializationSet = new Set<string>(COMPANY_SPECIALIZATIONS);
-  const companySpecializations = (company.specializations ?? []).filter(
-    (specialization): specialization is CompanySpecialization =>
-      specializationSet.has(specialization),
-  );
-  const benefitSet = new Set<string>(COMPANY_BENEFITS);
-  const companyBenefits = (company.benefits ?? []).filter(
-    (benefit): benefit is CompanyBenefit => benefitSet.has(benefit),
-  );
-  const companyCommunicationLanguages = normalizeCompanyCommunicationLanguages([
-    ...(company.communicationLanguages ?? []),
-    ...(company.communicationLanguage ? [company.communicationLanguage] : []),
-  ]);
   const companyUrl = getLocalizedCanonical(`/companies/${company.slug}`, locale);
   const companyPhone = company.phone?.trim() || undefined;
   const sameAs = [
@@ -483,54 +460,7 @@ export default async function CompanyDetailsPage({
                 <p className="whitespace-pre-wrap">
                   {company.description}
                 </p>
-                {companyCommunicationLanguages.length > 0 ? (
-                  <>
-                    <div className="py-2">
-                      <div className="border-t border-neutral-800" />
-                    </div>
-                    <p>
-                      <span className="text-neutral-400">{messages.companyCreate.communicationLanguagesTitle}: </span>
-                      {companyCommunicationLanguages
-                        .map((language) => messages.companyCreate.communicationLanguages[language])
-                        .join(", ")}
-                    </p>
-                  </>
-                ) : null}
                 {/* Tags and services intentionally hidden in company details view. */}
-                {companySpecializations.length > 0 ? (
-                  <div>
-                    <p>
-                      <span className="text-neutral-400">{messages.companyCreate.specializationsTitle}: </span>
-                    </p>
-                    <div className="mt-2 flex flex-wrap gap-2">
-                      {companySpecializations.map((specialization) => (
-                        <span
-                          key={specialization}
-                          className="inline-flex items-center rounded-lg border border-amber-400/35 bg-amber-500/10 px-3 py-1 text-xs font-medium text-amber-100"
-                        >
-                          {messages.companyCreate.specializationsOptions[specialization]}
-                        </span>
-                      ))}
-                    </div>
-                  </div>
-                ) : null}
-                {companyBenefits.length > 0 ? (
-                  <div>
-                    <p>
-                      <span className="text-neutral-400">{messages.companyCreate.benefitsTitle}: </span>
-                    </p>
-                    <div className="mt-2 flex flex-wrap gap-2">
-                      {companyBenefits.map((benefit) => (
-                        <span
-                          key={benefit}
-                          className="inline-flex items-center rounded-lg border border-emerald-400/35 bg-emerald-500/10 px-3 py-1 text-xs font-medium text-emerald-100"
-                        >
-                          {messages.companyCreate.benefitsOptions[benefit]}
-                        </span>
-                      ))}
-                    </div>
-                  </div>
-                ) : null}
               </div>
 
               <aside className="h-fit rounded-xl border border-neutral-700/80 bg-neutral-950/70 p-4">

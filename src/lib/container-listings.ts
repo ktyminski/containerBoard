@@ -23,7 +23,6 @@ import {
   type ListingStatus,
   type ListingType,
   type PriceType,
-  type PriceUnit,
   type TaxMode,
 } from "@/lib/container-listing-types";
 import { escapeRegexPattern } from "@/lib/escape-regex-pattern";
@@ -91,6 +90,8 @@ export type ContainerListingDocument = {
   logisticsComment?: string;
   hasCscPlate?: boolean;
   hasCscCertification?: boolean;
+  cscValidToMonth?: number;
+  cscValidToYear?: number;
   productionYear?: number;
   price?: string;
   description?: string;
@@ -109,6 +110,7 @@ export type ContainerInquiryDocument = {
   listingId: ObjectId;
   buyerName: string;
   buyerEmail: string;
+  buyerPhone?: string;
   message: string;
   requestedQuantity?: number;
   offeredPrice?: string;
@@ -150,6 +152,8 @@ export type ContainerListingItem = {
   logisticsComment?: string;
   hasCscPlate: boolean;
   hasCscCertification: boolean;
+  cscValidToMonth?: number;
+  cscValidToYear?: number;
   productionYear?: number;
   price?: string;
   description?: string;
@@ -170,6 +174,13 @@ export type ContainerListingMapPoint = {
   type: ListingType;
   locationLat: number | null;
   locationLng: number | null;
+};
+
+type MapPointBounds = {
+  minLat: number;
+  maxLat: number;
+  minLng: number;
+  maxLng: number;
 };
 
 let indexesReadyPromise: Promise<void> | null = null;
@@ -330,7 +341,7 @@ export async function ensureContainerListingsIndexes(): Promise<void> {
       await listings.createIndex({ "container.features": 1 });
       await listings.createIndex({ priceAmount: 1 });
       await listings.createIndex({ priceNegotiable: 1, priceAmount: 1 });
-      await listings.createIndex({ "pricing.type": 1, "pricing.original.unit": 1, "pricing.original.currency": 1 });
+      await listings.createIndex({ "pricing.type": 1, "pricing.original.currency": 1 });
       await listings.createIndex({ "pricing.original.taxMode": 1, "pricing.original.negotiable": 1 });
       await listings.createIndex({ "pricing.normalized.net.amountPln": 1 });
       await listings.createIndex({ "pricing.normalized.net.amountEur": 1 });
@@ -348,6 +359,11 @@ export async function ensureContainerListingsIndexes(): Promise<void> {
       await favorites.createIndex({ userId: 1, listingId: 1 }, { unique: true });
       await favorites.createIndex({ userId: 1, createdAt: -1 });
       await favorites.createIndex({ listingId: 1 });
+
+      await listings.updateMany(
+        { "pricing.original.unit": { $exists: true } },
+        { $unset: { "pricing.original.unit": "" } },
+      );
     })();
   }
 
@@ -444,6 +460,20 @@ export function mapContainerListingToItem(doc: ContainerListingDocument): Contai
     logisticsComment: doc.logisticsComment?.trim() || undefined,
     hasCscPlate: doc.hasCscPlate === true,
     hasCscCertification: doc.hasCscCertification === true,
+    cscValidToMonth:
+      typeof doc.cscValidToMonth === "number" &&
+      Number.isInteger(doc.cscValidToMonth) &&
+      doc.cscValidToMonth >= 1 &&
+      doc.cscValidToMonth <= 12
+        ? doc.cscValidToMonth
+        : undefined,
+    cscValidToYear:
+      typeof doc.cscValidToYear === "number" &&
+      Number.isInteger(doc.cscValidToYear) &&
+      doc.cscValidToYear >= 1900 &&
+      doc.cscValidToYear <= 2100
+        ? doc.cscValidToYear
+        : undefined,
     productionYear:
       typeof doc.productionYear === "number" && Number.isFinite(doc.productionYear)
         ? doc.productionYear
@@ -466,10 +496,14 @@ export function mapContainerListingToItem(doc: ContainerListingDocument): Contai
 
 export function mapContainerListingToMapPoints(
   doc: Pick<ContainerListingDocument, "_id" | "type" | "locationLat" | "locationLng" | "locations">,
+  options?: {
+    bounds?: MapPointBounds | null;
+  },
 ): ContainerListingMapPoint[] {
   const listingId = doc._id.toHexString();
   const points: ContainerListingMapPoint[] = [];
   const seenCoordinates = new Set<string>();
+  const bounds = options?.bounds ?? null;
 
   const appendPoint = (lat: unknown, lng: unknown) => {
     if (
@@ -477,6 +511,15 @@ export function mapContainerListingToMapPoints(
       !Number.isFinite(lat) ||
       typeof lng !== "number" ||
       !Number.isFinite(lng)
+    ) {
+      return;
+    }
+    if (
+      bounds &&
+      (lat < bounds.minLat ||
+        lat > bounds.maxLat ||
+        lng < bounds.minLng ||
+        lng > bounds.maxLng)
     ) {
       return;
     }
@@ -516,7 +559,6 @@ export function buildContainerListingsFilter(input: {
   priceMin?: number;
   priceMax?: number;
   priceCurrency?: Currency;
-  priceUnit?: PriceUnit;
   priceType?: PriceType;
   priceTaxMode?: TaxMode;
   priceNegotiable?: boolean;
@@ -684,18 +726,6 @@ export function buildContainerListingsFilter(input: {
     filter["pricing.original.currency"] = input.priceCurrency;
   }
 
-  if (input.priceUnit === "per_month") {
-    filter["pricing.original.unit"] = "per_month";
-  } else if (input.priceUnit === "per_container") {
-    andConditions.push({
-      $or: [
-        { "pricing.original.unit": "per_container" },
-        { "pricing.original.unit": { $exists: false } } as Filter<ContainerListingDocument>,
-        { "pricing.original.unit": null } as Filter<ContainerListingDocument>,
-      ],
-    } as Filter<ContainerListingDocument>);
-  }
-
   if (input.hasCscPlate === true) {
     filter.hasCscPlate = true;
   }
@@ -741,7 +771,6 @@ export function buildContainerListingsFilter(input: {
 
       const canUseLegacyPriceFallback =
         (input.priceCurrency ?? "PLN") === "PLN" &&
-        (input.priceUnit === undefined || input.priceUnit === "per_container") &&
         input.priceTaxMode !== "gross";
       if (canUseLegacyPriceFallback) {
         rangeConditions.push({

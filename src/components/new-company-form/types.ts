@@ -1,7 +1,4 @@
-import type { CompanyCommunicationLanguage } from "@/types/company-communication-language";
-import type { CompanyBenefit } from "@/lib/company-benefits";
 import type { CompanyOperatingArea } from "@/lib/company-operating-area";
-import type { CompanySpecialization } from "@/types/company-specialization";
 import type { GeocodeAddressParts } from "@/lib/geocode-address";
 
 export type ImageItem = {
@@ -26,7 +23,6 @@ export type BranchFormValue = {
 export type NewCompanyFormValues = {
   name: string;
   description: string;
-  communicationLanguages: CompanyCommunicationLanguage[];
   operatingArea: CompanyOperatingArea;
   operatingAreaDetails: string;
   nip: string;
@@ -36,8 +32,6 @@ export type NewCompanyFormValues = {
   facebookUrl: string;
   instagramUrl: string;
   linkedinUrl: string;
-  benefits: CompanyBenefit[];
-  specializations: CompanySpecialization[];
   branches: BranchFormValue[];
 };
 

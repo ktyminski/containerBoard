@@ -15,7 +15,6 @@ import {
   type Currency,
   type ListingType,
   type PriceType,
-  type PriceUnit,
   type TaxMode,
 } from "@/lib/container-listing-types";
 
@@ -30,9 +29,9 @@ export type SortPreset =
 export type FormContainerSize = "10" | "20" | "40" | "45" | "53";
 export type FormLocationRadiusKm = "20" | "50" | "100" | "200";
 export type FilterPriceType = "all" | PriceType;
-export type FilterPriceUnit = "all" | PriceUnit;
 export type FilterTaxMode = TaxMode;
 export type FilterCurrency = "all" | Currency;
+export type PriceDisplayCurrency = "original" | Currency;
 
 export type FiltersFormValues = {
   listingKind: ListingKind;
@@ -49,8 +48,8 @@ export type FiltersFormValues = {
   hasCscPlateOnly: boolean;
   hasCscCertificationOnly: boolean;
   priceType: FilterPriceType;
-  priceUnit: FilterPriceUnit;
   priceCurrency: FilterCurrency;
+  priceDisplayCurrency: PriceDisplayCurrency;
   priceTaxMode: FilterTaxMode;
   priceMinInput: string;
   priceMaxInput: string;
@@ -76,8 +75,8 @@ export type AppliedFilters = {
   hasCscPlateOnly: boolean;
   hasCscCertificationOnly: boolean;
   priceType: FilterPriceType;
-  priceUnit: FilterPriceUnit;
   priceCurrency: FilterCurrency;
+  priceDisplayCurrency: PriceDisplayCurrency;
   priceTaxMode: FilterTaxMode;
   priceMinInput: string;
   priceMaxInput: string;
@@ -140,8 +139,8 @@ export const FILTER_FORM_DEFAULTS: FiltersFormValues = {
   hasCscPlateOnly: false,
   hasCscCertificationOnly: false,
   priceType: "all",
-  priceUnit: "all",
   priceCurrency: "EUR",
+  priceDisplayCurrency: "original",
   priceTaxMode: "net",
   priceMinInput: "",
   priceMaxInput: "",
@@ -211,8 +210,8 @@ export type NonLocationFilters = Pick<
   | "hasCscPlateOnly"
   | "hasCscCertificationOnly"
   | "priceType"
-  | "priceUnit"
   | "priceCurrency"
+  | "priceDisplayCurrency"
   | "priceTaxMode"
   | "priceMinInput"
   | "priceMaxInput"
@@ -263,8 +262,8 @@ export function areNonLocationFiltersEqual(
     left.hasCscPlateOnly === right.hasCscPlateOnly &&
     left.hasCscCertificationOnly === right.hasCscCertificationOnly &&
     left.priceType === right.priceType &&
-    left.priceUnit === right.priceUnit &&
     left.priceCurrency === right.priceCurrency &&
+    left.priceDisplayCurrency === right.priceDisplayCurrency &&
     left.priceTaxMode === right.priceTaxMode &&
     left.priceMinInput === right.priceMinInput &&
     left.priceMaxInput === right.priceMaxInput &&
@@ -293,8 +292,8 @@ export function pickNonLocationFilters(filters: AppliedFilters): NonLocationFilt
     hasCscPlateOnly: filters.hasCscPlateOnly,
     hasCscCertificationOnly: filters.hasCscCertificationOnly,
     priceType: filters.priceType,
-    priceUnit: filters.priceUnit,
     priceCurrency: filters.priceCurrency,
+    priceDisplayCurrency: filters.priceDisplayCurrency,
     priceTaxMode: hasPriceRange ? filters.priceTaxMode : "net",
     priceMinInput: normalizedPriceMinInput,
     priceMaxInput: normalizedPriceMaxInput,

@@ -10,8 +10,9 @@ import {
 } from "@/lib/container-listings";
 import { getContainerShortLabel, LISTING_STATUS } from "@/lib/container-listing-types";
 import { enforceRateLimitOrResponse } from "@/lib/request-rate-limit";
-import { sendMail } from "@/lib/mailer";
+import { sendContainerInquiryEmail } from "@/lib/mailer";
 import { logError } from "@/lib/server-logger";
+import { getRequestIp, isTurnstileEnabled, verifyTurnstileToken } from "@/lib/turnstile";
 
 export const runtime = "nodejs";
 
@@ -22,19 +23,12 @@ type RouteContext = {
 const inquirySchema = z.object({
   buyerName: z.string().trim().min(2).max(120),
   buyerEmail: z.email().trim().max(160),
-  message: z.string().trim().min(10).max(2_000),
+  buyerPhone: z.string().trim().max(40).optional(),
+  message: z.string().trim().max(2_000).optional(),
   requestedQuantity: z.coerce.number().int().min(1).max(100_000).optional(),
   offeredPrice: z.string().trim().max(100).optional(),
+  turnstileToken: z.string().trim().optional().default(""),
 });
-
-function escapeHtml(value: string): string {
-  return value
-    .replaceAll("&", "&amp;")
-    .replaceAll("<", "&lt;")
-    .replaceAll(">", "&gt;")
-    .replaceAll('"', "&quot;")
-    .replaceAll("'", "&#39;");
-}
 
 function normalizeOptional(value?: string): string | undefined {
   const trimmed = value?.trim();
@@ -86,7 +80,24 @@ export async function POST(request: NextRequest, context: RouteContext) {
     }
 
     const inquiry = parsed.data;
+    const buyerPhone = normalizeOptional(inquiry.buyerPhone);
+    const inquiryMessage = normalizeOptional(inquiry.message);
+    const offeredPrice = normalizeOptional(inquiry.offeredPrice);
     const currentUser = await getCurrentUserFromRequest(request);
+    const isGuest = !currentUser?._id;
+    const turnstileEnabled = isTurnstileEnabled();
+    if (isGuest && turnstileEnabled && !inquiry.turnstileToken) {
+      return NextResponse.json({ error: "TURNSTILE_REQUIRED" }, { status: 400 });
+    }
+    if (isGuest && turnstileEnabled) {
+      const turnstileResult = await verifyTurnstileToken({
+        token: inquiry.turnstileToken,
+        remoteIp: getRequestIp(request.headers),
+      });
+      if (!turnstileResult.ok) {
+        return NextResponse.json({ error: "TURNSTILE_FAILED" }, { status: 400 });
+      }
+    }
     const now = new Date();
 
     const inquiries = await getContainerInquiriesCollection();
@@ -95,9 +106,10 @@ export async function POST(request: NextRequest, context: RouteContext) {
       listingId,
       buyerName: inquiry.buyerName.trim(),
       buyerEmail: inquiry.buyerEmail.trim(),
-      message: inquiry.message.trim(),
+      buyerPhone,
+      message: inquiryMessage ?? "",
       requestedQuantity: inquiry.requestedQuantity,
-      offeredPrice: normalizeOptional(inquiry.offeredPrice),
+      offeredPrice,
       createdByUserId: currentUser?._id,
       createdAt: now,
     });
@@ -105,40 +117,18 @@ export async function POST(request: NextRequest, context: RouteContext) {
     const listingItem = mapContainerListingToItem(listing);
     const containerLabel = getContainerShortLabel(listingItem.container);
     const summaryLine = `${containerLabel} | ${listing.type} | ${listing.locationCity}, ${listing.locationCountry}`;
-    const textMessage = [
-      `Otrzymales nowe zapytanie do kontenera (${summaryLine}).`,
-      "",
-      `Firma/ogloszenie: ${listing.companyName}`,
-      `Ilosc w ogloszeniu: ${listing.quantity}`,
-      "",
-      "Dane osoby pytajacej:",
-      `Imie i nazwisko: ${inquiry.buyerName}`,
-      `Email: ${inquiry.buyerEmail}`,
-      `Wiadomosc: ${inquiry.message}`,
-      inquiry.requestedQuantity ? `Oczekiwana ilosc: ${inquiry.requestedQuantity}` : "",
-      inquiry.offeredPrice?.trim() ? `Proponowana cena: ${inquiry.offeredPrice.trim()}` : "",
-    ]
-      .filter(Boolean)
-      .join("\n");
-
-    const htmlMessage = `
-      <p>Otrzymales nowe zapytanie do kontenera <strong>${escapeHtml(summaryLine)}</strong>.</p>
-      <p><strong>Firma/ogloszenie:</strong> ${escapeHtml(listing.companyName)}<br/>
-      <strong>Ilosc w ogloszeniu:</strong> ${listing.quantity}</p>
-      <p><strong>Dane osoby pytajacej:</strong><br/>
-      <strong>Imie i nazwisko:</strong> ${escapeHtml(inquiry.buyerName)}<br/>
-      <strong>Email:</strong> ${escapeHtml(inquiry.buyerEmail)}<br/>
-      <strong>Wiadomosc:</strong><br/>${escapeHtml(inquiry.message).replaceAll("\n", "<br/>")}<br/>
-      ${inquiry.requestedQuantity ? `<strong>Oczekiwana ilosc:</strong> ${inquiry.requestedQuantity}<br/>` : ""}
-      ${inquiry.offeredPrice?.trim() ? `<strong>Proponowana cena:</strong> ${escapeHtml(inquiry.offeredPrice.trim())}` : ""}
-      </p>
-    `;
-
-    const sendResult = await sendMail({
+    const sendResult = await sendContainerInquiryEmail({
       to: listing.contactEmail,
-      subject: `Nowe zapytanie o kontener - ${containerLabel}`,
-      text: textMessage,
-      html: htmlMessage,
+      containerLabel,
+      summaryLine,
+      companyName: listing.companyName,
+      listingQuantity: listing.quantity,
+      buyerName: inquiry.buyerName,
+      buyerEmail: inquiry.buyerEmail,
+      buyerPhone,
+      inquiryMessage,
+      requestedQuantity: inquiry.requestedQuantity,
+      offeredPrice,
     });
 
     if (!sendResult.ok) {

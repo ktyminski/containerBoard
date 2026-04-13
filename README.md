@@ -33,6 +33,17 @@ npm run dev
 - `DELETE /api/containers/[id]`
 - `POST /api/containers/[id]/inquiry`
 - `GET /api/admin/containers` (admin)
+- `GET/POST /api/cron/fx-rates` (cron, wymaga `CRON_SECRET`)
+
+## Kursy walut (FX)
+
+- Kursy `PLN/EUR` i `PLN/USD` sa odswiezane przez cron raz dziennie (`vercel.json`, 05:00 UTC).
+- Ostatni kurs zapisywany jest w Mongo (`fx_rates`, dokument `latest`).
+- API serwerowe korzysta z kursu z bazy (bez requestow do zewnetrznego API podczas tworzenia/edycji ogloszenia).
+- Gdy odswiezenie sie nie uda, zapisywany jest fallback z env:
+  - `FX_FALLBACK_PLN_PER_EUR`
+  - `FX_FALLBACK_PLN_PER_USD`
+  - `FX_FALLBACK_SOURCE`
 
 ## Weryfikacja
 

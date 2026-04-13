@@ -287,7 +287,7 @@ export function AuthForm({
           <div className="mt-2 text-right">
             <Link
               href={withLang("/forgot-password", locale)}
-              className="text-xs text-sky-400 hover:text-sky-300"
+              className="text-xs text-[#2f639a] transition hover:text-[#4e86c3]"
             >
               {messages.forgotPasswordLink}
             </Link>
@@ -298,7 +298,7 @@ export function AuthForm({
           <label className="mt-3 flex items-start gap-2 text-xs text-neutral-300">
             <input
               type="checkbox"
-              className="mt-0.5 h-4 w-4 rounded border-neutral-600 bg-neutral-950 text-sky-400 focus:ring-sky-500"
+              className="mt-0.5 h-4 w-4 rounded border-neutral-600 bg-neutral-950 text-[#67c7ff] focus:ring-[#4e86c3]"
               {...register("legalConsent", {
                 validate: (value) => value || messages.legalConsentRequired,
               })}
@@ -307,14 +307,14 @@ export function AuthForm({
               {messages.legalConsentPrefix}{" "}
               <Link
                 href={withLang("/privacy-policy", locale)}
-                className="text-sky-300 hover:text-sky-200"
+                className="text-[#2f639a] transition hover:text-[#4e86c3]"
               >
                 {messages.legalConsentPrivacy}
               </Link>{" "}
               {messages.legalConsentAnd}{" "}
               <Link
                 href={withLang("/terms", locale)}
-                className="text-sky-300 hover:text-sky-200"
+                className="text-[#2f639a] transition hover:text-[#4e86c3]"
               >
                 {messages.legalConsentTerms}
               </Link>
@@ -338,7 +338,7 @@ export function AuthForm({
 
         <button
           type="submit"
-          className="mt-4 w-full rounded-md bg-sky-500 px-3 py-2 text-sm font-medium text-neutral-950 hover:bg-sky-400 disabled:opacity-60"
+          className="mt-4 inline-flex h-10 w-full items-center justify-center rounded-md border border-[#67c7ff] bg-[linear-gradient(90deg,#0ea5e9_0%,#38bdf8_52%,#7dd3fc_100%)] px-3 text-sm font-medium text-[#032447] shadow-[0_10px_24px_-14px_rgba(56,189,248,0.95)] transition hover:brightness-110 disabled:opacity-60"
           disabled={isSubmitting}
         >
           {isSubmitting
@@ -364,7 +364,7 @@ export function AuthForm({
               ? withLang(`/register?next=${encodeURIComponent(next)}`, locale)
               : withLang(`/login?next=${encodeURIComponent(next)}`, locale)
           }
-          className="text-sky-400 hover:text-sky-300"
+          className="text-[#2f639a] transition hover:text-[#4e86c3]"
         >
           {mode === "login" ? messages.goToRegister : messages.goToLogin}
         </Link>

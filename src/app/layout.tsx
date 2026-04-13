@@ -34,10 +34,8 @@ export const metadata: Metadata = {
   icons: {
     icon: [
       { url: "/favicon.ico", sizes: "any" },
-      { url: "/icon.svg", type: "image/svg+xml" },
     ],
     shortcut: [{ url: "/favicon.ico" }],
-    apple: [{ url: "/icon.svg", type: "image/svg+xml" }],
   },
   openGraph: {
     siteName: "ContainerBoard",

@@ -122,9 +122,9 @@ export function BranchCard({
   };
 
   return (
-    <div className="grid gap-3 rounded-lg border border-neutral-500/60 bg-neutral-700/35 p-3">
+    <div className="grid gap-3 rounded-lg border border-neutral-300 bg-neutral-50 p-3">
       <div className="flex items-center justify-between">
-        <p className="text-sm font-medium text-neutral-200">
+        <p className="text-sm font-medium text-neutral-800">
           {index === 0
             ? messages.mainBranchTitle
             : `${messages.branchesTitle} #${index + 1}`}
@@ -132,7 +132,7 @@ export function BranchCard({
         {branchesCount > 1 ? (
           <button
             type="button"
-            className="cursor-pointer rounded-md border border-red-700 px-2 py-1 text-xs text-red-300 hover:border-red-500"
+            className="cursor-pointer rounded-md border border-red-700 px-2 py-1 text-xs text-red-600 hover:border-red-500"
             onClick={() => onRemoveBranch(index)}
           >
             {messages.removeBranch}
@@ -141,22 +141,22 @@ export function BranchCard({
       </div>
 
       <label className="mx-auto grid w-full gap-1 text-sm md:w-[70%]">
-        <span className="text-neutral-300">{messages.branchLabel}*</span>
+        <span className="text-neutral-700">{messages.branchLabel}*</span>
         <input
-          className="rounded-md border border-neutral-300 bg-neutral-100/85 px-3 py-2 text-neutral-800 placeholder:text-[#94a3b8]"
+          className="rounded-md border border-neutral-300 bg-white px-3 py-2 text-neutral-800 placeholder:text-neutral-400"
           {...register(`branches.${index}.label`, {
             required: messages.requiredField,
             minLength: { value: 1, message: messages.requiredField },
             maxLength: { value: 120, message: messages.validationError },
           })}
         />
-        {branchLabelError ? <p className="text-xs text-red-300">{branchLabelError}</p> : null}
+        {branchLabelError ? <p className="text-xs text-red-600">{branchLabelError}</p> : null}
       </label>
 
       <label className="mx-auto grid w-full gap-1 text-sm md:w-[70%]">
-        <span className="text-neutral-300">{messages.branchNote}</span>
+        <span className="text-neutral-700">{messages.branchNote}</span>
         <input
-          className="rounded-md border border-neutral-300 bg-neutral-100/85 px-3 py-2 text-neutral-800 placeholder:text-[#94a3b8]"
+          className="rounded-md border border-neutral-300 bg-white px-3 py-2 text-neutral-800 placeholder:text-neutral-400"
           {...register(`branches.${index}.note`, {
             maxLength: { value: 200, message: messages.validationError },
           })}
@@ -164,8 +164,8 @@ export function BranchCard({
       </label>
 
       <label className="mx-auto grid w-full gap-1 text-sm md:w-[70%]">
-        <span className="text-neutral-300">{messages.branchAddress}*</span>
-        <div className="flex overflow-hidden rounded-md border border-neutral-300 bg-neutral-100/85">
+        <span className="text-neutral-700">{messages.branchAddress}*</span>
+        <div className="flex overflow-hidden rounded-md border border-neutral-300 bg-white">
           <input
             className="w-full bg-transparent px-3 py-2 text-neutral-800 outline-none"
             {...register(`branches.${index}.addressText`, {
@@ -192,7 +192,7 @@ export function BranchCard({
           </button>
         </div>
         <p className="text-xs text-neutral-400">{messages.branchAddressNoPrefixHint}</p>
-        {branchAddressError ? <p className="text-xs text-red-300">{branchAddressError}</p> : null}
+        {branchAddressError ? <p className="text-xs text-red-600">{branchAddressError}</p> : null}
         {locationStatus ? <p className="text-xs text-neutral-600">{locationStatus}</p> : null}
       </label>
 
@@ -241,7 +241,7 @@ export function BranchCard({
           }
         }}
       />
-      {branchLatError ? <p className="text-xs text-red-300">{branchLatError}</p> : null}
+      {branchLatError ? <p className="text-xs text-red-600">{branchLatError}</p> : null}
 
       <div className="grid gap-3">
         <button
@@ -278,9 +278,9 @@ export function BranchCard({
         {branch?.useCustomDetails ? (
           <div className="grid gap-3 md:grid-cols-2">
             <label className="grid gap-1 text-sm">
-              <span className="text-neutral-300">{messages.branchPhone}</span>
+              <span className="text-neutral-700">{messages.branchPhone}</span>
               <input
-                className="rounded-md border border-neutral-300 bg-neutral-100/85 px-3 py-2 text-neutral-800 placeholder:text-[#94a3b8]"
+                className="rounded-md border border-neutral-300 bg-white px-3 py-2 text-neutral-800 placeholder:text-neutral-400"
                 {...register(`branches.${index}.phone`, {
                   validate: (value) =>
                     !value.trim() || PHONE_REGEX.test(value) || messages.invalidPhone,
@@ -288,14 +288,14 @@ export function BranchCard({
               />
               {getFieldMessage(branchPhoneError) &&
               (branchPhoneTouched || isSubmitted) ? (
-                <p className="text-xs text-red-300">{branchPhoneError}</p>
+                <p className="text-xs text-red-600">{branchPhoneError}</p>
               ) : null}
             </label>
 
             <label className="grid gap-1 text-sm">
-              <span className="text-neutral-300">{messages.branchEmail}</span>
+              <span className="text-neutral-700">{messages.branchEmail}</span>
               <input
-                className="rounded-md border border-neutral-300 bg-neutral-100/85 px-3 py-2 text-neutral-800 placeholder:text-[#94a3b8]"
+                className="rounded-md border border-neutral-300 bg-white px-3 py-2 text-neutral-800 placeholder:text-neutral-400"
                 {...register(`branches.${index}.email`, {
                   validate: (value) =>
                     !value.trim() ||
@@ -305,18 +305,19 @@ export function BranchCard({
               />
               {getFieldMessage(branchEmailError) &&
               (branchEmailTouched || isSubmitted) ? (
-                <p className="text-xs text-red-300">{branchEmailError}</p>
+                <p className="text-xs text-red-600">{branchEmailError}</p>
               ) : null}
             </label>
           </div>
         ) : (
-          <p className="text-center text-xs text-neutral-300">{messages.additionalData}</p>
+          <p className="text-center text-xs text-neutral-500">{messages.additionalData}</p>
         )}
       </div>
 
     </div>
   );
 }
+
 
 
 

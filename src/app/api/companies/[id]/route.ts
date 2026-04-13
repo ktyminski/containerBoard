@@ -7,7 +7,6 @@ import {
   type CompanyImageAsset,
 } from "@/lib/companies";
 import { getCurrentUserFromRequest } from "@/lib/auth-user";
-import { COMPANY_BENEFITS } from "@/lib/company-benefits";
 import {
   processBackgroundUpload,
   processGalleryUpload,
@@ -26,14 +25,6 @@ import { normalizeCompanyVerificationStatus } from "@/lib/company-verification";
 import { normalizeGeocodeAddressParts } from "@/lib/geocode-address";
 import { USER_ROLE } from "@/lib/user-roles";
 import { normalizeCompanyCategory } from "@/types/company-category";
-import {
-  COMPANY_COMMUNICATION_LANGUAGES,
-  normalizeCompanyCommunicationLanguages,
-} from "@/types/company-communication-language";
-import {
-  COMPANY_SPECIALIZATIONS,
-  normalizeCompanySpecializations,
-} from "@/types/company-specialization";
 import { logError } from "@/lib/server-logger";
 
 export const runtime = "nodejs";
@@ -64,10 +55,6 @@ const updateCompanySchema = z.object({
   name: z.string().trim().min(2).max(120),
   description: z.string().trim().min(10).max(5000),
   category: z.string().trim().min(1).max(100),
-  communicationLanguages: z
-    .array(z.enum(COMPANY_COMMUNICATION_LANGUAGES))
-    .max(COMPANY_COMMUNICATION_LANGUAGES.length)
-    .default([]),
   operatingArea: z.enum(COMPANY_OPERATING_AREAS).default("local"),
   operatingAreaDetails: z.string().trim().max(200).optional().or(z.literal("")),
   nip: z.string().trim().max(30).optional().or(z.literal("")),
@@ -77,11 +64,6 @@ const updateCompanySchema = z.object({
   facebookUrl: z.string().trim().max(600).optional().or(z.literal("")),
   instagramUrl: z.string().trim().max(600).optional().or(z.literal("")),
   linkedinUrl: z.string().trim().max(600).optional().or(z.literal("")),
-  benefits: z.array(z.enum(COMPANY_BENEFITS)).max(COMPANY_BENEFITS.length).default([]),
-  specializations: z
-    .array(z.enum(COMPANY_SPECIALIZATIONS))
-    .max(COMPANY_SPECIALIZATIONS.length)
-    .default([]),
   branches: z
     .array(
       z.object({
@@ -300,8 +282,6 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
       name: String(formData.get("name") ?? ""),
       description: String(formData.get("description") ?? ""),
       category: String(formData.get("category") ?? ""),
-      communicationLanguages:
-        parseJsonField<unknown[]>(formData.get("communicationLanguages")) ?? [],
       operatingArea: String(formData.get("operatingArea") ?? "local"),
       operatingAreaDetails: String(formData.get("operatingAreaDetails") ?? ""),
       nip: String(formData.get("nip") ?? ""),
@@ -311,8 +291,6 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
       facebookUrl: String(formData.get("facebookUrl") ?? ""),
       instagramUrl: String(formData.get("instagramUrl") ?? ""),
       linkedinUrl: String(formData.get("linkedinUrl") ?? ""),
-      benefits: parseJsonField<unknown[]>(formData.get("benefits")) ?? [],
-      specializations: parseJsonField<unknown[]>(formData.get("specializations")) ?? [],
       branches: parseJsonField<unknown[]>(formData.get("branches")) ?? [],
     };
 
@@ -454,16 +432,11 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
     }
 
     const normalizedCategory = normalizeCompanyCategory(parsed.data.category);
-    const communicationLanguages = normalizeCompanyCommunicationLanguages(
-      parsed.data.communicationLanguages,
-    );
     const operatingArea = normalizeCompanyOperatingArea(parsed.data.operatingArea);
     const operatingAreaDetails = parsed.data.operatingAreaDetails?.trim() || undefined;
     const nextCompanyName = parsed.data.name.trim();
     const nextCompanyDescription = parsed.data.description.trim();
     const nip = parsed.data.nip?.trim() || undefined;
-    const benefits = Array.from(new Set(parsed.data.benefits));
-    const specializations = normalizeCompanySpecializations(parsed.data.specializations);
     const phone = parsed.data.phone?.trim() || undefined;
     const email = parsed.data.email?.trim() || undefined;
     const website = normalizeOptionalHttpLink(parsed.data.website);
@@ -648,11 +621,12 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
       };
     });
 
-    const unsetFields: Record<string, ""> = {};
-    if (communicationLanguages.length === 0) {
-      unsetFields.communicationLanguages = "";
-      unsetFields.communicationLanguage = "";
-    }
+    const unsetFields: Record<string, ""> = {
+      communicationLanguages: "",
+      communicationLanguage: "",
+      benefits: "",
+      specializations: "",
+    };
     if (removeLogo && !storedNextLogo) {
       unsetFields.logo = "";
       unsetFields.logoThumb = "";
@@ -691,9 +665,6 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
             name: nextCompanyName,
             description: nextCompanyDescription,
             category: normalizedCategory,
-            ...(communicationLanguages.length > 0
-              ? { communicationLanguages }
-              : {}),
             operatingArea,
             operatingAreaDetails,
             nip,
@@ -704,8 +675,6 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
             facebookUrl,
             instagramUrl,
             linkedinUrl,
-            benefits,
-            specializations,
             ...(storedNextLogo ? { logo: storedNextLogo } : {}),
             ...(storedNextLogoThumb ? { logoThumb: storedNextLogoThumb } : {}),
             ...(storedNextBackground ? { background: storedNextBackground } : {}),

@@ -26,8 +26,6 @@ import {
   PRICE_TAX_MODE_LABEL,
   PRICE_TYPES,
   PRICE_TYPE_LABEL,
-  PRICE_UNITS,
-  PRICE_UNIT_LABEL,
   type ContainerCondition,
   type ContainerFeature,
   type ContainerHeight,
@@ -36,7 +34,6 @@ import {
   type Currency,
   type ListingType,
   type PriceType,
-  type PriceUnit,
   type TaxMode,
 } from "@/lib/container-listing-types";
 
@@ -50,6 +47,8 @@ type ContainerListingFormValues = {
   containerCondition: ContainerCondition;
   hasCscPlate: boolean;
   hasCscCertification: boolean;
+  cscValidToMonth: string;
+  cscValidToYear: string;
   productionYear: string;
   quantity: number;
   locationLat: string;
@@ -71,7 +70,6 @@ type ContainerListingFormValues = {
   priceType: PriceType;
   priceValueAmount: string;
   priceCurrency: Currency;
-  priceUnit: PriceUnit;
   priceTaxMode: TaxMode;
   priceVatRate: string;
   priceNegotiable: boolean;
@@ -178,6 +176,8 @@ function getDefaultValues(
     containerCondition: initialValues?.containerCondition ?? "cargo_worthy",
     hasCscPlate: initialValues?.hasCscPlate ?? false,
     hasCscCertification: initialValues?.hasCscCertification ?? false,
+    cscValidToMonth: initialValues?.cscValidToMonth ?? "",
+    cscValidToYear: initialValues?.cscValidToYear ?? "",
     productionYear: initialValues?.productionYear ?? "",
     quantity: initialValues?.quantity ?? 1,
     locationLat: initialValues?.locationLat ?? "",
@@ -199,7 +199,6 @@ function getDefaultValues(
     priceType: initialValues?.priceType ?? "fixed",
     priceValueAmount: initialValues?.priceValueAmount ?? "",
     priceCurrency: initialValues?.priceCurrency ?? "PLN",
-    priceUnit: initialValues?.priceUnit ?? "per_container",
     priceTaxMode: initialValues?.priceTaxMode ?? "net",
     priceVatRate: initialValues?.priceVatRate ?? "",
     priceNegotiable: initialValues?.priceNegotiable ?? false,
@@ -425,7 +424,7 @@ export function ContainerListingForm({
     const normalizedPriceAmount =
       values.priceType === "request"
         ? undefined
-        : normalizeOptionalNumber(values.priceValueAmount);
+        : normalizeOptionalInteger(values.priceValueAmount);
     const normalizedVatRate =
       values.priceType === "request"
         ? undefined
@@ -433,6 +432,8 @@ export function ContainerListingForm({
     const normalizedProductionYear = normalizeOptionalNumber(
       values.productionYear,
     );
+    const normalizedCscValidToMonth = normalizeOptionalInteger(values.cscValidToMonth);
+    const normalizedCscValidToYear = normalizeOptionalInteger(values.cscValidToYear);
     const normalizedLogisticsTransportFreeDistanceKm = normalizeOptionalInteger(
       values.logisticsTransportFreeDistanceKm,
     );
@@ -457,6 +458,21 @@ export function ContainerListingForm({
       return;
     }
 
+    const hasCscValidToMonth = typeof normalizedCscValidToMonth === "number";
+    const hasCscValidToYear = typeof normalizedCscValidToYear === "number";
+    if (hasCscValidToMonth !== hasCscValidToYear) {
+      setError("cscValidToMonth", {
+        type: "validate",
+        message: "Podaj miesiac i rok waznosci CSC",
+      });
+      setError("cscValidToYear", {
+        type: "validate",
+        message: "Podaj miesiac i rok waznosci CSC",
+      });
+      toast.error("Podaj miesiac i rok waznosci CSC");
+      return;
+    }
+
     if (
       values.logisticsTransportIncluded &&
       typeof normalizedLogisticsTransportFreeDistanceKm !== "number"
@@ -476,7 +492,6 @@ export function ContainerListingForm({
             original: {
               amount: null,
               currency: null,
-              unit: null,
               taxMode: null,
               vatRate: null,
               negotiable: values.priceNegotiable,
@@ -487,7 +502,6 @@ export function ContainerListingForm({
             original: {
               amount: normalizedPriceAmount ?? null,
               currency: values.priceCurrency,
-              unit: values.priceUnit,
               taxMode: values.priceTaxMode,
               vatRate: normalizedVatRate ?? null,
               negotiable: values.priceNegotiable,
@@ -533,6 +547,12 @@ export function ContainerListingForm({
       priceNegotiable: values.priceNegotiable,
       hasCscPlate: values.hasCscPlate,
       hasCscCertification: values.hasCscCertification,
+      ...(hasCscValidToMonth && hasCscValidToYear
+        ? {
+            cscValidToMonth: normalizedCscValidToMonth,
+            cscValidToYear: normalizedCscValidToYear,
+          }
+        : {}),
       productionYear:
         typeof normalizedProductionYear === "number"
           ? Math.trunc(normalizedProductionYear)
@@ -1017,6 +1037,71 @@ export function ContainerListingForm({
 
         <div className="grid gap-3 sm:grid-cols-2">
           <label className="grid gap-1 text-sm">
+            <span className="text-neutral-300">Waznosc CSC miesiac</span>
+            <input
+              type="number"
+              min={1}
+              max={12}
+              step={1}
+              inputMode="numeric"
+              {...register("cscValidToMonth", {
+                validate: (value) => {
+                  const month = normalizeOptionalInteger(value);
+                  const year = normalizeOptionalInteger(watch("cscValidToYear"));
+                  if (month === undefined && year === undefined) {
+                    return true;
+                  }
+                  return (
+                    typeof month === "number" &&
+                    month >= 1 &&
+                    month <= 12
+                  ) || "Podaj miesiac od 1 do 12";
+                },
+              })}
+              className="rounded-md border border-neutral-700 bg-neutral-950 px-3 py-2 text-neutral-100"
+              placeholder="np. 3"
+            />
+            {errors.cscValidToMonth?.message ? (
+              <span className="text-xs text-red-300">
+                {errors.cscValidToMonth.message}
+              </span>
+            ) : null}
+          </label>
+          <label className="grid gap-1 text-sm">
+            <span className="text-neutral-300">Waznosc CSC rok</span>
+            <input
+              type="number"
+              min={1900}
+              max={2100}
+              step={1}
+              inputMode="numeric"
+              {...register("cscValidToYear", {
+                validate: (value) => {
+                  const year = normalizeOptionalInteger(value);
+                  const month = normalizeOptionalInteger(watch("cscValidToMonth"));
+                  if (month === undefined && year === undefined) {
+                    return true;
+                  }
+                  return (
+                    typeof year === "number" &&
+                    year >= 1900 &&
+                    year <= 2100
+                  ) || "Podaj poprawny rok";
+                },
+              })}
+              className="rounded-md border border-neutral-700 bg-neutral-950 px-3 py-2 text-neutral-100"
+              placeholder="np. 2030"
+            />
+            {errors.cscValidToYear?.message ? (
+              <span className="text-xs text-red-300">
+                {errors.cscValidToYear.message}
+              </span>
+            ) : null}
+          </label>
+        </div>
+
+        <div className="grid gap-3 sm:grid-cols-2">
+          <label className="grid gap-1 text-sm">
             <span className="text-neutral-300">Rok produkcji</span>
             <input
               type="number"
@@ -1043,13 +1128,13 @@ export function ContainerListingForm({
           </label>
         </div>
 
-        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
+        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
           <label className="grid gap-1 text-sm lg:col-span-2">
             <span className="text-neutral-300">Kwota</span>
             <input
               type="number"
               min={0}
-              step="0.01"
+              step={1}
               disabled={priceTypeValue === "request"}
               {...register("priceValueAmount", {
                 validate: (value) => {
@@ -1057,8 +1142,8 @@ export function ContainerListingForm({
                     return true;
                   }
                   return (
-                    normalizeOptionalNumber(value) !== undefined ||
-                    "Podaj kwote ceny"
+                    normalizeOptionalInteger(value) !== undefined ||
+                    "Podaj kwote ceny jako pelna liczbe"
                   );
                 },
               })}
@@ -1085,22 +1170,6 @@ export function ContainerListingForm({
               {PRICE_CURRENCIES.map((currency) => (
                 <option key={currency} value={currency}>
                   {PRICE_CURRENCY_LABEL[currency]}
-                </option>
-              ))}
-            </select>
-          </label>
-          <label className="grid gap-1 text-sm">
-            <span className="text-neutral-300">Jednostka</span>
-            <select
-              {...register("priceUnit", {
-                required: "Wybierz jednostke rozliczenia",
-              })}
-              disabled={priceTypeValue === "request"}
-              className="rounded-md border border-neutral-700 bg-neutral-950 px-3 py-2 text-neutral-100 disabled:cursor-not-allowed disabled:opacity-60"
-            >
-              {PRICE_UNITS.map((unit) => (
-                <option key={unit} value={unit}>
-                  {PRICE_UNIT_LABEL[unit]}
                 </option>
               ))}
             </select>

@@ -350,7 +350,7 @@
                      "registerTitle":  "Utworz konto",
                      "loginSubtitle":  "Zaloguj się do ContainerBoard.",
                      "registerSubtitle":  "Stworz konto i zarządzaj profilem firmy.",
-                     "namePlaceholder":  "Imię i nazwisko",
+                     "namePlaceholder":  "Imię i nazwisko / nazwa firmy",
                      "emailPlaceholder":  "Email",
                      "passwordPlaceholder":  "Hasło",
                      "roleUser":  "Użytkownik",

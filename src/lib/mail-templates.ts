@@ -323,3 +323,63 @@ export function buildOfferPublishedMail(input: {
   };
 }
 
+export function buildContainerInquiryMail(input: {
+  containerLabel: string;
+  summaryLine: string;
+  companyName: string;
+  listingQuantity: number;
+  buyerName: string;
+  buyerEmail: string;
+  buyerPhone?: string;
+  inquiryMessage?: string;
+  requestedQuantity?: number;
+  offeredPrice?: string;
+}): MailTemplateContent {
+  const subject = `Nowe zapytanie o kontener - ${input.containerLabel}`;
+  const sections = [
+    `Kontener: ${input.summaryLine}`,
+    `Firma/ogloszenie: ${input.companyName}`,
+    `Ilosc w ogloszeniu: ${input.listingQuantity}`,
+    "Dane osoby pytajacej:",
+    `Imie i nazwisko: ${input.buyerName}`,
+    `Email: ${input.buyerEmail}`,
+    input.buyerPhone ? `Telefon: ${input.buyerPhone}` : "",
+    input.inquiryMessage ? `Wiadomosc: ${input.inquiryMessage}` : "",
+    input.requestedQuantity ? `Oczekiwana ilosc: ${input.requestedQuantity}` : "",
+    input.offeredPrice ? `Proponowana cena: ${input.offeredPrice}` : "",
+  ].filter((line) => line.trim().length > 0);
+
+  const htmlLines = [
+    `<strong>Kontener:</strong> ${escapeHtml(input.summaryLine)}<br/>`,
+    `<strong>Firma/ogloszenie:</strong> ${escapeHtml(input.companyName)}<br/>`,
+    `<strong>Ilosc w ogloszeniu:</strong> ${input.listingQuantity}`,
+    "<br/><br/><strong>Dane osoby pytajacej:</strong><br/>",
+    `<strong>Imie i nazwisko:</strong> ${escapeHtml(input.buyerName)}<br/>`,
+    `<strong>Email:</strong> ${escapeHtml(input.buyerEmail)}<br/>`,
+    input.buyerPhone ? `<strong>Telefon:</strong> ${escapeHtml(input.buyerPhone)}<br/>` : "",
+    input.inquiryMessage
+      ? `<strong>Wiadomosc:</strong><br/>${escapeHtml(input.inquiryMessage).replaceAll("\n", "<br/>")}<br/>`
+      : "",
+    input.requestedQuantity
+      ? `<strong>Oczekiwana ilosc:</strong> ${input.requestedQuantity}<br/>`
+      : "",
+    input.offeredPrice
+      ? `<strong>Proponowana cena:</strong> ${escapeHtml(input.offeredPrice)}`
+      : "",
+  ]
+    .filter((line) => line.trim().length > 0)
+    .join("");
+
+  return {
+    subject,
+    text: renderTextLayout({
+      sections,
+    }),
+    html: renderHtmlLayout({
+      preheader: "Nowe zapytanie o kontener",
+      title: subject,
+      contentHtml: htmlParagraphRaw(htmlLines),
+    }),
+  };
+}
+

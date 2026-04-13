@@ -1,6 +1,7 @@
-"use client";
+﻿"use client";
 
 import Link from "next/link";
+import type { MouseEvent } from "react";
 import Image from "next/image";
 import { memo } from "react";
 import type { ContainerListingItem } from "@/lib/container-listings";
@@ -12,6 +13,7 @@ import {
 } from "@/lib/container-listing-types";
 import {
   CONTAINER_CONDITION_COLOR_TOKENS,
+  type PriceDisplayCurrency,
 } from "@/components/container-listings-shared";
 import { getContainerListingLocationLabel } from "@/components/container-listings-utils";
 
@@ -31,6 +33,10 @@ type ContainerListingsResultsProps = {
   onCopyListingLink: (listingId: string) => void;
   onPreviousPage: () => void;
   onNextPage: () => void;
+  onOpenDetails?: (href: string) => void;
+  detailsHrefPrefix?: string;
+  detailsQueryString?: string;
+  priceDisplayCurrency: PriceDisplayCurrency;
 };
 
 type ListingPriceDisplay = {
@@ -39,14 +45,8 @@ type ListingPriceDisplay = {
   isRequestPrice: boolean;
 };
 
-type LogisticsChipDisplay = {
-  key: "transport" | "unloading";
-  label: string;
-  tooltip: string;
-  isFree: boolean;
-};
-
 const DAY_IN_MS = 24 * 60 * 60 * 1000;
+const MAX_LOGISTICS_TOOLTIP_LENGTH = 120;
 
 function getDaysLabel(days: number): string {
   return days === 1 ? "dzien" : "dni";
@@ -85,6 +85,15 @@ function getAvailableFromLabel(item: ContainerListingItem): string {
   return item.availableFromApproximate ? `~${dateLabel}` : dateLabel;
 }
 
+function truncateTooltipText(value: string, maxLength = MAX_LOGISTICS_TOOLTIP_LENGTH): string {
+  const normalizedValue = value.trim();
+  if (normalizedValue.length <= maxLength) {
+    return normalizedValue;
+  }
+
+  return `${normalizedValue.slice(0, maxLength).trimEnd()}...`;
+}
+
 function formatVatRateLabel(vatRate: number | null): string {
   if (typeof vatRate !== "number" || !Number.isFinite(vatRate)) {
     return "VAT n/d";
@@ -93,7 +102,24 @@ function formatVatRateLabel(vatRate: number | null): string {
   return `VAT${vatRate.toLocaleString("pl-PL")}%`;
 }
 
-function getListingPriceDisplay(item: ContainerListingItem): ListingPriceDisplay {
+function getNormalizedAmountByCurrency(input: {
+  amountPln: number | null;
+  amountEur: number | null;
+  amountUsd: number | null;
+}, currency: Exclude<PriceDisplayCurrency, "original">): number | null {
+  if (currency === "PLN") {
+    return input.amountPln;
+  }
+  if (currency === "EUR") {
+    return input.amountEur;
+  }
+  return input.amountUsd;
+}
+
+function getListingPriceDisplay(
+  item: ContainerListingItem,
+  priceDisplayCurrency: PriceDisplayCurrency,
+): ListingPriceDisplay {
   const pricing = item.pricing;
 
   if (pricing?.type === "request") {
@@ -113,10 +139,30 @@ function getListingPriceDisplay(item: ContainerListingItem): ListingPriceDisplay
     pricing?.original.amount !== null &&
     typeof pricing?.original.amount === "number" &&
     pricing.original.currency &&
-    pricing.original.unit &&
     pricing.original.taxMode
   ) {
     const amountPrefix = pricing.type === "starting_from" ? "od " : "";
+    const normalizedAmountSet =
+      pricing.original.taxMode === "net"
+        ? pricing.normalized.net
+        : pricing.normalized.gross;
+    const shouldConvertAmount =
+      priceDisplayCurrency !== "original" &&
+      priceDisplayCurrency !== pricing.original.currency;
+    const normalizedAmount = shouldConvertAmount
+      ? getNormalizedAmountByCurrency(normalizedAmountSet, priceDisplayCurrency)
+      : null;
+    const hasConvertedAmount =
+      shouldConvertAmount &&
+      typeof normalizedAmount === "number" &&
+      Number.isFinite(normalizedAmount);
+    const resolvedAmountRaw = hasConvertedAmount ? normalizedAmount : pricing.original.amount;
+    const resolvedAmount = Math.round(resolvedAmountRaw);
+    const resolvedCurrency = hasConvertedAmount
+      ? priceDisplayCurrency
+      : pricing.original.currency;
+    const convertedPrefix = hasConvertedAmount ? "~" : "";
+
     const metaParts = [
       pricing.original.taxMode === "net" ? "Netto" : "Brutto",
       formatVatRateLabel(pricing.original.vatRate),
@@ -126,7 +172,7 @@ function getListingPriceDisplay(item: ContainerListingItem): ListingPriceDisplay
     }
 
     return {
-      amountLabel: `${amountPrefix}${pricing.original.amount.toLocaleString("pl-PL")} ${PRICE_CURRENCY_LABEL[pricing.original.currency]}`,
+      amountLabel: `${amountPrefix}${convertedPrefix}${resolvedAmount.toLocaleString("pl-PL")} ${PRICE_CURRENCY_LABEL[resolvedCurrency]}`,
       metaLine: metaParts.join(" | "),
       isRequestPrice: false,
     };
@@ -139,7 +185,7 @@ function getListingPriceDisplay(item: ContainerListingItem): ListingPriceDisplay
     }
 
     return {
-      amountLabel: `${item.priceAmount.toLocaleString("pl-PL")} PLN`,
+      amountLabel: `${Math.round(item.priceAmount).toLocaleString("pl-PL")} PLN`,
       metaLine: metaParts.join(" | "),
       isRequestPrice: false,
     };
@@ -178,45 +224,180 @@ function getContainerPlaceholderSrc(item: ContainerListingItem): string {
   return "/placeholders/containers/container-unknown.svg";
 }
 
-function buildLogisticsChips(item: ContainerListingItem): LogisticsChipDisplay[] {
-  const chips: LogisticsChipDisplay[] = [];
-  const comment = item.logisticsComment?.trim();
+function getCscValidityLabel(item: ContainerListingItem): string {
+  if (
+    typeof item.cscValidToMonth === "number" &&
+    Number.isInteger(item.cscValidToMonth) &&
+    item.cscValidToMonth >= 1 &&
+    item.cscValidToMonth <= 12 &&
+    typeof item.cscValidToYear === "number" &&
+    Number.isInteger(item.cscValidToYear) &&
+    item.cscValidToYear >= 1900 &&
+    item.cscValidToYear <= 2100
+  ) {
+    return `${String(item.cscValidToMonth).padStart(2, "0")}.${item.cscValidToYear}`;
+  }
+
+  return "brak danych";
+}
+
+function getLocationLabel(input: {
+  locationAddressParts?: { city?: string; country?: string };
+  locationCity?: string;
+  locationCountry?: string;
+}): string {
+  const city = input.locationAddressParts?.city?.trim() || input.locationCity?.trim() || "";
+  const country = input.locationAddressParts?.country?.trim() || input.locationCountry?.trim() || "";
+  const combined = [city, country].filter(Boolean).join(", ");
+  return combined || "Nie podano lokalizacji";
+}
+
+function getAllLocationLabels(item: ContainerListingItem): string[] {
+  const labels: string[] = [];
+  const seen = new Set<string>();
+
+  const appendLabel = (label: string) => {
+    const normalizedKey = label.toLowerCase();
+    if (seen.has(normalizedKey)) {
+      return;
+    }
+    seen.add(normalizedKey);
+    labels.push(label);
+  };
+
+  if (Array.isArray(item.locations) && item.locations.length > 0) {
+    for (const location of item.locations) {
+      appendLabel(
+        getLocationLabel({
+          locationAddressParts: location.locationAddressParts,
+          locationCity: location.locationCity,
+          locationCountry: location.locationCountry,
+        }),
+      );
+    }
+  } else {
+    appendLabel(
+      getLocationLabel({
+        locationAddressParts: item.locationAddressParts,
+        locationCity: item.locationCity,
+        locationCountry: item.locationCountry,
+      }),
+    );
+  }
+
+  return labels.length > 0 ? labels : ["Nie podano lokalizacji"];
+}
+
+function CscInfoBadge({ item }: { item: ContainerListingItem }) {
+  const validityLabel = getCscValidityLabel(item);
+
+  return (
+    <div className="group relative">
+      <span className="inline-flex cursor-help items-center gap-1 rounded-md border border-green-300 bg-green-100 px-2 py-1 text-xs font-medium text-green-700">
+        <span>CSC</span>
+        <svg
+          className="h-3.5 w-3.5"
+          viewBox="0 0 20 20"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="2"
+          aria-hidden="true"
+        >
+          <path d="m5 10 3 3 7-7" />
+        </svg>
+      </span>
+      <div className="pointer-events-none absolute bottom-full right-0 z-30 mb-2 w-64 translate-y-1 rounded-md border border-neutral-700 bg-neutral-900 px-2.5 py-2 text-left text-xs leading-5 text-neutral-100 opacity-0 shadow-xl transition duration-150 group-hover:delay-500 group-hover:translate-y-0 group-hover:opacity-100 group-focus-within:delay-500 group-focus-within:translate-y-0 group-focus-within:opacity-100">
+        <p>Tabliczka CSC: {item.hasCscPlate ? "Tak" : "Nie"}</p>
+        <p>Certyfikacja CSC: {item.hasCscCertification ? "Tak" : "Nie"}</p>
+        <p>Waznosc CSC: {validityLabel}</p>
+        <span
+          aria-hidden="true"
+          className="absolute -bottom-1 right-3 h-2 w-2 rotate-45 border-b border-r border-neutral-700 bg-neutral-900"
+        />
+      </div>
+    </div>
+  );
+}
+
+function LocationInfoBadge({ item }: { item: ContainerListingItem }) {
+  const locationLabel = getContainerListingLocationLabel(item);
+  const allLocationLabels = getAllLocationLabels(item);
+  const showTooltip = allLocationLabels.length > 1;
+
+  return (
+    <div
+      className={`flex w-full min-w-0 items-center gap-1.5 text-sm text-neutral-600 ${
+        showTooltip ? "group relative" : ""
+      }`}
+      {...(showTooltip
+        ? {
+            tabIndex: 0,
+            "aria-label": "Pelna lista lokalizacji",
+          }
+        : {})}
+    >
+      <svg
+        className="h-4 w-4 shrink-0 text-neutral-500"
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="2"
+        aria-hidden="true"
+      >
+        <path d="M12 22s7-6.2 7-12a7 7 0 1 0-14 0c0 5.8 7 12 7 12Z" />
+        <circle cx="12" cy="10" r="2.5" />
+      </svg>
+      <span className={`min-w-0 flex-1 truncate ${showTooltip ? "cursor-help" : ""}`}>
+        {locationLabel}
+      </span>
+      {showTooltip ? (
+        <div className="pointer-events-none absolute bottom-full left-0 z-30 mb-2 w-72 max-w-[85vw] translate-y-1 rounded-md border border-neutral-700 bg-neutral-900 px-2.5 py-2 text-left text-xs leading-5 text-neutral-100 opacity-0 shadow-xl transition duration-150 group-hover:delay-500 group-hover:translate-y-0 group-hover:opacity-100 group-focus-within:delay-500 group-focus-within:translate-y-0 group-focus-within:opacity-100">
+          <ul className="space-y-0.5">
+            {allLocationLabels.map((label) => (
+              <li key={`${item.id}-location-${label}`}>{label}</li>
+            ))}
+          </ul>
+          <span
+            aria-hidden="true"
+            className="absolute -bottom-1 left-3 h-2 w-2 rotate-45 border-b border-r border-neutral-700 bg-neutral-900"
+          />
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
+function getLogisticsSummaryLabels(item: ContainerListingItem): string[] {
+  const labels: string[] = [];
 
   if (item.logisticsTransportAvailable) {
-    const distanceKm =
-      typeof item.logisticsTransportFreeDistanceKm === "number" &&
-      Number.isFinite(item.logisticsTransportFreeDistanceKm) &&
-      item.logisticsTransportFreeDistanceKm > 0
-        ? Math.trunc(item.logisticsTransportFreeDistanceKm)
-        : null;
-    const baseTooltip = item.logisticsTransportIncluded
-      ? distanceKm
-        ? `Darmowy transport do ${distanceKm} km.`
-        : "Darmowy transport."
-      : "Mozliwy transport na dodatkowych warunkach.";
-    chips.push({
-      key: "transport",
-      label: item.logisticsTransportIncluded ? "🚛 FREE" : "🚛",
-      tooltip: comment ? `${baseTooltip} ${comment}` : baseTooltip,
-      isFree: item.logisticsTransportIncluded,
-    });
+    if (item.logisticsTransportIncluded) {
+      const distanceKm =
+        typeof item.logisticsTransportFreeDistanceKm === "number" &&
+        Number.isFinite(item.logisticsTransportFreeDistanceKm) &&
+        item.logisticsTransportFreeDistanceKm > 0
+          ? Math.trunc(item.logisticsTransportFreeDistanceKm)
+          : null;
+      labels.push(
+        distanceKm
+          ? `darmowy transport ${distanceKm} km`
+          : "darmowy transport",
+      );
+    } else {
+      labels.push("mozliwy transport");
+    }
   }
 
   if (item.logisticsUnloadingAvailable) {
-    const baseTooltip = item.logisticsUnloadingIncluded
-      ? "Rozladunek / HDS w cenie."
-      : "Mozliwy rozladunek / HDS na dodatkowych warunkach.";
-    chips.push({
-      key: "unloading",
-      label: item.logisticsUnloadingIncluded ? "🏗️ FREE" : "🏗️",
-      tooltip: comment ? `${baseTooltip} ${comment}` : baseTooltip,
-      isFree: item.logisticsUnloadingIncluded,
-    });
+    labels.push(
+      item.logisticsUnloadingIncluded
+        ? "darmowy rozladunek"
+        : "mozliwy rozladunek",
+    );
   }
 
-  return chips;
+  return labels;
 }
-
 function ContainerListingsResultsComponent({
   items,
   total,
@@ -233,6 +414,10 @@ function ContainerListingsResultsComponent({
   onCopyListingLink,
   onPreviousPage,
   onNextPage,
+  onOpenDetails,
+  detailsHrefPrefix = "/containers",
+  detailsQueryString,
+  priceDisplayCurrency,
 }: ContainerListingsResultsProps) {
   const renderPaginationControls = (extraClassName?: string) => {
     if (totalPages <= 1) {
@@ -310,9 +495,6 @@ function ContainerListingsResultsComponent({
           ) : null}
         </div>
         <div className="flex items-center gap-4">
-          <p className="text-xs text-neutral-500">
-            Strona {page} z {totalPages}
-          </p>
           {renderPaginationControls()}
         </div>
       </div>
@@ -341,17 +523,27 @@ function ContainerListingsResultsComponent({
             </div>
           ) : null}
 
-          <ul className="space-y-3">
+          <ul className="w-full space-y-3">
             {items.map((item) => {
-              const priceDisplay = getListingPriceDisplay(item);
+              const priceDisplay = getListingPriceDisplay(item, priceDisplayCurrency);
               const expiresInLabel = getExpiresInLabel(item.expiresAt);
               const availableFromLabel = getAvailableFromLabel(item);
               const normalizedTitle = item.title?.trim();
               const fallbackTitle = getContainerShortLabel(item.container);
-              const resolvedTitle = normalizedTitle && normalizedTitle.length > 0
+              const listingTitle = normalizedTitle && normalizedTitle.length > 0
                 ? normalizedTitle
-                : fallbackTitle;
-              const logisticsChips = buildLogisticsChips(item);
+                : null;
+              const logisticsSummaryLabels = getLogisticsSummaryLabels(item);
+              const logisticsComment = item.logisticsComment?.trim();
+              const logisticsTooltipText =
+                logisticsComment && logisticsComment.length > 0
+                  ? truncateTooltipText(logisticsComment)
+                  : "Skontaktuj sie aby poznac szczegoly";
+              const showLogisticsTooltip = logisticsSummaryLabels.length > 0;
+              const detailsHref =
+                detailsQueryString && detailsQueryString.length > 0
+                  ? `${detailsHrefPrefix}/${item.id}?${detailsQueryString}`
+                  : `${detailsHrefPrefix}/${item.id}`;
               const containerFeatureLabels = item.container.features
                 .map((feature) => CONTAINER_FEATURE_LABEL[feature])
                 .filter((label) => typeof label === "string" && label.trim().length > 0);
@@ -361,11 +553,14 @@ function ContainerListingsResultsComponent({
                   : []),
                 ...containerFeatureLabels,
               ];
+              const containerMetaWithTitleParts = listingTitle
+                ? [...containerMetaParts, listingTitle]
+                : containerMetaParts;
 
               return (
                 <li
                   key={item.id}
-                  className="rounded-md border border-neutral-200 bg-white p-4 shadow-sm transition-colors duration-150 hover:border-sky-100 hover:bg-sky-50/60"
+                  className="w-full rounded-md border border-neutral-200 bg-white p-4 shadow-sm transition-colors duration-150 hover:border-sky-100 hover:bg-sky-50/60"
                 >
                   <div className="flex flex-col gap-4 sm:flex-row">
                     <div className="relative aspect-square w-full shrink-0 overflow-hidden rounded-md border border-neutral-200 bg-neutral-100 sm:w-44">
@@ -378,78 +573,45 @@ function ContainerListingsResultsComponent({
                       />
                     </div>
                     <div className="min-w-0 flex-1">
-                      <div className="flex flex-wrap items-start justify-between gap-3">
-                        <div className="min-w-0">
-                          <p className="text-xs uppercase tracking-wide text-neutral-500">
+                      <div className="flex min-w-0 items-start gap-3">
+                        <div className="w-0 flex-1">
+                          <p className="truncate text-xs uppercase tracking-wide text-neutral-500">
                             {item.companyName}
                           </p>
-                          <h3 className="mt-1 text-xl font-semibold text-neutral-900">
-                            {resolvedTitle}
+                          <h3 className="mt-1 truncate text-xl font-semibold text-neutral-900">
+                            {fallbackTitle}
                           </h3>
-                          {resolvedTitle !== fallbackTitle ? (
-                            <p className="mt-1 text-xs text-neutral-500">
-                              {fallbackTitle}
-                            </p>
-                          ) : null}
-                          <div className="mt-1 inline-flex items-center gap-1.5 text-sm text-neutral-600">
-                            <svg
-                              className="h-4 w-4 shrink-0 text-neutral-500"
-                              viewBox="0 0 24 24"
-                              fill="none"
-                              stroke="currentColor"
-                              strokeWidth="2"
-                              aria-hidden="true"
-                            >
-                              <path d="M12 22s7-6.2 7-12a7 7 0 1 0-14 0c0 5.8 7 12 7 12Z" />
-                              <circle cx="12" cy="10" r="2.5" />
-                            </svg>
-                            <span>{getContainerListingLocationLabel(item)}</span>
+                          <div className="mt-1 min-w-0">
+                            <LocationInfoBadge item={item} />
                           </div>
-                          {containerMetaParts.length > 0 ? (
-                            <p className="mt-1 text-xs text-neutral-500">
-                              {containerMetaParts.join(", ")}
+                          {containerMetaWithTitleParts.length > 0 ? (
+                            <p
+                              className="mt-1 w-full truncate text-xs text-neutral-500"
+                              title={containerMetaWithTitleParts.join(", ")}
+                            >
+                              {containerMetaWithTitleParts.join(", ")}
                             </p>
                           ) : null}
                         </div>
-                        <div className="grid gap-2">
-                          <div className="text-right">
+                        <div className="ml-auto grid shrink-0 justify-items-end gap-2 text-right">
+                          <div>
                             <p
-                              className={`text-lg font-bold sm:text-xl ${
+                              className={`max-w-full overflow-hidden text-ellipsis whitespace-nowrap text-lg font-bold sm:text-xl ${
                                 priceDisplay.isRequestPrice ? "text-neutral-700" : "text-amber-600"
                               }`}
                             >
                               {priceDisplay.amountLabel}
                             </p>
-                            <p className="text-xs text-neutral-600">{priceDisplay.metaLine}</p>
+                            <p className="max-w-full overflow-hidden text-ellipsis whitespace-nowrap text-xs text-neutral-600">
+                              {priceDisplay.metaLine}
+                            </p>
                           </div>
                           <div className="flex flex-wrap items-center justify-end gap-2">
-                            {logisticsChips.map((chip) => (
-                              <span
-                                key={chip.key}
-                                title={chip.tooltip}
-                                className={`rounded-md border px-2 py-1 text-xs font-semibold ${
-                                  chip.isFree
-                                    ? "border-emerald-300 bg-emerald-100 text-emerald-800"
-                                    : "border-neutral-300 bg-white text-neutral-700"
-                                }`}
-                              >
-                                {chip.label}
-                              </span>
-                            ))}
-                            {item.hasCscPlate || item.hasCscCertification ? (
-                              <span className="inline-flex items-center gap-1 rounded-md border border-green-300 bg-green-100 px-2 py-1 text-xs font-medium text-green-700">
-                                <span>CSC</span>
-                                <svg
-                                  className="h-3.5 w-3.5"
-                                  viewBox="0 0 20 20"
-                                  fill="none"
-                                  stroke="currentColor"
-                                  strokeWidth="2"
-                                  aria-hidden="true"
-                                >
-                                  <path d="m5 10 3 3 7-7" />
-                                </svg>
-                              </span>
+                            {item.hasCscPlate ||
+                            item.hasCscCertification ||
+                            (typeof item.cscValidToMonth === "number" &&
+                              typeof item.cscValidToYear === "number") ? (
+                              <CscInfoBadge item={item} />
                             ) : null}
                             <span
                               className={`rounded-md border px-2 py-1 text-xs font-medium ${CONTAINER_CONDITION_COLOR_TOKENS[item.container.condition].badgeClassName}`}
@@ -463,16 +625,44 @@ function ContainerListingsResultsComponent({
                         </div>
                       </div>
 
-                      <div className="mt-3 flex flex-wrap items-center gap-2 text-sm text-neutral-700">
-                        {item.quantity > 1 ? (
-                          <p>
-                            Ilosc:{" "}
-                            <span className="font-medium text-neutral-900">
-                              {item.quantity}
-                            </span>
-                          </p>
-                        ) : null}
-                        <p className="ml-auto text-right">
+                      <div className="mt-3 flex flex-wrap items-center gap-2 text-xs text-neutral-500">
+                        <div
+                          className={`group relative flex flex-wrap items-center gap-x-1 gap-y-1 ${
+                            showLogisticsTooltip ? "cursor-help" : ""
+                          }`}
+                          {...(showLogisticsTooltip
+                            ? {
+                                tabIndex: 0,
+                                "aria-label": "Komentarz logistyczny",
+                              }
+                            : {})}
+                        >
+                          {logisticsSummaryLabels.map((label, index) => {
+                            const isFreeLabel = label.startsWith("darmowy");
+                            return (
+                              <span
+                                key={`${item.id}-${label}`}
+                                className={isFreeLabel ? "font-medium text-neutral-700" : undefined}
+                              >
+                                {label}
+                                {index < logisticsSummaryLabels.length - 1 ? "," : ""}
+                              </span>
+                            );
+                          })}
+                          {showLogisticsTooltip ? (
+                            <div className="pointer-events-none absolute bottom-full left-0 z-30 mb-2 w-72 max-w-[85vw] translate-y-1 rounded-md border border-neutral-700 bg-neutral-900 px-2.5 py-2 text-left text-xs leading-5 text-neutral-100 opacity-0 shadow-xl transition duration-150 group-hover:delay-500 group-hover:translate-y-0 group-hover:opacity-100 group-focus-within:delay-500 group-focus-within:translate-y-0 group-focus-within:opacity-100">
+                              <p className="mb-1 font-medium text-neutral-200">
+                                Komentarz ogloszeniodawcy:
+                              </p>
+                              <p>{logisticsTooltipText}</p>
+                              <span
+                                aria-hidden="true"
+                                className="absolute -bottom-1 left-3 h-2 w-2 rotate-45 border-b border-r border-neutral-700 bg-neutral-900"
+                              />
+                            </div>
+                          ) : null}
+                        </div>
+                        <p className="ml-auto text-right text-sm text-neutral-700">
                           Dostepny od:{" "}
                           <span className="font-medium text-neutral-900">
                             {availableFromLabel}
@@ -480,63 +670,84 @@ function ContainerListingsResultsComponent({
                         </p>
                       </div>
 
-                      <div className="mt-3 flex items-center justify-end gap-2">
-                        <button
-                          type="button"
-                          className={`rounded-md border p-2 transition-colors ${
-                            item.isFavorite
-                              ? "border-rose-300 bg-rose-100 text-rose-700 hover:bg-rose-200"
-                              : "border-neutral-300 bg-white text-neutral-600 hover:border-neutral-400 hover:bg-neutral-100 hover:text-neutral-800"
-                          } disabled:cursor-not-allowed disabled:opacity-60`}
-                          onClick={() => {
-                            onToggleFavorite(item.id, item.isFavorite === true);
-                          }}
-                          aria-label={
-                            item.isFavorite ? "Usun z ulubionych" : "Dodaj do ulubionych"
-                          }
-                          title={
-                            item.isFavorite ? "Usun z ulubionych" : "Dodaj do ulubionych"
-                          }
-                          disabled={pendingFavoriteId === item.id}
-                        >
-                          <svg
-                            className="h-4 w-4"
-                            viewBox="0 0 24 24"
-                            fill={item.isFavorite ? "currentColor" : "none"}
-                            stroke="currentColor"
-                            strokeWidth="2"
-                            aria-hidden="true"
+                      <div className="mt-3 flex flex-wrap items-center justify-between gap-2">
+                        {item.quantity > 1 ? (
+                          <p className="text-sm text-neutral-700">
+                            Ilosc:{" "}
+                            <span className="font-medium text-neutral-900">
+                              {item.quantity}
+                            </span>
+                          </p>
+                        ) : (
+                          <span />
+                        )}
+                        <div className="ml-auto flex items-center justify-end gap-2">
+                          <button
+                            type="button"
+                            className={`rounded-md border p-2 transition-colors ${
+                              item.isFavorite
+                                ? "border-rose-300 bg-rose-100 text-rose-700 hover:bg-rose-200"
+                                : "border-neutral-300 bg-white text-neutral-600 hover:border-neutral-400 hover:bg-neutral-100 hover:text-neutral-800"
+                            } disabled:cursor-not-allowed disabled:opacity-60`}
+                            onClick={() => {
+                              onToggleFavorite(item.id, item.isFavorite === true);
+                            }}
+                            aria-label={
+                              item.isFavorite ? "Usun z ulubionych" : "Dodaj do ulubionych"
+                            }
+                            title={
+                              item.isFavorite ? "Usun z ulubionych" : "Dodaj do ulubionych"
+                            }
+                            disabled={pendingFavoriteId === item.id}
                           >
-                            <path d="M12 21s-6.7-4.35-9.25-8.09C.83 10.09 1.64 6.1 4.68 4.3a5.46 5.46 0 0 1 6.24.46L12 5.66l1.08-.9a5.46 5.46 0 0 1 6.24-.46c3.04 1.8 3.85 5.8 1.93 8.61C18.7 16.65 12 21 12 21Z" />
-                          </svg>
-                        </button>
-                        <button
-                          type="button"
-                          className="rounded-md border border-neutral-300 bg-white p-2 text-neutral-600 transition-colors hover:border-neutral-400 hover:bg-neutral-100 hover:text-neutral-800"
-                          onClick={() => {
-                            onCopyListingLink(item.id);
-                          }}
-                          aria-label="Kopiuj link do ogloszenia"
-                          title="Kopiuj link do ogloszenia"
-                        >
-                          <svg
-                            className="h-4 w-4"
-                            viewBox="0 0 24 24"
-                            fill="none"
-                            stroke="currentColor"
-                            strokeWidth="2"
-                            aria-hidden="true"
+                            <svg
+                              className="h-4 w-4"
+                              viewBox="0 0 24 24"
+                              fill={item.isFavorite ? "currentColor" : "none"}
+                              stroke="currentColor"
+                              strokeWidth="2"
+                              aria-hidden="true"
+                            >
+                              <path d="M12 21s-6.7-4.35-9.25-8.09C.83 10.09 1.64 6.1 4.68 4.3a5.46 5.46 0 0 1 6.24.46L12 5.66l1.08-.9a5.46 5.46 0 0 1 6.24-.46c3.04 1.8 3.85 5.8 1.93 8.61C18.7 16.65 12 21 12 21Z" />
+                            </svg>
+                          </button>
+                          <button
+                            type="button"
+                            className="rounded-md border border-neutral-300 bg-white p-2 text-neutral-600 transition-colors hover:border-neutral-400 hover:bg-neutral-100 hover:text-neutral-800"
+                            onClick={() => {
+                              onCopyListingLink(item.id);
+                            }}
+                            aria-label="Kopiuj link do ogloszenia"
+                            title="Kopiuj link do ogloszenia"
                           >
-                            <rect x="9" y="9" width="11" height="11" rx="2" />
-                            <rect x="4" y="4" width="11" height="11" rx="2" />
-                          </svg>
-                        </button>
-                        <Link
-                          href={`/containers/${item.id}`}
-                          className={`rounded-md px-3 py-2 text-sm font-medium ${darkBlueCtaClass}`}
-                        >
-                          Szczegoly i zapytanie
-                        </Link>
+                            <svg
+                              className="h-4 w-4"
+                              viewBox="0 0 24 24"
+                              fill="none"
+                              stroke="currentColor"
+                              strokeWidth="2"
+                              aria-hidden="true"
+                            >
+                              <rect x="9" y="9" width="11" height="11" rx="2" />
+                              <rect x="4" y="4" width="11" height="11" rx="2" />
+                            </svg>
+                          </button>
+                          <Link
+                            href={detailsHref}
+                            prefetch
+                            scroll={false}
+                            onClick={(event: MouseEvent<HTMLAnchorElement>) => {
+                              if (!onOpenDetails) {
+                                return;
+                              }
+                              event.preventDefault();
+                              onOpenDetails(detailsHref);
+                            }}
+                            className={`rounded-md px-3 py-2 text-sm font-medium ${darkBlueCtaClass}`}
+                          >
+                            Szczegoly i zapytanie
+                          </Link>
+                        </div>
                       </div>
                     </div>
                   </div>
@@ -553,3 +764,4 @@ function ContainerListingsResultsComponent({
 }
 
 export const ContainerListingsResults = memo(ContainerListingsResultsComponent);
+

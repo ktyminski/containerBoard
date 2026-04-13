@@ -148,7 +148,7 @@ export function ForgotPasswordForm({
 
         <button
           type="submit"
-          className="mt-4 w-full rounded-md bg-sky-500 px-3 py-2 text-sm font-medium text-neutral-950 hover:bg-sky-400 disabled:opacity-60"
+          className="mt-4 inline-flex h-10 w-full items-center justify-center rounded-md border border-[#67c7ff] bg-[linear-gradient(90deg,#0ea5e9_0%,#38bdf8_52%,#7dd3fc_100%)] px-3 text-sm font-medium text-[#032447] shadow-[0_10px_24px_-14px_rgba(56,189,248,0.95)] transition hover:brightness-110 disabled:opacity-60"
           disabled={isSubmitting}
         >
           {isSubmitting ? messages.submitLoading : messages.forgotPasswordSubmit}
@@ -156,7 +156,7 @@ export function ForgotPasswordForm({
       </form>
 
       <p className="mt-4 text-sm text-neutral-400">
-        <Link href={withLang("/login", locale)} className="text-sky-400 hover:text-sky-300">
+        <Link href={withLang("/login", locale)} className="text-[#2f639a] transition hover:text-[#4e86c3]">
           {messages.goToLogin}
         </Link>
       </p>

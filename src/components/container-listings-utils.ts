@@ -70,7 +70,6 @@ export function getContainerListingLocationLabel(item: ContainerListingItem): st
 export function buildAppliedBaseFromFormValues(
   values: FiltersFormValues,
 ): Omit<AppliedFilters, "locationCenter" | "locationQuery"> {
-  const normalizedPriceUnit: AppliedFilters["priceUnit"] = "all";
   const normalizedPriceCurrency: AppliedFilters["priceCurrency"] =
     values.priceCurrency === "all" ? "EUR" : values.priceCurrency;
   const normalizedPriceMinInput =
@@ -96,8 +95,8 @@ export function buildAppliedBaseFromFormValues(
     hasCscPlateOnly: values.hasCscPlateOnly,
     hasCscCertificationOnly: values.hasCscCertificationOnly,
     priceType: values.priceType,
-    priceUnit: normalizedPriceUnit,
     priceCurrency: normalizedPriceCurrency,
+    priceDisplayCurrency: values.priceDisplayCurrency,
     priceTaxMode: normalizedPriceTaxMode,
     priceMinInput: normalizedPriceMinInput,
     priceMaxInput: normalizedPriceMaxInput,
@@ -162,7 +161,6 @@ function createListQueryParams(appliedFilters: AppliedFilters, page: number): UR
 function applyListingKindParams(params: URLSearchParams, listingKind: ListingKind): void {
   if (listingKind === "rent") {
     params.set("type", "available");
-    params.set("priceUnit", "per_month");
     return;
   }
 

@@ -1,5 +1,6 @@
 import { getEnv } from "@/lib/env";
 import {
+  buildContainerInquiryMail,
   buildClaimDecisionMail,
   buildClaimSubmittedMail,
   buildEmailVerificationMail,
@@ -214,6 +215,40 @@ export async function sendOfferPublishedEmail(input: {
     companyName: input.companyName,
     offerUrl: input.offerUrl,
   });
+  return sendMail({
+    to: input.to,
+    subject: template.subject,
+    text: template.text,
+    html: template.html,
+  });
+}
+
+export async function sendContainerInquiryEmail(input: {
+  to: string;
+  containerLabel: string;
+  summaryLine: string;
+  companyName: string;
+  listingQuantity: number;
+  buyerName: string;
+  buyerEmail: string;
+  buyerPhone?: string;
+  inquiryMessage?: string;
+  requestedQuantity?: number;
+  offeredPrice?: string;
+}): Promise<SendMailResult> {
+  const template = buildContainerInquiryMail({
+    containerLabel: input.containerLabel,
+    summaryLine: input.summaryLine,
+    companyName: input.companyName,
+    listingQuantity: input.listingQuantity,
+    buyerName: input.buyerName,
+    buyerEmail: input.buyerEmail,
+    buyerPhone: input.buyerPhone,
+    inquiryMessage: input.inquiryMessage,
+    requestedQuantity: input.requestedQuantity,
+    offeredPrice: input.offeredPrice,
+  });
+
   return sendMail({
     to: input.to,
     subject: template.subject,

@@ -2,53 +2,27 @@ import type {
   Currency,
   ListingPrice,
   PriceType,
-  PriceUnit,
   TaxMode,
 } from "@/lib/container-listing-types";
+import { getFallbackFxContext, type FxContext } from "@/lib/fx-rates";
 
 export type ListingPriceInput = {
   type: PriceType;
   original: {
     amount: number | null;
     currency: Currency | null;
-    unit: PriceUnit | null;
     taxMode: TaxMode | null;
     vatRate: number | null;
     negotiable: boolean;
   };
 };
 
-type FxContext = {
-  plnPerEur: number;
-  plnPerUsd: number;
-  fxDate: string;
-  fxSource: string;
-};
-
 function roundMoney(value: number): number {
-  return Math.round((value + Number.EPSILON) * 100) / 100;
-}
-
-function parsePositiveFxRate(value: string | undefined, fallback: number): number {
-  if (!value) {
-    return fallback;
-  }
-
-  const parsed = Number(value.replace(",", ".").trim());
-  if (!Number.isFinite(parsed) || parsed <= 0) {
-    return fallback;
-  }
-
-  return parsed;
+  return Math.round(value);
 }
 
 export function getFxContext(now = new Date()): FxContext {
-  return {
-    plnPerEur: parsePositiveFxRate(process.env.FX_PLN_PER_EUR, 4.3),
-    plnPerUsd: parsePositiveFxRate(process.env.FX_PLN_PER_USD, 3.95),
-    fxDate: now.toISOString().slice(0, 10),
-    fxSource: process.env.FX_SOURCE?.trim() || "manual-default",
-  };
+  return getFallbackFxContext(now);
 }
 
 function convertToPln(amount: number, currency: Currency, fx: FxContext): number {
@@ -71,11 +45,7 @@ function convertFromPln(amountPln: number, currency: Currency, fx: FxContext): n
   return amountPln / fx.plnPerUsd;
 }
 
-function convertAmountSet(
-  amount: number | null,
-  currency: Currency | null,
-  fx: FxContext,
-): {
+function convertAmountSet(amount: number | null, currency: Currency | null, fx: FxContext): {
   amountPln: number | null;
   amountEur: number | null;
   amountUsd: number | null;
@@ -116,8 +86,12 @@ function toNullableAmount(amount: number | null): number | null {
   return roundMoney(amount);
 }
 
-export function normalizeListingPrice(input: ListingPriceInput, now = new Date()): ListingPrice {
-  const fx = getFxContext(now);
+export function normalizeListingPrice(
+  input: ListingPriceInput,
+  now = new Date(),
+  fxContext: FxContext = getFallbackFxContext(now),
+): ListingPrice {
+  const fx = fxContext;
   const vatRate = toNullableVatRate(input.original.vatRate);
   const amount = toNullableAmount(input.original.amount);
   const currency = input.original.currency;
@@ -143,7 +117,6 @@ export function normalizeListingPrice(input: ListingPriceInput, now = new Date()
     original: {
       amount,
       currency: input.original.currency,
-      unit: input.original.unit,
       taxMode: input.original.taxMode,
       vatRate,
       negotiable: input.original.negotiable === true,
@@ -160,8 +133,8 @@ export function normalizeListingPrice(input: ListingPriceInput, now = new Date()
 export function buildLegacyListingPrice(input: {
   amount?: number;
   negotiable?: boolean;
-  unit?: PriceUnit;
   now?: Date;
+  fxContext?: FxContext;
 }): ListingPrice | null {
   if (typeof input.amount !== "number" || !Number.isFinite(input.amount) || input.amount < 0) {
     return null;
@@ -173,12 +146,12 @@ export function buildLegacyListingPrice(input: {
       original: {
         amount: input.amount,
         currency: "PLN",
-        unit: input.unit ?? "per_container",
         taxMode: "net",
         vatRate: null,
         negotiable: input.negotiable === true,
       },
     },
     input.now ?? new Date(),
+    input.fxContext,
   );
 }

@@ -33,7 +33,6 @@ import {
   PRICE_CURRENCIES,
   PRICE_TAX_MODES,
   PRICE_TYPES,
-  PRICE_UNITS,
   type Currency,
   type ContainerSize,
   type ListingStatus,
@@ -43,6 +42,7 @@ import {
   normalizeListingPrice,
   type ListingPriceInput,
 } from "@/lib/listing-price";
+import { getLatestFxContext } from "@/lib/fx-rates";
 import { getRichTextLength, hasRichTextContent } from "@/lib/listing-rich-text";
 import { enforceRateLimitOrResponse } from "@/lib/request-rate-limit";
 import { logError } from "@/lib/server-logger";
@@ -72,9 +72,8 @@ const listingLocationSchema = z.object({
 });
 
 const pricingOriginalSchema = z.object({
-  amount: z.coerce.number().finite().nonnegative().max(100_000_000).nullable(),
+  amount: z.coerce.number().int().nonnegative().max(100_000_000).nullable(),
   currency: z.enum(PRICE_CURRENCIES).nullable(),
-  unit: z.enum(PRICE_UNITS).nullable(),
   taxMode: z.enum(PRICE_TAX_MODES).nullable(),
   vatRate: z.coerce.number().finite().min(0).max(100).nullable(),
   negotiable: z.coerce.boolean(),
@@ -104,13 +103,6 @@ const pricingPayloadSchema = z
         message: "Currency is required for fixed/starting_from price type",
       });
     }
-    if (value.original.unit === null) {
-      context.addIssue({
-        code: z.ZodIssueCode.custom,
-        path: ["original", "unit"],
-        message: "Unit is required for fixed/starting_from price type",
-      });
-    }
     if (value.original.taxMode === null) {
       context.addIssue({
         code: z.ZodIssueCode.custom,
@@ -133,7 +125,6 @@ const querySchema = z.object({
   priceMin: z.string().trim().max(32).optional(),
   priceMax: z.string().trim().max(32).optional(),
   priceCurrency: z.enum(PRICE_CURRENCIES).optional(),
-  priceUnit: z.enum(PRICE_UNITS).optional(),
   priceType: z.enum(PRICE_TYPES).optional(),
   priceTaxMode: z.enum(PRICE_TAX_MODES).optional(),
   productionYear: z.string().trim().max(8).optional(),
@@ -298,6 +289,23 @@ function getPriceSortValueExpression(sortPriceField: string): Record<string, unk
   };
 }
 
+function getLocationBoundsFromRadius(input: {
+  lat: number;
+  lng: number;
+  radiusKm: number;
+}): { minLat: number; maxLat: number; minLng: number; maxLng: number } {
+  const latDelta = input.radiusKm / 110.574;
+  const cosLat = Math.cos((input.lat * Math.PI) / 180);
+  const lngDelta = input.radiusKm / (111.32 * Math.max(0.1, Math.abs(cosLat)));
+
+  return {
+    minLng: Math.max(-180, input.lng - lngDelta),
+    maxLng: Math.min(180, input.lng + lngDelta),
+    minLat: Math.max(-90, input.lat - latDelta),
+    maxLat: Math.min(90, input.lat + latDelta),
+  };
+}
+
 async function getUserFavoriteListingIdSet(
   userId: ObjectId,
   listingIds: ObjectId[],
@@ -357,7 +365,7 @@ const createSchema = z.object({
   availableFromApproximate: z.coerce.boolean().optional(),
   availableFrom: z.coerce.date().optional(),
   pricing: pricingPayloadSchema.optional(),
-  priceAmount: z.coerce.number().finite().nonnegative().max(100_000_000).optional(),
+  priceAmount: z.coerce.number().int().nonnegative().max(100_000_000).optional(),
   priceNegotiable: z.coerce.boolean().optional(),
   logisticsTransportAvailable: z.coerce.boolean().optional(),
   logisticsTransportIncluded: z.coerce.boolean().optional(),
@@ -367,6 +375,8 @@ const createSchema = z.object({
   logisticsComment: z.string().trim().max(600).optional(),
   hasCscPlate: z.coerce.boolean().optional(),
   hasCscCertification: z.coerce.boolean().optional(),
+  cscValidToMonth: z.coerce.number().int().min(1).max(12).optional(),
+  cscValidToYear: z.coerce.number().int().min(1900).max(2100).optional(),
   productionYear: z.coerce.number().int().min(1900).max(2100).optional(),
   price: z.string().trim().max(100).optional(),
   description: z.string().trim().max(16_000).optional(),
@@ -405,6 +415,16 @@ const createSchema = z.object({
       code: z.ZodIssueCode.custom,
       path: ["logisticsTransportFreeDistanceKm"],
       message: "logisticsTransportFreeDistanceKm is required when transport is included",
+    });
+  }
+
+  const hasCscValidityMonth = typeof value.cscValidToMonth === "number";
+  const hasCscValidityYear = typeof value.cscValidToYear === "number";
+  if (hasCscValidityMonth !== hasCscValidityYear) {
+    context.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ["cscValidToMonth"],
+      message: "cscValidToMonth and cscValidToYear must be provided together",
     });
   }
 });
@@ -484,7 +504,6 @@ export async function GET(request: NextRequest) {
       priceMin,
       priceMax,
       priceCurrency,
-      priceUnit,
       priceType,
       priceTaxMode,
       productionYear,
@@ -568,7 +587,6 @@ export async function GET(request: NextRequest) {
       priceMin: parsedPriceMin,
       priceMax: parsedPriceMax,
       priceCurrency,
-      priceUnit,
       priceType,
       priceTaxMode,
       productionYear: parsedProductionYear,
@@ -601,6 +619,20 @@ export async function GET(request: NextRequest) {
     if (sortField !== "createdAt") {
       sort.createdAt = -1;
     }
+    const mapLocationBounds =
+      typeof locationLat === "number" &&
+      Number.isFinite(locationLat) &&
+      typeof locationLng === "number" &&
+      Number.isFinite(locationLng) &&
+      typeof radiusKm === "number" &&
+      Number.isFinite(radiusKm) &&
+      radiusKm > 0
+        ? getLocationBoundsFromRadius({
+            lat: locationLat,
+            lng: locationLng,
+            radiusKm,
+          })
+        : null;
 
     const listings = await getContainerListingsCollection();
     const typedFilter = filter as Filter<ContainerListingDocument>;
@@ -714,6 +746,7 @@ export async function GET(request: NextRequest) {
             ContainerListingDocument,
             "_id" | "type" | "locationLat" | "locationLng" | "locations"
           >,
+          { bounds: mapLocationBounds },
         ),
       );
       const clippedMapPoints = all ? mapPoints.slice(0, MAX_MAP_POINTS) : mapPoints;
@@ -902,13 +935,29 @@ export async function POST(request: NextRequest) {
     const logisticsUnloadingIncluded = listing.logisticsUnloadingIncluded === true;
     const logisticsUnloadingAvailable =
       listing.logisticsUnloadingAvailable === true || logisticsUnloadingIncluded;
+    const normalizedCscValidToMonth =
+      typeof listing.cscValidToMonth === "number" &&
+      Number.isInteger(listing.cscValidToMonth) &&
+      listing.cscValidToMonth >= 1 &&
+      listing.cscValidToMonth <= 12
+        ? listing.cscValidToMonth
+        : undefined;
+    const normalizedCscValidToYear =
+      typeof listing.cscValidToYear === "number" &&
+      Number.isInteger(listing.cscValidToYear) &&
+      listing.cscValidToYear >= 1900 &&
+      listing.cscValidToYear <= 2100
+        ? listing.cscValidToYear
+        : undefined;
+    const fxContext = await getLatestFxContext(now);
     const normalizedPricing =
       listing.pricing
-        ? normalizeListingPrice(listing.pricing as ListingPriceInput, now)
+        ? normalizeListingPrice(listing.pricing as ListingPriceInput, now, fxContext)
         : buildLegacyListingPrice({
             amount: normalizedPriceAmount,
             negotiable: listing.priceNegotiable,
             now,
+            fxContext,
           });
 
     if (
@@ -961,6 +1010,12 @@ export async function POST(request: NextRequest) {
       ...(normalizedLogisticsComment ? { logisticsComment: normalizedLogisticsComment } : {}),
       hasCscPlate: listing.hasCscPlate === true,
       hasCscCertification: listing.hasCscCertification === true,
+      ...(normalizedCscValidToMonth !== undefined && normalizedCscValidToYear !== undefined
+        ? {
+            cscValidToMonth: normalizedCscValidToMonth,
+            cscValidToYear: normalizedCscValidToYear,
+          }
+        : {}),
       ...(typeof listing.productionYear === "number" ? { productionYear: listing.productionYear } : {}),
       price:
         normalizedPrice ??

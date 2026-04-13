@@ -1,6 +1,5 @@
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
-import { UserSettingsAssignedCompanies } from "@/components/user-settings-assigned-companies";
 import { UserSettingsAccountSection } from "@/components/user-settings-account-section";
 import { UserSettingsDangerZone } from "@/components/user-settings-danger-zone";
 import { SESSION_COOKIE_NAME } from "@/lib/auth-session";
@@ -53,8 +52,6 @@ export default async function SettingsPage({ searchParams }: SettingsPageProps) 
   const hasBlockedAssignedCompany = assignedCompanies.some(
     (company) => company.isBlocked === true,
   );
-  const shouldRenderAssignedCompaniesSection =
-    shouldShowAssignedCompanies && assignedCompanies.length > 0;
   const shouldShowBlockedNotice =
     currentUser.isBlocked === true || hasBlockedAssignedCompany;
 
@@ -100,19 +97,6 @@ export default async function SettingsPage({ searchParams }: SettingsPageProps) 
             currentUser.authProvider !== "local" || currentUser.isEmailVerified !== false,
         }}
       />
-
-      {shouldRenderAssignedCompaniesSection ? (
-        <UserSettingsAssignedCompanies
-          locale={locale}
-          messages={messages.settingsPage}
-          companies={assignedCompanies.map((company) => ({
-            id: company._id.toHexString(),
-            name: company.name,
-            slug: company.slug,
-            isBlocked: company.isBlocked === true,
-          }))}
-        />
-      ) : null}
 
       {currentUser.role !== USER_ROLE.ADMIN ? (
         <UserSettingsDangerZone locale={locale} messages={messages.settingsPage} />

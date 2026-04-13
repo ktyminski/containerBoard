@@ -31,6 +31,7 @@ import {
   LISTING_KIND_OPTIONS,
   LOCATION_RADIUS_OPTIONS,
   SORT_OPTIONS,
+  type PriceDisplayCurrency,
   areNonLocationFiltersEqual,
   pickNonLocationFilters,
   shouldUseTypedDebounce,
@@ -43,6 +44,15 @@ import {
 } from "@/components/container-listings-shared";
 
 const PRICE_FILTER_CURRENCIES: Currency[] = ["EUR", "PLN", "USD"];
+const PRICE_DISPLAY_OPTIONS: Array<{
+  value: PriceDisplayCurrency;
+  label: string;
+}> = [
+  { value: "original", label: "Oryginalne" },
+  { value: "PLN", label: "PLN" },
+  { value: "EUR", label: "EUR" },
+  { value: "USD", label: "USD" },
+];
 
 type SelectWithChevronProps = SelectHTMLAttributes<HTMLSelectElement> & {
   wrapperClassName?: string;
@@ -321,6 +331,8 @@ function ContainerListingsFiltersComponent({
     useWatch({ control, name: "hasCscCertificationOnly" }) ?? false;
   const priceCurrencyValue =
     useWatch({ control, name: "priceCurrency" }) ?? "EUR";
+  const priceDisplayCurrencyValue =
+    useWatch({ control, name: "priceDisplayCurrency" }) ?? "original";
   const priceTaxModeValue =
     useWatch({ control, name: "priceTaxMode" }) ?? "net";
   const priceMinInputValue = useWatch({ control, name: "priceMinInput" }) ?? "";
@@ -350,8 +362,8 @@ function ContainerListingsFiltersComponent({
       hasCscPlateOnly: hasCscPlateOnlyValue,
       hasCscCertificationOnly: hasCscCertificationOnlyValue,
       priceType: "all",
-      priceUnit: "all",
       priceCurrency: priceCurrencyValue === "all" ? "EUR" : priceCurrencyValue,
+      priceDisplayCurrency: priceDisplayCurrencyValue,
       priceTaxMode: hasPriceRange ? priceTaxModeValue : "net",
       priceMinInput: normalizedPriceMinInput,
       priceMaxInput: normalizedPriceMaxInput,
@@ -373,6 +385,7 @@ function ContainerListingsFiltersComponent({
     hasCscPlateOnlyValue,
     hasCscCertificationOnlyValue,
     priceCurrencyValue,
+    priceDisplayCurrencyValue,
     priceTaxModeValue,
     priceMinInputValue,
     priceMaxInputValue,
@@ -577,13 +590,6 @@ function ContainerListingsFiltersComponent({
         {locationFilterError ? (
           <p className="mt-2 text-xs text-neutral-600">{locationFilterError}</p>
         ) : null}
-        {appliedFilters.locationCenter && appliedFilters.locationQuery ? (
-          <p className="mt-2 text-xs text-neutral-600">
-            Filtr lokalizacji: +{appliedFilters.locationRadiusKm} km od &quot;
-            {appliedFilters.locationQuery}
-            &quot;.
-          </p>
-        ) : null}
       </section>
 
       <div className="grid items-start gap-4 lg:grid-cols-[280px_minmax(0,1fr)]">
@@ -600,6 +606,24 @@ function ContainerListingsFiltersComponent({
                 }`}
               >
                 {SORT_OPTIONS.map((option) => (
+                  <option key={option.value} value={option.value}>
+                    {option.label}
+                </option>
+              ))}
+              </SelectWithChevron>
+            </label>
+
+            <label className="grid gap-1 text-sm">
+              <span className="text-neutral-600">Przelicz ceny na</span>
+              <SelectWithChevron
+                {...register("priceDisplayCurrency")}
+                className={`rounded-md border px-3 py-2 text-neutral-900 ${
+                  priceDisplayCurrencyValue !== "original"
+                    ? "border-sky-400 bg-sky-100/70 shadow-[0_0_0_1px_rgba(56,189,248,0.15)]"
+                    : "border-neutral-300 bg-white"
+                }`}
+              >
+                {PRICE_DISPLAY_OPTIONS.map((option) => (
                   <option key={option.value} value={option.value}>
                     {option.label}
                   </option>

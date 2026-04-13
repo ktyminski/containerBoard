@@ -1,7 +1,6 @@
 export const LISTING_TYPES = ["available", "wanted"] as const;
 export const LISTING_STATUSES = ["active", "expired", "closed"] as const;
 export const PRICE_CURRENCIES = ["PLN", "EUR", "USD"] as const;
-export const PRICE_UNITS = ["per_container", "per_month"] as const;
 export const PRICE_TYPES = ["fixed", "starting_from", "request"] as const;
 export const PRICE_TAX_MODES = ["net", "gross"] as const;
 
@@ -54,7 +53,6 @@ export const LISTING_STATUS = {
 export type ListingType = (typeof LISTING_TYPES)[number];
 export type ListingStatus = (typeof LISTING_STATUSES)[number];
 export type Currency = (typeof PRICE_CURRENCIES)[number];
-export type PriceUnit = (typeof PRICE_UNITS)[number];
 export type PriceType = (typeof PRICE_TYPES)[number];
 export type TaxMode = (typeof PRICE_TAX_MODES)[number];
 export type ContainerSize = (typeof CONTAINER_SIZES)[number];
@@ -68,7 +66,6 @@ export type ListingPrice = {
   original: {
     amount: number | null;
     currency: Currency | null;
-    unit: PriceUnit | null;
     taxMode: TaxMode | null;
     vatRate: number | null;
     negotiable: boolean;
@@ -141,11 +138,6 @@ export const PRICE_CURRENCY_LABEL: Record<Currency, string> = {
   PLN: "PLN",
   EUR: "EUR",
   USD: "USD",
-};
-
-export const PRICE_UNIT_LABEL: Record<PriceUnit, string> = {
-  per_container: "Za kontener",
-  per_month: "Za miesiac",
 };
 
 export const PRICE_TYPE_LABEL: Record<PriceType, string> = {

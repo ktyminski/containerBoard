@@ -27,7 +27,6 @@ import {
   PRICE_CURRENCIES,
   PRICE_TAX_MODES,
   PRICE_TYPES,
-  PRICE_UNITS,
   type ContainerSize,
   type ListingStatus,
 } from "@/lib/container-listing-types";
@@ -36,6 +35,7 @@ import {
   normalizeListingPrice,
   type ListingPriceInput,
 } from "@/lib/listing-price";
+import { getLatestFxContext } from "@/lib/fx-rates";
 import { getRichTextLength, hasRichTextContent } from "@/lib/listing-rich-text";
 import { USER_ROLE } from "@/lib/user-roles";
 import { logError } from "@/lib/server-logger";
@@ -62,9 +62,8 @@ const listingLocationSchema = z.object({
 });
 
 const pricingOriginalSchema = z.object({
-  amount: z.coerce.number().finite().nonnegative().max(100_000_000).nullable(),
+  amount: z.coerce.number().int().nonnegative().max(100_000_000).nullable(),
   currency: z.enum(PRICE_CURRENCIES).nullable(),
-  unit: z.enum(PRICE_UNITS).nullable(),
   taxMode: z.enum(PRICE_TAX_MODES).nullable(),
   vatRate: z.coerce.number().finite().min(0).max(100).nullable(),
   negotiable: z.coerce.boolean(),
@@ -92,13 +91,6 @@ const pricingPayloadSchema = z
         code: z.ZodIssueCode.custom,
         path: ["original", "currency"],
         message: "Currency is required for fixed/starting_from price type",
-      });
-    }
-    if (value.original.unit === null) {
-      context.addIssue({
-        code: z.ZodIssueCode.custom,
-        path: ["original", "unit"],
-        message: "Unit is required for fixed/starting_from price type",
       });
     }
     if (value.original.taxMode === null) {
@@ -140,7 +132,7 @@ const updateSchema = z.object({
   availableFromApproximate: z.coerce.boolean().optional(),
   availableFrom: z.coerce.date().optional(),
   pricing: pricingPayloadSchema.optional(),
-  priceAmount: z.coerce.number().finite().nonnegative().max(100_000_000).optional(),
+  priceAmount: z.coerce.number().int().nonnegative().max(100_000_000).optional(),
   priceNegotiable: z.coerce.boolean().optional(),
   logisticsTransportAvailable: z.coerce.boolean().optional(),
   logisticsTransportIncluded: z.coerce.boolean().optional(),
@@ -150,6 +142,8 @@ const updateSchema = z.object({
   logisticsComment: z.string().trim().max(600).optional(),
   hasCscPlate: z.coerce.boolean().optional(),
   hasCscCertification: z.coerce.boolean().optional(),
+  cscValidToMonth: z.coerce.number().int().min(1).max(12).optional(),
+  cscValidToYear: z.coerce.number().int().min(1900).max(2100).optional(),
   productionYear: z.coerce.number().int().min(1900).max(2100).optional(),
   price: z.string().trim().max(100).optional(),
   description: z.string().trim().max(16_000).optional(),
@@ -188,6 +182,16 @@ const updateSchema = z.object({
       code: z.ZodIssueCode.custom,
       path: ["logisticsTransportFreeDistanceKm"],
       message: "logisticsTransportFreeDistanceKm is required when transport is included",
+    });
+  }
+
+  const hasCscValidityMonth = typeof value.cscValidToMonth === "number";
+  const hasCscValidityYear = typeof value.cscValidToYear === "number";
+  if (hasCscValidityMonth !== hasCscValidityYear) {
+    context.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ["cscValidToMonth"],
+      message: "cscValidToMonth and cscValidToYear must be provided together",
     });
   }
 });
@@ -389,13 +393,33 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
       const logisticsUnloadingIncluded = updateParsed.data.logisticsUnloadingIncluded === true;
       const logisticsUnloadingAvailable =
         updateParsed.data.logisticsUnloadingAvailable === true || logisticsUnloadingIncluded;
+      const normalizedCscValidToMonth =
+        typeof updateParsed.data.cscValidToMonth === "number" &&
+        Number.isInteger(updateParsed.data.cscValidToMonth) &&
+        updateParsed.data.cscValidToMonth >= 1 &&
+        updateParsed.data.cscValidToMonth <= 12
+          ? updateParsed.data.cscValidToMonth
+          : undefined;
+      const normalizedCscValidToYear =
+        typeof updateParsed.data.cscValidToYear === "number" &&
+        Number.isInteger(updateParsed.data.cscValidToYear) &&
+        updateParsed.data.cscValidToYear >= 1900 &&
+        updateParsed.data.cscValidToYear <= 2100
+          ? updateParsed.data.cscValidToYear
+          : undefined;
+      const fxContext = await getLatestFxContext(now);
       const normalizedPricing =
         updateParsed.data.pricing
-          ? normalizeListingPrice(updateParsed.data.pricing as ListingPriceInput, now)
+          ? normalizeListingPrice(
+              updateParsed.data.pricing as ListingPriceInput,
+              now,
+              fxContext,
+            )
           : buildLegacyListingPrice({
               amount: normalizedPriceAmount,
               negotiable: updateParsed.data.priceNegotiable,
               now,
+              fxContext,
             });
       const unsetPatch: Record<string, 1> = {};
       unsetPatch.containerType = 1;
@@ -413,6 +437,10 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
       }
       if (typeof updateParsed.data.productionYear !== "number") {
         unsetPatch.productionYear = 1;
+      }
+      if (normalizedCscValidToMonth === undefined || normalizedCscValidToYear === undefined) {
+        unsetPatch.cscValidToMonth = 1;
+        unsetPatch.cscValidToYear = 1;
       }
       if (!normalizedTitle) {
         unsetPatch.title = 1;
@@ -483,6 +511,12 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
             ...(normalizedLogisticsComment ? { logisticsComment: normalizedLogisticsComment } : {}),
             hasCscPlate: updateParsed.data.hasCscPlate === true,
             hasCscCertification: updateParsed.data.hasCscCertification === true,
+            ...(normalizedCscValidToMonth !== undefined && normalizedCscValidToYear !== undefined
+              ? {
+                  cscValidToMonth: normalizedCscValidToMonth,
+                  cscValidToYear: normalizedCscValidToYear,
+                }
+              : {}),
             ...(typeof updateParsed.data.productionYear === "number"
               ? { productionYear: updateParsed.data.productionYear }
               : {}),

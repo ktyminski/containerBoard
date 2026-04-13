@@ -421,6 +421,12 @@ function buildListing(index, now) {
         ? `${pick(LOGISTICS_COMMENTS)} (${primaryLocation.locationCity})`
         : undefined
       : undefined;
+  const hasCscPlate = Math.random() < 0.58;
+  const hasCscCertification = Math.random() < 0.46;
+  const hasAnyCsc = hasCscPlate || hasCscCertification;
+  const cscValidToMonth = hasAnyCsc && Math.random() < 0.72 ? randomInt(1, 12) : undefined;
+  const cscValidToYear =
+    typeof cscValidToMonth === "number" ? randomInt(2026, 2035) : undefined;
   const pricingPayload = buildPricing({
     listingType,
     container,
@@ -454,8 +460,11 @@ function buildListing(index, now) {
     logisticsUnloadingAvailable,
     logisticsUnloadingIncluded,
     ...(logisticsComment ? { logisticsComment } : {}),
-    hasCscPlate: Math.random() < 0.58,
-    hasCscCertification: Math.random() < 0.46,
+    hasCscPlate,
+    hasCscCertification,
+    ...(typeof cscValidToMonth === "number" && typeof cscValidToYear === "number"
+      ? { cscValidToMonth, cscValidToYear }
+      : {}),
     productionYear: pickProductionYear(container.condition),
     price: pricingPayload.priceText,
     companyName: company,

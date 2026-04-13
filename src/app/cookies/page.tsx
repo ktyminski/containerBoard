@@ -42,7 +42,8 @@ export default async function CookiesPage({ searchParams }: CookiesPageProps) {
     <StaticPageFrame
       locale={locale}
       backLabel={messages.companyDetails.back}
-      mapLabel={messages.home.heroPrimaryCta}
+      mapLabel={locale === "pl" ? "PrzejdÅº do ogÅ‚oszeÅ„" : messages.home.whatBrowseAnnouncementsCta}
+      mapHref="/list"
       title={page.title}
       intro={page.intro}
       links={[
@@ -55,11 +56,11 @@ export default async function CookiesPage({ searchParams }: CookiesPageProps) {
           <h2 className="text-base font-semibold text-neutral-100">1. Informacje ogÃ³lne</h2>
           <ol className="list-decimal space-y-2 pl-5">
             <li>
-              Niniejsza Polityka cookies okreÅ›la zasady wykorzystywania plikÃ³w cookies na
-              platformie ContainerBoard dostÄ™pnej pod adresem <strong>containerboard.pl</strong>.
+              Niniejsza Polityka cookies okreÅ›la zasady wykorzystywania plikÃ³w cookies na platformie
+              ContainerBoard dostÄ™pnej pod adresem <strong>containerboard.pl</strong>.
             </li>
             <li>
-              Administratorem danych jest <strong>ContainerBoard Karol Tymi&#324;ski 5842785961</strong>,
+              Administratorem danych jest <strong>ContainerBoard Karol TymiÅ„ski 5842785961</strong>,
               e-mail: <strong>hello@containerboard.pl</strong>.
             </li>
             <li>
@@ -83,8 +84,8 @@ export default async function CookiesPage({ searchParams }: CookiesPageProps) {
         <section className="space-y-3">
           <h2 className="text-base font-semibold text-neutral-100">3. Jakie cookies wykorzystujemy</h2>
           <p>
-            Platforma ContainerBoard wykorzystuje wyÅ‚Ä…cznie cookies niezbÄ™dne (techniczne), w
-            szczegÃ³lnoÅ›ci do:
+            Platforma ContainerBoard wykorzystuje wyÅ‚Ä…cznie cookies niezbÄ™dne (techniczne),
+            w szczegÃ³lnoÅ›ci do:
           </p>
           <ul className="list-disc space-y-1 pl-5">
             <li>utrzymania sesji uÅ¼ytkownika,</li>
@@ -98,10 +99,7 @@ export default async function CookiesPage({ searchParams }: CookiesPageProps) {
         <section className="space-y-3">
           <h2 className="text-base font-semibold text-neutral-100">4. Cookies podmiotÃ³w trzecich</h2>
           <ol className="list-decimal space-y-2 pl-5">
-            <li>
-              Platforma nie wykorzystuje cookies marketingowych ani analitycznych podmiotÃ³w
-              trzecich.
-            </li>
+            <li>Platforma nie wykorzystuje cookies marketingowych ani analitycznych podmiotÃ³w trzecich.</li>
             <li>
               W przypadku wprowadzenia takich narzÄ™dzi w przyszÅ‚oÅ›ci, polityka cookies zostanie
               odpowiednio zaktualizowana.
@@ -132,10 +130,3 @@ export default async function CookiesPage({ searchParams }: CookiesPageProps) {
     </StaticPageFrame>
   );
 }
-
-
-
-
-
-
-

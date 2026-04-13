@@ -60,11 +60,9 @@ export function CompanyMediaSection({
     backgroundColor: getRandomPlaceholderColor(),
   }));
   const backgroundPlaceholderStyle = {
-    backgroundImage:
-      "linear-gradient(180deg,#031a3c_0%,#05244f_100%)",
+    backgroundImage: "linear-gradient(180deg,#e5e5e5_0%,#d4d4d4_100%)",
   };
   const isLogoModalOpen = mediaModalTarget === "logo";
-  const isBackgroundModalOpen = mediaModalTarget === "background";
   const hasLogoImage = Boolean(logo || (initialLogoUrl && !isInitialLogoRemoved));
   const hasBackgroundImage = Boolean(background || (initialBackgroundUrl && !isInitialBackgroundRemoved));
   const activeHasImage = isLogoModalOpen ? hasLogoImage : hasBackgroundImage;
@@ -76,12 +74,12 @@ export function CompanyMediaSection({
   const backgroundPreviewUrl =
     background?.previewUrl ?? (isInitialBackgroundRemoved ? null : initialBackgroundUrl);
   const backgroundOverlayClass = backgroundPreviewUrl
-    ? "absolute inset-0 bg-gradient-to-t from-neutral-950/34 via-neutral-950/10 to-transparent"
+    ? "absolute inset-0 bg-gradient-to-t from-neutral-900/20 via-neutral-900/5 to-transparent"
     : "";
 
   return (
     <>
-      <section className="overflow-hidden border-b border-[#1f4f86] bg-[linear-gradient(180deg,#031a3c_0%,#05244f_100%)]">
+      <section className="overflow-hidden border-b border-neutral-300 bg-neutral-200">
         <div className="relative overflow-hidden">
           <button
             type="button"
@@ -113,7 +111,7 @@ export function CompanyMediaSection({
           <div className="absolute bottom-4 left-4 z-10 flex max-w-[calc(100%-2rem)] items-end gap-3">
             <button
               type="button"
-              className="relative h-12 w-12 shrink-0 cursor-pointer overflow-hidden rounded-lg border-2 border-[#d1d5db] bg-[#0b1730] text-xl font-semibold text-white shadow-lg sm:h-12 sm:w-12 md:h-24 md:w-24 lg:h-32 lg:w-32"
+              className="relative h-12 w-12 shrink-0 cursor-pointer overflow-hidden rounded-lg border-2 border-neutral-300 bg-neutral-700 text-xl font-semibold text-white shadow-lg sm:h-12 sm:w-12 md:h-24 md:w-24 lg:h-32 lg:w-32"
               onClick={() => setMediaModalTarget("logo")}
               aria-label={messages.logoFile}
             >
@@ -131,13 +129,13 @@ export function CompanyMediaSection({
                   {companyInitial}
                 </span>
               )}
-              <span className="absolute bottom-1 right-1 inline-flex h-6 w-6 items-center justify-center rounded-full border border-neutral-400/60 bg-[rgba(11,23,48,0.86)] text-sm text-[#e2efff]">
+              <span className="absolute bottom-1 right-1 inline-flex h-6 w-6 items-center justify-center rounded-full border border-neutral-300/80 bg-neutral-900/70 text-sm text-neutral-100">
                 +
               </span>
             </button>
 
             {companyNameText ? (
-              <p className="max-w-[400px] min-w-0 truncate pb-1 text-base font-semibold text-white/95 [text-shadow:0_2px_8px_rgba(2,6,23,0.85)] sm:text-lg">
+              <p className="max-w-[400px] min-w-0 truncate pb-1 text-base font-semibold text-neutral-900 sm:text-lg">
                 {companyNameText}
               </p>
             ) : null}
@@ -147,31 +145,21 @@ export function CompanyMediaSection({
 
       {mediaModalTarget ? (
         <div
-          className={`fixed inset-0 z-[70] flex items-center justify-center overflow-y-auto [&>div:not(.fixed)]:my-auto [&>div:not(.fixed)]:max-h-[calc(100dvh-2rem)] [&>div:not(.fixed)]:!overflow-y-auto p-4 ${
-            isBackgroundModalOpen ? "bg-neutral-100/85" : "bg-[rgba(2,6,23,0.82)]"
-          }`}
+          className="fixed inset-0 z-[70] flex items-center justify-center overflow-y-auto bg-neutral-100/85 p-4 [&>div:not(.fixed)]:my-auto [&>div:not(.fixed)]:max-h-[calc(100dvh-2rem)] [&>div:not(.fixed)]:!overflow-y-auto"
         >
-          <div
-            className={`w-full max-w-xl rounded-xl border p-5 shadow-2xl ${
-              isBackgroundModalOpen ? "border-neutral-300 bg-white" : "border-[#334155] bg-[#0b1730]"
-            }`}
-          >
+          <div className="w-full max-w-xl rounded-lg border border-neutral-300 bg-white p-5 shadow-2xl">
             <div className="flex items-start justify-between gap-3">
               <div>
-                <h3 className={`text-lg font-semibold ${isBackgroundModalOpen ? "text-neutral-800" : "text-[#e2efff]"}`}>
+                <h3 className="text-lg font-semibold text-neutral-800">
                   {activeTitle}
                 </h3>
-                <p className={`mt-1 text-xs ${isBackgroundModalOpen ? "text-neutral-600" : "text-[#9fb8d8]"}`}>
+                <p className="mt-1 text-xs text-neutral-600">
                   {activeHint}
                 </p>
               </div>
               <button
                 type="button"
-                className={`cursor-pointer rounded-md border px-3 py-1.5 text-xs transition ${
-                  isBackgroundModalOpen
-                    ? "border-neutral-300 text-neutral-600 hover:border-neutral-400"
-                    : "border-[#334155] text-[#cbd5e1] hover:border-[#475569]"
-                }`}
+                className="cursor-pointer rounded-md border border-neutral-300 px-3 py-1.5 text-xs text-neutral-600 transition hover:border-neutral-400"
                 onClick={() => setMediaModalTarget(null)}
               >
                 {messages.cropCancel}
@@ -182,7 +170,7 @@ export function CompanyMediaSection({
               <ImageDropzone
                 title={activeTitle}
                 hintText={activeHint}
-                variant={isBackgroundModalOpen ? "light" : "dark"}
+                variant="light"
                 multiple={false}
                 onFilesAdded={(files) => {
                   if (isLogoModalOpen) {
@@ -199,7 +187,7 @@ export function CompanyMediaSection({
               <div className="mt-4">
                 <button
                   type="button"
-                  className="cursor-pointer rounded-md border border-rose-700/70 bg-rose-900/20 px-3 py-2 text-xs text-rose-200 hover:border-rose-500"
+                  className="cursor-pointer rounded-md border border-rose-300 bg-rose-50 px-3 py-2 text-xs text-rose-700 hover:border-rose-400"
                   onClick={isLogoModalOpen ? onRemoveLogo : onRemoveBackground}
                 >
                   {messages.imageRemove}

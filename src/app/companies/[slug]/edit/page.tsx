@@ -67,7 +67,6 @@ export default async function EditCompanyPage({ params, searchParams }: EditComp
         name: 1,
         description: 1,
         category: 1,
-        communicationLanguages: 1,
         operatingArea: 1,
         operatingAreaDetails: 1,
         nip: 1,
@@ -77,8 +76,6 @@ export default async function EditCompanyPage({ params, searchParams }: EditComp
         facebookUrl: 1,
         instagramUrl: 1,
         linkedinUrl: 1,
-        benefits: 1,
-        specializations: 1,
         "locations.label": 1,
         "locations.addressText": 1,
         "locations.addressParts": 1,
@@ -131,7 +128,6 @@ export default async function EditCompanyPage({ params, searchParams }: EditComp
   const initialValues: NewCompanyFormValues = {
     name: company.name,
     description: company.description,
-    communicationLanguages: company.communicationLanguages ?? [],
     operatingArea: normalizeCompanyOperatingArea(company.operatingArea),
     operatingAreaDetails: company.operatingAreaDetails ?? "",
     nip: company.nip ?? "",
@@ -141,8 +137,6 @@ export default async function EditCompanyPage({ params, searchParams }: EditComp
     facebookUrl: company.facebookUrl ?? "",
     instagramUrl: company.instagramUrl ?? "",
     linkedinUrl: company.linkedinUrl ?? "",
-    benefits: company.benefits ?? [],
-    specializations: company.specializations ?? [],
     branches: initialBranches,
   };
   const companyId = company._id.toHexString();
@@ -176,23 +170,18 @@ export default async function EditCompanyPage({ params, searchParams }: EditComp
   }, 0);
 
   return (
-    <section className="relative overflow-hidden">
-      <div className="pointer-events-none absolute inset-0" aria-hidden="true">
-        <div className="absolute -left-28 top-10 h-64 w-64 rounded-full bg-sky-500/15 blur-3xl" />
-        <div className="absolute right-[-5rem] top-28 h-72 w-72 rounded-full bg-cyan-400/10 blur-3xl" />
-        <div className="absolute bottom-8 left-1/3 h-56 w-56 rounded-full bg-emerald-400/10 blur-3xl" />
-      </div>
-      <main className="relative mx-auto flex w-full max-w-5xl flex-col gap-6 px-4 py-6 sm:px-6">
+    <section className="bg-neutral-100">
+      <main className="mx-auto flex w-full max-w-5xl flex-col gap-6 px-4 py-6 sm:px-6">
         <SmartBackButton
           label={messages.companyDetails.back}
           hideWhenNoHistory
-          className="inline-flex w-fit items-center gap-2 rounded-md border border-neutral-700 px-3 py-2 text-sm text-neutral-200 transition-colors hover:border-neutral-500"
+          className="inline-flex w-fit items-center gap-2 rounded-md border border-neutral-400 bg-white px-3 py-2 text-sm text-neutral-700 transition-colors hover:border-neutral-500"
         />
         <header>
-          <h1 className="text-2xl font-semibold text-neutral-100 sm:text-3xl">
+          <h1 className="text-2xl font-semibold text-neutral-900 sm:text-3xl">
             {messages.companyDetails.editCompany}
           </h1>
-          <p className="mt-1 text-xs text-neutral-400">{messages.companyCreate.requiredFieldsHint}</p>
+          <p className="mt-1 text-xs text-neutral-500">{messages.companyCreate.requiredFieldsHint}</p>
         </header>
 
         <NewCompanyForm
