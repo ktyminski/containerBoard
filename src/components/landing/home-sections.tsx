@@ -76,7 +76,7 @@ export function HomeHeroSection({
           </p>
           <div className="mt-6 flex flex-wrap justify-end gap-3">
             <Link
-              href={withLang("/maps", locale)}
+              href={withLang("/list", locale)}
               className="inline-flex items-center gap-2 rounded-md bg-sky-500 px-4 py-2 text-sm font-medium text-neutral-950 hover:bg-sky-400"
             >
               <span>{home.heroPrimaryCta}</span>
@@ -110,7 +110,7 @@ export function HomeWhatSection({
               <ul className="mt-5 space-y-3 text-sm">
                 <li>
                   <Link
-                    href={withLang("/maps/companies", locale)}
+                    href={withLang("/list", locale)}
                     className="flex items-center justify-center gap-2 rounded-xl border-2 border-sky-500/55 bg-sky-500/10 px-4 py-3 font-medium text-sky-100 transition hover:border-sky-300 hover:bg-sky-500/20 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-sky-300"
                   >
                     <span aria-hidden="true" className="inline-flex h-6 w-6 items-center justify-center rounded-full bg-sky-500/25 text-xs text-sky-200">ðŸ”Ž</span>
@@ -119,7 +119,7 @@ export function HomeWhatSection({
                 </li>
                 <li>
                   <Link
-                    href={withLang("/maps/companies", locale)}
+                    href={withLang("/list", locale)}
                     className="flex items-center justify-center gap-2 rounded-xl border-2 border-sky-500/55 bg-sky-500/10 px-4 py-3 font-medium text-sky-100 transition hover:border-sky-300 hover:bg-sky-500/20 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-sky-300"
                   >
                     <span aria-hidden="true" className="inline-flex h-6 w-6 items-center justify-center rounded-full bg-sky-500/25 text-xs text-sky-200">ðŸ”Ž</span>
@@ -195,7 +195,7 @@ export function HomeMapPreviewSection({
         <div className="mt-6 overflow-hidden rounded-2xl border border-neutral-800 bg-neutral-900/50 shadow-[0_20px_60px_-30px_rgba(14,165,233,0.45)]">
           <div className="grid lg:grid-cols-[minmax(0,1.45fr)_minmax(0,1fr)]">
             <Link
-              href={withLang("/maps/companies", locale)}
+              href={withLang("/list", locale)}
               className="group relative block"
               aria-label={home.previewImageAlt}
             >
@@ -225,7 +225,7 @@ export function HomeMapPreviewSection({
               </ul>
               <div>
                 <Link
-                  href={withLang("/maps/companies", locale)}
+                  href={withLang("/list", locale)}
                   className="inline-flex items-center gap-2 rounded-md border border-sky-700 px-4 py-2 text-sm text-sky-200 hover:border-sky-500"
                 >
                   <span>{home.previewOpenMap}</span>
@@ -373,7 +373,7 @@ export function HomeFinalSection({
         <p className="mx-auto mt-3 max-w-2xl text-sm text-neutral-300 sm:text-base">{home.finalSubtitle}</p>
         <div className="mt-6">
           <Link
-            href={withLang("/maps", locale)}
+            href={withLang("/list", locale)}
             className="inline-flex items-center gap-2 rounded-md bg-sky-500 px-5 py-2.5 text-sm font-medium text-neutral-950 hover:bg-sky-400"
           >
             <span>{home.finalCta}</span>

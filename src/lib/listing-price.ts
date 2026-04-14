@@ -1,13 +1,11 @@
 import type {
   Currency,
   ListingPrice,
-  PriceType,
   TaxMode,
 } from "@/lib/container-listing-types";
 import { getFallbackFxContext, type FxContext } from "@/lib/fx-rates";
 
 export type ListingPriceInput = {
-  type: PriceType;
   original: {
     amount: number | null;
     currency: Currency | null;
@@ -113,7 +111,6 @@ export function normalizeListingPrice(
   }
 
   return {
-    type: input.type,
     original: {
       amount,
       currency: input.original.currency,
@@ -142,7 +139,6 @@ export function buildLegacyListingPrice(input: {
 
   return normalizeListingPrice(
     {
-      type: "fixed",
       original: {
         amount: input.amount,
         currency: "PLN",

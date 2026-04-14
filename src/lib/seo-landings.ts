@@ -1,6 +1,5 @@
 import type { Filter } from "mongodb";
 import type { CompanyDocument } from "@/lib/companies";
-import type { CompanyCategory } from "@/types/company-category";
 
 type SearchBbox = [number, number, number, number];
 
@@ -104,7 +103,6 @@ export const SEO_CITIES: SeoCity[] = [
 type SeoSector = {
   slug: string;
   name: string;
-  companyCategories?: CompanyCategory[];
   companyKeywords?: string[];
 };
 
@@ -112,19 +110,10 @@ export const SEO_SECTORS: SeoSector[] = [
   {
     slug: "spedycja",
     name: "Spedycja",
-    companyCategories: ["freight-forwarding"],
     companyKeywords: ["spedy", "spedyt", "freight", "forward"],
   },
-  {
-    slug: "transport",
-    name: "Transport",
-    companyCategories: ["transport"],
-  },
-  {
-    slug: "logistyka",
-    name: "Logistyka",
-    companyCategories: ["logistics"],
-  },
+  { slug: "transport", name: "Transport" },
+  { slug: "logistyka", name: "Logistyka" },
 ];
 
 const CITY_BY_SLUG = new Map(SEO_CITIES.map((city) => [city.slug, city]));
@@ -195,25 +184,20 @@ export function getCityBbox(city: SeoCity): SearchBbox {
   });
 }
 
-function bboxToQuery(bbox: SearchBbox): string {
-  return bbox.map((value) => value.toFixed(6)).join(",");
-}
-
 export function buildSeoMapsHref(input: {
   view: "companies";
   city: SeoCity;
   keyword?: string;
 }): string {
-  const search = new URLSearchParams();
-  search.set("location", input.city.name);
-  search.set("distance", String(input.city.radiusKm));
-  search.set("bbox", bboxToQuery(getCityBbox(input.city)));
-  const keyword = input.keyword?.trim();
-  if (keyword) {
-    search.set("q", keyword);
+  void input.view;
+  const keyword = [input.keyword?.trim(), input.city.name].filter(Boolean).join(" ").trim();
+  if (!keyword) {
+    return "/list";
   }
 
-  return `/maps/${input.view}?${search.toString()}`;
+  const search = new URLSearchParams();
+  search.set("q", keyword);
+  return `/list?${search.toString()}`;
 }
 
 export function buildCompaniesLandingFilter(input: {
@@ -234,9 +218,6 @@ export function buildCompaniesLandingFilter(input: {
 
   if (input.sectorSlug) {
     const sector = getSeoSectorBySlug(input.sectorSlug);
-    if (sector?.companyCategories && sector.companyCategories.length > 0) {
-      clauses.push({ category: { $in: sector.companyCategories } });
-    }
     if (sector?.companyKeywords && sector.companyKeywords.length > 0) {
       const regex = buildKeywordRegex(sector.companyKeywords);
       clauses.push({

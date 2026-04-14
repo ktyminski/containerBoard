@@ -361,7 +361,6 @@ function ContainerListingsFiltersComponent({
       logisticsUnloadingOnly: logisticsUnloadingOnlyValue,
       hasCscPlateOnly: hasCscPlateOnlyValue,
       hasCscCertificationOnly: hasCscCertificationOnlyValue,
-      priceType: "all",
       priceCurrency: priceCurrencyValue === "all" ? "EUR" : priceCurrencyValue,
       priceDisplayCurrency: priceDisplayCurrencyValue,
       priceTaxMode: hasPriceRange ? priceTaxModeValue : "net",
@@ -648,10 +647,10 @@ function ContainerListingsFiltersComponent({
                     }}
                     className={`listing-kind-option ${
                       listingKind === option.value
-                        ? option.value === "wanted"
+                        ? option.value === "buy"
                           ? "w-full border-b border-neutral-300 bg-amber-500 px-3 py-2 text-left font-semibold text-white shadow-[0_8px_20px_-12px_rgba(245,158,11,0.9)] last:border-b-0"
                           : "w-full border-b border-neutral-300 bg-[#0c3466] px-3 py-2 text-left font-semibold text-white shadow-[0_8px_20px_-12px_rgba(12,52,102,0.95)] last:border-b-0"
-                        : option.value === "wanted"
+                        : option.value === "buy"
                           ? "w-full border-b border-neutral-300 bg-amber-50 px-3 py-2 text-left text-amber-900 transition-colors hover:bg-amber-100 last:border-b-0"
                           : "w-full border-b border-neutral-300 bg-white px-3 py-2 text-left text-neutral-700 transition-colors hover:bg-neutral-100 last:border-b-0"
                     }`}

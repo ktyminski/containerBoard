@@ -114,9 +114,10 @@ function buildListing(index, now) {
   const lng = jitterCoordinate(hub.lng, 0.28);
   const houseNumber = String(randomInt(1, 199));
   const street = hub.street;
-  const listingType = Math.random() < 0.62 ? "available" : "wanted";
+  const typeRoll = Math.random();
+  const listingType = typeRoll < 0.62 ? "sell" : typeRoll < 0.82 ? "rent" : "buy";
   const containerType = pick(containerTypes);
-  const isRentLikePricing = Math.random() < 0.34;
+  const isRentLikePricing = listingType === "rent" || Math.random() < 0.16;
   const quantity = randomInt(1, 120);
   const createdAt = new Date(now.getTime() - randomInt(0, 4) * 24 * 60 * 60 * 1000 - randomInt(0, 720) * 60 * 1000);
   const updatedAt = new Date(createdAt.getTime() + randomInt(5, 96) * 60 * 1000);
@@ -124,9 +125,17 @@ function buildListing(index, now) {
   const expiresAt = new Date(createdAt.getTime() + TTL_DAYS * 24 * 60 * 60 * 1000);
 
   const priceValue =
-    isRentLikePricing
+    listingType === "buy"
+      ? "Budzet do uzgodnienia"
+      : isRentLikePricing
       ? `${randomInt(45, 380)} EUR / tydz.`
       : `${randomInt(900, 4200)} EUR`;
+  const listingLabel =
+    listingType === "buy"
+      ? "Zapytanie zakupu"
+      : listingType === "rent"
+        ? "Oferta wynajmu"
+        : "Oferta sprzedazy";
 
   return {
     type: listingType,
@@ -145,7 +154,7 @@ function buildListing(index, now) {
     },
     availableFrom,
     price: priceValue,
-    description: `${SEED_PREFIX} ${listingType === "available" ? "Oferta" : "Zapytanie"} ${containerType} w lokalizacji ${hub.city}.`,
+    description: `${SEED_PREFIX} ${listingLabel} ${containerType} w lokalizacji ${hub.city}.`,
     companyName: company,
     contactEmail: `containers+${index + 1}@example.com`,
     contactPhone: `+48 600 ${String(100000 + index).slice(-6)}`,

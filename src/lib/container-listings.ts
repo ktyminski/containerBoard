@@ -1,4 +1,4 @@
-import { ObjectId, type Collection, type Filter } from "mongodb";
+import { Binary, ObjectId, type Collection, type Filter } from "mongodb";
 import { getDb } from "@/lib/mongodb";
 import type { GeocodeAddressParts } from "@/lib/geocode-address";
 import {
@@ -7,9 +7,14 @@ import {
   type ListingLocation,
 } from "@/lib/listing-locations";
 import {
+  sanitizeContainerRalColors,
+  type ContainerRalColor,
+} from "@/lib/container-ral-colors";
+import {
   CONTAINER_CONDITIONS,
   CONTAINER_FEATURES,
   CONTAINER_HEIGHTS,
+  CONTAINER_SIZE,
   CONTAINER_SIZES,
   CONTAINER_TYPES,
   LISTING_STATUS,
@@ -22,7 +27,6 @@ import {
   type ListingPrice,
   type ListingStatus,
   type ListingType,
-  type PriceType,
   type TaxMode,
 } from "@/lib/container-listing-types";
 import { escapeRegexPattern } from "@/lib/escape-regex-pattern";
@@ -56,11 +60,39 @@ const DEFAULT_CONTAINER: Container = {
   condition: "cargo_worthy",
 };
 
-const containerSizeSet = new Set<number>(CONTAINER_SIZES);
+const standardContainerSizeSet = new Set<number>(CONTAINER_SIZES);
 const containerHeightSet = new Set<string>(CONTAINER_HEIGHTS);
 const containerTypeSet = new Set<string>(CONTAINER_TYPES);
 const containerFeatureSet = new Set<string>(CONTAINER_FEATURES);
 const containerConditionSet = new Set<string>(CONTAINER_CONDITIONS);
+
+function isSupportedContainerSize(value: unknown): value is ContainerSize {
+  if (value === CONTAINER_SIZE.CUSTOM) {
+    return true;
+  }
+
+  return (
+    typeof value === "number" &&
+    Number.isInteger(value) &&
+    standardContainerSizeSet.has(value)
+  );
+}
+
+function normalizeContainerSizeFromDocument(value: unknown): ContainerSize | null {
+  if (isSupportedContainerSize(value)) {
+    return value;
+  }
+
+  if (
+    typeof value === "number" &&
+    Number.isInteger(value) &&
+    value > 0
+  ) {
+    return CONTAINER_SIZE.CUSTOM;
+  }
+
+  return null;
+}
 
 export type ContainerListingDocument = {
   _id: ObjectId;
@@ -68,6 +100,8 @@ export type ContainerListingDocument = {
   title?: string;
   container?: Container;
   containerType?: string;
+  containerColors?: ContainerRalColor[];
+  photos?: ContainerListingImageAsset[];
   quantity: number;
   locationCity: string;
   locationCountry: string;
@@ -105,6 +139,16 @@ export type ContainerListingDocument = {
   expiresAt: Date;
 };
 
+export type ContainerListingImageAsset = {
+  filename: string;
+  contentType: string;
+  size: number;
+  width?: number;
+  height?: number;
+  data?: Binary;
+  blobUrl?: string;
+};
+
 export type ContainerInquiryDocument = {
   _id: ObjectId;
   listingId: ObjectId;
@@ -130,6 +174,8 @@ export type ContainerListingItem = {
   type: ListingType;
   title?: string;
   container: Container;
+  containerColors?: ContainerRalColor[];
+  photoUrls?: string[];
   quantity: number;
   locationCity: string;
   locationCountry: string;
@@ -242,10 +288,7 @@ function sanitizeContainer(input: unknown): Container | null {
     condition?: unknown;
   };
 
-  const size =
-    typeof candidate.size === "number" && containerSizeSet.has(candidate.size)
-      ? (candidate.size as ContainerSize)
-      : null;
+  const size = normalizeContainerSizeFromDocument(candidate.size);
   const height =
     typeof candidate.height === "string" && containerHeightSet.has(candidate.height)
       ? (candidate.height as ContainerHeight)
@@ -270,7 +313,7 @@ function sanitizeContainer(input: unknown): Container | null {
       )
     : [];
 
-  if (!size || !height || !type || !condition) {
+  if (size === null || !height || !type || !condition) {
     return null;
   }
 
@@ -335,13 +378,14 @@ export async function ensureContainerListingsIndexes(): Promise<void> {
       await listings.createIndex({ createdByUserId: 1, createdAt: -1 });
       await listings.createIndex({ type: 1, "container.type": 1, createdAt: -1 });
       await listings.createIndex({ type: 1, containerType: 1, createdAt: -1 });
+      await listings.createIndex({ "containerColors.ral": 1 });
       await listings.createIndex({ title: 1 });
       await listings.createIndex({ "container.size": 1, "container.height": 1, "container.type": 1 });
       await listings.createIndex({ "container.condition": 1 });
       await listings.createIndex({ "container.features": 1 });
       await listings.createIndex({ priceAmount: 1 });
       await listings.createIndex({ priceNegotiable: 1, priceAmount: 1 });
-      await listings.createIndex({ "pricing.type": 1, "pricing.original.currency": 1 });
+      await listings.createIndex({ "pricing.original.currency": 1 });
       await listings.createIndex({ "pricing.original.taxMode": 1, "pricing.original.negotiable": 1 });
       await listings.createIndex({ "pricing.normalized.net.amountPln": 1 });
       await listings.createIndex({ "pricing.normalized.net.amountEur": 1 });
@@ -419,12 +463,33 @@ export function mapContainerListingToItem(doc: ContainerListingDocument): Contai
     max: MAX_LISTING_LOCATIONS,
   });
   const primaryLocation = resolvedLocations[0];
+  const containerColors = sanitizeContainerRalColors(doc.containerColors);
+  const mediaVersion = doc.updatedAt instanceof Date ? doc.updatedAt.getTime() : 0;
+  const photoUrls = Array.from(
+    new Set(
+      (doc.photos ?? [])
+        .map((photo, index) => {
+          const blobUrl = photo?.blobUrl?.trim() ?? "";
+          if (blobUrl) {
+            return blobUrl;
+          }
+          if (!photo?.data && !photo?.filename && typeof photo?.size !== "number") {
+            return "";
+          }
+          const baseUrl = `/api/containers/${doc._id.toHexString()}/photos/${index}`;
+          return mediaVersion > 0 ? `${baseUrl}?v=${mediaVersion}` : baseUrl;
+        })
+        .filter(Boolean),
+    ),
+  );
 
   return {
     id: doc._id.toHexString(),
     type: doc.type,
     title: doc.title,
     container: resolveContainerFromDocument(doc),
+    ...(containerColors.length > 0 ? { containerColors } : {}),
+    ...(photoUrls.length > 0 ? { photoUrls } : {}),
     quantity: doc.quantity,
     locationCity: primaryLocation?.locationCity ?? doc.locationCity,
     locationCountry: primaryLocation?.locationCountry ?? doc.locationCountry,
@@ -504,7 +569,6 @@ export function mapContainerListingToMapPoints(
   const points: ContainerListingMapPoint[] = [];
   const seenCoordinates = new Set<string>();
   const bounds = options?.bounds ?? null;
-
   const appendPoint = (lat: unknown, lng: unknown) => {
     if (
       typeof lat !== "number" ||
@@ -552,6 +616,7 @@ export function buildContainerListingsFilter(input: {
   q?: string;
   type?: ListingType;
   containerSizes?: ContainerSize[];
+  includeCustomContainerSize?: boolean;
   containerHeights?: ContainerHeight[];
   containerTypes?: Container["type"][];
   containerFeatures?: ContainerFeature[];
@@ -559,7 +624,6 @@ export function buildContainerListingsFilter(input: {
   priceMin?: number;
   priceMax?: number;
   priceCurrency?: Currency;
-  priceType?: PriceType;
   priceTaxMode?: TaxMode;
   priceNegotiable?: boolean;
   logisticsTransportAvailable?: boolean;
@@ -596,8 +660,11 @@ export function buildContainerListingsFilter(input: {
     filter.type = input.type;
   }
 
-  if (input.containerSizes && input.containerSizes.length > 0) {
-    const sizeConditions = input.containerSizes.map((size) => {
+  if (
+    (input.containerSizes && input.containerSizes.length > 0) ||
+    input.includeCustomContainerSize === true
+  ) {
+    const sizeConditions = (input.containerSizes ?? []).map((size) => {
       const oneSizeConditions: Filter<ContainerListingDocument>[] = [
         { "container.size": size } as Filter<ContainerListingDocument>,
       ];
@@ -613,6 +680,23 @@ export function buildContainerListingsFilter(input: {
         ? oneSizeConditions[0]
         : ({ $or: oneSizeConditions } as Filter<ContainerListingDocument>);
     });
+
+    if (input.includeCustomContainerSize === true) {
+      sizeConditions.push({
+        $and: [
+          {
+            "container.size": {
+              $exists: true,
+            },
+          },
+          {
+            "container.size": {
+              $nin: Array.from(standardContainerSizeSet),
+            },
+          },
+        ],
+      } as Filter<ContainerListingDocument>);
+    }
 
     andConditions.push(
       sizeConditions.length === 1
@@ -716,10 +800,6 @@ export function buildContainerListingsFilter(input: {
         { logisticsUnloadingIncluded: true },
       ],
     } as Filter<ContainerListingDocument>);
-  }
-
-  if (input.priceType) {
-    filter["pricing.type"] = input.priceType;
   }
 
   if (input.priceCurrency) {
@@ -876,6 +956,7 @@ export function buildContainerListingsFilter(input: {
         { locationCountry: pattern },
         { "locations.locationCity": pattern },
         { "locations.locationCountry": pattern },
+        { "containerColors.ral": pattern },
         { "container.type": pattern } as Filter<ContainerListingDocument>,
         { containerType: pattern },
       ],

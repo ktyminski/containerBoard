@@ -19,9 +19,11 @@ import {
   mapContainerListingToMapPoints,
   mapContainerListingToItem,
   type ContainerListingDocument,
+  type ContainerListingImageAsset,
   type ContainerListingItem,
 } from "@/lib/container-listings";
 import {
+  CONTAINER_SIZE,
   CONTAINER_CONDITIONS,
   CONTAINER_FEATURES,
   CONTAINER_HEIGHTS,
@@ -32,7 +34,6 @@ import {
   LISTING_STATUS,
   PRICE_CURRENCIES,
   PRICE_TAX_MODES,
-  PRICE_TYPES,
   type Currency,
   type ContainerSize,
   type ListingStatus,
@@ -42,8 +43,15 @@ import {
   normalizeListingPrice,
   type ListingPriceInput,
 } from "@/lib/listing-price";
+import { processGalleryUpload } from "@/lib/company-media";
+import {
+  buildBlobPath,
+  safeDeleteBlobUrls,
+  uploadBlobFromBuffer,
+} from "@/lib/blob-storage";
 import { getLatestFxContext } from "@/lib/fx-rates";
 import { getRichTextLength, hasRichTextContent } from "@/lib/listing-rich-text";
+import { parseContainerRalColors } from "@/lib/container-ral-colors";
 import { enforceRateLimitOrResponse } from "@/lib/request-rate-limit";
 import { logError } from "@/lib/server-logger";
 
@@ -52,11 +60,14 @@ const MAX_POPUP_DETAILS_IDS = 80;
 const MAX_MAP_POINTS = 50_000;
 const MAX_LOCAL_FAVORITE_IDS = 2_000;
 const DESCRIPTION_MAX_TEXT_LENGTH = 1000;
+const MAX_LISTING_PHOTO_COUNT = 5;
+const MAX_LISTING_PHOTO_BYTES = 6 * 1024 * 1024;
 const DESCRIPTION_ALLOWED_TAGS = ["p", "br", "strong", "em", "u", "ul", "ol", "li", "div"];
 
 const locationAddressPartsSchema = z.object({
   street: z.string().trim().min(1).max(120).optional(),
   houseNumber: z.string().trim().min(1).max(40).optional(),
+  postalCode: z.string().trim().min(1).max(40).optional(),
   city: z.string().trim().min(1).max(120).optional(),
   country: z.string().trim().min(1).max(120).optional(),
 });
@@ -81,42 +92,57 @@ const pricingOriginalSchema = z.object({
 
 const pricingPayloadSchema = z
   .object({
-    type: z.enum(PRICE_TYPES),
     original: pricingOriginalSchema,
   })
   .superRefine((value, context) => {
-    if (value.type === "request") {
+    if (value.original.amount === null) {
+      if (value.original.currency !== null) {
+        context.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ["original", "currency"],
+          message: "Currency must be empty when amount is not set",
+        });
+      }
+      if (value.original.taxMode !== null) {
+        context.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ["original", "taxMode"],
+          message: "Tax mode must be empty when amount is not set",
+        });
+      }
+      if (value.original.vatRate !== null) {
+        context.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ["original", "vatRate"],
+          message: "VAT rate must be empty when amount is not set",
+        });
+      }
       return;
     }
 
-    if (value.original.amount === null) {
-      context.addIssue({
-        code: z.ZodIssueCode.custom,
-        path: ["original", "amount"],
-        message: "Amount is required for fixed/starting_from price type",
-      });
-    }
     if (value.original.currency === null) {
       context.addIssue({
         code: z.ZodIssueCode.custom,
         path: ["original", "currency"],
-        message: "Currency is required for fixed/starting_from price type",
+        message: "Currency is required when amount is set",
       });
     }
     if (value.original.taxMode === null) {
       context.addIssue({
         code: z.ZodIssueCode.custom,
         path: ["original", "taxMode"],
-        message: "Tax mode is required for fixed/starting_from price type",
+        message: "Tax mode is required when amount is set",
       });
     }
   });
+
+const listingTypeInputSchema = z.enum(LISTING_TYPES);
 
 const querySchema = z.object({
   page: z.coerce.number().int().min(1).default(1),
   pageSize: z.coerce.number().int().min(1).max(500).default(20),
   q: z.string().trim().min(1).max(120).optional(),
-  type: z.enum(LISTING_TYPES).optional(),
+  type: listingTypeInputSchema.optional(),
   containerSize: z.string().trim().max(120).optional(),
   containerHeight: z.string().trim().max(160).optional(),
   containerType: z.string().trim().max(240).optional(),
@@ -125,7 +151,6 @@ const querySchema = z.object({
   priceMin: z.string().trim().max(32).optional(),
   priceMax: z.string().trim().max(32).optional(),
   priceCurrency: z.enum(PRICE_CURRENCIES).optional(),
-  priceType: z.enum(PRICE_TYPES).optional(),
   priceTaxMode: z.enum(PRICE_TAX_MODES).optional(),
   productionYear: z.string().trim().max(8).optional(),
   priceNegotiable: z.string().trim().max(8).optional(),
@@ -185,24 +210,29 @@ function parseEnumList<T extends string>(value: string | undefined, allowed: rea
   );
 }
 
-function parseContainerSizeList(value: string | undefined): ContainerSize[] {
-  const values = parseEnumList(value, ["10", "20", "40", "45", "53"] as const);
+function parseContainerSizeList(value: string | undefined): {
+  sizes: ContainerSize[];
+  includeCustomSize: boolean;
+} {
+  if (!value) {
+    return {
+      sizes: [],
+      includeCustomSize: false,
+    };
+  }
 
-  return values.map((item) => {
-    if (item === "10") {
-      return 10;
-    }
-    if (item === "20") {
-      return 20;
-    }
-    if (item === "40") {
-      return 40;
-    }
-    if (item === "45") {
-      return 45;
-    }
-    return 53;
-  });
+  const rawEntries = value
+    .split(",")
+    .map((item) => item.trim().toLowerCase())
+    .filter(Boolean);
+  const includeCustomSize = rawEntries.includes("custom");
+  const standardSizeValues = parseEnumList(value, ["10", "20", "40", "45", "53"] as const);
+  const sizes = standardSizeValues.map((item) => Number(item) as ContainerSize);
+
+  return {
+    sizes,
+    includeCustomSize,
+  };
 }
 
 function parseOptionalNumber(value: string | undefined): number | undefined {
@@ -281,11 +311,7 @@ function getPriceNetFieldForCurrency(currency: Currency): string {
 
 function getPriceSortValueExpression(sortPriceField: string): Record<string, unknown> {
   return {
-    $cond: [
-      { $eq: ["$pricing.type", "request"] },
-      0,
-      { $ifNull: [`$${sortPriceField}`, 0] },
-    ],
+    $ifNull: [`$${sortPriceField}`, 0],
   };
 }
 
@@ -343,13 +369,15 @@ function mapItemsWithFavoriteFlag(
 }
 
 const createSchema = z.object({
-  type: z.enum(LISTING_TYPES),
+  type: listingTypeInputSchema,
   title: z.string().trim().max(80).optional(),
   container: z.object({
-    size: z
-      .number()
-      .int()
-      .refine((value) => CONTAINER_SIZES.includes(value as (typeof CONTAINER_SIZES)[number])),
+    size: z.coerce.number().int().refine((value) => {
+      return (
+        value === CONTAINER_SIZE.CUSTOM ||
+        CONTAINER_SIZES.includes(value as (typeof CONTAINER_SIZES)[number])
+      );
+    }),
     height: z.enum(CONTAINER_HEIGHTS),
     type: z.enum(CONTAINER_TYPES),
     features: z.array(z.enum(CONTAINER_FEATURES)).default([]),
@@ -378,6 +406,7 @@ const createSchema = z.object({
   cscValidToMonth: z.coerce.number().int().min(1).max(12).optional(),
   cscValidToYear: z.coerce.number().int().min(1900).max(2100).optional(),
   productionYear: z.coerce.number().int().min(1900).max(2100).optional(),
+  containerColorsRal: z.string().trim().max(320).optional(),
   price: z.string().trim().max(100).optional(),
   description: z.string().trim().max(16_000).optional(),
   companyName: z.string().trim().min(2).max(160),
@@ -452,6 +481,95 @@ function normalizeOptionalDescriptionHtml(value?: string): string | undefined {
   return sanitized;
 }
 
+function parseJsonField<T>(value: FormDataEntryValue | null): T | null {
+  if (typeof value !== "string") {
+    return null;
+  }
+
+  try {
+    return JSON.parse(value) as T;
+  } catch {
+    return null;
+  }
+}
+
+function ensureImageFile(file: File, maxBytes: number, field: string): string | null {
+  if (!file.type.startsWith("image/")) {
+    return `${field} must be an image file`;
+  }
+
+  if (file.size > maxBytes) {
+    return `${field} exceeds size limit`;
+  }
+
+  return null;
+}
+
+function assetDataToBuffer(asset: ContainerListingImageAsset): Buffer {
+  if (!asset.data?.buffer) {
+    throw new Error("Missing processed image buffer");
+  }
+
+  return Buffer.from(asset.data.buffer);
+}
+
+function toStoredImageAsset(
+  asset: ContainerListingImageAsset,
+  blobUrl: string,
+): ContainerListingImageAsset {
+  return {
+    filename: asset.filename,
+    contentType: asset.contentType,
+    size: asset.size,
+    width: asset.width,
+    height: asset.height,
+    blobUrl,
+  };
+}
+
+async function uploadContainerImageAsset(input: {
+  listingId: ObjectId;
+  key: string;
+  asset: ContainerListingImageAsset;
+}): Promise<ContainerListingImageAsset> {
+  const buffer = assetDataToBuffer(input.asset);
+  const { url } = await uploadBlobFromBuffer({
+    pathname: buildBlobPath({
+      segments: ["containers", input.listingId.toHexString(), input.key],
+      filenameBase: input.asset.filename,
+      contentType: input.asset.contentType,
+    }),
+    contentType: input.asset.contentType,
+    access: "public",
+    cacheControlMaxAge: 31536000,
+    buffer,
+  });
+
+  return toStoredImageAsset(input.asset, url);
+}
+
+async function parseCreateBody(request: NextRequest): Promise<{
+  payload: unknown;
+  photoFiles: File[];
+}> {
+  const contentType = request.headers.get("content-type") ?? "";
+  if (contentType.includes("multipart/form-data")) {
+    const formData = await request.formData();
+    const payload = parseJsonField<unknown>(formData.get("payload"));
+    return {
+      payload,
+      photoFiles: formData
+        .getAll("photos")
+        .filter((item): item is File => item instanceof File && item.size > 0),
+    };
+  }
+
+  return {
+    payload: await request.json(),
+    photoFiles: [],
+  };
+}
+
 function resolveAvailableFromDate(input: {
   availableNow?: boolean;
   availableFrom?: Date;
@@ -504,7 +622,6 @@ export async function GET(request: NextRequest) {
       priceMin,
       priceMax,
       priceCurrency,
-      priceType,
       priceTaxMode,
       productionYear,
       priceNegotiable,
@@ -528,7 +645,7 @@ export async function GET(request: NextRequest) {
       localFavoriteIds,
     } = parsed.data;
 
-    const containerSizes = parseContainerSizeList(containerSize);
+    const { sizes: containerSizes, includeCustomSize } = parseContainerSizeList(containerSize);
     const containerHeights = parseEnumList(containerHeight, CONTAINER_HEIGHTS);
     const containerTypes = parseEnumList(containerType, CONTAINER_TYPES);
     const containerFeatures = parseEnumList(containerFeature, CONTAINER_FEATURES);
@@ -580,6 +697,7 @@ export async function GET(request: NextRequest) {
       q,
       type,
       containerSizes: containerSizes.length > 0 ? containerSizes : undefined,
+      includeCustomContainerSize: includeCustomSize,
       containerHeights: containerHeights.length > 0 ? containerHeights : undefined,
       containerTypes: containerTypes.length > 0 ? containerTypes : undefined,
       containerFeatures: containerFeatures.length > 0 ? containerFeatures : undefined,
@@ -587,7 +705,6 @@ export async function GET(request: NextRequest) {
       priceMin: parsedPriceMin,
       priceMax: parsedPriceMax,
       priceCurrency,
-      priceType,
       priceTaxMode,
       productionYear: parsedProductionYear,
       priceNegotiable: parsedPriceNegotiable,
@@ -871,7 +988,8 @@ export async function POST(request: NextRequest) {
       return userRateLimitResponse;
     }
 
-    const parsed = createSchema.safeParse(await request.json());
+    const { payload, photoFiles } = await parseCreateBody(request);
+    const parsed = createSchema.safeParse(payload);
     if (!parsed.success) {
       return NextResponse.json(
         {
@@ -881,9 +999,31 @@ export async function POST(request: NextRequest) {
         { status: 400 },
       );
     }
+    if (photoFiles.length > MAX_LISTING_PHOTO_COUNT) {
+      return NextResponse.json(
+        {
+          error: "Invalid files",
+          issues: [`photos cannot exceed ${MAX_LISTING_PHOTO_COUNT} files`],
+        },
+        { status: 400 },
+      );
+    }
+    const fileIssues = photoFiles
+      .map((file, index) => ensureImageFile(file, MAX_LISTING_PHOTO_BYTES, `photo ${index + 1}`))
+      .filter((issue): issue is string => Boolean(issue));
+    if (fileIssues.length > 0) {
+      return NextResponse.json(
+        {
+          error: "Invalid files",
+          issues: fileIssues,
+        },
+        { status: 400 },
+      );
+    }
 
     const now = new Date();
     const listing = parsed.data;
+    const listingId = new ObjectId();
     const legacyLocationAddressLabel = normalizeOptionalString(listing.locationAddressLabel);
     const legacyLocationAddressParts = normalizeGeocodeAddressParts(listing.locationAddressParts);
     const normalizedLocations = normalizeListingLocations({
@@ -922,6 +1062,24 @@ export async function POST(request: NextRequest) {
         ? listing.priceAmount
         : undefined;
     const normalizedLogisticsComment = normalizeOptionalString(listing.logisticsComment);
+    const parsedContainerColors = parseContainerRalColors(listing.containerColorsRal);
+    if (parsedContainerColors.tooMany) {
+      return NextResponse.json(
+        {
+          error: "containerColorsRal supports at most 8 RAL codes",
+        },
+        { status: 400 },
+      );
+    }
+    if (parsedContainerColors.invalidCodes.length > 0) {
+      return NextResponse.json(
+        {
+          error: "Invalid RAL color code(s)",
+          issues: parsedContainerColors.invalidCodes,
+        },
+        { status: 400 },
+      );
+    }
     const logisticsTransportIncluded = listing.logisticsTransportIncluded === true;
     const logisticsTransportAvailable =
       listing.logisticsTransportAvailable === true || logisticsTransportIncluded;
@@ -970,70 +1128,121 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    let uploadedPhotos: ContainerListingImageAsset[] = [];
+    let storedPhotos: ContainerListingImageAsset[] = [];
+    const uploadedBlobUrls: string[] = [];
+    try {
+      uploadedPhotos =
+        photoFiles.length > 0
+          ? await Promise.all(photoFiles.map((file) => processGalleryUpload(file, "photo")))
+          : [];
+      storedPhotos =
+        uploadedPhotos.length > 0
+          ? await Promise.all(
+              uploadedPhotos.map(async (asset, index) => {
+                const stored = await uploadContainerImageAsset({
+                  listingId,
+                  key: `photos/${index}`,
+                  asset,
+                });
+                if (stored.blobUrl) {
+                  uploadedBlobUrls.push(stored.blobUrl);
+                }
+                return stored;
+              }),
+            )
+          : [];
+    } catch (mediaError) {
+      if (uploadedBlobUrls.length > 0) {
+        await safeDeleteBlobUrls(uploadedBlobUrls);
+      }
+      const message =
+        mediaError instanceof Error ? mediaError.message : "image processing failed";
+      return NextResponse.json(
+        {
+          error: "Invalid files",
+          issues: [message],
+        },
+        { status: 400 },
+      );
+    }
+
     const listings = await getContainerListingsCollection();
-    const insertResult = await listings.insertOne({
-      _id: new ObjectId(),
-      type: listing.type,
-      ...(normalizedTitle ? { title: normalizedTitle } : {}),
-      container: {
-        size: listing.container.size as ContainerSize,
-        height: listing.container.height,
-        type: listing.container.type,
-        features: Array.from(new Set(listing.container.features)),
-        condition: listing.container.condition,
-      },
-      quantity: listing.quantity,
-      locationCity,
-      locationCountry,
-      locationLat: primaryLocation.locationLat,
-      locationLng: primaryLocation.locationLng,
-      ...(locationAddressLabel ? { locationAddressLabel } : {}),
-      ...(locationAddressParts ? { locationAddressParts } : {}),
-      locations: normalizedLocations,
-      availableNow: listing.availableNow === true,
-      availableFromApproximate:
-        listing.availableNow === true ? false : listing.availableFromApproximate === true,
-      availableFrom: resolvedAvailableFrom,
-      ...(normalizedPricing ? { pricing: normalizedPricing } : {}),
-      ...(normalizedPriceAmount !== undefined || normalizedPricing?.original.amount !== null
-        ? { priceAmount: normalizedPriceAmount ?? normalizedPricing?.original.amount ?? undefined }
-        : {}),
-      priceNegotiable:
-        normalizedPricing?.original.negotiable === true || listing.priceNegotiable === true,
-      logisticsTransportAvailable,
-      logisticsTransportIncluded: logisticsTransportAvailable && logisticsTransportIncluded,
-      ...(normalizedLogisticsTransportFreeDistanceKm !== undefined
-        ? { logisticsTransportFreeDistanceKm: normalizedLogisticsTransportFreeDistanceKm }
-        : {}),
-      logisticsUnloadingAvailable,
-      logisticsUnloadingIncluded: logisticsUnloadingAvailable && logisticsUnloadingIncluded,
-      ...(normalizedLogisticsComment ? { logisticsComment: normalizedLogisticsComment } : {}),
-      hasCscPlate: listing.hasCscPlate === true,
-      hasCscCertification: listing.hasCscCertification === true,
-      ...(normalizedCscValidToMonth !== undefined && normalizedCscValidToYear !== undefined
-        ? {
-            cscValidToMonth: normalizedCscValidToMonth,
-            cscValidToYear: normalizedCscValidToYear,
-          }
-        : {}),
-      ...(typeof listing.productionYear === "number" ? { productionYear: listing.productionYear } : {}),
-      price:
-        normalizedPrice ??
-        (normalizedPriceAmount !== undefined
-          ? String(normalizedPriceAmount)
-          : normalizedPricing?.original.amount !== null
-            ? String(normalizedPricing?.original.amount)
-            : undefined),
-      ...(normalizedDescription ? { description: normalizedDescription } : {}),
-      companyName: listing.companyName.trim(),
-      contactEmail: listing.contactEmail.trim(),
-      contactPhone: normalizeOptionalString(listing.contactPhone),
-      status: LISTING_STATUS.ACTIVE,
-      createdByUserId: user._id,
-      createdAt: now,
-      updatedAt: now,
-      expiresAt: getDefaultListingExpiration(now),
-    });
+    let insertResult;
+    try {
+      insertResult = await listings.insertOne({
+        _id: listingId,
+        type: listing.type,
+        ...(normalizedTitle ? { title: normalizedTitle } : {}),
+        container: {
+          size: listing.container.size as ContainerSize,
+          height: listing.container.height,
+          type: listing.container.type,
+          features: Array.from(new Set(listing.container.features)),
+          condition: listing.container.condition,
+        },
+        ...(parsedContainerColors.colors.length > 0
+          ? { containerColors: parsedContainerColors.colors }
+          : {}),
+        ...(storedPhotos.length > 0 ? { photos: storedPhotos } : {}),
+        quantity: listing.quantity,
+        locationCity,
+        locationCountry,
+        locationLat: primaryLocation.locationLat,
+        locationLng: primaryLocation.locationLng,
+        ...(locationAddressLabel ? { locationAddressLabel } : {}),
+        ...(locationAddressParts ? { locationAddressParts } : {}),
+        locations: normalizedLocations,
+        availableNow: listing.availableNow === true,
+        availableFromApproximate:
+          listing.availableNow === true ? false : listing.availableFromApproximate === true,
+        availableFrom: resolvedAvailableFrom,
+        ...(normalizedPricing ? { pricing: normalizedPricing } : {}),
+        ...(normalizedPriceAmount !== undefined || normalizedPricing?.original.amount !== null
+          ? { priceAmount: normalizedPriceAmount ?? normalizedPricing?.original.amount ?? undefined }
+          : {}),
+        priceNegotiable:
+          normalizedPricing?.original.negotiable === true || listing.priceNegotiable === true,
+        logisticsTransportAvailable,
+        logisticsTransportIncluded: logisticsTransportAvailable && logisticsTransportIncluded,
+        ...(normalizedLogisticsTransportFreeDistanceKm !== undefined
+          ? { logisticsTransportFreeDistanceKm: normalizedLogisticsTransportFreeDistanceKm }
+          : {}),
+        logisticsUnloadingAvailable,
+        logisticsUnloadingIncluded: logisticsUnloadingAvailable && logisticsUnloadingIncluded,
+        ...(normalizedLogisticsComment ? { logisticsComment: normalizedLogisticsComment } : {}),
+        hasCscPlate: listing.hasCscPlate === true,
+        hasCscCertification: listing.hasCscCertification === true,
+        ...(normalizedCscValidToMonth !== undefined && normalizedCscValidToYear !== undefined
+          ? {
+              cscValidToMonth: normalizedCscValidToMonth,
+              cscValidToYear: normalizedCscValidToYear,
+            }
+          : {}),
+        ...(typeof listing.productionYear === "number" ? { productionYear: listing.productionYear } : {}),
+        price:
+          normalizedPrice ??
+          (normalizedPriceAmount !== undefined
+            ? String(normalizedPriceAmount)
+            : normalizedPricing?.original.amount !== null
+              ? String(normalizedPricing?.original.amount)
+              : undefined),
+        ...(normalizedDescription ? { description: normalizedDescription } : {}),
+        companyName: listing.companyName.trim(),
+        contactEmail: listing.contactEmail.trim(),
+        contactPhone: normalizeOptionalString(listing.contactPhone),
+        status: LISTING_STATUS.ACTIVE,
+        createdByUserId: user._id,
+        createdAt: now,
+        updatedAt: now,
+        expiresAt: getDefaultListingExpiration(now),
+      });
+    } catch (dbError) {
+      if (uploadedBlobUrls.length > 0) {
+        await safeDeleteBlobUrls(uploadedBlobUrls);
+      }
+      throw dbError;
+    }
 
     return NextResponse.json(
       {

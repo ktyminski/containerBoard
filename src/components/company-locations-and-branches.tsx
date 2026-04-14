@@ -7,7 +7,6 @@ import { CompanyLocationsMap } from "@/components/company-locations-map";
 type CompanyLocationWithMedia = {
   label: string;
   addressText: string;
-  note?: string;
   phone?: string;
   email?: string;
   point: {
@@ -26,7 +25,6 @@ type CompanyLocationsAndBranchesProps = {
   labels: {
     locationsTitle: string;
     branchesTitle: string;
-    mainLocationBadge: string;
     phoneLabel: string;
     emailLabel: string;
     showMoreBranches: string;
@@ -42,10 +40,8 @@ export function CompanyLocationsAndBranches({
   const mapLocations = useMemo(
     () =>
       locations.map((location) => ({
-        label: location.label,
         addressText: location.addressText,
         point: location.point.coordinates,
-        isMain: location.isMain,
       })),
     [locations],
   );
@@ -55,9 +51,6 @@ export function CompanyLocationsAndBranches({
       <section className="grid gap-3 border-t border-neutral-800 pt-5">
         <CompanyLocationsMap
           locations={mapLocations}
-          labels={{
-            mainLocationBadge: labels.mainLocationBadge,
-          }}
           focusedLocationIndex={focusedLocationIndex}
           focusRequestId={focusRequestId}
         />

@@ -12,7 +12,6 @@ type BranchPhoto = {
 type BranchLocation = {
   label: string;
   addressText: string;
-  note?: string;
   phone?: string;
   email?: string;
   photos: BranchPhoto[];
@@ -48,7 +47,6 @@ export function CompanyBranchesList({
               <div className="min-w-0">
                 <p className="text-sm font-semibold text-neutral-100">{location.label}</p>
                 <p className="mt-1 text-sm text-neutral-300">{location.addressText}</p>
-                {location.note ? <p className="mt-1 text-xs text-neutral-400">{location.note}</p> : null}
               </div>
               {(location.phone || location.email) ? (
                 <div className="grid gap-2 text-left sm:min-w-[220px] sm:justify-items-end sm:text-right">

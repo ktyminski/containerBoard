@@ -1,3 +1,4 @@
+import { redirect } from "next/navigation";
 import { ContainerDetailsContent } from "@/components/container-details-content";
 import { ListDetailsOverlayFrame } from "@/components/list-details-overlay-frame";
 
@@ -24,6 +25,12 @@ export default async function ListContainerOverlayPage({
   searchParams,
 }: ListContainerOverlayPageProps) {
   const [{ id }, queryParams] = await Promise.all([params, searchParams]);
+  if (id === "mine") {
+    redirect("/containers/mine");
+  }
+  if (id === "new") {
+    redirect("/containers/new");
+  }
   const listParams = toSearchParams(queryParams);
   const listHref = listParams.toString() ? `/list?${listParams.toString()}` : "/list";
 

@@ -3,6 +3,7 @@ import { cookies } from "next/headers";
 import { UserAccountMenu } from "@/components/user-account-menu";
 import { SESSION_COOKIE_NAME } from "@/lib/auth-session";
 import { getCurrentUserFromToken } from "@/lib/auth-user";
+import { getCompaniesCollection } from "@/lib/companies";
 import type { AppLocale, AppMessages } from "@/lib/i18n";
 import { withLang } from "@/lib/i18n";
 import { USER_ROLE } from "@/lib/user-roles";
@@ -37,7 +38,15 @@ export async function AuthNav({ locale, roleMessages }: AuthNavProps) {
   }
 
   const myListingsHref = withLang("/containers/mine", locale);
-  const companyPanelHref = withLang("/companies/panel", locale);
+  const companies = await getCompaniesCollection();
+  const ownedCompany = await companies.findOne(
+    { createdByUserId: user._id },
+    { projection: { _id: 1, slug: 1, isBlocked: 1 } },
+  );
+  const hasOwnedCompany = Boolean(ownedCompany?._id);
+  const companyPanelHref = ownedCompany?.slug
+    ? withLang(`/companies/${ownedCompany.slug}`, locale)
+    : undefined;
 
   return (
     <div className="flex min-w-0 flex-nowrap items-center justify-end gap-2 text-sm whitespace-nowrap">
@@ -62,12 +71,12 @@ export async function AuthNav({ locale, roleMessages }: AuthNavProps) {
         isEmailVerified={user.authProvider !== "local" || user.isEmailVerified !== false}
         unverifiedAccountLabel="Konto niezweryfikowane"
         isUserBlocked={user.isBlocked === true}
-        hasBlockedCompany={false}
+        hasBlockedCompany={ownedCompany?.isBlocked === true}
         blockedUserLabel="Konto zablokowane"
         blockedCompanyLabel="Firma zablokowana"
         adminPanelLabel={user.role === USER_ROLE.ADMIN ? "Admin" : undefined}
         adminPanelHref={user.role === USER_ROLE.ADMIN ? withLang("/admin", locale) : undefined}
-        companyPanelLabel="Panel firmy"
+        companyPanelLabel={hasOwnedCompany && companyPanelHref ? "Moja firma" : undefined}
         companyPanelHref={companyPanelHref}
         myListingsLabel="Moje ogloszenia"
         myListingsHref={myListingsHref}

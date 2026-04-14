@@ -30,7 +30,7 @@ export default async function MailPreviewsPage({ searchParams }: MailPreviewsPag
   }
 
   if (currentUser.role !== USER_ROLE.ADMIN) {
-    redirect(withLang("/maps", locale));
+    redirect(withLang("/list", locale));
   }
 
   const cases = getMailPreviewCases();

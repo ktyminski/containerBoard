@@ -398,7 +398,6 @@ export function MainMapModules({
             keyword={keywordFilter}
             operatingAreas={operatingAreaFilter}
             communicationLanguages={communicationLanguageFilter}
-            companyCategories={[]}
             companySpecializations={companySpecializationFilter}
             locationBbox={locationBbox}
             onLocationFilterRelease={releaseLocationFilter}

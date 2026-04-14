@@ -8,7 +8,7 @@ import type { ListingKind } from "@/components/container-listings-shared";
 export const metadata: Metadata = {
   title: "Lista kontenerow | ContainerBoard",
   description:
-    "Szybka tablica kontenerow: dostepne i poszukiwane kontenery, filtry oraz zapytania email.",
+    "Szybka tablica kontenerow: sprzedaz, wynajem i zapytania zakupu, filtry oraz zapytania email.",
 };
 
 type ListPageProps = {
@@ -19,7 +19,10 @@ function resolveKind(
   value: string | string[] | undefined,
 ): ListingKind {
   const raw = typeof value === "string" ? value : value?.[0];
-  return raw === "available" || raw === "wanted" || raw === "rent" ? raw : "all";
+  if (raw === "sell" || raw === "rent" || raw === "buy") {
+    return raw;
+  }
+  return "all";
 }
 
 function resolveTab(value: string | string[] | undefined): "all" | "favorites" {

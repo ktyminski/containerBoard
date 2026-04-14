@@ -44,6 +44,19 @@ export function ImageCropModal({
   const [loadedImageVersion, setLoadedImageVersion] = useState(0);
 
   useEffect(() => {
+    const onEscape = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        onCancel();
+      }
+    };
+
+    document.addEventListener("keydown", onEscape);
+    return () => {
+      document.removeEventListener("keydown", onEscape);
+    };
+  }, [onCancel]);
+
+  useEffect(() => {
     const image = new Image();
     let isCanceled = false;
     image.src = state.sourceUrl;
@@ -128,10 +141,28 @@ export function ImageCropModal({
   }, [fitMode, loadedImageVersion, previewSize.height, previewSize.width, state]);
 
   return (
-    <div className="fixed inset-0 z-[70] flex items-center justify-center overflow-y-auto bg-neutral-900/45 p-4 [&>div:not(.fixed)]:my-auto [&>div:not(.fixed)]:max-h-[calc(100dvh-2rem)] [&>div:not(.fixed)]:!overflow-y-auto">
-      <div className="w-full max-w-xl rounded-lg border border-neutral-300 bg-white p-4">
-        <h3 className="text-lg font-semibold text-neutral-900">{title}</h3>
-        <p className="mt-1 text-xs text-neutral-600">{labels.hint}</p>
+    <div
+      className="fixed inset-0 z-[70] flex items-center justify-center overflow-y-auto bg-[rgba(2,6,23,0.45)] p-4 backdrop-blur-[2px] [&>div:not(.fixed)]:my-auto [&>div:not(.fixed)]:max-h-[calc(100dvh-2rem)] [&>div:not(.fixed)]:!overflow-y-auto"
+      onMouseDown={(event) => {
+        if (event.target === event.currentTarget) {
+          onCancel();
+        }
+      }}
+    >
+      <div className="w-full max-w-xl rounded-lg border border-neutral-300 bg-white p-5 shadow-2xl">
+        <div className="flex items-start justify-between gap-3">
+          <div>
+            <h3 className="text-lg font-semibold text-neutral-800">{title}</h3>
+            <p className="mt-1 text-xs text-neutral-600">{labels.hint}</p>
+          </div>
+          <button
+            type="button"
+            className="cursor-pointer rounded-md border border-neutral-300 px-3 py-1.5 text-xs text-neutral-600 transition hover:border-neutral-400"
+            onClick={onCancel}
+          >
+            {labels.cancel}
+          </button>
+        </div>
 
         <div
           ref={previewFrameRef}
@@ -200,7 +231,7 @@ export function ImageCropModal({
         <div className="mt-4 flex items-center gap-2">
           <button
             type="button"
-            className="cursor-pointer rounded-md bg-neutral-900 px-3 py-2 text-sm font-medium text-white hover:bg-neutral-800"
+            className="cursor-pointer rounded-md border border-sky-300 bg-sky-50 px-3 py-2 text-sm font-medium text-sky-800 transition-colors hover:border-sky-400 hover:bg-sky-100"
             onClick={() => {
               void onApply();
             }}

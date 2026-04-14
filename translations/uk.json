@@ -969,13 +969,11 @@
                           "turnstileRequired":  "Pidtverdte captcha, shchob dodaty kompaniiu.",
                           "backToMap":  "Nazad do mapy",
                           "mainBranchTitle":  "Holovne viddilennia",
-                          "additionalData":  "Dodatkovi dani pryhovano: telefon, email ta katehoriia uspadkovuiutsia z danykh kompanii.",
+                          "additionalData":  "Dodatkovi dani pryhovano: telefon ta email uspadkovuiutsia z danykh kompanii.",
                           "showAdditionalData":  "Pokazaty dodatkovi dani",
                           "hideAdditionalData":  "Skhovaty dodatkovi dani",
                           "branchPhone":  "Telefon viddilennia",
-                          "branchEmail":  "Email viddilennia",
-                          "branchCategory":  "Katehoriia viddilennia",
-                          "useCompanyDefaults":  "Vykorystaty dani kompanii (za zamovchuvanniam)",
+                          "branchEmail":  "Email viddilennia",                          "useCompanyDefaults":  "Vykorystaty dani kompanii (za zamovchuvanniam)",
                           "branchLocationHint":  "Adres viddilennia vstanovliuie poznychku na mapi. Takozh mozhna kliknuty abo peretiahnuty poznychku vruchnu.",
                           "branchLocationFind":  "Znayty na mapi",
                           "branchLocationSearching":  "Poshuk...",
@@ -1457,9 +1455,7 @@
                            "branchPhotoAlt":  "Foto viddilennia {branch} ({index})",
                            "backgroundAlt":  "Fon kompanii {company}",
                            "logoAlt":  "Logo kompanii {company}",
-                           "noLogo":  "Logo vidsutnie",
-                           "categoryLabel":  "Katehoriia",
-                           "phoneLabel":  "Telefon",
+                           "noLogo":  "Logo vidsutnie",                           "phoneLabel":  "Telefon",
                            "nipLabel":  "NIP",
                            "emailLabel":  "Email",
                            "websiteLabel":  "Sait",
@@ -1476,10 +1472,10 @@
                            "mainLocationBadge":  "Holovna lokalizatsiia",
                            "mainLocationHint":  "Persha lokalizatsiia vvazhaietsia holovnoiu i vykorystovuietsia na mapi za zamovchuvanniam.",
                            "branchesTitle":  "Viddilennia",
-                           "mainLocationShort":  "holovna",
-                           "coordinatesLabel":  "Koordynaty",
-                           "backToMap":  "Nazad do mapy",
-                           "showMoreBranches":  "Pokazaty bilshe",
+                            "mainLocationShort":  "holovna",
+                            "coordinatesLabel":  "Koordynaty",
+                            "backToMap":  "Nazad do spysku",
+                            "showMoreBranches":  "Pokazaty bilshe",
                            "loadMoreOffers":  "Pokazaty bilshe",
                            "ownershipClaim":  {
                                                   "action":  "Tse moia kompaniia",
@@ -1533,5 +1529,6 @@
                           "not_verified":  "Ne pidtverdzheno"
                       }
 }
+
 
 

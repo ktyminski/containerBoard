@@ -7,6 +7,7 @@ type ContainerDetailsGalleryProps = {
   images: string[];
   title: string;
   showMainImage?: boolean;
+  mainImagePriority?: boolean;
   showThumbnails?: boolean;
   className?: string;
 };
@@ -15,6 +16,7 @@ export function ContainerDetailsGallery({
   images,
   title,
   showMainImage = true,
+  mainImagePriority = false,
   showThumbnails = true,
   className,
 }: ContainerDetailsGalleryProps) {
@@ -85,6 +87,7 @@ export function ContainerDetailsGallery({
               unoptimized
               className="object-contain p-1"
               sizes="176px"
+              priority={mainImagePriority}
             />
           </button>
         ) : null}

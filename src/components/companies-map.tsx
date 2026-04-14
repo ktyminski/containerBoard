@@ -5,7 +5,6 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import maplibregl, { type GeoJSONSource } from "maplibre-gl";
 import { COMPANY_VERIFICATION_STATUS } from "@/lib/company-verification";
 import type { CompanyMapItem } from "@/types/company";
-import type { CompanyCategory } from "@/types/company-category";
 import type { CompanyOperatingArea } from "@/lib/company-operating-area";
 import type { CompanyCommunicationLanguage } from "@/types/company-communication-language";
 import {
@@ -97,86 +96,27 @@ function matchCompaniesByIds(
   return output;
 }
 
-const CATEGORY_META: Record<CompanyCategory, { background: string }> = {
-  warehouse: { background: "#2563eb" },
-  transport: { background: "#059669" },
-  "freight-forwarding": { background: "#dc2626" },
-  logistics: { background: "#7c3aed" },
-  "staffing-agency": { background: "#881337" },
-  other: { background: "#ca8a04" },
-};
+const COMPANY_MARKER = {
+  standard: {
+    id: "company-icon",
+    background: "#0ea5e9",
+  },
+  premium: {
+    id: "company-icon-premium",
+    background: "#14b8a6",
+  },
+} as const;
 
-function categoryToLabel(
-  messages: AppMessages["map"],
-  category: CompanyCategory,
-): string {
-  return messages.categories[category];
+function categoryIconId(isPremium = false): string {
+  return isPremium ? COMPANY_MARKER.premium.id : COMPANY_MARKER.standard.id;
 }
 
-function categoryIconId(category: CompanyCategory, isPremium = false): string {
-  return `category-icon-${category}${isPremium ? "-premium" : ""}`;
-}
-
-function categoryIconBody(category: CompanyCategory): string {
-  switch (category) {
-    case "warehouse":
-      return [
-        '<path d="M11 18L22 12L33 18" />',
-        '<rect x="12" y="18" width="20" height="12" rx="1.5" />',
-        '<path d="M17 30V18" />',
-        '<path d="M22 30V18" />',
-        '<path d="M27 30V18" />',
-      ].join("");
-    case "transport":
-      return [
-        '<rect x="8.8" y="19" width="17.8" height="9.2" rx="1.1" />',
-        '<rect x="26.8" y="21" width="6.2" height="7.2" rx="0.9" />',
-        '<path d="M26.8 24.6H33" />',
-        '<circle cx="14.5" cy="29" r="2.3" />',
-        '<circle cx="28.8" cy="29" r="2.3" />',
-      ].join("");
-    case "freight-forwarding":
-      return [
-        '<rect x="10.5" y="17.5" width="23" height="11" rx="1.2" />',
-        '<path d="M14 18V28.5" />',
-        '<path d="M17.5 18V28.5" />',
-        '<path d="M21 18V28.5" />',
-        '<path d="M24.5 18V28.5" />',
-        '<path d="M28 18V28.5" />',
-        '<path d="M31.5 18V28.5" />',
-      ].join("");
-    case "logistics":
-      return [
-        '<rect x="16" y="18" width="12" height="9" rx="1.4" />',
-        '<path d="M16 21.2H28" />',
-        '<path d="M22 18V27" />',
-        '<path d="M10.5 23C10.5 16.8 14.6 13 20.2 13" />',
-        '<path d="M19 11.5L20.8 13L19 14.5" />',
-        '<path d="M33.5 22C33.5 28.2 29.4 32 23.8 32" />',
-        '<path d="M25 30.5L23.2 32L25 33.5" />',
-      ].join("");
-    case "staffing-agency":
-      return [
-        '<circle cx="22" cy="16.8" r="3" />',
-        '<path d="M14.5 29.5C14.5 25.5 17.8 22.3 21.8 22.3H22.2C26.2 22.3 29.5 25.5 29.5 29.5" />',
-      ].join("");
-    case "other":
-      return [
-        '<rect x="13.5" y="14.5" width="17" height="15" rx="2" />',
-        '<path d="M13.5 18H30.5" />',
-        '<path d="M17.5 22H26.5" />',
-        '<path d="M17.5 26H23.5" />',
-      ].join("");
-    default:
-      return "";
-  }
-}
-function markerSvg(category: CompanyCategory, isPremium = false): string {
-  const background = CATEGORY_META[category].background;
+function markerSvg(isPremium = false): string {
+  const background = isPremium ? COMPANY_MARKER.premium.background : COMPANY_MARKER.standard.background;
   const premiumRing = isPremium
     ? '<circle cx="22" cy="22" r="19" fill="none" stroke="#f59e0b" stroke-width="2" opacity="0.95"/>'
     : "";
-  return `<svg xmlns="http://www.w3.org/2000/svg" width="56" height="56" viewBox="0 0 44 44">${premiumRing}<circle cx="22" cy="22" r="16" fill="${background}" stroke="#ffffff" stroke-width="2.2"/><g transform="translate(22 22) scale(0.9) translate(-22 -22)" stroke="#ffffff" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round">${categoryIconBody(category)}</g></svg>`;
+  return `<svg xmlns="http://www.w3.org/2000/svg" width="56" height="56" viewBox="0 0 44 44">${premiumRing}<circle cx="22" cy="22" r="16" fill="${background}" stroke="#ffffff" stroke-width="2.2"/><g transform="translate(22 22) scale(0.9) translate(-22 -22)" stroke="#ffffff" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"><rect x="11.5" y="14.8" width="21" height="14.4" rx="2.2" /><path d="M11.5 19.5H32.5" /><path d="M17 24H27.5" /><path d="M17 27.8H24.5" /></g></svg>`;
 }
 function loadSvgImage(svg: string): Promise<HTMLImageElement> {
   return new Promise((resolve, reject) => {
@@ -188,18 +128,14 @@ function loadSvgImage(svg: string): Promise<HTMLImageElement> {
 }
 
 async function ensureCategoryIcons(map: maplibregl.Map): Promise<void> {
-  const categories = Object.keys(CATEGORY_META) as CompanyCategory[];
-
-  for (const category of categories) {
-    for (const isPremium of [false, true]) {
-      const imageId = categoryIconId(category, isPremium);
-      if (map.hasImage(imageId)) {
-        continue;
-      }
-
-      const icon = await loadSvgImage(markerSvg(category, isPremium));
-      map.addImage(imageId, icon, { pixelRatio: 2 });
+  for (const isPremium of [false, true]) {
+    const imageId = categoryIconId(isPremium);
+    if (map.hasImage(imageId)) {
+      continue;
     }
+
+    const icon = await loadSvgImage(markerSvg(isPremium));
+    map.addImage(imageId, icon, { pixelRatio: 2 });
   }
 }
 
@@ -216,8 +152,7 @@ function toFeatureCollection(
       id: company.id,
       name: company.name,
       slug: company.slug,
-      category: company.category,
-      categoryIconId: categoryIconId(company.category, company.isPremium),
+      categoryIconId: categoryIconId(company.isPremium),
       locationCount: company.locationCount,
     },
   }));
@@ -243,7 +178,6 @@ function popupCompanyCard(
   const summary = escapeHtml(
     formatCompanySummary(company, messages, operatingAreaLabels, specializationLabels),
   );
-  const categoryLabel = escapeHtml(categoryToLabel(messages, company.category));
   const detailsUrl = withLang(`/companies/${company.slug}`, locale);
   const fallbackColor = getCompanyFallbackColor(company.id);
   const premiumCardStyle = company.isPremium
@@ -253,7 +187,6 @@ function popupCompanyCard(
     ? "box-shadow:0 0 12px rgba(245,158,11,0.25);"
     : "";
   const nameStyle = company.isPremium ? ' style="color:#fef3c7;"' : "";
-  const categoryStyle = company.isPremium ? ' style="color:rgba(253,230,138,0.92);"' : "";
   const summaryStyle = company.isPremium ? ' style="color:rgba(253,186,116,0.88);"' : "";
   const logo =
     company.logoUrl
@@ -279,7 +212,6 @@ function popupCompanyCard(
             ${verifiedBadge}
           </span>
         </div>
-        <div class="company-map-popup-card__category"${categoryStyle}>${categoryLabel}</div>
         <div class="company-map-popup-card__summary"${summaryStyle}>${summary}</div>
       </div>
     </div>
@@ -1002,14 +934,10 @@ export function CompaniesMap({
                             </span>
                           </div>
                           <p className={`truncate text-xs ${company.isPremium ? "text-amber-100/80" : "text-neutral-400"}`}>
-                            {categoryToLabel(messages, company.category)}
                             {company.locationCity ? (
-                              <>
-                                {", "}
-                                <strong className={`font-semibold ${company.isPremium ? "text-amber-100" : "text-neutral-200"}`}>
-                                  {company.locationCity}
-                                </strong>
-                              </>
+                              <strong className={`font-semibold ${company.isPremium ? "text-amber-100" : "text-neutral-200"}`}>
+                                {company.locationCity}
+                              </strong>
                             ) : null}
                           </p>
                           <p className={`mt-1 truncate text-xs ${company.isPremium ? "text-amber-200/70" : "text-neutral-500"}`}>

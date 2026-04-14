@@ -12,7 +12,6 @@ import {
   LOCALE_COOKIE_NAME,
   withLang,
 } from "@/lib/i18n";
-import { getTurnstileSiteKey } from "@/lib/turnstile";
 
 type NewCompanyPageProps = {
   searchParams: Promise<Record<string, string | string[] | undefined>>;
@@ -26,7 +25,6 @@ export default async function NewCompanyPage({ searchParams }: NewCompanyPagePro
     cookieLocale: cookieStore.get(LOCALE_COOKIE_NAME)?.value,
   });
   const messages = getMessages(locale);
-  const turnstileSiteKey = getTurnstileSiteKey();
 
   const token = cookieStore.get(SESSION_COOKIE_NAME)?.value;
   if (!token) {
@@ -43,33 +41,41 @@ export default async function NewCompanyPage({ searchParams }: NewCompanyPagePro
     currentUser.role !== USER_ROLE.COMPANY_OWNER &&
     currentUser.role !== USER_ROLE.ADMIN
   ) {
-    redirect(withLang("/maps", locale));
+    redirect(withLang("/list", locale));
+  }
+
+  const companies = await getCompaniesCollection();
+  const existingOwnedCompany = await companies.findOne(
+    { createdByUserId: currentUser._id },
+    { projection: { _id: 1 } },
+  );
+  if (existingOwnedCompany) {
+    redirect(withLang("/containers/mine", locale));
   }
 
   const companyCreationLimit =
     currentUser.role === USER_ROLE.ADMIN
       ? null
       : await getCompanyCreationLimitState({
-          companies: await getCompaniesCollection(),
+          companies,
           userId: currentUser._id,
         });
 
   return (
-    <section className="bg-neutral-100">
+    <section className="bg-neutral-200/90">
       <main className="relative mx-auto flex w-full max-w-5xl flex-col gap-6 px-4 py-6 sm:px-6">
         <header>
           <h1 className="text-2xl font-semibold text-neutral-900 sm:text-3xl">
             {messages.companyCreate.title}
           </h1>
-          <p className="mt-2 text-sm whitespace-pre-line text-neutral-600">
+          <p className="mt-2 text-sm whitespace-pre-line text-neutral-800">
             {messages.companyCreate.subtitle}
           </p>
-          <p className="mt-1 text-xs text-neutral-500">{messages.companyCreate.requiredFieldsHint}</p>
+          <p className="mt-1 text-xs text-neutral-700">{messages.companyCreate.requiredFieldsHint}</p>
         </header>
         <NewCompanyForm
           locale={locale}
           messages={messages.companyCreate}
-          turnstileSiteKey={turnstileSiteKey}
           companyCreationLimit={
             companyCreationLimit
               ? {

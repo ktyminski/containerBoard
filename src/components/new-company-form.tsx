@@ -1,22 +1,18 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { useFieldArray, useForm } from "react-hook-form";
 import { COMPANY_OPERATING_AREAS } from "@/lib/company-operating-area";
 import { useToast } from "@/components/toast-provider";
-import { TurnstileWidget } from "@/components/turnstile-widget";
 import type { AppLocale, AppMessages } from "@/lib/i18n";
 import { formatTemplate, LOCALE_HEADER_NAME, withLang } from "@/lib/i18n";
 import { BranchCard } from "@/components/new-company-form/branch-card";
 import { CompanyMediaSection } from "@/components/new-company-form/company-media-section";
-import { ImageDropzone } from "@/components/new-company-form/image-dropzone";
-import { ImageGrid } from "@/components/new-company-form/image-grid";
 import { ImageCropModal } from "@/components/new-company-form/image-crop-modal";
 import { useCompanyMediaState } from "@/components/new-company-form/use-company-media-state";
 import { FacebookIcon, InstagramIcon, LinkedInIcon } from "@/components/social-icons";
 import {
-  MAX_COMPANY_PHOTOS,
   PHONE_REGEX,
   createEmptyBranch,
   createImageItems,
@@ -24,8 +20,6 @@ import {
   getFieldMessage,
   hasValidCoordinate,
   isValidWebsite,
-  removeImageItem,
-  revokeImageItems,
 } from "@/components/new-company-form/helpers";
 import type {
   ImageCropState,
@@ -46,16 +40,13 @@ type NewCompanyFormProps = {
   initialValues?: NewCompanyFormValues;
   submitEndpoint?: string;
   httpMethod?: "POST" | "PATCH";
-  turnstileSiteKey?: string | null;
   resetOnSuccess?: boolean;
   successMessage?: string;
   successRedirectTo?: string;
   initialLogoUrl?: string | null;
   initialBackgroundUrl?: string | null;
-  initialPhotoUrls?: string[];
   initialLogoBytes?: number;
   initialBackgroundBytes?: number;
-  initialPhotoBytes?: number[];
   initialBranchPhotosBytes?: number;
 };
 
@@ -63,14 +54,10 @@ const DEFAULT_CREATION_LIMIT = 3;
 const DEFAULT_CREATION_WINDOW_HOURS = 48;
 const MAX_LOGO_BYTES = 3 * 1024 * 1024;
 const MAX_BACKGROUND_BYTES = 6 * 1024 * 1024;
-const MAX_PHOTO_BYTES = 6 * 1024 * 1024;
 const MAX_TOTAL_IMAGES_BYTES = 14 * 1024 * 1024;
 const MAX_LOGO_MB = 3;
 const MAX_BACKGROUND_MB = 6;
-const MAX_PHOTO_MB = 6;
 const MAX_TOTAL_IMAGES_MB = 14;
-const EMPTY_STRING_ARRAY: string[] = [];
-const EMPTY_NUMBER_ARRAY: number[] = [];
 
 function toIntlLocale(locale: AppLocale): string {
   if (locale === "en") {
@@ -130,16 +117,13 @@ export function NewCompanyForm({
   initialValues,
   submitEndpoint = "/api/companies",
   httpMethod = "POST",
-  turnstileSiteKey,
   resetOnSuccess = true,
   successMessage,
   successRedirectTo,
   initialLogoUrl = null,
   initialBackgroundUrl = null,
-  initialPhotoUrls,
   initialLogoBytes = 0,
   initialBackgroundBytes = 0,
-  initialPhotoBytes,
   initialBranchPhotosBytes = 0,
 }: NewCompanyFormProps) {
   const router = useRouter();
@@ -153,32 +137,21 @@ export function NewCompanyForm({
     setLogoCrop,
     backgroundCrop,
     setBackgroundCrop,
-    photoItems,
-    setPhotoItems,
     isInitialLogoRemoved,
     setIsInitialLogoRemoved,
     isInitialBackgroundRemoved,
     setIsInitialBackgroundRemoved,
-    keptInitialPhotoIndexes,
-    setKeptInitialPhotoIndexes,
   } = useCompanyMediaState();
-  const stableInitialPhotoUrls = initialPhotoUrls ?? EMPTY_STRING_ARRAY;
-  const stableInitialPhotoBytes = initialPhotoBytes ?? EMPTY_NUMBER_ARRAY;
-  const [isPostCreateModalOpen, setIsPostCreateModalOpen] = useState(false);
-  const [turnstileToken, setTurnstileToken] = useState("");
-  const [turnstileRefreshKey, setTurnstileRefreshKey] = useState(0);
   const mediaCleanupRef = useRef<{
     logo: ImageItem | null;
     background: ImageItem | null;
     logoCrop: ImageCropState | null;
     backgroundCrop: ImageCropState | null;
-    photoItems: ImageItem[];
   }>({
     logo: null,
     background: null,
     logoCrop: null,
     backgroundCrop: null,
-    photoItems: [],
   });
 
   const defaultValues = useMemo<NewCompanyFormValues>(() => {
@@ -198,9 +171,9 @@ export function NewCompanyForm({
       facebookUrl: "",
       instagramUrl: "",
       linkedinUrl: "",
-      branches: [createEmptyBranch(messages.mainBranchTitle)],
+      branches: [createEmptyBranch()],
     };
-  }, [initialValues, messages.mainBranchTitle]);
+  }, [initialValues]);
 
   const {
     control,
@@ -245,7 +218,6 @@ export function NewCompanyForm({
       nextAllowedAt: companyCreationLimit.nextAllowedAt,
     });
   }, [companyCreationLimit, locale, messages]);
-  const visibleInitialPhotoCount = keptInitialPhotoIndexes.length;
   const normalizedInitialLogoBytes =
     Number.isFinite(initialLogoBytes) && initialLogoBytes > 0 ? initialLogoBytes : 0;
   const normalizedInitialBackgroundBytes =
@@ -254,18 +226,10 @@ export function NewCompanyForm({
     Number.isFinite(initialBranchPhotosBytes) && initialBranchPhotosBytes > 0
       ? initialBranchPhotosBytes
       : 0;
-  const normalizedInitialPhotoBytes = useMemo(
-    () =>
-      stableInitialPhotoBytes.map((value) =>
-        Number.isFinite(value) && value > 0 ? value : 0
-      ),
-    [stableInitialPhotoBytes],
-  );
 
   const getEstimatedPersistedImagesBytes = (overrides?: {
     nextLogoBytes?: number;
     nextBackgroundBytes?: number;
-    additionalPhotoBytes?: number;
   }): number => {
     const logoBytes =
       typeof overrides?.nextLogoBytes === "number"
@@ -285,19 +249,11 @@ export function NewCompanyForm({
               ? normalizedInitialBackgroundBytes
               : 0
           );
-    const keptInitialCompanyPhotosBytes = keptInitialPhotoIndexes.reduce((sum, index) => {
-      return sum + (normalizedInitialPhotoBytes[index] ?? 0);
-    }, 0);
-    const newCompanyPhotosBytes = photoItems.reduce((sum, item) => sum + item.file.size, 0);
-    const additionalPhotoBytes = overrides?.additionalPhotoBytes ?? 0;
 
     return (
       logoBytes +
       backgroundBytes +
-      keptInitialCompanyPhotosBytes +
-      newCompanyPhotosBytes +
-      normalizedInitialBranchPhotosBytes +
-      additionalPhotoBytes
+      normalizedInitialBranchPhotosBytes
     );
   };
 
@@ -308,14 +264,11 @@ export function NewCompanyForm({
   useEffect(() => {
     setIsInitialLogoRemoved(false);
     setIsInitialBackgroundRemoved(false);
-    setKeptInitialPhotoIndexes(stableInitialPhotoUrls.map((_, index) => index));
   }, [
     initialBackgroundUrl,
     initialLogoUrl,
     setIsInitialBackgroundRemoved,
     setIsInitialLogoRemoved,
-    setKeptInitialPhotoIndexes,
-    stableInitialPhotoUrls,
   ]);
 
   useEffect(() => {
@@ -324,9 +277,8 @@ export function NewCompanyForm({
       background,
       logoCrop,
       backgroundCrop,
-      photoItems,
     };
-  }, [background, backgroundCrop, logo, logoCrop, photoItems]);
+  }, [background, backgroundCrop, logo, logoCrop]);
 
   useEffect(() => {
     return () => {
@@ -343,7 +295,6 @@ export function NewCompanyForm({
       if (current.backgroundCrop) {
         URL.revokeObjectURL(current.backgroundCrop.sourceUrl);
       }
-      revokeImageItems(current.photoItems);
     };
   }, []);
 
@@ -355,18 +306,9 @@ export function NewCompanyForm({
     remove(index);
   };
 
-  const closePostCreateModal = () => {
-    setIsPostCreateModalOpen(false);
-    router.push(withLang("/companies/panel", locale));
-  };
-
   const onSubmit = async (values: NewCompanyFormValues) => {
     if (companyCreationLimit?.isLimited) {
       toast.warning(creationLimitNotice ?? messages.creationLimitText);
-      return;
-    }
-    if (httpMethod === "POST" && turnstileSiteKey && !turnstileToken) {
-      toast.warning(messages.turnstileRequired);
       return;
     }
 
@@ -393,7 +335,6 @@ export function NewCompanyForm({
       const formData = new FormData();
       formData.set("name", values.name);
       formData.set("description", values.description);
-      formData.set("category", "other");
       formData.set("operatingArea", values.operatingArea);
       formData.set("operatingAreaDetails", values.operatingAreaDetails);
       formData.set("nip", values.nip);
@@ -404,9 +345,7 @@ export function NewCompanyForm({
       formData.set("instagramUrl", values.instagramUrl);
       formData.set("linkedinUrl", values.linkedinUrl);
       formData.set("branches", JSON.stringify(values.branches));
-      if (httpMethod === "POST") {
-        formData.set("turnstileToken", turnstileToken);
-      } else {
+      if (httpMethod !== "POST") {
         formData.set(
           "removeLogo",
           String(Boolean(initialLogoUrl) && isInitialLogoRemoved && !logo),
@@ -419,7 +358,6 @@ export function NewCompanyForm({
             !background
           ),
         );
-        formData.set("keepPhotoIndexes", JSON.stringify(keptInitialPhotoIndexes));
       }
 
       if (logo) {
@@ -427,10 +365,6 @@ export function NewCompanyForm({
       }
       if (background) {
         formData.set("background", background.file);
-      }
-
-      for (const item of photoItems) {
-        formData.append("photos", item.file);
       }
 
       const response = await fetch(submitEndpoint, {
@@ -470,9 +404,6 @@ export function NewCompanyForm({
         return;
       }
       if (!response.ok) {
-        if (data.error === "TURNSTILE_REQUIRED" || data.error === "TURNSTILE_FAILED") {
-          throw new Error(messages.turnstileRequired);
-        }
         const issueText =
           data.issues && data.issues.length > 0
             ? `\n${data.issues.join("\n")}`
@@ -490,16 +421,13 @@ export function NewCompanyForm({
           URL.revokeObjectURL(background.previewUrl);
         }
         setBackground(null);
-        revokeImageItems(photoItems);
-        setPhotoItems([]);
         setIsInitialLogoRemoved(false);
         setIsInitialBackgroundRemoved(false);
-        setKeptInitialPhotoIndexes(stableInitialPhotoUrls.map((_, index) => index));
         reset(defaultValues);
       }
 
       if (httpMethod === "POST") {
-        setIsPostCreateModalOpen(true);
+        router.push(withLang("/containers/mine", locale));
         return;
       }
 
@@ -514,17 +442,12 @@ export function NewCompanyForm({
           ? submitError.message
           : messages.validationError,
       );
-    } finally {
-      if (httpMethod === "POST" && turnstileSiteKey) {
-        setTurnstileToken("");
-        setTurnstileRefreshKey((current) => current + 1);
-      }
     }
   };
 
   return (
     <section className="grid gap-3 sm:gap-4">
-      <section className="overflow-hidden rounded-lg border border-neutral-300 bg-neutral-100/95 shadow-sm">
+      <section className="overflow-hidden rounded-lg border border-neutral-300 bg-white shadow-[0_22px_46px_-30px_rgba(15,23,42,0.45)]">
       {creationLimitNotice ? (
         <section className="m-5 rounded-lg border border-neutral-300 bg-neutral-100 p-4">
           <h2 className="text-sm font-semibold text-neutral-800">
@@ -725,138 +648,6 @@ export function NewCompanyForm({
           </div>
         </section>
 
-      <section className="grid gap-3 rounded-lg border border-neutral-300 bg-neutral-50 p-3">
-        <div>
-          <h2 className="text-sm font-semibold text-neutral-800">{messages.photosTitle}</h2>
-          <p className="text-xs text-neutral-400">
-            {formatTemplate(messages.imageDropzoneHintWithLimit, {
-              maxMb: MAX_PHOTO_MB,
-            })}
-          </p>
-        </div>
-        <ImageDropzone
-          title={`${messages.photosTitle} (max ${MAX_COMPANY_PHOTOS})`}
-          hintText={formatTemplate(messages.imageDropzoneHintWithLimit, {
-            maxMb: MAX_PHOTO_MB,
-          })}
-          variant="light"
-          onFilesAdded={(files) => {
-            const imageFiles = files.filter((file) => file.type.startsWith("image/"));
-            if (imageFiles.length !== files.length) {
-              toast.warning(messages.imageFileTypeError);
-            }
-
-            const sizeAccepted = imageFiles.filter((file) => file.size <= MAX_PHOTO_BYTES);
-            if (sizeAccepted.length !== imageFiles.length) {
-              toast.warning(
-                formatTemplate(messages.photoSizeLimitError, {
-                  maxMb: MAX_PHOTO_MB,
-                }),
-              );
-            }
-
-            const currentPhotoCount = visibleInitialPhotoCount + photoItems.length;
-            const remaining = Math.max(0, MAX_COMPANY_PHOTOS - currentPhotoCount);
-            if (remaining === 0) {
-              toast.warning(
-                formatTemplate(messages.photosLimitReached, {
-                  max: MAX_COMPANY_PHOTOS,
-                  selected: currentPhotoCount + sizeAccepted.length,
-                }),
-              );
-              return;
-            }
-
-            let acceptedFiles = sizeAccepted;
-            if (sizeAccepted.length > remaining) {
-              toast.warning(
-                formatTemplate(messages.photosLimitAllowed, {
-                  remaining,
-                  max: MAX_COMPANY_PHOTOS,
-                }),
-              );
-              acceptedFiles = sizeAccepted.slice(0, remaining);
-            }
-
-            const baseTotalBytes = getEstimatedPersistedImagesBytes();
-            const totalAccepted: File[] = [];
-            let totalBytes = baseTotalBytes;
-            for (const file of acceptedFiles) {
-              if (totalBytes + file.size > MAX_TOTAL_IMAGES_BYTES) {
-                break;
-              }
-              totalAccepted.push(file);
-              totalBytes += file.size;
-            }
-            if (totalAccepted.length !== acceptedFiles.length) {
-              toast.warning(
-                formatTemplate(messages.totalImagesSizeLimitError, {
-                  maxMb: MAX_TOTAL_IMAGES_MB,
-                }),
-              );
-            }
-            if (totalAccepted.length === 0) {
-              return;
-            }
-
-            const accepted = createImageItems(totalAccepted);
-            setPhotoItems((prev) => [...prev, ...accepted]);
-          }}
-        />
-        {keptInitialPhotoIndexes.length > 0 ? (
-          <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-            {keptInitialPhotoIndexes.map((index) => {
-              const url = stableInitialPhotoUrls[index];
-              if (!url) {
-                return null;
-              }
-              return (
-              <div
-                key={`initial-photo-${index + 1}`}
-                className="group relative rounded-md border border-neutral-300 bg-white p-1"
-              >
-                <button
-                  type="button"
-                  className="flex h-28 w-full cursor-pointer items-center justify-center overflow-hidden rounded-sm"
-                  onClick={() => {
-                    setKeptInitialPhotoIndexes((prev) => prev.filter((value) => value !== index));
-                  }}
-                  title={messages.imageRemove}
-                >
-                  <img
-                    src={url}
-                    alt={messages.imagePreviewAlt}
-                    className="max-h-24 w-auto max-w-full object-contain transition-transform duration-300 ease-out group-hover:scale-105"
-                  />
-                </button>
-                <button
-                  type="button"
-                  className="absolute right-1 top-1 cursor-pointer rounded-full bg-black/70 px-2 py-0.5 text-xs text-white opacity-90"
-                  onClick={() => {
-                    setKeptInitialPhotoIndexes((prev) => prev.filter((value) => value !== index));
-                  }}
-                  title={messages.imageRemove}
-                  aria-label={messages.imageRemove}
-                >
-                  x
-                </button>
-              </div>
-              );
-            })}
-          </div>
-        ) : null}
-        {photoItems.length > 0 ? (
-          <ImageGrid
-            items={photoItems}
-            onRemove={(id) => {
-              setPhotoItems((prev) => removeImageItem(prev, id));
-            }}
-            removeLabel={messages.imageRemove}
-            previewAlt={messages.imagePreviewAlt}
-          />
-        ) : null}
-      </section>
-
       <section className="grid gap-4 border-t border-neutral-300 pt-4">
       <h2 className="text-sm font-semibold text-neutral-800">{messages.stepContact}</h2>
 
@@ -1024,18 +815,10 @@ export function NewCompanyForm({
       </div>
       </section>
 
-      {httpMethod === "POST" && turnstileSiteKey ? (
-        <TurnstileWidget
-          siteKey={turnstileSiteKey}
-          onTokenChange={setTurnstileToken}
-          refreshKey={turnstileRefreshKey}
-        />
-      ) : null}
-
       <div className="mt-4 flex flex-wrap items-center justify-end gap-2">
         <button
           type="button"
-          className="cursor-pointer rounded-md bg-[#111827] px-4 py-2 text-sm font-medium text-white transition hover:bg-[#1f2937] disabled:opacity-60"
+          className="cursor-pointer rounded-md bg-[#05244f] px-4 py-2 text-sm font-medium text-white transition hover:bg-[#0a356d] disabled:opacity-60"
           disabled={isSubmitting || companyCreationLimit?.isLimited}
           onClick={() => {
             void handleSubmit(onSubmit)();
@@ -1152,55 +935,6 @@ export function NewCompanyForm({
             setBackgroundCrop(null);
           }}
         />
-      ) : null}
-      {isPostCreateModalOpen ? (
-        <div className="fixed inset-0 z-[80] flex items-center justify-center p-4">
-          <div
-            className="absolute inset-0 bg-neutral-950/85 backdrop-blur-sm"
-            onClick={closePostCreateModal}
-            aria-hidden="true"
-          />
-          <div className="relative z-10 w-full max-w-2xl rounded-2xl border border-neutral-600/50 bg-neutral-950 p-6 shadow-[0_30px_90px_-40px_rgba(15,23,42,0.55)] sm:p-7">
-            <h3 className="text-2xl font-semibold text-neutral-100 sm:text-3xl">
-              {messages.postCreateModalTitle}
-            </h3>
-            <div className="mt-4 space-y-3 text-sm leading-6 text-neutral-300 sm:text-base">
-              <p>
-                {messages.postCreateModalIntro}
-              </p>
-              <p>
-                {messages.postCreateModalCollabIntro}
-              </p>
-              <ul className="list-disc space-y-1 pl-5 marker:text-neutral-400">
-                <li>{messages.postCreateModalBulletSupport}</li>
-                <li>{messages.postCreateModalBulletCoCreate}</li>
-                <li>{messages.postCreateModalBulletPartner}</li>
-              </ul>
-              <p>
-                {messages.postCreateModalOutro}
-              </p>
-            </div>
-            <div className="mt-6 flex flex-wrap justify-end gap-2">
-              <button
-                type="button"
-                className="rounded-md border border-neutral-700 px-4 py-2 text-sm text-neutral-200 hover:border-neutral-500"
-                onClick={closePostCreateModal}
-              >
-                {messages.postCreateModalClose}
-              </button>
-              <button
-                type="button"
-                className="rounded-md bg-neutral-200 px-4 py-2 text-sm font-medium text-neutral-900 hover:bg-neutral-100"
-                onClick={() => {
-                  setIsPostCreateModalOpen(false);
-                  router.push(withLang("/contact", locale));
-                }}
-              >
-                {messages.postCreateModalContact}
-              </button>
-            </div>
-          </div>
-        </div>
       ) : null}
     </section>
   );

@@ -6,17 +6,12 @@ import maplibregl, { type GeoJSONSource } from "maplibre-gl";
 import { MAP_STYLE_URL } from "@/components/map-shared";
 
 type CompanyLocationMapItem = {
-  label: string;
   addressText: string;
   point: [number, number];
-  isMain: boolean;
 };
 
 type CompanyLocationsMapProps = {
   locations: CompanyLocationMapItem[];
-  labels: {
-    mainLocationBadge: string;
-  };
   focusedLocationIndex?: number | null;
   focusRequestId?: number;
 };
@@ -30,29 +25,19 @@ function toFeatures(locations: CompanyLocationMapItem[]): GeoJSON.Feature<GeoJSO
     },
     properties: {
       id: String(index),
-      label: location.label,
       addressText: location.addressText,
-      isMain: location.isMain,
     },
   }));
 }
 
-function buildPopupHtml(input: {
-  label: string;
-  addressText: string;
-  isMain: boolean;
-  mainLocationBadge: string;
-}): string {
+function buildPopupHtml(input: { addressText: string }): string {
   return `<div style="font-family:sans-serif; min-width:220px; padding:10px;">
-    <div style="font-weight:700; color:#f8fafc;">${input.label}</div>
-    <div style="font-size:12px; color:#cbd5e1; margin-top:4px;">${input.addressText}</div>
-    ${input.isMain ? `<div style="font-size:12px; margin-top:6px; color:#f59e0b;">${input.mainLocationBadge}</div>` : ""}
+    <div style="font-size:12px; color:#cbd5e1;">${input.addressText}</div>
   </div>`;
 }
 
 export function CompanyLocationsMap({
   locations,
-  labels,
   focusedLocationIndex = null,
   focusRequestId = 0,
 }: CompanyLocationsMapProps) {
@@ -90,37 +75,10 @@ export function CompanyLocationsMap({
         type: "circle",
         source: "company-locations",
         paint: {
-          "circle-color": [
-            "case",
-            ["boolean", ["get", "isMain"], false],
-            "#f59e0b",
-            "#0ea5e9",
-          ],
-          "circle-radius": [
-            "case",
-            ["boolean", ["get", "isMain"], false],
-            10,
-            7,
-          ],
+          "circle-color": "#0ea5e9",
+          "circle-radius": 8,
           "circle-stroke-color": "#ffffff",
           "circle-stroke-width": 2,
-        },
-      });
-
-      map.addLayer({
-        id: "company-locations-label",
-        type: "symbol",
-        source: "company-locations",
-        layout: {
-          "text-field": ["get", "label"],
-          "text-size": 12,
-          "text-offset": [0, 1.2],
-          "text-anchor": "top",
-        },
-        paint: {
-          "text-color": "#0f172a",
-          "text-halo-color": "#ffffff",
-          "text-halo-width": 1.2,
         },
       });
 
@@ -130,9 +88,7 @@ export function CompanyLocationsMap({
           return;
         }
 
-        const label = String(feature.properties?.label ?? "");
         const addressText = String(feature.properties?.addressText ?? "");
-        const isMain = Boolean(feature.properties?.isMain);
         const coordinates = feature.geometry.coordinates as [number, number];
 
         popupRef.current?.remove();
@@ -141,7 +97,7 @@ export function CompanyLocationsMap({
           className: "company-map-popup",
         })
           .setLngLat(coordinates)
-          .setHTML(buildPopupHtml({ label, addressText, isMain, mainLocationBadge: labels.mainLocationBadge }))
+          .setHTML(buildPopupHtml({ addressText }))
           .addTo(map);
       });
 
@@ -163,7 +119,7 @@ export function CompanyLocationsMap({
       map.remove();
       mapRef.current = null;
     };
-  }, [labels.mainLocationBadge, locations]);
+  }, [locations]);
 
   useEffect(() => {
     const map = mapRef.current;
@@ -217,16 +173,9 @@ export function CompanyLocationsMap({
       className: "company-map-popup",
     })
       .setLngLat(target.point)
-      .setHTML(
-        buildPopupHtml({
-          label: target.label,
-          addressText: target.addressText,
-          isMain: target.isMain,
-          mainLocationBadge: labels.mainLocationBadge,
-        }),
-      )
+      .setHTML(buildPopupHtml({ addressText: target.addressText }))
       .addTo(map);
-  }, [focusRequestId, focusedLocationIndex, labels.mainLocationBadge, locations]);
+  }, [focusRequestId, focusedLocationIndex, locations]);
 
   return <div ref={containerRef} className="h-[380px] w-full rounded-xl" />;
 }

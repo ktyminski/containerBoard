@@ -48,7 +48,7 @@ export default async function AboutPage({ searchParams }: AboutPageProps) {
       intro={page.intro}
       links={[
         { href: "/contact", label: messages.footer.contact },
-        { href: "/maps/companies", label: messages.mapModules.tabs.companies },
+        { href: "/list", label: messages.mapModules.tabs.companies },
       ]}
     >
       <p className="whitespace-pre-line">{page.body}</p>

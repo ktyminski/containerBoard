@@ -122,7 +122,10 @@ function getListingPriceDisplay(
 ): ListingPriceDisplay {
   const pricing = item.pricing;
 
-  if (pricing?.type === "request") {
+  if (
+    pricing &&
+    (pricing.original.amount === null || typeof pricing.original.amount !== "number")
+  ) {
     const metaParts = ["Zapytanie", "VAT do ustalenia"];
     if (pricing.original.negotiable === true || item.priceNegotiable === true) {
       metaParts.push("Do negocjacji");
@@ -141,7 +144,6 @@ function getListingPriceDisplay(
     pricing.original.currency &&
     pricing.original.taxMode
   ) {
-    const amountPrefix = pricing.type === "starting_from" ? "od " : "";
     const normalizedAmountSet =
       pricing.original.taxMode === "net"
         ? pricing.normalized.net
@@ -172,7 +174,7 @@ function getListingPriceDisplay(
     }
 
     return {
-      amountLabel: `${amountPrefix}${convertedPrefix}${resolvedAmount.toLocaleString("pl-PL")} ${PRICE_CURRENCY_LABEL[resolvedCurrency]}`,
+      amountLabel: `${convertedPrefix}${resolvedAmount.toLocaleString("pl-PL")} ${PRICE_CURRENCY_LABEL[resolvedCurrency]}`,
       metaLine: metaParts.join(" | "),
       isRequestPrice: false,
     };
@@ -205,9 +207,9 @@ function getListingPriceDisplay(
   }
 
   return {
-    amountLabel: "Nie podano",
-    metaLine: "VAT n/d",
-    isRequestPrice: false,
+    amountLabel: "Zapytaj o cene",
+    metaLine: "Zapytanie | VAT do ustalenia",
+    isRequestPrice: true,
   };
 }
 
@@ -222,6 +224,14 @@ function getContainerPlaceholderSrc(item: ContainerListingItem): string {
     return "/placeholders/containers/container-45.svg";
   }
   return "/placeholders/containers/container-unknown.svg";
+}
+
+function getContainerPreviewSrc(item: ContainerListingItem): string {
+  const firstPhotoUrl = item.photoUrls?.find((value) => {
+    const trimmed = value?.trim();
+    return Boolean(trimmed);
+  });
+  return firstPhotoUrl ?? getContainerPlaceholderSrc(item);
 }
 
 function getCscValidityLabel(item: ContainerListingItem): string {
@@ -286,6 +296,13 @@ function getAllLocationLabels(item: ContainerListingItem): string[] {
   }
 
   return labels.length > 0 ? labels : ["Nie podano lokalizacji"];
+}
+
+function getContainerColorBadgeLabel(color: {
+  ral: string;
+  rgb: { r: number; g: number; b: number };
+}): string {
+  return `${color.ral} (RGB ${color.rgb.r}, ${color.rgb.g}, ${color.rgb.b})`;
 }
 
 function CscInfoBadge({ item }: { item: ContainerListingItem }) {
@@ -524,7 +541,7 @@ function ContainerListingsResultsComponent({
           ) : null}
 
           <ul className="w-full space-y-3">
-            {items.map((item) => {
+            {items.map((item, index) => {
               const priceDisplay = getListingPriceDisplay(item, priceDisplayCurrency);
               const expiresInLabel = getExpiresInLabel(item.expiresAt);
               const availableFromLabel = getAvailableFromLabel(item);
@@ -556,6 +573,11 @@ function ContainerListingsResultsComponent({
               const containerMetaWithTitleParts = listingTitle
                 ? [...containerMetaParts, listingTitle]
                 : containerMetaParts;
+              const containerColors = item.containerColors ?? [];
+              const containerColorsTitle = containerColors
+                .map((color) => getContainerColorBadgeLabel(color))
+                .join(", ");
+              const shouldPrioritizeImage = page === 1 && index === 0;
 
               return (
                 <li
@@ -565,11 +587,12 @@ function ContainerListingsResultsComponent({
                   <div className="flex flex-col gap-4 sm:flex-row">
                     <div className="relative aspect-square w-full shrink-0 overflow-hidden rounded-md border border-neutral-200 bg-neutral-100 sm:w-44">
                       <Image
-                        src={getContainerPlaceholderSrc(item)}
+                        src={getContainerPreviewSrc(item)}
                         alt=""
                         fill
-                        className="object-contain p-1"
+                        className={item.photoUrls && item.photoUrls.length > 0 ? "object-cover" : "object-contain p-1"}
                         sizes="(max-width: 640px) 100vw, 176px"
+                        priority={shouldPrioritizeImage}
                       />
                     </div>
                     <div className="min-w-0 flex-1">
@@ -607,6 +630,34 @@ function ContainerListingsResultsComponent({
                             </p>
                           </div>
                           <div className="flex flex-wrap items-center justify-end gap-2">
+                            {containerColors.length > 0 ? (
+                              <div
+                                className="flex flex-wrap items-center justify-end gap-1"
+                                title={containerColorsTitle}
+                              >
+                                {containerColors.slice(0, 3).map((color) => (
+                                  <span
+                                    key={`${item.id}-${color.ral}`}
+                                    className="inline-flex items-center gap-1 rounded-md border border-neutral-300 bg-neutral-100 px-1.5 py-0.5 text-[10px] text-neutral-700"
+                                    aria-label={getContainerColorBadgeLabel(color)}
+                                  >
+                                    <span
+                                      aria-hidden="true"
+                                      className="h-3 w-3 rounded-[3px] border border-neutral-300"
+                                      style={{
+                                        backgroundColor: `rgb(${color.rgb.r}, ${color.rgb.g}, ${color.rgb.b})`,
+                                      }}
+                                    />
+                                    <span>{color.ral.replace("RAL ", "")}</span>
+                                  </span>
+                                ))}
+                                {containerColors.length > 3 ? (
+                                  <span className="text-[10px] text-neutral-500">
+                                    +{containerColors.length - 3}
+                                  </span>
+                                ) : null}
+                              </div>
+                            ) : null}
                             {item.hasCscPlate ||
                             item.hasCscCertification ||
                             (typeof item.cscValidToMonth === "number" &&

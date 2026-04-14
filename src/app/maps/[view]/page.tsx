@@ -1,54 +1,30 @@
-import type { Metadata } from "next";
-import { notFound } from "next/navigation";
-import {
-  buildMainMapPath,
-  parseMainMapView,
-} from "@/components/main-map-modules/shared";
-import {
-  buildMapsPageMetadata,
-  renderMapsPage,
-  type MapsSearchParams,
-} from "@/app/maps/shared";
+import { redirect } from "next/navigation";
 
 type MapsViewPageProps = {
-  params: Promise<{ view: string }>;
-  searchParams: Promise<MapsSearchParams>;
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
 };
 
-async function resolveView(paramsPromise: Promise<{ view: string }>) {
-  const params = await paramsPromise;
-  const view = parseMainMapView(params.view);
+function toUrlSearchParams(params: Record<string, string | string[] | undefined>): string {
+  const search = new URLSearchParams();
 
-  if (!view || view !== "companies") {
-    notFound();
+  for (const [key, value] of Object.entries(params)) {
+    if (value === undefined || key === "view") {
+      continue;
+    }
+    if (Array.isArray(value)) {
+      for (const item of value) {
+        search.append(key, item);
+      }
+      continue;
+    }
+    search.set(key, value);
   }
 
-  return view;
+  const serialized = search.toString();
+  return serialized ? `?${serialized}` : "";
 }
 
-export async function generateMetadata({
-  params,
-  searchParams,
-}: MapsViewPageProps): Promise<Metadata> {
-  const view = await resolveView(params);
-
-  return buildMapsPageMetadata({
-    searchParams,
-    path: buildMainMapPath(view),
-    forcedView: view,
-    fallbackView: view,
-  });
-}
-
-export default async function MapsViewPage({
-  params,
-  searchParams,
-}: MapsViewPageProps) {
-  const view = await resolveView(params);
-
-  return renderMapsPage({
-    searchParams,
-    forcedView: view,
-    fallbackView: view,
-  });
+export default async function MapsViewPage({ searchParams }: MapsViewPageProps) {
+  const params = await searchParams;
+  redirect(`/list${toUrlSearchParams(params)}`);
 }

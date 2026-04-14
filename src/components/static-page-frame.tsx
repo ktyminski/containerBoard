@@ -27,7 +27,7 @@ export function StaticPageFrame({
   children,
   links = [],
   backHref = "/",
-  mapHref = "/maps",
+  mapHref = "/list",
 }: StaticPageFrameProps) {
   return (
     <section className="relative overflow-hidden">

@@ -523,8 +523,10 @@ const ListingsMap = memo(function ListingsMap({
             "circle-color": [
               "match",
               ["get", "type"],
-              "wanted",
+              "buy",
               "#78716c",
+              "rent",
+              "#0ea5e9",
               "#64748b",
             ],
             "circle-stroke-width": 2,
@@ -648,12 +650,20 @@ const ListingsMap = memo(function ListingsMap({
         }
 
         const key = getCoordinateKey(clickedLat, clickedLng);
+        const featureTypeRaw =
+          typeof feature.properties?.type === "string"
+            ? feature.properties.type
+            : "";
         const grouped = (
           itemsByCoordinateRef.current.get(key) ?? [
             {
               id: listingId,
               type:
-                feature.properties?.type === "wanted" ? "wanted" : "available",
+                featureTypeRaw === "buy"
+                  ? "buy"
+                  : featureTypeRaw === "rent"
+                    ? "rent"
+                    : "sell",
               locationLat: clickedLat,
               locationLng: clickedLng,
             } satisfies ContainerListingMapPoint,
@@ -843,7 +853,6 @@ export function ContainerListingsBoard({
     logisticsUnloadingOnly: FILTER_FORM_DEFAULTS.logisticsUnloadingOnly,
     hasCscPlateOnly: FILTER_FORM_DEFAULTS.hasCscPlateOnly,
     hasCscCertificationOnly: FILTER_FORM_DEFAULTS.hasCscCertificationOnly,
-    priceType: FILTER_FORM_DEFAULTS.priceType,
     priceCurrency: FILTER_FORM_DEFAULTS.priceCurrency,
     priceDisplayCurrency: FILTER_FORM_DEFAULTS.priceDisplayCurrency,
     priceTaxMode: FILTER_FORM_DEFAULTS.priceTaxMode,
@@ -1295,7 +1304,6 @@ export function ContainerListingsBoard({
       logisticsUnloadingOnly: false,
       hasCscPlateOnly: false,
       hasCscCertificationOnly: false,
-      priceType: "all",
       priceCurrency: FILTER_FORM_DEFAULTS.priceCurrency,
       priceDisplayCurrency: FILTER_FORM_DEFAULTS.priceDisplayCurrency,
       priceTaxMode: FILTER_FORM_DEFAULTS.priceTaxMode,

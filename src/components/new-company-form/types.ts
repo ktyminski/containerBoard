@@ -11,13 +11,11 @@ export type BranchFormValue = {
   label: string;
   addressText: string;
   addressParts?: GeocodeAddressParts | null;
-  note: string;
   lat: string;
   lng: string;
   useCustomDetails: boolean;
   phone: string;
   email: string;
-  category: string;
 };
 
 export type NewCompanyFormValues = {

@@ -6,10 +6,8 @@ export function useCompanyMediaState() {
   const [background, setBackground] = useState<ImageItem | null>(null);
   const [logoCrop, setLogoCrop] = useState<ImageCropState | null>(null);
   const [backgroundCrop, setBackgroundCrop] = useState<ImageCropState | null>(null);
-  const [photoItems, setPhotoItems] = useState<ImageItem[]>([]);
   const [isInitialLogoRemoved, setIsInitialLogoRemoved] = useState(false);
   const [isInitialBackgroundRemoved, setIsInitialBackgroundRemoved] = useState(false);
-  const [keptInitialPhotoIndexes, setKeptInitialPhotoIndexes] = useState<number[]>([]);
 
   return {
     logo,
@@ -20,13 +18,9 @@ export function useCompanyMediaState() {
     setLogoCrop,
     backgroundCrop,
     setBackgroundCrop,
-    photoItems,
-    setPhotoItems,
     isInitialLogoRemoved,
     setIsInitialLogoRemoved,
     isInitialBackgroundRemoved,
     setIsInitialBackgroundRemoved,
-    keptInitialPhotoIndexes,
-    setKeptInitialPhotoIndexes,
   };
 }

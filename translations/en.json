@@ -969,13 +969,11 @@
                           "turnstileRequired":  "Please complete the captcha to add a company.",
                           "backToMap":  "Back to map",
                           "mainBranchTitle":  "Main branch",
-                          "additionalData":  "Additional details are hidden: phone, email and category will be inherited from company details.",
+                          "additionalData":  "Additional details are hidden: phone and email will be inherited from company details.",
                           "showAdditionalData":  "Show additional details",
                           "hideAdditionalData":  "Hide additional details",
                           "branchPhone":  "Branch phone",
-                          "branchEmail":  "Branch email",
-                          "branchCategory":  "Branch category",
-                          "useCompanyDefaults":  "Use company defaults",
+                          "branchEmail":  "Branch email",                          "useCompanyDefaults":  "Use company defaults",
                           "branchLocationHint":  "Branch address sets the pin on the map. You can also click or drag the pin manually.",
                           "branchLocationFind":  "Find on map",
                           "branchLocationSearching":  "Searching...",
@@ -1457,9 +1455,7 @@
                            "branchPhotoAlt":  "Branch photo {branch} ({index})",
                            "backgroundAlt":  "Company background {company}",
                            "logoAlt":  "Company logo {company}",
-                           "noLogo":  "No logo",
-                           "categoryLabel":  "Category",
-                           "phoneLabel":  "Phone",
+                           "noLogo":  "No logo",                           "phoneLabel":  "Phone",
                            "nipLabel":  "NIP",
                            "emailLabel":  "Email",
                            "websiteLabel":  "Website",
@@ -1476,10 +1472,10 @@
                            "mainLocationBadge":  "Main location",
                            "mainLocationHint":  "The first location is treated as main and used by default on the map.",
                            "branchesTitle":  "Branches",
-                           "mainLocationShort":  "main",
-                           "coordinatesLabel":  "Coordinates",
-                           "backToMap":  "Back to map",
-                           "showMoreBranches":  "Show more",
+                            "mainLocationShort":  "main",
+                            "coordinatesLabel":  "Coordinates",
+                            "backToMap":  "Back to list",
+                            "showMoreBranches":  "Show more",
                            "loadMoreOffers":  "Load more",
                            "ownershipClaim":  {
                                                   "action":  "This is my company",
@@ -1533,5 +1529,6 @@
                           "not_verified":  "Not verified"
                       }
 }
+
 
 

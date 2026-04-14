@@ -16,12 +16,13 @@ import { logError } from "@/lib/server-logger";
 export const metadata: Metadata = {
   title: "ContainerBoard - Landing",
   description:
-    "ContainerBoard: jedna platforma do publikacji i wyszukiwania dostepnych oraz poszukiwanych kontenerow.",
+    "ContainerBoard: jedna platforma do publikacji i wyszukiwania kontenerow na sprzedaz, wynajem oraz zakup.",
 };
 
 const LISTING_TYPE_LABEL: Record<ContainerListingItem["type"], string> = {
-  available: "Dostepny",
-  wanted: "Poszukiwany",
+  sell: "Sprzedaz",
+  rent: "Wynajem",
+  buy: "Chce zakupic",
 };
 
 async function getLatestListings(limit = 6): Promise<ContainerListingItem[]> {
@@ -193,7 +194,7 @@ export default async function LandingPage() {
               </span>
               <h3 className="mt-4 text-lg font-semibold text-[#0b1f42]">Dodaj wpis</h3>
               <p className="mt-2 text-sm text-neutral-600">
-                Publikujesz kontener dostepny albo poszukiwany. Formularz jest prosty i prowadzi krok po kroku.
+                Publikujesz kontener na sprzedaz, wynajem albo zapytanie zakupu. Formularz jest prosty i prowadzi krok po kroku.
               </p>
             </article>
             <article className="rounded-2xl border border-sky-200 bg-[linear-gradient(180deg,#f8fbff_0%,#eef6ff_100%)] p-5">

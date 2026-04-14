@@ -1,6 +1,5 @@
 import type { BranchFormValue, ImageCropState, ImageItem } from "./types";
 
-export const MAX_COMPANY_PHOTOS = 5;
 export const MAX_BRANCH_PHOTOS = 3;
 export const PHONE_REGEX = /^[+()0-9\s-]{6,30}$/;
 export type CropFitMode = "cover" | "contain";
@@ -10,13 +9,11 @@ export function createEmptyBranch(initialLabel = ""): BranchFormValue {
     label: initialLabel,
     addressText: "",
     addressParts: null,
-    note: "",
     lat: "",
     lng: "",
     useCustomDetails: false,
     phone: "",
     email: "",
-    category: "",
   };
 }
 

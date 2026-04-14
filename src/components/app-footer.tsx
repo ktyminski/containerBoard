@@ -1,7 +1,6 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
 import { withLang, type AppLocale, type AppMessages } from "@/lib/i18n";
 import { FacebookIcon, InstagramIcon, LinkedInIcon } from "@/components/social-icons";
 
@@ -11,12 +10,6 @@ type AppFooterProps = {
 };
 
 export function AppFooter({ locale, messages }: AppFooterProps) {
-  const pathname = usePathname();
-
-  if (pathname.startsWith("/maps")) {
-    return null;
-  }
-
   return (
     <footer className="relative mt-10 overflow-hidden border-t border-[#1f4f86] bg-[linear-gradient(180deg,#031a3c_0%,#05244f_100%)]">
       <div className="relative z-10 mx-auto w-full max-w-5xl px-4 py-8 text-xs text-[#bcd6f3]">

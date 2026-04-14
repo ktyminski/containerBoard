@@ -28,19 +28,10 @@ import {
   normalizeCompanyVerificationStatus,
 } from "@/lib/company-verification";
 import { getCompanyCreationLimitState } from "@/lib/company-creation-limit";
-import {
-  getRequestIp,
-  isTurnstileEnabled,
-  verifyTurnstileToken,
-} from "@/lib/turnstile";
 import { parseBbox } from "@/lib/geo";
 import { getUsersCollection } from "@/lib/users";
 import { USER_ROLE } from "@/lib/user-roles";
 import { enforceRateLimitOrResponse } from "@/lib/request-rate-limit";
-import {
-  COMPANY_CATEGORIES,
-  normalizeCompanyCategory,
-} from "@/types/company-category";
 import { logError } from "@/lib/server-logger";
 
 export const runtime = "nodejs";
@@ -48,7 +39,6 @@ export const runtime = "nodejs";
 const MAX_LOGO_BYTES = 3 * 1024 * 1024;
 const MAX_BACKGROUND_BYTES = 6 * 1024 * 1024;
 const MAX_PHOTO_BYTES = 6 * 1024 * 1024;
-const MAX_PHOTO_COUNT = 5;
 const MAX_BRANCH_PHOTO_COUNT = 3;
 const MAX_TOTAL_IMAGES_BYTES = 14 * 1024 * 1024;
 
@@ -81,21 +71,6 @@ const querySchema = z.object({
         .map((entry) => entry.trim().toLowerCase())
         .filter((entry): entry is (typeof COMPANY_OPERATING_AREAS)[number] => allowed.has(entry));
     }),
-  categories: z
-    .string()
-    .optional()
-    .transform((value) => {
-      if (!value) {
-        return [];
-      }
-      const allowed = new Set<string>(COMPANY_CATEGORIES);
-      return value
-        .split(",")
-        .map((entry) => entry.trim().toLowerCase())
-        .filter(
-          (entry): entry is (typeof COMPANY_CATEGORIES)[number] => allowed.has(entry),
-        );
-    }),
   limit: z.coerce.number().int().min(1).max(500).default(200),
 });
 
@@ -109,6 +84,7 @@ const branchAddressPartsSchema = z
   .object({
     street: optionalTrimmedStringAllowingNull(120),
     houseNumber: optionalTrimmedStringAllowingNull(40),
+    postalCode: optionalTrimmedStringAllowingNull(40),
     city: optionalTrimmedStringAllowingNull(120),
     country: optionalTrimmedStringAllowingNull(120),
   })
@@ -117,7 +93,6 @@ const branchAddressPartsSchema = z
 const createCompanySchema = z.object({
   name: z.string().trim().min(2).max(120),
   description: z.string().trim().min(10).max(5000),
-  category: z.string().trim().min(1).max(100),
   operatingArea: z.enum(COMPANY_OPERATING_AREAS).default("local"),
   operatingAreaDetails: z.string().trim().max(200).optional().or(z.literal("")),
   nip: z.string().trim().max(30).optional().or(z.literal("")),
@@ -133,11 +108,9 @@ const createCompanySchema = z.object({
         label: z.string().trim().min(1).max(120),
         addressText: z.string().trim().min(1).max(200),
         addressParts: branchAddressPartsSchema.nullable().optional(),
-        note: z.string().trim().max(200).optional().or(z.literal("")),
         useCustomDetails: z.boolean().optional().default(false),
         phone: z.string().trim().max(60).optional().or(z.literal("")),
         email: z.string().trim().email().optional().or(z.literal("")),
-        category: z.string().trim().max(100).optional().or(z.literal("")),
         lat: z.preprocess(
           (value) => {
             if (typeof value === "string" && value.trim().length === 0) {
@@ -291,7 +264,6 @@ export async function GET(request: NextRequest) {
     const {
       q,
       tags,
-      categories,
       operatingAreas,
       limit,
     } = query.data;
@@ -310,7 +282,6 @@ export async function GET(request: NextRequest) {
       bbox,
       q,
       tags,
-      categories,
       operatingAreas,
     });
     const rows = await companies
@@ -321,7 +292,6 @@ export async function GET(request: NextRequest) {
           isPremium: 1,
           verificationStatus: 1,
           tags: 1,
-          category: 1,
           operatingArea: 1,
           "logo.size": 1,
           "logo.filename": 1,
@@ -404,6 +374,16 @@ export async function POST(request: NextRequest) {
 
     await ensureCompaniesIndexes();
     const companies = await getCompaniesCollection();
+    const existingOwnedCompany = await companies.findOne(
+      { createdByUserId: user._id },
+      { projection: { _id: 1 } },
+    );
+    if (existingOwnedCompany) {
+      return NextResponse.json(
+        { error: "User already has a company" },
+        { status: 409 },
+      );
+    }
     if (user.role !== USER_ROLE.ADMIN) {
       const limitState = await getCompanyCreationLimitState({
         companies,
@@ -431,22 +411,10 @@ export async function POST(request: NextRequest) {
     }
 
     const formData = await request.formData();
-    const turnstileToken = String(formData.get("turnstileToken") ?? "").trim();
-    if (isTurnstileEnabled() && !turnstileToken) {
-      return NextResponse.json({ error: "TURNSTILE_REQUIRED" }, { status: 400 });
-    }
-    const turnstileResult = await verifyTurnstileToken({
-      token: turnstileToken,
-      remoteIp: getRequestIp(request.headers),
-    });
-    if (!turnstileResult.ok) {
-      return NextResponse.json({ error: "TURNSTILE_FAILED" }, { status: 400 });
-    }
 
     const payload = {
       name: String(formData.get("name") ?? ""),
       description: String(formData.get("description") ?? ""),
-      category: String(formData.get("category") ?? ""),
       operatingArea: String(formData.get("operatingArea") ?? "local"),
       operatingAreaDetails: String(formData.get("operatingAreaDetails") ?? ""),
       nip: String(formData.get("nip") ?? ""),
@@ -476,22 +444,11 @@ export async function POST(request: NextRequest) {
     const backgroundFile =
       backgroundInput instanceof File && backgroundInput.size > 0 ? backgroundInput : null;
 
-    const photoFiles = formData
-      .getAll("photos")
-      .filter((item): item is File => item instanceof File && item.size > 0);
-
     const branchPhotoFiles = parsed.data.branches.map((_, branchIndex) =>
       formData
         .getAll(`branchPhotos-${branchIndex}`)
         .filter((item): item is File => item instanceof File && item.size > 0),
     );
-
-    if (photoFiles.length > MAX_PHOTO_COUNT) {
-      return NextResponse.json(
-        { error: `photos cannot exceed ${MAX_PHOTO_COUNT} files` },
-        { status: 400 },
-      );
-    }
 
     const issues: string[] = [];
 
@@ -512,13 +469,6 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    for (const photo of photoFiles) {
-      const photoIssue = ensureImageFile(photo, MAX_PHOTO_BYTES, "photo");
-      if (photoIssue) {
-        issues.push(photoIssue);
-      }
-    }
-
     for (let branchIndex = 0; branchIndex < branchPhotoFiles.length; branchIndex += 1) {
       const files = branchPhotoFiles[branchIndex];
       if (files.length > MAX_BRANCH_PHOTO_COUNT) {
@@ -536,7 +486,6 @@ export async function POST(request: NextRequest) {
     const totalBytes =
       (logoFile?.size ?? 0) +
       (backgroundFile?.size ?? 0) +
-      photoFiles.reduce((sum, photo) => sum + photo.size, 0) +
       branchPhotoFiles.flat().reduce((sum, photo) => sum + photo.size, 0);
 
     if (totalBytes > MAX_TOTAL_IMAGES_BYTES) {
@@ -550,7 +499,6 @@ export async function POST(request: NextRequest) {
     const now = new Date();
     const companyId = new ObjectId();
     const slug = await generateUniqueSlug(parsed.data.name);
-    const normalizedCategory = normalizeCompanyCategory(parsed.data.category);
     const operatingArea = normalizeCompanyOperatingArea(parsed.data.operatingArea);
     const operatingAreaDetails = parsed.data.operatingAreaDetails?.trim() || undefined;
     const nip = parsed.data.nip?.trim() || undefined;
@@ -585,7 +533,6 @@ export async function POST(request: NextRequest) {
       | Awaited<ReturnType<typeof processLogoUpload>>["logoThumb"]
       | undefined;
     let background: CompanyImageAsset | undefined;
-    let photos: CompanyImageAsset[] | undefined;
     let locationPhotos: CompanyImageAsset[][];
     const uploadedBlobUrls: string[] = [];
 
@@ -596,10 +543,6 @@ export async function POST(request: NextRequest) {
         logoThumb = processedLogo.logoThumb;
       }
       background = backgroundFile ? await processBackgroundUpload(backgroundFile) : undefined;
-      photos =
-        photoFiles.length > 0
-          ? await Promise.all(photoFiles.map((file) => processGalleryUpload(file, "photo")))
-          : undefined;
       locationPhotos = await Promise.all(
         branchPhotoFiles.map((files, branchIndex) =>
           Promise.all(
@@ -622,7 +565,6 @@ export async function POST(request: NextRequest) {
     let storedLogo: CompanyImageAsset | undefined;
     let storedLogoThumb: CompanyImageAsset | undefined;
     let storedBackground: CompanyImageAsset | undefined;
-    let storedPhotos: CompanyImageAsset[] | undefined;
     let storedLocationPhotos: CompanyImageAsset[][];
 
     try {
@@ -656,22 +598,6 @@ export async function POST(request: NextRequest) {
           uploadedBlobUrls.push(storedBackground.blobUrl);
         }
       }
-      storedPhotos =
-        photos && photos.length > 0
-          ? await Promise.all(
-              photos.map(async (asset, index) => {
-                const stored = await uploadCompanyImageAsset({
-                  companyId,
-                  key: `photos/${index}`,
-                  asset,
-                });
-                if (stored.blobUrl) {
-                  uploadedBlobUrls.push(stored.blobUrl);
-                }
-                return stored;
-              }),
-            )
-          : undefined;
       storedLocationPhotos = await Promise.all(
         locationPhotos.map((branchAssets, branchIndex) =>
           Promise.all(
@@ -710,7 +636,6 @@ export async function POST(request: NextRequest) {
         name: parsed.data.name.trim(),
         slug,
         description: parsed.data.description.trim(),
-        category: normalizedCategory,
         operatingArea,
         operatingAreaDetails,
         nip,
@@ -720,7 +645,6 @@ export async function POST(request: NextRequest) {
         logo: storedLogo,
         logoThumb: storedLogoThumb,
         background: storedBackground,
-        photos: storedPhotos,
         phone,
         email,
         website,
@@ -732,24 +656,18 @@ export async function POST(request: NextRequest) {
         locations: parsed.data.branches.map((branch, index) => {
           const branchPhone = branch.phone?.trim() || undefined;
           const branchEmail = branch.email?.trim() || undefined;
-          const branchCategoryInput = branch.category?.trim() || undefined;
-          const hasCustomDetails =
+          const hasCustomContactDetails =
             branch.useCustomDetails ||
             Boolean(branchPhone) ||
-            Boolean(branchEmail) ||
-            Boolean(branchCategoryInput);
+            Boolean(branchEmail);
           const addressParts = normalizeGeocodeAddressParts(branch.addressParts);
 
           return {
             label: branch.label.trim(),
             addressText: branch.addressText.trim(),
             ...(addressParts ? { addressParts } : {}),
-            note: branch.note?.trim() || undefined,
-            phone: hasCustomDetails ? branchPhone : phone,
-            email: hasCustomDetails ? branchEmail : email,
-            category: hasCustomDetails
-              ? normalizeCompanyCategory(branchCategoryInput ?? normalizedCategory)
-              : normalizedCategory,
+            phone: hasCustomContactDetails ? (branchPhone ?? phone) : phone,
+            email: hasCustomContactDetails ? (branchEmail ?? email) : email,
             photos:
               storedLocationPhotos[index].length > 0
                 ? storedLocationPhotos[index]

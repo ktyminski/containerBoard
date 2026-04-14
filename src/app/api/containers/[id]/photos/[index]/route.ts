@@ -2,7 +2,7 @@ import { ObjectId } from "mongodb";
 import { NextRequest, NextResponse } from "next/server";
 import { downloadBlobToBufferWithAccessFallback } from "@/lib/blob-storage";
 import { getMediaCacheControl } from "@/lib/company-media";
-import { getCompaniesCollection } from "@/lib/companies";
+import { getContainerListingsCollection } from "@/lib/container-listings";
 import { logError } from "@/lib/server-logger";
 
 export const runtime = "nodejs";
@@ -38,7 +38,7 @@ export async function GET(request: NextRequest, context: RouteContext) {
     const { id, index } = await context.params;
 
     if (!ObjectId.isValid(id)) {
-      return NextResponse.json({ error: "Invalid company id" }, { status: 400 });
+      return NextResponse.json({ error: "Invalid listing id" }, { status: 400 });
     }
 
     const numericIndex = Number(index);
@@ -46,14 +46,13 @@ export async function GET(request: NextRequest, context: RouteContext) {
       return NextResponse.json({ error: "Invalid photo index" }, { status: 400 });
     }
 
-    const companies = await getCompaniesCollection();
-
-    const company = await companies.findOne(
+    const listings = await getContainerListingsCollection();
+    const listing = await listings.findOne(
       { _id: new ObjectId(id) },
       { projection: { photos: 1 } },
     );
 
-    const photo = company?.photos?.[numericIndex];
+    const photo = listing?.photos?.[numericIndex];
     if (photo?.blobUrl) {
       const downloaded = await downloadBlobToBufferWithAccessFallback({
         urlOrPathname: photo.blobUrl,
@@ -101,15 +100,13 @@ export async function GET(request: NextRequest, context: RouteContext) {
       },
     });
   } catch (error) {
-    logError("Unhandled API error", { route: "/api/companies/[id]/photos/[index]", error });
+    logError("Unhandled API error", { route: "/api/containers/[id]/photos/[index]", error });
     return NextResponse.json(
       {
         error: "Internal server error",
-        message:
-          error instanceof Error ? error.message : "Unknown company photo error",
+        message: error instanceof Error ? error.message : "Unknown container photo error",
       },
       { status: 500 },
     );
   }
 }
-

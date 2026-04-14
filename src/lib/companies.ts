@@ -15,7 +15,6 @@ import {
 import type { GeocodeAddressParts } from "@/lib/geocode-address";
 import type { CompanyMapItem } from "@/types/company";
 import type { CompanyCommunicationLanguage } from "@/types/company-communication-language";
-import { normalizeCompanyCategory, type CompanyCategory } from "@/types/company-category";
 import {
   normalizeCompanySpecializations,
   type CompanySpecialization,
@@ -47,10 +46,8 @@ export type CompanyLocation = {
   label: string;
   addressText: string;
   addressParts?: GeocodeAddressParts;
-  note?: string;
   phone?: string;
   email?: string;
-  category?: string;
   photos?: CompanyImageAsset[];
   point: GeoPoint;
 };
@@ -74,8 +71,6 @@ export type CompanyDocument = {
   logo?: CompanyImageAsset;
   logoThumb?: CompanyImageAsset;
   background?: CompanyImageAsset;
-  photos?: CompanyImageAsset[];
-  category?: string;
   // Legacy single-value field kept for backward compatibility in reads/filters.
   communicationLanguage?: CompanyCommunicationLanguage;
   communicationLanguages?: CompanyCommunicationLanguage[];
@@ -133,7 +128,6 @@ export async function ensureCompaniesIndexes(): Promise<void> {
       await createCompanyIndex(companies, { "locations.point": "2dsphere" });
       await createCompanyIndex(companies, { slug: 1 }, { unique: true });
       await createCompanyIndex(companies, { tags: 1 });
-      await createCompanyIndex(companies, { category: 1 });
       await createCompanyIndex(companies, { specializations: 1 });
       await createCompanyIndex(companies, { communicationLanguages: 1 });
       await createCompanyIndex(companies, { createdByUserId: 1, createdAt: -1 });
@@ -145,6 +139,30 @@ export async function ensureCompaniesIndexes(): Promise<void> {
         verificationStatus: -1,
         createdAt: -1,
       });
+      await companies.updateMany(
+        { photos: { $exists: true } },
+        { $unset: { photos: "" } },
+      );
+      await companies.updateMany(
+        { "locations.note": { $exists: true } },
+        { $unset: { "locations.$[].note": "" } },
+      );
+      await companies.updateMany(
+        { category: { $exists: true } },
+        {
+          $unset: {
+            category: "",
+          },
+        },
+      );
+      await companies.updateMany(
+        { "locations.category": { $exists: true } },
+        {
+          $unset: {
+            "locations.$[].category": "",
+          },
+        },
+      );
     })();
   }
 
@@ -208,7 +226,6 @@ export function mapToCompanyMapItem(
     name: company.name,
     slug: company.slug,
     isPremium: company.isPremium === true,
-    category: normalizeCompanyCategory(company.category),
     locationCity: locationCity || undefined,
     communicationLanguages:
       company.communicationLanguages ??
@@ -233,7 +250,6 @@ export function buildCompaniesFilter(input: {
   bbox?: [number, number, number, number];
   q?: string;
   tags?: string[];
-  categories?: CompanyCategory[];
   operatingAreas?: CompanyOperatingArea[];
   communicationLanguages?: CompanyCommunicationLanguage[];
   specializations?: CompanySpecialization[];
@@ -299,10 +315,6 @@ export function buildCompaniesFilter(input: {
 
   if (input.tags && input.tags.length > 0) {
     filter.tags = { $all: input.tags };
-  }
-
-  if (input.categories && input.categories.length > 0) {
-    filter.category = { $in: input.categories };
   }
 
   if (input.communicationLanguages && input.communicationLanguages.length > 0) {

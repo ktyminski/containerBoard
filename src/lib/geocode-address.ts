@@ -1,5 +1,6 @@
 export type NominatimAddress = {
   house_number?: string;
+  postcode?: string;
   road?: string;
   pedestrian?: string;
   footway?: string;
@@ -24,6 +25,7 @@ export type NominatimAddress = {
 export type GeocodeAddressParts = {
   street?: string;
   houseNumber?: string;
+  postalCode?: string;
   city?: string;
   country?: string;
 };
@@ -53,11 +55,16 @@ export function normalizeGeocodeAddressParts(
   const normalized: GeocodeAddressParts = {
     street: normalizeAddressPart(parts.street),
     houseNumber: normalizeAddressPart(parts.houseNumber),
+    postalCode: normalizeAddressPart(parts.postalCode),
     city: normalizeAddressPart(parts.city),
     country: normalizeAddressPart(parts.country),
   };
 
-  return normalized.street || normalized.houseNumber || normalized.city || normalized.country
+  return normalized.street ||
+    normalized.houseNumber ||
+    normalized.postalCode ||
+    normalized.city ||
+    normalized.country
     ? normalized
     : undefined;
 }
@@ -75,6 +82,7 @@ export function buildGeocodeAddressParts(
       address?.residential,
     ]),
     houseNumber: address?.house_number,
+    postalCode: address?.postcode,
     city: firstNonEmpty([
       address?.city,
       address?.town,

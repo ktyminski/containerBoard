@@ -70,6 +70,7 @@ export function BranchCard({
 }: BranchCardProps) {
   const [isLocating, setIsLocating] = useState(false);
   const [locationStatus, setLocationStatus] = useState<string | null>(null);
+  const branchName = branch?.label?.trim();
 
   const locateByAddress = async () => {
     const query = getValues(`branches.${index}.addressText`).trim();
@@ -125,9 +126,7 @@ export function BranchCard({
     <div className="grid gap-3 rounded-lg border border-neutral-300 bg-neutral-50 p-3">
       <div className="flex items-center justify-between">
         <p className="text-sm font-medium text-neutral-800">
-          {index === 0
-            ? messages.mainBranchTitle
-            : `${messages.branchesTitle} #${index + 1}`}
+          {branchName || `${messages.branchesTitle} #${index + 1}`}
         </p>
         {branchesCount > 1 ? (
           <button
@@ -151,16 +150,6 @@ export function BranchCard({
           })}
         />
         {branchLabelError ? <p className="text-xs text-red-600">{branchLabelError}</p> : null}
-      </label>
-
-      <label className="mx-auto grid w-full gap-1 text-sm md:w-[70%]">
-        <span className="text-neutral-700">{messages.branchNote}</span>
-        <input
-          className="rounded-md border border-neutral-300 bg-white px-3 py-2 text-neutral-800 placeholder:text-neutral-400"
-          {...register(`branches.${index}.note`, {
-            maxLength: { value: 200, message: messages.validationError },
-          })}
-        />
       </label>
 
       <label className="mx-auto grid w-full gap-1 text-sm md:w-[70%]">
@@ -255,10 +244,6 @@ export function BranchCard({
                 shouldValidate: false,
               });
               setValue(`branches.${index}.email`, "", {
-                shouldDirty: true,
-                shouldValidate: false,
-              });
-              setValue(`branches.${index}.category`, "", {
                 shouldDirty: true,
                 shouldValidate: false,
               });

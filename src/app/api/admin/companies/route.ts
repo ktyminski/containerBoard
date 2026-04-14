@@ -92,13 +92,12 @@ function escapeRegexPattern(value: string): string {
 }
 
 function collectCompanyBlobUrls(
-  company: Pick<CompanyDocument, "logo" | "logoThumb" | "background" | "photos" | "locations">,
+  company: Pick<CompanyDocument, "logo" | "logoThumb" | "background" | "locations">,
 ): string[] {
   const urls = [
     company.logo?.blobUrl,
     company.logoThumb?.blobUrl,
     company.background?.blobUrl,
-    ...(company.photos ?? []).map((photo) => photo?.blobUrl),
     ...(company.locations ?? []).flatMap((location) =>
       (location.photos ?? []).map((photo) => photo?.blobUrl),
     ),
@@ -375,7 +374,6 @@ export async function DELETE(request: NextRequest) {
           logo: 1,
           logoThumb: 1,
           background: 1,
-          photos: 1,
           locations: 1,
         },
       },

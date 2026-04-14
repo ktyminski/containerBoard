@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Link from "next/link";
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { ContainerListingForm } from "@/components/container-listing-form";
@@ -10,19 +11,8 @@ export const metadata: Metadata = {
   description: "Dodaj nowe ogloszenie kontenera w mniej niz minute.",
 };
 
-type NewContainerPageProps = {
-  searchParams: Promise<Record<string, string | string[] | undefined>>;
-};
-
-function resolveKind(value: string | string[] | undefined): "available" | "wanted" | undefined {
-  const raw = typeof value === "string" ? value : value?.[0];
-  return raw === "available" || raw === "wanted" ? raw : undefined;
-}
-
-export default async function NewContainerPage({ searchParams }: NewContainerPageProps) {
-  const params = await searchParams;
-  const kind = resolveKind(params.kind);
-  const nextPath = kind ? `/containers/new?kind=${kind}` : "/containers/new";
+export default async function NewContainerPage() {
+  const nextPath = "/containers/new";
 
   const cookieStore = await cookies();
   const token = cookieStore.get(SESSION_COOKIE_NAME)?.value;
@@ -37,9 +27,17 @@ export default async function NewContainerPage({ searchParams }: NewContainerPag
 
   return (
     <main className="mx-auto w-full max-w-5xl px-4 py-6 sm:px-6">
-      <header className="mb-4">
-        <h1 className="text-2xl font-semibold text-neutral-100">Dodaj kontener</h1>
-        <p className="mt-1 text-sm text-neutral-300">Prosty formularz publikacji kontenera (wygasa po 14 dniach).</p>
+      <header className="mb-4 flex flex-wrap items-center justify-between gap-2">
+        <div>
+          <h1 className="text-2xl font-semibold text-neutral-100">Dodaj kontener</h1>
+          <p className="mt-1 text-sm text-neutral-300">Prosty formularz publikacji kontenera (wygasa po 14 dniach).</p>
+        </div>
+        <Link
+          href="/list"
+          className="inline-flex min-h-10 items-center rounded-md border border-[#2f639a] bg-[#082650]/80 px-4 text-sm font-medium text-[#e2efff] transition hover:border-[#4e86c3] hover:bg-[#0c3466] hover:text-white"
+        >
+          Wroc
+        </Link>
       </header>
 
       <ContainerListingForm
@@ -50,7 +48,6 @@ export default async function NewContainerPage({ searchParams }: NewContainerPag
         successMessage="Kontener opublikowany"
         backHref="/list"
         backLabel="Powrot do listy kontenerow"
-        initialValues={kind ? { type: kind } : undefined}
       />
     </main>
   );

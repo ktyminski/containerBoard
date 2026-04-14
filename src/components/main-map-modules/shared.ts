@@ -31,7 +31,8 @@ export function parseMainMapView(value: string | undefined): MainMapView | null 
 }
 
 export function buildMainMapPath(view: MainMapView): string {
-  return `/maps/${view}`;
+  void view;
+  return "/list";
 }
 
 export function resolveMainMapViewFromLocation(input: {

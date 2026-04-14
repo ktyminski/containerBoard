@@ -2,14 +2,17 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useCallback, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Controller, useForm } from "react-hook-form";
 import { MapLocationPicker } from "@/components/map-location-picker";
+import { ImageDropzone } from "@/components/new-company-form/image-dropzone";
+import { ImageGrid } from "@/components/new-company-form/image-grid";
 import { SimpleRichTextEditor } from "@/components/simple-rich-text-editor";
 import { useToast } from "@/components/toast-provider";
 import type { GeocodeAddressParts } from "@/lib/geocode-address";
 import { getRichTextLength, hasRichTextContent } from "@/lib/listing-rich-text";
 import {
+  CONTAINER_SIZE,
   CONTAINER_CONDITIONS,
   CONTAINER_FEATURES,
   CONTAINER_HEIGHTS,
@@ -24,8 +27,6 @@ import {
   PRICE_CURRENCY_LABEL,
   PRICE_TAX_MODES,
   PRICE_TAX_MODE_LABEL,
-  PRICE_TYPES,
-  PRICE_TYPE_LABEL,
   type ContainerCondition,
   type ContainerFeature,
   type ContainerHeight,
@@ -33,7 +34,6 @@ import {
   type ContainerType,
   type Currency,
   type ListingType,
-  type PriceType,
   type TaxMode,
 } from "@/lib/container-listing-types";
 
@@ -45,6 +45,7 @@ type ContainerListingFormValues = {
   containerType: ContainerType;
   containerFeatures: ContainerFeature[];
   containerCondition: ContainerCondition;
+  containerColorsRal: string;
   hasCscPlate: boolean;
   hasCscCertification: boolean;
   cscValidToMonth: string;
@@ -56,6 +57,7 @@ type ContainerListingFormValues = {
   locationAddressLabel: string;
   locationStreet: string;
   locationHouseNumber: string;
+  locationPostalCode: string;
   locationAddressCity: string;
   locationAddressCountry: string;
   availableNow: boolean;
@@ -67,7 +69,6 @@ type ContainerListingFormValues = {
   logisticsUnloadingAvailable: boolean;
   logisticsUnloadingIncluded: boolean;
   logisticsComment: string;
-  priceType: PriceType;
   priceValueAmount: string;
   priceCurrency: Currency;
   priceTaxMode: TaxMode;
@@ -80,6 +81,14 @@ type ContainerListingFormValues = {
   contactPhone: string;
 };
 
+export type ListingIntent = ListingType;
+
+type ImageItem = {
+  id: string;
+  file: File;
+  previewUrl: string;
+};
+
 type ContainerListingFormProps = {
   mode?: "create" | "edit";
   submitEndpoint: string;
@@ -89,6 +98,8 @@ type ContainerListingFormProps = {
   backHref: string;
   backLabel: string;
   initialValues?: Partial<ContainerListingFormValues>;
+  initialPhotoUrls?: string[];
+  initialListingIntent?: ListingIntent;
 };
 
 type GeocodeSearchResponse = {
@@ -112,9 +123,105 @@ type ReverseGeocodeResponse = {
 };
 
 const LISTING_TYPE_LABEL: Record<ListingType, string> = {
-  available: "Dostepny",
-  wanted: "Poszukiwany",
+  sell: "Sprzedaz",
+  rent: "Wynajem",
+  buy: "Chce zakupic",
 };
+const LISTING_INTENT_OPTIONS: Array<{
+  value: ListingIntent;
+  label: string;
+  description: string;
+  cta: string;
+}> = [
+  {
+    value: "sell",
+    label: "Sprzedaz",
+    description: "Publikujesz oferte sprzedazy kontenera.",
+    cta: "Sprzedaje",
+  },
+  {
+    value: "rent",
+    label: "Wynajem",
+    description: "Publikujesz oferte wynajmu kontenera.",
+    cta: "Wynajmuje",
+  },
+  {
+    value: "buy",
+    label: "Chce zakupic",
+    description: "Publikujesz zapotrzebowanie na kontener.",
+    cta: "Szukam kontenera",
+  },
+];
+const MAX_CONTAINER_RAL_COLORS = 8;
+const MAX_CONTAINER_PHOTOS = 5;
+const MAX_CONTAINER_PHOTO_BYTES = 6 * 1024 * 1024;
+const MAX_CONTAINER_PHOTO_MB = 6;
+const RAL_COLOR_INPUT_PATTERN = /^(?:RAL)?\s*[0-9]{4}$/i;
+const CONTAINER_FEATURE_OPTIONS: Array<{
+  value: ContainerFeature;
+  label: string;
+}> = CONTAINER_FEATURES.map((feature) => ({
+  value: feature,
+  label: CONTAINER_FEATURE_LABEL[feature],
+}));
+
+function mapListingIntentToType(intent: ListingIntent): ListingType {
+  return intent;
+}
+
+function getListingIntentFromType(type: ListingType): ListingIntent {
+  if (type === "sell" || type === "rent" || type === "buy") {
+    return type;
+  }
+  return "sell";
+}
+
+function createImageItems(files: File[]): ImageItem[] {
+  return files.map((file) => ({
+    id: `${Date.now()}-${Math.random().toString(36).slice(2)}`,
+    file,
+    previewUrl: URL.createObjectURL(file),
+  }));
+}
+
+function revokeImageItems(items: ImageItem[]): void {
+  for (const item of items) {
+    URL.revokeObjectURL(item.previewUrl);
+  }
+}
+
+function removeImageItem(items: ImageItem[], id: string): ImageItem[] {
+  const target = items.find((item) => item.id === id);
+  if (target) {
+    URL.revokeObjectURL(target.previewUrl);
+  }
+  return items.filter((item) => item.id !== id);
+}
+
+function splitContainerRalColorTokens(input: string): string[] {
+  return input
+    .split(/[\n,;|]+/)
+    .map((entry) => entry.trim())
+    .filter((entry) => entry.length > 0);
+}
+
+function validateContainerRalColorsInput(input: string): true | string {
+  const tokens = splitContainerRalColorTokens(input);
+  if (tokens.length === 0) {
+    return true;
+  }
+  const uniqueTokens = new Set(
+    tokens.map((token) => token.toUpperCase().replace(/\s+/g, "")),
+  );
+  if (uniqueTokens.size > MAX_CONTAINER_RAL_COLORS) {
+    return `Maksymalnie ${MAX_CONTAINER_RAL_COLORS} kolorow RAL`;
+  }
+  const hasInvalidCode = tokens.some((token) => !RAL_COLOR_INPUT_PATTERN.test(token));
+  if (hasInvalidCode) {
+    return "Podaj kody RAL w formacie 5010 lub RAL 5010";
+  }
+  return true;
+}
 
 function toCoordinateText(value: number | undefined): string {
   return Number.isFinite(value) ? Number(value).toFixed(6) : "";
@@ -162,18 +269,215 @@ function normalizeOptionalInteger(value: string): number | undefined {
   return parsed;
 }
 
+function normalizeContainerFeatures(values: ContainerFeature[]): ContainerFeature[] {
+  const selected = new Set(
+    values.filter((feature) =>
+      CONTAINER_FEATURES.includes(feature as ContainerFeature),
+    ),
+  );
+  return CONTAINER_FEATURES.filter((feature) => selected.has(feature));
+}
+
+type ContainerFeaturesMultiSelectProps = {
+  values: ContainerFeature[];
+  onChange: (next: ContainerFeature[]) => void;
+  onBlur: () => void;
+};
+
+function ContainerFeaturesMultiSelect({
+  values,
+  onChange,
+  onBlur,
+}: ContainerFeaturesMultiSelectProps) {
+  const detailsRef = useRef<HTMLDetailsElement | null>(null);
+  const selectedCount = values.length;
+  const selectedSummaryLabel =
+    selectedCount === 0
+      ? "Dowolne"
+      : selectedCount === 1
+        ? (CONTAINER_FEATURE_LABEL[values[0]] ?? "1 wybrane")
+        : `${selectedCount} wybrane`;
+
+  useEffect(() => {
+    const handlePointerDown = (event: PointerEvent) => {
+      const detailsElement = detailsRef.current;
+      if (!detailsElement || !detailsElement.open) {
+        return;
+      }
+
+      const target = event.target;
+      if (!(target instanceof Node)) {
+        return;
+      }
+
+      if (detailsElement.contains(target)) {
+        return;
+      }
+
+      detailsElement.removeAttribute("open");
+      onBlur();
+    };
+
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key !== "Escape") {
+        return;
+      }
+      const detailsElement = detailsRef.current;
+      if (!detailsElement?.open) {
+        return;
+      }
+      detailsElement.removeAttribute("open");
+      onBlur();
+    };
+
+    document.addEventListener("pointerdown", handlePointerDown);
+    document.addEventListener("keydown", handleKeyDown);
+
+    return () => {
+      document.removeEventListener("pointerdown", handlePointerDown);
+      document.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [onBlur]);
+
+  const toggleFeature = (feature: ContainerFeature) => {
+    const isSelected = values.includes(feature);
+    const nextValues = isSelected
+      ? values.filter((value) => value !== feature)
+      : [...values, feature];
+    onChange(normalizeContainerFeatures(nextValues));
+  };
+
+  return (
+    <div className="grid gap-2">
+      <details
+        ref={detailsRef}
+        className="relative"
+        onToggle={(event) => {
+          if (!event.currentTarget.open) {
+            onBlur();
+          }
+        }}
+      >
+        <summary
+          className="multi-checkbox-summary flex h-full min-h-12 w-full cursor-pointer list-none items-center justify-between gap-2 rounded-md border border-neutral-700 bg-neutral-950 px-3 py-2 text-sm text-neutral-100 [&::-webkit-details-marker]:hidden"
+        >
+          <span className="flex min-w-0 flex-1 flex-col">
+            <span
+              className={`truncate text-xs ${
+                selectedCount > 0 ? "font-semibold text-neutral-200" : "text-neutral-400"
+              }`}
+              title="Cechy dodatkowe"
+            >
+              Cechy dodatkowe
+            </span>
+            <span
+              className={`truncate text-left ${
+                selectedCount > 0 ? "text-sm font-medium text-neutral-100" : "text-sm text-neutral-500"
+              }`}
+              title={selectedSummaryLabel}
+            >
+              {selectedSummaryLabel}
+            </span>
+          </span>
+          <svg
+            viewBox="0 0 20 20"
+            aria-hidden="true"
+            className="h-4 w-4 shrink-0 text-neutral-400"
+            fill="none"
+          >
+            <path
+              d="M5 7.5L10 12.5L15 7.5"
+              stroke="currentColor"
+              strokeWidth="1.75"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            />
+          </svg>
+        </summary>
+        <div className="absolute left-0 top-full z-40 mt-1 w-full rounded-md border border-neutral-700 bg-neutral-900 p-2 shadow-lg">
+          <div className="max-h-64 space-y-1 overflow-y-auto pr-1">
+            {CONTAINER_FEATURE_OPTIONS.map((option) => (
+              <label
+                key={option.value}
+                className="flex cursor-pointer items-center gap-2 rounded-md px-2 py-1.5 text-sm text-neutral-200 hover:bg-neutral-800"
+              >
+                <input
+                  type="checkbox"
+                  checked={values.includes(option.value)}
+                  onChange={() => {
+                    toggleFeature(option.value);
+                  }}
+                  className="h-4 w-4 rounded border-neutral-500 bg-neutral-900 text-[#2f639a] focus:ring-[#4e86c3]"
+                />
+                <span>{option.label}</span>
+              </label>
+            ))}
+          </div>
+          <button
+            type="button"
+            onClick={() => {
+              onChange([]);
+            }}
+            className="mt-2 w-full rounded-md border border-neutral-600 bg-neutral-900 px-3 py-1.5 text-xs font-medium text-neutral-200 hover:border-neutral-500 hover:bg-neutral-800"
+          >
+            Wyczysc
+          </button>
+        </div>
+      </details>
+
+      {values.length > 0 ? (
+        <div className="flex flex-wrap gap-2">
+          {values.map((feature) => (
+            <span
+              key={feature}
+              className="inline-flex items-center gap-1 rounded-md border border-neutral-700 bg-neutral-900 px-2.5 py-1 text-xs font-medium text-neutral-200"
+            >
+              <span>{CONTAINER_FEATURE_LABEL[feature]}</span>
+              <button
+                type="button"
+                onClick={() => {
+                  toggleFeature(feature);
+                }}
+                className="rounded px-1 text-neutral-200 hover:bg-neutral-800"
+                aria-label={`Usun ${CONTAINER_FEATURE_LABEL[feature]}`}
+              >
+                x
+              </button>
+            </span>
+          ))}
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
+function isStandardContainerSize(value: number): boolean {
+  return CONTAINER_SIZES.includes(value as (typeof CONTAINER_SIZES)[number]);
+}
+
 function getDefaultValues(
   initialValues?: Partial<ContainerListingFormValues>,
 ): ContainerListingFormValues {
   const today = new Date().toISOString().slice(0, 10);
+  const initialContainerSize =
+    typeof initialValues?.containerSize === "number" &&
+    Number.isFinite(initialValues.containerSize) &&
+    initialValues.containerSize >= 0
+      ? Math.trunc(initialValues.containerSize)
+      : 40;
+  const hasCustomContainerSize = !isStandardContainerSize(initialContainerSize);
+  const defaultContainerSize: ContainerSize = hasCustomContainerSize
+    ? CONTAINER_SIZE.CUSTOM
+    : (initialContainerSize as (typeof CONTAINER_SIZES)[number]);
   return {
-    type: initialValues?.type ?? "available",
+    type: initialValues?.type ?? "sell",
     title: initialValues?.title ?? "",
-    containerSize: initialValues?.containerSize ?? 40,
+    containerSize: defaultContainerSize,
     containerHeight: initialValues?.containerHeight ?? "standard",
     containerType: initialValues?.containerType ?? "dry",
     containerFeatures: initialValues?.containerFeatures ?? [],
     containerCondition: initialValues?.containerCondition ?? "cargo_worthy",
+    containerColorsRal: initialValues?.containerColorsRal ?? "",
     hasCscPlate: initialValues?.hasCscPlate ?? false,
     hasCscCertification: initialValues?.hasCscCertification ?? false,
     cscValidToMonth: initialValues?.cscValidToMonth ?? "",
@@ -185,6 +489,7 @@ function getDefaultValues(
     locationAddressLabel: initialValues?.locationAddressLabel ?? "",
     locationStreet: initialValues?.locationStreet ?? "",
     locationHouseNumber: initialValues?.locationHouseNumber ?? "",
+    locationPostalCode: initialValues?.locationPostalCode ?? "",
     locationAddressCity: initialValues?.locationAddressCity ?? "",
     locationAddressCountry: initialValues?.locationAddressCountry ?? "",
     availableNow: initialValues?.availableNow ?? false,
@@ -196,7 +501,6 @@ function getDefaultValues(
     logisticsUnloadingAvailable: initialValues?.logisticsUnloadingAvailable ?? false,
     logisticsUnloadingIncluded: initialValues?.logisticsUnloadingIncluded ?? false,
     logisticsComment: initialValues?.logisticsComment ?? "",
-    priceType: initialValues?.priceType ?? "fixed",
     priceValueAmount: initialValues?.priceValueAmount ?? "",
     priceCurrency: initialValues?.priceCurrency ?? "PLN",
     priceTaxMode: initialValues?.priceTaxMode ?? "net",
@@ -219,13 +523,21 @@ export function ContainerListingForm({
   backHref,
   backLabel,
   initialValues,
+  initialPhotoUrls,
+  initialListingIntent,
 }: ContainerListingFormProps) {
   const router = useRouter();
   const toast = useToast();
+  const isCreateMode = mode === "create";
   const reverseLookupRequestRef = useRef(0);
+  const stableInitialPhotoUrls = useMemo(
+    () => initialPhotoUrls ?? [],
+    [initialPhotoUrls],
+  );
   const [locationSearch, setLocationSearch] = useState(
     [
       initialValues?.locationAddressLabel,
+      initialValues?.locationPostalCode,
       initialValues?.locationAddressCity,
       initialValues?.locationAddressCountry,
     ]
@@ -235,6 +547,20 @@ export function ContainerListingForm({
   );
   const [isSearchingLocation, setIsSearchingLocation] = useState(false);
   const [isReverseLookupPending, setIsReverseLookupPending] = useState(false);
+  const [photoItems, setPhotoItems] = useState<ImageItem[]>([]);
+  const [listingIntent, setListingIntent] = useState<ListingIntent | null>(() => {
+    if (initialListingIntent) {
+      return initialListingIntent;
+    }
+    if (initialValues?.type) {
+      return getListingIntentFromType(initialValues.type);
+    }
+    return isCreateMode ? null : "sell";
+  });
+  const [keptInitialPhotoIndexes, setKeptInitialPhotoIndexes] = useState<number[]>(
+    () => stableInitialPhotoUrls.map((_, index) => index),
+  );
+  const photoItemsRef = useRef<ImageItem[]>([]);
 
   const {
     control,
@@ -251,14 +577,50 @@ export function ContainerListingForm({
 
   const latValue = watch("locationLat");
   const lngValue = watch("locationLng");
-  const priceTypeValue = watch("priceType");
   const availableNowValue = watch("availableNow");
   const logisticsTransportAvailableValue = watch("logisticsTransportAvailable");
   const logisticsTransportIncludedValue = watch("logisticsTransportIncluded");
   const logisticsUnloadingAvailableValue = watch("logisticsUnloadingAvailable");
+  const resolvedTitlePlaceholder = useMemo(() => {
+    if (listingIntent === "buy") {
+      return "np. Szukam 40HC do zakupu - odbior Hamburg";
+    }
+    if (listingIntent === "rent") {
+      return "np. Wynajem 40HC reefer - szybki odbior w Hamburgu";
+    }
+    return "np. 40HC reefer - szybki odbior w Hamburgu";
+  }, [listingIntent]);
   const latNumber = parseCoordinate(latValue);
   const lngNumber = parseCoordinate(lngValue);
   const isLocationBusy = isSearchingLocation || isReverseLookupPending;
+  const visibleInitialPhotoCount = keptInitialPhotoIndexes.length;
+  const canProceedFromIntentStep = !isCreateMode || listingIntent !== null;
+
+  useEffect(() => {
+    setKeptInitialPhotoIndexes(stableInitialPhotoUrls.map((_, index) => index));
+  }, [stableInitialPhotoUrls]);
+
+  useEffect(() => {
+    photoItemsRef.current = photoItems;
+  }, [photoItems]);
+
+  useEffect(() => {
+    return () => {
+      revokeImageItems(photoItemsRef.current);
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!isCreateMode || !listingIntent) {
+      return;
+    }
+    setValue("type", mapListingIntentToType(listingIntent), {
+      shouldDirty: false,
+      shouldTouch: false,
+      shouldValidate: true,
+    });
+    clearErrors("type");
+  }, [clearErrors, isCreateMode, listingIntent, setValue]);
 
   const applyCoordinates = useCallback(
     (nextLat: number, nextLng: number) => {
@@ -283,12 +645,17 @@ export function ContainerListingForm({
       const country = parts?.country?.trim();
       const street = parts?.street?.trim() ?? "";
       const houseNumber = parts?.houseNumber?.trim() ?? "";
+      const postalCode = parts?.postalCode?.trim() ?? "";
 
       setValue("locationStreet", street, {
         shouldDirty: true,
         shouldTouch: true,
       });
       setValue("locationHouseNumber", houseNumber, {
+        shouldDirty: true,
+        shouldTouch: true,
+      });
+      setValue("locationPostalCode", postalCode, {
         shouldDirty: true,
         shouldTouch: true,
       });
@@ -396,6 +763,15 @@ export function ContainerListingForm({
   }, [applyAddressParts, applyCoordinates, locationSearch, setValue, toast]);
 
   const onSubmit = async (values: ContainerListingFormValues) => {
+    if (isCreateMode && !listingIntent) {
+      setError("type", {
+        type: "validate",
+        message: "Wybierz typ ogloszenia",
+      });
+      toast.error("Najpierw wybierz typ ogloszenia");
+      return;
+    }
+
     const locationLat = parseCoordinate(values.locationLat);
     const locationLng = parseCoordinate(values.locationLng);
 
@@ -415,23 +791,19 @@ export function ContainerListingForm({
     const locationAddressParts = {
       street: normalizeOptionalText(values.locationStreet),
       houseNumber: normalizeOptionalText(values.locationHouseNumber),
+      postalCode: normalizeOptionalText(values.locationPostalCode),
       city: normalizeOptionalText(values.locationAddressCity),
       country: normalizeOptionalText(values.locationAddressCountry),
     };
     const hasAddressParts = Object.values(locationAddressParts).some((value) =>
       Boolean(value),
     );
-    const normalizedPriceAmount =
-      values.priceType === "request"
-        ? undefined
-        : normalizeOptionalInteger(values.priceValueAmount);
-    const normalizedVatRate =
-      values.priceType === "request"
-        ? undefined
-        : normalizeOptionalNumber(values.priceVatRate);
+    const normalizedPriceAmount = normalizeOptionalInteger(values.priceValueAmount);
+    const normalizedVatRate = normalizeOptionalNumber(values.priceVatRate);
     const normalizedProductionYear = normalizeOptionalNumber(
       values.productionYear,
     );
+    const resolvedContainerSize = values.containerSize;
     const normalizedCscValidToMonth = normalizeOptionalInteger(values.cscValidToMonth);
     const normalizedCscValidToYear = normalizeOptionalInteger(values.cscValidToYear);
     const normalizedLogisticsTransportFreeDistanceKm = normalizeOptionalInteger(
@@ -485,40 +857,50 @@ export function ContainerListingForm({
       return;
     }
 
-    const pricing =
-      values.priceType === "request"
-        ? {
-            type: values.priceType,
-            original: {
-              amount: null,
-              currency: null,
-              taxMode: null,
-              vatRate: null,
-              negotiable: values.priceNegotiable,
-            },
-          }
-        : {
-            type: values.priceType,
-            original: {
-              amount: normalizedPriceAmount ?? null,
-              currency: values.priceCurrency,
-              taxMode: values.priceTaxMode,
-              vatRate: normalizedVatRate ?? null,
-              negotiable: values.priceNegotiable,
-            },
-          };
+    if (
+      typeof resolvedContainerSize !== "number" ||
+      !Number.isInteger(resolvedContainerSize) ||
+      !(
+        resolvedContainerSize === CONTAINER_SIZE.CUSTOM ||
+        isStandardContainerSize(resolvedContainerSize)
+      )
+    ) {
+      setError("containerSize", {
+        type: "validate",
+        message: "Wybierz rozmiar kontenera",
+      });
+      toast.error("Wybierz poprawny rozmiar kontenera");
+      return;
+    }
+    if (visibleInitialPhotoCount + photoItems.length > MAX_CONTAINER_PHOTOS) {
+      toast.error(`Maksymalnie ${MAX_CONTAINER_PHOTOS} dodatkowych zdjec`);
+      return;
+    }
+
+    const pricing = {
+      original: {
+        amount: normalizedPriceAmount ?? null,
+        currency: normalizedPriceAmount === undefined ? null : values.priceCurrency,
+        taxMode: normalizedPriceAmount === undefined ? null : values.priceTaxMode,
+        vatRate: normalizedPriceAmount === undefined ? null : (normalizedVatRate ?? null),
+        negotiable: values.priceNegotiable,
+      },
+    };
 
     const payload = {
       ...(mode === "edit" ? { action: "update" } : {}),
       type: values.type,
       title: normalizeOptionalText(values.title),
       container: {
-        size: values.containerSize,
+        size: resolvedContainerSize,
         height: values.containerHeight,
         type: values.containerType,
         features: Array.from(new Set(values.containerFeatures)),
         condition: values.containerCondition,
       },
+      containerColorsRal: values.containerColorsRal.trim()
+        ? values.containerColorsRal.trim()
+        : undefined,
       quantity: Number(values.quantity),
       locationLat,
       locationLng,
@@ -567,12 +949,18 @@ export function ContainerListingForm({
     };
 
     try {
+      const formData = new FormData();
+      formData.set("payload", JSON.stringify(payload));
+      if (mode === "edit") {
+        formData.set("keepPhotoIndexes", JSON.stringify(keptInitialPhotoIndexes));
+      }
+      for (const item of photoItems) {
+        formData.append("photos", item.file);
+      }
+
       const response = await fetch(submitEndpoint, {
         method: submitMethod,
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(payload),
+        body: formData,
       });
 
       const data = (await response.json().catch(() => null)) as {
@@ -590,6 +978,8 @@ export function ContainerListingForm({
       }
 
       toast.success(successMessage);
+      revokeImageItems(photoItems);
+      setPhotoItems([]);
       router.push(backHref);
       router.refresh();
     } catch (error) {
@@ -604,44 +994,72 @@ export function ContainerListingForm({
       onSubmit={handleSubmit(onSubmit)}
       className="grid gap-4 rounded-xl border border-neutral-800 bg-neutral-900/60 p-5"
     >
-      <div className="grid gap-1 text-sm">
-        <span className="text-neutral-300">Typ ogloszenia *</span>
-        <select
-          {...register("type", { required: "Wybierz typ ogloszenia" })}
-          className="rounded-md border border-neutral-700 bg-neutral-950 px-3 py-2 text-neutral-100"
-        >
-          {LISTING_TYPES.map((type) => (
-            <option key={type} value={type}>
-              {LISTING_TYPE_LABEL[type]}
-            </option>
-          ))}
-        </select>
-        {errors.type?.message ? (
-          <span className="text-xs text-red-300">{errors.type.message}</span>
-        ) : null}
-      </div>
+      {isCreateMode ? (
+        <section className="grid gap-3 rounded-lg border border-neutral-700/70 bg-neutral-950/40 p-3">
+          <div>
+            <h2 className="text-base font-semibold text-neutral-100">Co chcesz dodac?</h2>
+            <p className="mt-1 text-xs text-neutral-400">
+              Wybierz typ ogloszenia, zeby latwiej przejsc przez formularz.
+            </p>
+          </div>
+          <div className="grid gap-2 sm:grid-cols-3">
+            {LISTING_INTENT_OPTIONS.map((option) => {
+              const isActive = listingIntent === option.value;
+              return (
+                <button
+                  key={option.value}
+                  type="button"
+                  onClick={() => {
+                    setListingIntent(option.value);
+                  }}
+                  className={`rounded-md border px-3 py-3 text-left transition ${
+                    isActive
+                      ? "border-[#4e86c3] bg-[#082650]/70 shadow-[0_0_0_1px_rgba(47,99,154,0.35)]"
+                      : "border-neutral-700 bg-neutral-900/70 hover:border-neutral-500 hover:bg-neutral-900"
+                  }`}
+                >
+                  <p className={`text-sm font-semibold ${isActive ? "text-[#e2efff]" : "text-neutral-100"}`}>
+                    {option.label}
+                  </p>
+                  <p className={`mt-1 text-xs ${isActive ? "text-[#dbeafe]" : "text-neutral-400"}`}>
+                    {option.description}
+                  </p>
+                  <p className={`mt-2 text-xs font-medium ${isActive ? "text-[#e2efff]" : "text-neutral-300"}`}>
+                    {option.cta}
+                  </p>
+                </button>
+              );
+            })}
+          </div>
+          <input
+            type="hidden"
+            {...register("type", { required: "Wybierz typ ogloszenia" })}
+          />
+          {errors.type?.message ? (
+            <span className="text-xs text-red-300">{errors.type.message}</span>
+          ) : null}
+        </section>
+      ) : (
+        <div className="grid gap-1 text-sm">
+          <span className="text-neutral-300">Typ ogloszenia *</span>
+          <select
+            {...register("type", { required: "Wybierz typ ogloszenia" })}
+            className="rounded-md border border-neutral-700 bg-neutral-950 px-3 py-2 text-neutral-100"
+          >
+            {LISTING_TYPES.map((type) => (
+              <option key={type} value={type}>
+                {LISTING_TYPE_LABEL[type]}
+              </option>
+            ))}
+          </select>
+          {errors.type?.message ? (
+            <span className="text-xs text-red-300">{errors.type.message}</span>
+          ) : null}
+        </div>
+      )}
 
-      <label className="grid gap-1 text-sm">
-        <span className="text-neutral-300">Tytul ogloszenia *</span>
-        <input
-          {...register("title", {
-            required: "Podaj tytul ogloszenia",
-            validate: (value) =>
-              value.trim().length > 0 || "Podaj tytul ogloszenia",
-            maxLength: {
-              value: 80,
-              message: "Tytul moze miec maksymalnie 80 znakow",
-            },
-          })}
-          className="rounded-md border border-neutral-700 bg-neutral-950 px-3 py-2 text-neutral-100"
-          placeholder="np. 40HC reefer - szybki odbior w Hamburgu"
-        />
-        <p className="text-xs text-neutral-400">{watch("title").length}/80</p>
-        {errors.title?.message ? (
-          <span className="text-xs text-red-300">{errors.title.message}</span>
-        ) : null}
-      </label>
-
+      {canProceedFromIntentStep ? (
+        <>
       <div className="grid gap-4 rounded-lg border border-neutral-700/70 bg-neutral-950/40 p-3">
         <p className="text-sm font-medium text-neutral-200">
           Parametry kontenera *
@@ -654,6 +1072,10 @@ export function ContainerListingForm({
               {...register("containerSize", {
                 required: "Wybierz rozmiar",
                 valueAsNumber: true,
+                validate: (value) =>
+                  value === CONTAINER_SIZE.CUSTOM ||
+                  isStandardContainerSize(value) ||
+                  "Wybierz rozmiar kontenera",
               })}
               className="rounded-md border border-neutral-700 bg-neutral-950 px-3 py-2 text-neutral-100"
             >
@@ -662,7 +1084,13 @@ export function ContainerListingForm({
                   {size} ft
                 </option>
               ))}
+              <option value={CONTAINER_SIZE.CUSTOM}>Inne / custom</option>
             </select>
+            {errors.containerSize?.message ? (
+              <span className="text-xs text-red-300">
+                {errors.containerSize.message}
+              </span>
+            ) : null}
           </label>
 
           <label className="grid gap-1 text-sm">
@@ -712,99 +1140,229 @@ export function ContainerListingForm({
           </label>
         </div>
 
-        <div className="grid gap-2 text-sm">
+        <div className="grid gap-1 text-sm">
           <span className="text-neutral-300">Cechy dodatkowe</span>
-          <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
-            {CONTAINER_FEATURES.map((feature) => (
-              <label
-                key={feature}
-                className="inline-flex items-center gap-2 rounded-md border border-neutral-700/70 bg-neutral-900/60 px-2.5 py-1.5 text-xs text-neutral-200"
-              >
-                <input
-                  type="checkbox"
-                  value={feature}
-                  {...register("containerFeatures")}
-                  className="h-3.5 w-3.5 rounded border-neutral-600 bg-neutral-950 text-sky-500 focus:ring-sky-500"
-                />
-                <span>{CONTAINER_FEATURE_LABEL[feature]}</span>
-              </label>
-            ))}
-          </div>
+          <Controller
+            control={control}
+            name="containerFeatures"
+            render={({ field }) => (
+              <ContainerFeaturesMultiSelect
+                values={field.value ?? []}
+                onBlur={field.onBlur}
+                onChange={(nextValues) => {
+                  field.onChange(normalizeContainerFeatures(nextValues));
+                }}
+              />
+            )}
+          />
         </div>
-      </div>
 
-      <div className="grid gap-4 sm:grid-cols-2">
         <label className="grid gap-1 text-sm">
-          <span className="text-neutral-300">Ilosc *</span>
+          <span className="text-neutral-300">Kolory RAL (opcjonalnie)</span>
           <input
-            type="number"
-            min={1}
-            {...register("quantity", {
-              required: "Podaj ilosc",
-              valueAsNumber: true,
-              min: { value: 1, message: "Ilosc musi byc wieksza od 0" },
+            {...register("containerColorsRal", {
+              validate: validateContainerRalColorsInput,
+              maxLength: {
+                value: 320,
+                message: "Lista kolorow moze miec maksymalnie 320 znakow",
+              },
             })}
             className="rounded-md border border-neutral-700 bg-neutral-950 px-3 py-2 text-neutral-100"
+            placeholder="np. RAL 5010, 9010"
           />
-          {errors.quantity?.message ? (
+          <span className="text-xs text-neutral-400">
+            Podaj jeden lub kilka kolorow RAL, oddzielajac je przecinkiem.
+          </span>
+          {errors.containerColorsRal?.message ? (
             <span className="text-xs text-red-300">
-              {errors.quantity.message}
+              {errors.containerColorsRal.message}
             </span>
           ) : null}
         </label>
+      </div>
 
-        <div className="grid gap-2 text-sm">
-          <label className="inline-flex items-center gap-2 rounded-md border border-neutral-700 bg-neutral-900/70 px-3 py-2 text-neutral-200">
-            <input
-              type="checkbox"
-              {...register("availableNow", {
-                onChange: (event) => {
-                  const isChecked = event.target.checked === true;
-                  if (isChecked) {
-                    setValue("availableFromApproximate", false, {
-                      shouldDirty: true,
-                      shouldTouch: true,
-                    });
-                    clearErrors("availableFrom");
-                  }
-                },
-              })}
-              className="h-4 w-4 rounded border-neutral-600 bg-neutral-950 text-sky-500 focus:ring-sky-500"
-            />
-            <span>Dostepny juz teraz</span>
-          </label>
+      <section className="grid gap-3 rounded-lg border border-neutral-700/70 bg-neutral-950/40 p-3">
+        <div>
+          <h2 className="text-sm font-medium text-neutral-200">Dodatkowe zdjecia</h2>
+          <p className="text-xs text-neutral-400">
+            Dodaj maksymalnie {MAX_CONTAINER_PHOTOS} zdjec (do {MAX_CONTAINER_PHOTO_MB} MB kazde).
+          </p>
+        </div>
+        <ImageDropzone
+          title={`Zdjecia kontenera (max ${MAX_CONTAINER_PHOTOS})`}
+          hintText={`JPG/PNG/WebP, maksymalnie ${MAX_CONTAINER_PHOTO_MB} MB na plik`}
+          onFilesAdded={(files) => {
+            const imageFiles = files.filter((file) => file.type.startsWith("image/"));
+            if (imageFiles.length !== files.length) {
+              toast.warning("Dodawaj tylko pliki graficzne.");
+            }
 
-          <label className="inline-flex items-center gap-2 rounded-md border border-neutral-700 bg-neutral-900/70 px-3 py-2 text-neutral-200">
-            <input
-              type="checkbox"
-              disabled={availableNowValue}
-              {...register("availableFromApproximate")}
-              className="h-4 w-4 rounded border-neutral-600 bg-neutral-950 text-sky-500 focus:ring-sky-500 disabled:cursor-not-allowed disabled:opacity-60"
-            />
-            <span>Data przyblizona (pokazuj ~)</span>
-          </label>
+            const sizeAccepted = imageFiles.filter(
+              (file) => file.size <= MAX_CONTAINER_PHOTO_BYTES,
+            );
+            if (sizeAccepted.length !== imageFiles.length) {
+              toast.warning(
+                `Kazde zdjecie moze miec maksymalnie ${MAX_CONTAINER_PHOTO_MB} MB.`,
+              );
+            }
 
+            const currentPhotoCount = visibleInitialPhotoCount + photoItems.length;
+            const remaining = Math.max(0, MAX_CONTAINER_PHOTOS - currentPhotoCount);
+            if (remaining === 0) {
+              toast.warning(`Mozesz dodac maksymalnie ${MAX_CONTAINER_PHOTOS} zdjec.`);
+              return;
+            }
+
+            let acceptedFiles = sizeAccepted;
+            if (sizeAccepted.length > remaining) {
+              acceptedFiles = sizeAccepted.slice(0, remaining);
+              toast.warning(`Mozesz dodac jeszcze ${remaining} zdjec.`);
+            }
+
+            if (acceptedFiles.length === 0) {
+              return;
+            }
+
+            const accepted = createImageItems(acceptedFiles);
+            setPhotoItems((prev) => [...prev, ...accepted]);
+          }}
+        />
+
+        {keptInitialPhotoIndexes.length > 0 ? (
+          <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+            {keptInitialPhotoIndexes.map((index) => {
+              const url = stableInitialPhotoUrls[index];
+              if (!url) {
+                return null;
+              }
+
+              return (
+                <div
+                  key={`initial-container-photo-${index + 1}`}
+                  className="group relative rounded-md border border-neutral-700 bg-neutral-900 p-1"
+                >
+                  <button
+                    type="button"
+                    className="flex h-28 w-full cursor-pointer items-center justify-center overflow-hidden rounded-sm"
+                    onClick={() => {
+                      setKeptInitialPhotoIndexes((prev) =>
+                        prev.filter((value) => value !== index),
+                      );
+                    }}
+                    title="Usun zdjecie"
+                  >
+                    <img
+                      src={url}
+                      alt="Podglad zdjecia kontenera"
+                      className="max-h-24 w-auto max-w-full object-contain transition-transform duration-300 ease-out group-hover:scale-105"
+                    />
+                  </button>
+                  <button
+                    type="button"
+                    className="absolute right-1 top-1 cursor-pointer rounded-full bg-black/70 px-2 py-0.5 text-xs text-white opacity-90"
+                    onClick={() => {
+                      setKeptInitialPhotoIndexes((prev) =>
+                        prev.filter((value) => value !== index),
+                      );
+                    }}
+                    title="Usun zdjecie"
+                    aria-label="Usun zdjecie"
+                  >
+                    x
+                  </button>
+                </div>
+              );
+            })}
+          </div>
+        ) : null}
+
+        {photoItems.length > 0 ? (
+          <ImageGrid
+            items={photoItems}
+            onRemove={(id) => {
+              setPhotoItems((prev) => removeImageItem(prev, id));
+            }}
+            removeLabel="Usun zdjecie"
+            previewAlt="Podglad zdjecia kontenera"
+          />
+        ) : null}
+      </section>
+
+      <section className="grid gap-3 rounded-lg border border-neutral-700/70 bg-neutral-950/40 p-3">
+        <p className="text-sm font-medium text-neutral-200">Ilosc i dostepnosc *</p>
+        <div className="grid gap-4 sm:grid-cols-2">
           <label className="grid gap-1 text-sm">
-            <span className="text-neutral-300">Dostepny od {availableNowValue ? "" : "*"}</span>
+            <span className="text-neutral-300">Ilosc *</span>
             <input
-              type="date"
-              disabled={availableNowValue}
-              {...register("availableFrom", {
-                validate: (value) =>
-                  availableNowValue ||
-                  value.trim().length > 0 ||
-                  "Podaj date albo zaznacz Dostepny teraz",
+              type="number"
+              min={1}
+              {...register("quantity", {
+                required: "Podaj ilosc",
+                valueAsNumber: true,
+                min: { value: 1, message: "Ilosc musi byc wieksza od 0" },
               })}
-              className="rounded-md border border-neutral-700 bg-neutral-950 px-3 py-2 text-neutral-100 disabled:cursor-not-allowed disabled:opacity-60"
+              className="rounded-md border border-neutral-700 bg-neutral-950 px-3 py-2 text-neutral-100"
             />
-            {errors.availableFrom?.message ? (
+            {errors.quantity?.message ? (
               <span className="text-xs text-red-300">
-                {errors.availableFrom.message}
+                {errors.quantity.message}
               </span>
             ) : null}
           </label>
+
+          <div className="grid gap-2 text-sm">
+            <label className="inline-flex items-center gap-2 rounded-md border border-neutral-700 bg-neutral-900/70 px-3 py-2 text-neutral-200">
+              <input
+                type="checkbox"
+                {...register("availableNow", {
+                  onChange: (event) => {
+                    const isChecked = event.target.checked === true;
+                    if (isChecked) {
+                      setValue("availableFromApproximate", false, {
+                        shouldDirty: true,
+                        shouldTouch: true,
+                      });
+                      clearErrors("availableFrom");
+                    }
+                  },
+                })}
+                className="h-4 w-4 rounded border-neutral-600 bg-neutral-950 text-[#2f639a] focus:ring-[#4e86c3]"
+              />
+              <span>Dostepny juz teraz</span>
+            </label>
+
+            <label className="inline-flex items-center gap-2 rounded-md border border-neutral-700 bg-neutral-900/70 px-3 py-2 text-neutral-200">
+              <input
+                type="checkbox"
+                disabled={availableNowValue}
+                {...register("availableFromApproximate")}
+                className="h-4 w-4 rounded border-neutral-600 bg-neutral-950 text-[#2f639a] focus:ring-[#4e86c3] disabled:cursor-not-allowed disabled:opacity-60"
+              />
+              <span>Data przyblizona (pokazuj ~)</span>
+            </label>
+
+            <label className="grid gap-1 text-sm">
+              <span className="text-neutral-300">Dostepny od {availableNowValue ? "" : "*"}</span>
+              <input
+                type="date"
+                disabled={availableNowValue}
+                {...register("availableFrom", {
+                  validate: (value) =>
+                    availableNowValue ||
+                    value.trim().length > 0 ||
+                    "Podaj date albo zaznacz Dostepny teraz",
+                })}
+                className="rounded-md border border-neutral-700 bg-neutral-950 px-3 py-2 text-neutral-100 disabled:cursor-not-allowed disabled:opacity-60"
+              />
+              {errors.availableFrom?.message ? (
+                <span className="text-xs text-red-300">
+                  {errors.availableFrom.message}
+                </span>
+              ) : null}
+            </label>
+          </div>
         </div>
-      </div>
+      </section>
 
       <div className="grid gap-3 rounded-lg border border-neutral-700/70 bg-neutral-950/40 p-3">
         <p className="text-sm font-medium text-neutral-200">Lokalizacja *</p>
@@ -829,7 +1387,7 @@ export function ContainerListingForm({
                 className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2"
                 aria-hidden="true"
               >
-                <span className="block h-4 w-4 animate-spin rounded-full border-2 border-neutral-500 border-t-sky-400" />
+                <span className="block h-4 w-4 animate-spin rounded-full border-2 border-neutral-500 border-t-[#4e86c3]" />
               </span>
             ) : null}
           </div>
@@ -839,7 +1397,7 @@ export function ContainerListingForm({
               void handleSearchLocation();
             }}
             disabled={isLocationBusy || isSubmitting}
-            className="border-l border-neutral-700 bg-sky-600 px-4 py-2 text-sm font-medium text-white transition hover:bg-sky-500 disabled:cursor-not-allowed disabled:bg-sky-700/70"
+            className="border-l border-[#2f639a] bg-[linear-gradient(180deg,#082650_0%,#0c3466_100%)] px-4 py-2 text-sm font-medium text-[#e2efff] transition hover:bg-[#0f3f75] hover:text-white disabled:cursor-not-allowed disabled:opacity-60"
           >
             Szukaj
           </button>
@@ -880,6 +1438,7 @@ export function ContainerListingForm({
         <input type="hidden" {...register("locationAddressLabel")} />
         <input type="hidden" {...register("locationStreet")} />
         <input type="hidden" {...register("locationHouseNumber")} />
+        <input type="hidden" {...register("locationPostalCode")} />
         <input type="hidden" {...register("locationAddressCity")} />
         <input type="hidden" {...register("locationAddressCountry")} />
 
@@ -910,7 +1469,7 @@ export function ContainerListingForm({
                   }
                 },
               })}
-              className="h-4 w-4 rounded border-neutral-600 bg-neutral-950 text-sky-500 focus:ring-sky-500"
+              className="h-4 w-4 rounded border-neutral-600 bg-neutral-950 text-[#2f639a] focus:ring-[#4e86c3]"
             />
             <span>Mozliwy transport</span>
           </label>
@@ -928,7 +1487,7 @@ export function ContainerListingForm({
                   }
                 },
               })}
-              className="h-4 w-4 rounded border-neutral-600 bg-neutral-950 text-sky-500 focus:ring-sky-500 disabled:cursor-not-allowed disabled:opacity-60"
+              className="h-4 w-4 rounded border-neutral-600 bg-neutral-950 text-[#2f639a] focus:ring-[#4e86c3] disabled:cursor-not-allowed disabled:opacity-60"
             />
             <span>Transport w cenie</span>
           </label>
@@ -945,7 +1504,7 @@ export function ContainerListingForm({
                   }
                 },
               })}
-              className="h-4 w-4 rounded border-neutral-600 bg-neutral-950 text-sky-500 focus:ring-sky-500"
+              className="h-4 w-4 rounded border-neutral-600 bg-neutral-950 text-[#2f639a] focus:ring-[#4e86c3]"
             />
             <span>Mozliwy rozladunek / HDS</span>
           </label>
@@ -954,7 +1513,7 @@ export function ContainerListingForm({
               type="checkbox"
               disabled={!logisticsUnloadingAvailableValue}
               {...register("logisticsUnloadingIncluded")}
-              className="h-4 w-4 rounded border-neutral-600 bg-neutral-950 text-sky-500 focus:ring-sky-500 disabled:cursor-not-allowed disabled:opacity-60"
+              className="h-4 w-4 rounded border-neutral-600 bg-neutral-950 text-[#2f639a] focus:ring-[#4e86c3] disabled:cursor-not-allowed disabled:opacity-60"
             />
             <span>Rozladunek / HDS w cenie</span>
           </label>
@@ -1021,7 +1580,7 @@ export function ContainerListingForm({
             <input
               type="checkbox"
               {...register("hasCscPlate")}
-              className="h-4 w-4 rounded border-neutral-600 bg-neutral-950 text-sky-500 focus:ring-sky-500"
+              className="h-4 w-4 rounded border-neutral-600 bg-neutral-950 text-[#2f639a] focus:ring-[#4e86c3]"
             />
             <span>Tabliczka CSC</span>
           </label>
@@ -1029,7 +1588,7 @@ export function ContainerListingForm({
             <input
               type="checkbox"
               {...register("hasCscCertification")}
-              className="h-4 w-4 rounded border-neutral-600 bg-neutral-950 text-sky-500 focus:ring-sky-500"
+              className="h-4 w-4 rounded border-neutral-600 bg-neutral-950 text-[#2f639a] focus:ring-[#4e86c3]"
             />
             <span>Certyfikacja CSC</span>
           </label>
@@ -1100,7 +1659,7 @@ export function ContainerListingForm({
           </label>
         </div>
 
-        <div className="grid gap-3 sm:grid-cols-2">
+        <div className="grid gap-3">
           <label className="grid gap-1 text-sm">
             <span className="text-neutral-300">Rok produkcji</span>
             <input
@@ -1113,19 +1672,6 @@ export function ContainerListingForm({
               placeholder="np. 2018"
             />
           </label>
-          <label className="grid gap-1 text-sm">
-            <span className="text-neutral-300">Typ ceny</span>
-            <select
-              {...register("priceType", { required: "Wybierz typ ceny" })}
-              className="rounded-md border border-neutral-700 bg-neutral-950 px-3 py-2 text-neutral-100"
-            >
-              {PRICE_TYPES.map((type) => (
-                <option key={type} value={type}>
-                  {PRICE_TYPE_LABEL[type]}
-                </option>
-              ))}
-            </select>
-          </label>
         </div>
 
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
@@ -1135,10 +1681,9 @@ export function ContainerListingForm({
               type="number"
               min={0}
               step={1}
-              disabled={priceTypeValue === "request"}
               {...register("priceValueAmount", {
                 validate: (value) => {
-                  if (priceTypeValue === "request") {
+                  if (value.trim().length === 0) {
                     return true;
                   }
                   return (
@@ -1147,12 +1692,8 @@ export function ContainerListingForm({
                   );
                 },
               })}
-              className="rounded-md border border-neutral-700 bg-neutral-950 px-3 py-2 text-neutral-100 disabled:cursor-not-allowed disabled:opacity-60"
-              placeholder={
-                priceTypeValue === "request"
-                  ? "Bez kwoty dla zapytania"
-                  : "np. 2500"
-              }
+              className="rounded-md border border-neutral-700 bg-neutral-950 px-3 py-2 text-neutral-100"
+              placeholder="np. 2500"
             />
             {errors.priceValueAmount?.message ? (
               <span className="text-xs text-red-300">
@@ -1164,8 +1705,7 @@ export function ContainerListingForm({
             <span className="text-neutral-300">Waluta</span>
             <select
               {...register("priceCurrency", { required: "Wybierz walute" })}
-              disabled={priceTypeValue === "request"}
-              className="rounded-md border border-neutral-700 bg-neutral-950 px-3 py-2 text-neutral-100 disabled:cursor-not-allowed disabled:opacity-60"
+              className="rounded-md border border-neutral-700 bg-neutral-950 px-3 py-2 text-neutral-100"
             >
               {PRICE_CURRENCIES.map((currency) => (
                 <option key={currency} value={currency}>
@@ -1180,8 +1720,7 @@ export function ContainerListingForm({
               {...register("priceTaxMode", {
                 required: "Wybierz netto/brutto",
               })}
-              disabled={priceTypeValue === "request"}
-              className="rounded-md border border-neutral-700 bg-neutral-950 px-3 py-2 text-neutral-100 disabled:cursor-not-allowed disabled:opacity-60"
+              className="rounded-md border border-neutral-700 bg-neutral-950 px-3 py-2 text-neutral-100"
             >
               {PRICE_TAX_MODES.map((mode) => (
                 <option key={mode} value={mode}>
@@ -1200,9 +1739,8 @@ export function ContainerListingForm({
               min={0}
               max={100}
               step="0.01"
-              disabled={priceTypeValue === "request"}
               {...register("priceVatRate")}
-              className="rounded-md border border-neutral-700 bg-neutral-950 px-3 py-2 text-neutral-100 disabled:cursor-not-allowed disabled:opacity-60"
+              className="rounded-md border border-neutral-700 bg-neutral-950 px-3 py-2 text-neutral-100"
               placeholder="np. 23"
             />
             <span className="text-xs text-neutral-400">
@@ -1212,11 +1750,11 @@ export function ContainerListingForm({
         </div>
 
         <label className="inline-flex items-center gap-2 rounded-md border border-neutral-700 bg-neutral-900/70 px-3 py-2 text-sm text-neutral-200">
-          <input
-            type="checkbox"
-            {...register("priceNegotiable")}
-            className="h-4 w-4 rounded border-neutral-600 bg-neutral-950 text-sky-500 focus:ring-sky-500"
-          />
+            <input
+              type="checkbox"
+              {...register("priceNegotiable")}
+              className="h-4 w-4 rounded border-neutral-600 bg-neutral-950 text-[#2f639a] focus:ring-[#4e86c3]"
+            />
           <span>Cena do negocjacji</span>
         </label>
       </div>
@@ -1272,32 +1810,56 @@ export function ContainerListingForm({
         />
       </label>
 
-      <label className="grid gap-1 text-sm">
-        <span className="text-neutral-300">Opis (opcjonalnie)</span>
-        <Controller
-          name="description"
-          control={control}
-          rules={{
-            validate: (value) =>
-              getRichTextLength(value) <= 1000 ||
-              "Opis moze miec maksymalnie 1000 znakow",
-          }}
-          render={({ field }) => (
-            <SimpleRichTextEditor
-              value={field.value}
-              onChange={field.onChange}
-              maxCharacters={1000}
-              placeholder="Dodatkowe informacje o kontenerze, warunkach i terminie"
-              disabled={isSubmitting}
-            />
-          )}
-        />
-        {errors.description?.message ? (
-          <span className="text-xs text-red-300">
-            {errors.description.message}
-          </span>
-        ) : null}
-      </label>
+      <section className="grid gap-3 rounded-lg border border-neutral-700/70 bg-neutral-950/40 p-3">
+        <p className="text-sm font-medium text-neutral-200">Opis ogloszenia</p>
+        <label className="grid gap-1 text-sm">
+          <span className="text-neutral-300">Tytul ogloszenia *</span>
+          <input
+            {...register("title", {
+              required: "Podaj tytul ogloszenia",
+              validate: (value) =>
+                value.trim().length > 0 || "Podaj tytul ogloszenia",
+              maxLength: {
+                value: 80,
+                message: "Tytul moze miec maksymalnie 80 znakow",
+              },
+            })}
+            className="rounded-md border border-neutral-700 bg-neutral-950 px-3 py-2 text-neutral-100"
+            placeholder={resolvedTitlePlaceholder}
+          />
+          <p className="text-xs text-neutral-400">{watch("title").length}/80</p>
+          {errors.title?.message ? (
+            <span className="text-xs text-red-300">{errors.title.message}</span>
+          ) : null}
+        </label>
+
+        <label className="grid gap-1 text-sm">
+          <span className="text-neutral-300">Opis (opcjonalnie)</span>
+          <Controller
+            name="description"
+            control={control}
+            rules={{
+              validate: (value) =>
+                getRichTextLength(value) <= 1000 ||
+                "Opis moze miec maksymalnie 1000 znakow",
+            }}
+            render={({ field }) => (
+              <SimpleRichTextEditor
+                value={field.value}
+                onChange={field.onChange}
+                maxCharacters={1000}
+                placeholder="Dodatkowe informacje o kontenerze, warunkach i terminie"
+                disabled={isSubmitting}
+              />
+            )}
+          />
+          {errors.description?.message ? (
+            <span className="text-xs text-red-300">
+              {errors.description.message}
+            </span>
+          ) : null}
+        </label>
+      </section>
 
       <div className="flex flex-wrap items-center justify-end gap-2 border-t border-neutral-800 pt-4">
         <Link
@@ -1314,6 +1876,12 @@ export function ContainerListingForm({
           {isSubmitting ? "Zapisywanie..." : submitLabel}
         </button>
       </div>
+        </>
+      ) : (
+        <div className="rounded-md border border-neutral-700/70 bg-neutral-950/40 px-3 py-2 text-sm text-neutral-300">
+          Wybierz typ ogloszenia, aby przejsc do pelnego formularza.
+        </div>
+      )}
     </form>
   );
 }

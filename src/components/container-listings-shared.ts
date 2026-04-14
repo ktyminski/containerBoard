@@ -6,6 +6,7 @@ import {
   CONTAINER_HEIGHTS,
   CONTAINER_HEIGHT_LABEL,
   CONTAINER_SIZES,
+  CONTAINER_TYPE,
   CONTAINER_TYPES,
   CONTAINER_TYPE_LABEL,
   type ContainerCondition,
@@ -14,11 +15,10 @@ import {
   type ContainerType,
   type Currency,
   type ListingType,
-  type PriceType,
   type TaxMode,
 } from "@/lib/container-listing-types";
 
-export type ListingKind = "all" | ListingType | "rent";
+export type ListingKind = "all" | ListingType;
 export type SortPreset =
   | "newest"
   | "quantity_desc"
@@ -26,9 +26,9 @@ export type SortPreset =
   | "available_asc"
   | "price_net_asc"
   | "price_net_desc";
-export type FormContainerSize = "10" | "20" | "40" | "45" | "53";
+export type FormContainerSize = "10" | "20" | "40" | "45" | "53" | "custom";
+export const CUSTOM_CONTAINER_SIZE_FILTER_VALUE = "custom";
 export type FormLocationRadiusKm = "20" | "50" | "100" | "200";
-export type FilterPriceType = "all" | PriceType;
 export type FilterTaxMode = TaxMode;
 export type FilterCurrency = "all" | Currency;
 export type PriceDisplayCurrency = "original" | Currency;
@@ -47,7 +47,6 @@ export type FiltersFormValues = {
   logisticsUnloadingOnly: boolean;
   hasCscPlateOnly: boolean;
   hasCscCertificationOnly: boolean;
-  priceType: FilterPriceType;
   priceCurrency: FilterCurrency;
   priceDisplayCurrency: PriceDisplayCurrency;
   priceTaxMode: FilterTaxMode;
@@ -74,7 +73,6 @@ export type AppliedFilters = {
   logisticsUnloadingOnly: boolean;
   hasCscPlateOnly: boolean;
   hasCscCertificationOnly: boolean;
-  priceType: FilterPriceType;
   priceCurrency: FilterCurrency;
   priceDisplayCurrency: PriceDisplayCurrency;
   priceTaxMode: FilterTaxMode;
@@ -94,8 +92,9 @@ export const AUTO_APPLY_FILTERS_DEBOUNCE_MS = 450;
 export const AUTO_APPLY_TYPED_FILTERS_DEBOUNCE_MS = 800;
 
 export const LISTING_TYPE_LABEL: Record<ListingType, string> = {
-  available: "Oferta",
-  wanted: "Buy request",
+  sell: "Sprzedaz",
+  rent: "Wynajem",
+  buy: "Chce zakupic",
 };
 
 export const CONTAINER_CONDITION_COLOR_TOKENS: Record<
@@ -138,7 +137,6 @@ export const FILTER_FORM_DEFAULTS: FiltersFormValues = {
   logisticsUnloadingOnly: false,
   hasCscPlateOnly: false,
   hasCscCertificationOnly: false,
-  priceType: "all",
   priceCurrency: "EUR",
   priceDisplayCurrency: "original",
   priceTaxMode: "net",
@@ -152,9 +150,9 @@ export const FILTER_FORM_DEFAULTS: FiltersFormValues = {
 
 export const LISTING_KIND_OPTIONS: Array<{ value: ListingKind; label: string }> = [
   { value: "all", label: "Dowolne" },
-  { value: "available", label: "Sell / Oferty" },
+  { value: "sell", label: "Sprzedaz" },
   { value: "rent", label: "Wynajem" },
-  { value: "wanted", label: "Buy request" },
+  { value: "buy", label: "Chce zakupic" },
 ];
 
 export const SORT_OPTIONS: Array<{ value: SortPreset; label: string }> = [
@@ -167,10 +165,16 @@ export const SORT_OPTIONS: Array<{ value: SortPreset; label: string }> = [
 ];
 
 export const CONTAINER_SIZE_OPTIONS: Array<{ value: FormContainerSize; label: string }> =
-  CONTAINER_SIZES.map((value) => ({
-    value: String(value) as FormContainerSize,
-    label: `${value} ft`,
-  }));
+  [
+    ...CONTAINER_SIZES.map((value) => ({
+      value: String(value) as FormContainerSize,
+      label: `${value} ft`,
+    })),
+    {
+      value: CUSTOM_CONTAINER_SIZE_FILTER_VALUE as FormContainerSize,
+      label: "Inne / custom",
+    },
+  ];
 
 export const CONTAINER_HEIGHT_OPTIONS: Array<{ value: ContainerHeight; label: string }> =
   CONTAINER_HEIGHTS.map((value) => ({
@@ -181,7 +185,10 @@ export const CONTAINER_HEIGHT_OPTIONS: Array<{ value: ContainerHeight; label: st
 export const CONTAINER_TYPE_OPTIONS: Array<{ value: ContainerType; label: string }> =
   CONTAINER_TYPES.map((value) => ({
     value,
-    label: CONTAINER_TYPE_LABEL[value],
+    label:
+      value === CONTAINER_TYPE.DRY
+        ? `${CONTAINER_TYPE_LABEL[value]} (DV | GP)`
+        : CONTAINER_TYPE_LABEL[value],
   }));
 
 export const CONTAINER_CONDITION_OPTIONS: Array<{ value: ContainerCondition; label: string }> =
@@ -209,7 +216,6 @@ export type NonLocationFilters = Pick<
   | "logisticsUnloadingOnly"
   | "hasCscPlateOnly"
   | "hasCscCertificationOnly"
-  | "priceType"
   | "priceCurrency"
   | "priceDisplayCurrency"
   | "priceTaxMode"
@@ -261,7 +267,6 @@ export function areNonLocationFiltersEqual(
     left.logisticsUnloadingOnly === right.logisticsUnloadingOnly &&
     left.hasCscPlateOnly === right.hasCscPlateOnly &&
     left.hasCscCertificationOnly === right.hasCscCertificationOnly &&
-    left.priceType === right.priceType &&
     left.priceCurrency === right.priceCurrency &&
     left.priceDisplayCurrency === right.priceDisplayCurrency &&
     left.priceTaxMode === right.priceTaxMode &&
@@ -291,7 +296,6 @@ export function pickNonLocationFilters(filters: AppliedFilters): NonLocationFilt
     logisticsUnloadingOnly: filters.logisticsUnloadingOnly,
     hasCscPlateOnly: filters.hasCscPlateOnly,
     hasCscCertificationOnly: filters.hasCscCertificationOnly,
-    priceType: filters.priceType,
     priceCurrency: filters.priceCurrency,
     priceDisplayCurrency: filters.priceDisplayCurrency,
     priceTaxMode: hasPriceRange ? filters.priceTaxMode : "net",

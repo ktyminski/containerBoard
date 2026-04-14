@@ -969,12 +969,11 @@
         "turnstileRequired": "Bitte füllen Sie das Captcha aus, um ein Unternehmen hinzuzufügen.",
         "backToMap": "Zurück zur Karte",
         "mainBranchTitle": "Hauptzweig",
-        "additionalData": "Zusätzliche Details werden ausgeblendet: Telefon, E-Mail und Kategorie werden aus den Firmendetails übernommen.",
+        "additionalData": "Zusätzliche Details werden ausgeblendet: Telefon und E-Mail werden aus den Firmendetails übernommen.",
         "showAdditionalData": "Weitere Details anzeigen",
         "hideAdditionalData": "Zusätzliche Details ausblenden",
         "branchPhone": "Filialtelefon",
         "branchEmail": "Filial-E-Mail",
-        "branchCategory": "Branchenkategorie",
         "useCompanyDefaults": "Firmenstandards verwenden",
         "branchLocationHint": "Die Filialadresse legt den Pin auf der Karte fest. Sie können den Pin auch manuell anklicken oder ziehen.",
         "branchLocationFind": "Auf der Karte finden",
@@ -1458,7 +1457,6 @@
         "backgroundAlt": "Firmenhintergrund {company}",
         "logoAlt": "Firmenlogo {company}",
         "noLogo": "Kein Logo",
-        "categoryLabel": "Kategorie",
         "phoneLabel": "Telefon",
         "nipLabel": "NIP",
         "emailLabel": "E-Mail",
@@ -1478,7 +1476,7 @@
         "branchesTitle": "Zweige",
         "mainLocationShort": "hauptsächlich",
         "coordinatesLabel": "Koordinaten",
-        "backToMap": "Zurück zur Karte",
+        "backToMap": "Zurück zur Liste",
         "showMoreBranches": "Mehr anzeigen",
         "loadMoreOffers": "Mehr laden",
         "ownershipClaim": {
@@ -1533,5 +1531,6 @@
         "not_verified": "Nicht verifiziert"
     }
 }
+
 
 

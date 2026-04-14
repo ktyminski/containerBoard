@@ -11,7 +11,7 @@ const TOTAL_LISTINGS = 220;
 const TTL_DAYS = 14;
 const SYSTEM_USER_ID = new ObjectId("0000000000000000000000c0");
 
-const LISTING_TYPES = ["available", "wanted"];
+const LISTING_TYPES = ["sell", "rent", "buy"];
 const CONTAINER_FEATURES = [
   "double_door",
   "pallet_wide",
@@ -235,17 +235,17 @@ function estimateBaseAmount({ container, unit }) {
 
 function buildPricing({ listingType, container, now }) {
   const maybeRequest =
-    listingType === "wanted"
-      ? Math.random() < 0.54
-      : Math.random() < 0.15;
+    listingType === "buy"
+      ? Math.random() < 0.56
+      : listingType === "rent"
+        ? Math.random() < 0.18
+        : Math.random() < 0.12;
   if (maybeRequest) {
     return {
       pricing: {
-        type: "request",
         original: {
           amount: null,
           currency: null,
-          unit: null,
           taxMode: null,
           vatRate: null,
           negotiable: true,
@@ -272,11 +272,12 @@ function buildPricing({ listingType, container, now }) {
     { value: "net", weight: 70 },
     { value: "gross", weight: 30 },
   ]);
-  const priceType = pickWeighted([
-    { value: "fixed", weight: 72 },
-    { value: "starting_from", weight: 28 },
-  ]);
-  const unit = Math.random() < 0.34 ? "per_month" : "per_container";
+  const unit =
+    listingType === "rent"
+      ? "per_month"
+      : Math.random() < 0.25
+        ? "per_month"
+        : "per_container";
   const vatRate = currency === "USD" ? 0 : 23;
   const negotiable = Math.random() < 0.34;
 
@@ -289,16 +290,13 @@ function buildPricing({ listingType, container, now }) {
 
   const suffix = unit === "per_month" ? "/mies." : "/kont.";
   const taxSuffix = taxMode === "gross" ? "brutto" : "netto";
-  const pricePrefix = priceType === "starting_from" ? "od " : "";
-  const priceText = `${pricePrefix}${originalAmount} ${currency} ${suffix} ${taxSuffix}`;
+  const priceText = `${originalAmount} ${currency} ${suffix} ${taxSuffix}`;
 
   return {
     pricing: {
-      type: priceType,
       original: {
         amount: originalAmount,
         currency,
-        unit,
         taxMode,
         vatRate,
         negotiable,
@@ -393,7 +391,8 @@ function buildListing(index, now) {
   const container = pickContainer();
   const listingType = pickWeighted([
     { value: LISTING_TYPES[0], weight: 64 },
-    { value: LISTING_TYPES[1], weight: 36 },
+    { value: LISTING_TYPES[1], weight: 21 },
+    { value: LISTING_TYPES[2], weight: 15 },
   ]);
   const quantity = randomInt(1, 120);
   const lat = jitterCoordinate(hub.lat, 0.23);

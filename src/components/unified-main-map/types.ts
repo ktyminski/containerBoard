@@ -7,7 +7,6 @@ import type { CompanyOperatingArea } from "@/lib/company-operating-area";
 import type { AppLocale, AppMessages } from "@/lib/i18n";
 import type { OfferType } from "@/lib/offer-type";
 import type { CompanyMapItem } from "@/types/company";
-import type { CompanyCategory } from "@/types/company-category";
 import type { CompanyCommunicationLanguage } from "@/types/company-communication-language";
 import type { CompanySpecialization } from "@/types/company-specialization";
 
@@ -60,7 +59,6 @@ export type UnifiedMainMapProps = {
   keyword?: string;
   operatingAreas?: CompanyOperatingArea[];
   communicationLanguages?: CompanyCommunicationLanguage[];
-  companyCategories?: CompanyCategory[];
   companySpecializations?: CompanySpecialization[];
   locationBbox?: SearchBBox | null;
   onLocationFilterRelease?: () => void;
@@ -106,5 +104,4 @@ export const MAX_CLUSTER_POPUP_ITEMS = 30;
 
 export const EMPTY_OPERATING_AREAS: CompanyOperatingArea[] = [];
 export const EMPTY_COMMUNICATION_LANGUAGES: CompanyCommunicationLanguage[] = [];
-export const EMPTY_COMPANY_CATEGORIES: CompanyCategory[] = [];
 export const EMPTY_COMPANY_SPECIALIZATIONS: CompanySpecialization[] = [];

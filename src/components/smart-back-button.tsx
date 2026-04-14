@@ -19,27 +19,6 @@ function normalizeHrefForHistory(href: string): string {
   return normalizedQuery ? `${pathname}?${normalizedQuery}` : pathname;
 }
 
-function normalizePathname(href: string): string {
-  const normalizedHref = normalizeHrefForHistory(href);
-  const [pathname] = normalizedHref.split("?");
-  const trimmed = pathname.replace(/\/+$/, "");
-  return trimmed || "/";
-}
-
-function shouldPreferFallbackForMapsTarget(input: {
-  fallbackHref?: string;
-  candidateHref: string;
-}): boolean {
-  if (!input.fallbackHref) {
-    return false;
-  }
-
-  const candidatePath = normalizePathname(input.candidateHref);
-  const fallbackPath = normalizePathname(input.fallbackHref);
-
-  return candidatePath === "/maps" && fallbackPath.startsWith("/maps/");
-}
-
 export function SmartBackButton({
   label,
   fallbackHref,
@@ -104,25 +83,11 @@ export function SmartBackButton({
       target &&
       normalizeHrefForHistory(target) !== normalizeHrefForHistory(currentFromWindow)
     ) {
-      if (
-        fallbackHref &&
-        shouldPreferFallbackForMapsTarget({ fallbackHref, candidateHref: target })
-      ) {
-        router.push(fallbackHref);
-        return;
-      }
       router.push(target);
       return;
     }
 
     if (internalTargetHref) {
-      if (
-        fallbackHref &&
-        shouldPreferFallbackForMapsTarget({ fallbackHref, candidateHref: internalTargetHref })
-      ) {
-        router.push(fallbackHref);
-        return;
-      }
       router.push(internalTargetHref);
       return;
     }

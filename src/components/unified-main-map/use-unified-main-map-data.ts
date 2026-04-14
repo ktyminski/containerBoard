@@ -9,7 +9,6 @@ import { tupleBboxToQuery } from "@/components/map-shared";
 import type { CompanyOperatingArea } from "@/lib/company-operating-area";
 import type { AppMessages } from "@/lib/i18n";
 import type { CompanyMapItem } from "@/types/company";
-import type { CompanyCategory } from "@/types/company-category";
 import type { CompanyCommunicationLanguage } from "@/types/company-communication-language";
 import type { CompanySpecialization } from "@/types/company-specialization";
 import type {
@@ -24,7 +23,6 @@ type DataLayerParams = {
   keyword: string;
   operatingAreas: CompanyOperatingArea[];
   communicationLanguages: CompanyCommunicationLanguage[];
-  companyCategories: CompanyCategory[];
   companySpecializations: CompanySpecialization[];
   locationBbox: [number, number, number, number] | null;
 };
@@ -56,7 +54,6 @@ export function useUnifiedMainMapData(params: DataLayerParams): DataLayerResult 
     keyword,
     operatingAreas,
     communicationLanguages,
-    companyCategories,
     companySpecializations,
     locationBbox,
   } = params;
@@ -115,9 +112,6 @@ export function useUnifiedMainMapData(params: DataLayerParams): DataLayerResult 
       if (operatingAreas.length > 0) {
         searchParams.set("operatingAreas", operatingAreas.join(","));
       }
-      if (companyCategories.length > 0) {
-        searchParams.set("categories", companyCategories.join(","));
-      }
       if (companySpecializations.length > 0) {
         searchParams.set("specializations", companySpecializations.join(","));
       }
@@ -151,7 +145,6 @@ export function useUnifiedMainMapData(params: DataLayerParams): DataLayerResult 
       }
     }
   }, [
-    companyCategories,
     companySpecializations,
     keyword,
     locationBbox,
@@ -187,9 +180,6 @@ export function useUnifiedMainMapData(params: DataLayerParams): DataLayerResult 
       if (communicationLanguages.length > 0) {
         searchParams.set("communicationLanguages", communicationLanguages.join(","));
       }
-      if (companyCategories.length > 0) {
-        searchParams.set("categories", companyCategories.join(","));
-      }
       if (companySpecializations.length > 0) {
         searchParams.set("specializations", companySpecializations.join(","));
       }
@@ -224,7 +214,6 @@ export function useUnifiedMainMapData(params: DataLayerParams): DataLayerResult 
     }
   }, [
     communicationLanguages,
-    companyCategories,
     companySpecializations,
     keyword,
     locationBbox,

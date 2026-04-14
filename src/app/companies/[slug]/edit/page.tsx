@@ -66,7 +66,6 @@ export default async function EditCompanyPage({ params, searchParams }: EditComp
         createdByUserId: 1,
         name: 1,
         description: 1,
-        category: 1,
         operatingArea: 1,
         operatingAreaDetails: 1,
         nip: 1,
@@ -79,14 +78,11 @@ export default async function EditCompanyPage({ params, searchParams }: EditComp
         "locations.label": 1,
         "locations.addressText": 1,
         "locations.addressParts": 1,
-        "locations.note": 1,
         "locations.phone": 1,
         "locations.email": 1,
-        "locations.category": 1,
         "locations.point": 1,
         "locations.photos.size": 1,
         "locations.photos.filename": 1,
-        "photos.size": 1,
         "logo.filename": 1,
         "logo.size": 1,
         "background.filename": 1,
@@ -97,7 +93,7 @@ export default async function EditCompanyPage({ params, searchParams }: EditComp
   );
 
   if (!company?._id) {
-    redirect(withLang("/maps", locale));
+    redirect(withLang("/list", locale));
   }
 
   const isAdmin = currentUser.role === USER_ROLE.ADMIN;
@@ -115,13 +111,11 @@ export default async function EditCompanyPage({ params, searchParams }: EditComp
       label: location?.label ?? "",
       addressText: location?.addressText ?? "",
       addressParts: location?.addressParts ?? null,
-      note: location?.note ?? "",
       lat: hasValidPoint ? String(point[1]) : "",
       lng: hasValidPoint ? String(point[0]) : "",
-      useCustomDetails: Boolean(location?.phone || location?.email || location?.category),
+      useCustomDetails: Boolean(location?.phone || location?.email),
       phone: location?.phone ?? "",
       email: location?.email ?? "",
-      category: location?.category ?? "",
     };
   });
 
@@ -152,12 +146,8 @@ export default async function EditCompanyPage({ params, searchParams }: EditComp
     company.background?.data || company.background?.size
       ? withMediaVersion(`/api/companies/${companyId}/background`)
       : null;
-  const initialPhotoUrls = (company.photos ?? []).map(
-    (_photo, index) => withMediaVersion(`/api/companies/${companyId}/photos/${index}`),
-  );
   const initialLogoBytes = company.logo?.size ?? 0;
   const initialBackgroundBytes = company.background?.size ?? 0;
-  const initialPhotoBytes = (company.photos ?? []).map((photo) => photo?.size ?? 0);
   const initialBranchPhotosBytes = (company.locations ?? []).reduce((sum, location) => {
     const bytes = (location?.photos ?? []).reduce((locationSum, photo) => {
       const size = photo?.size;
@@ -170,7 +160,7 @@ export default async function EditCompanyPage({ params, searchParams }: EditComp
   }, 0);
 
   return (
-    <section className="bg-neutral-100">
+    <section className="bg-neutral-200/90">
       <main className="mx-auto flex w-full max-w-5xl flex-col gap-6 px-4 py-6 sm:px-6">
         <SmartBackButton
           label={messages.companyDetails.back}
@@ -181,7 +171,7 @@ export default async function EditCompanyPage({ params, searchParams }: EditComp
           <h1 className="text-2xl font-semibold text-neutral-900 sm:text-3xl">
             {messages.companyDetails.editCompany}
           </h1>
-          <p className="mt-1 text-xs text-neutral-500">{messages.companyCreate.requiredFieldsHint}</p>
+          <p className="mt-1 text-xs text-neutral-700">{messages.companyCreate.requiredFieldsHint}</p>
         </header>
 
         <NewCompanyForm
@@ -190,10 +180,8 @@ export default async function EditCompanyPage({ params, searchParams }: EditComp
           initialValues={initialValues}
           initialLogoUrl={initialLogoUrl}
           initialBackgroundUrl={initialBackgroundUrl}
-          initialPhotoUrls={initialPhotoUrls}
           initialLogoBytes={initialLogoBytes}
           initialBackgroundBytes={initialBackgroundBytes}
-          initialPhotoBytes={initialPhotoBytes}
           initialBranchPhotosBytes={initialBranchPhotosBytes}
           submitEndpoint={`/api/companies/${company._id.toHexString()}`}
           httpMethod="PATCH"

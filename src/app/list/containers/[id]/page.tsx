@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { redirect } from "next/navigation";
 import { ContainerDetailsContent } from "@/components/container-details-content";
 
 export const metadata: Metadata = {
@@ -32,6 +33,12 @@ export default async function ListContainerDetailsPage({
   searchParams,
 }: ListContainerDetailsPageProps) {
   const [{ id }, queryParams] = await Promise.all([params, searchParams]);
+  if (id === "mine") {
+    redirect("/containers/mine");
+  }
+  if (id === "new") {
+    redirect("/containers/new");
+  }
   const listParams = toSearchParams(queryParams);
   const listHref = listParams.toString() ? `/list?${listParams.toString()}` : "/list";
 

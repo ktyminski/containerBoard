@@ -15,8 +15,10 @@ import {
   getContainerListingsCollection,
   getDefaultListingExpiration,
   mapContainerListingToItem,
+  type ContainerListingImageAsset,
 } from "@/lib/container-listings";
 import {
+  CONTAINER_SIZE,
   CONTAINER_CONDITIONS,
   CONTAINER_FEATURES,
   CONTAINER_HEIGHTS,
@@ -26,7 +28,6 @@ import {
   LISTING_STATUS,
   PRICE_CURRENCIES,
   PRICE_TAX_MODES,
-  PRICE_TYPES,
   type ContainerSize,
   type ListingStatus,
 } from "@/lib/container-listing-types";
@@ -35,18 +36,28 @@ import {
   normalizeListingPrice,
   type ListingPriceInput,
 } from "@/lib/listing-price";
+import { processGalleryUpload } from "@/lib/company-media";
+import {
+  buildBlobPath,
+  safeDeleteBlobUrls,
+  uploadBlobFromBuffer,
+} from "@/lib/blob-storage";
 import { getLatestFxContext } from "@/lib/fx-rates";
 import { getRichTextLength, hasRichTextContent } from "@/lib/listing-rich-text";
+import { parseContainerRalColors } from "@/lib/container-ral-colors";
 import { USER_ROLE } from "@/lib/user-roles";
 import { logError } from "@/lib/server-logger";
 
 export const runtime = "nodejs";
 const DESCRIPTION_MAX_TEXT_LENGTH = 1000;
 const DESCRIPTION_ALLOWED_TAGS = ["p", "br", "strong", "em", "u", "ul", "ol", "li", "div"];
+const MAX_LISTING_PHOTO_COUNT = 5;
+const MAX_LISTING_PHOTO_BYTES = 6 * 1024 * 1024;
 
 const locationAddressPartsSchema = z.object({
   street: z.string().trim().min(1).max(120).optional(),
   houseNumber: z.string().trim().min(1).max(40).optional(),
+  postalCode: z.string().trim().min(1).max(40).optional(),
   city: z.string().trim().min(1).max(120).optional(),
   country: z.string().trim().min(1).max(120).optional(),
 });
@@ -71,36 +82,51 @@ const pricingOriginalSchema = z.object({
 
 const pricingPayloadSchema = z
   .object({
-    type: z.enum(PRICE_TYPES),
     original: pricingOriginalSchema,
   })
   .superRefine((value, context) => {
-    if (value.type === "request") {
+    if (value.original.amount === null) {
+      if (value.original.currency !== null) {
+        context.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ["original", "currency"],
+          message: "Currency must be empty when amount is not set",
+        });
+      }
+      if (value.original.taxMode !== null) {
+        context.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ["original", "taxMode"],
+          message: "Tax mode must be empty when amount is not set",
+        });
+      }
+      if (value.original.vatRate !== null) {
+        context.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ["original", "vatRate"],
+          message: "VAT rate must be empty when amount is not set",
+        });
+      }
       return;
     }
 
-    if (value.original.amount === null) {
-      context.addIssue({
-        code: z.ZodIssueCode.custom,
-        path: ["original", "amount"],
-        message: "Amount is required for fixed/starting_from price type",
-      });
-    }
     if (value.original.currency === null) {
       context.addIssue({
         code: z.ZodIssueCode.custom,
         path: ["original", "currency"],
-        message: "Currency is required for fixed/starting_from price type",
+        message: "Currency is required when amount is set",
       });
     }
     if (value.original.taxMode === null) {
       context.addIssue({
         code: z.ZodIssueCode.custom,
         path: ["original", "taxMode"],
-        message: "Tax mode is required for fixed/starting_from price type",
+        message: "Tax mode is required when amount is set",
       });
     }
   });
+
+const listingTypeInputSchema = z.enum(LISTING_TYPES);
 
 type RouteContext = {
   params: Promise<{
@@ -110,13 +136,15 @@ type RouteContext = {
 
 const updateSchema = z.object({
   action: z.literal("update"),
-  type: z.enum(LISTING_TYPES),
+  type: listingTypeInputSchema,
   title: z.string().trim().max(80).optional(),
   container: z.object({
-    size: z
-      .number()
-      .int()
-      .refine((value) => CONTAINER_SIZES.includes(value as (typeof CONTAINER_SIZES)[number])),
+    size: z.coerce.number().int().refine((value) => {
+      return (
+        value === CONTAINER_SIZE.CUSTOM ||
+        CONTAINER_SIZES.includes(value as (typeof CONTAINER_SIZES)[number])
+      );
+    }),
     height: z.enum(CONTAINER_HEIGHTS),
     type: z.enum(CONTAINER_TYPES),
     features: z.array(z.enum(CONTAINER_FEATURES)).default([]),
@@ -145,6 +173,7 @@ const updateSchema = z.object({
   cscValidToMonth: z.coerce.number().int().min(1).max(12).optional(),
   cscValidToYear: z.coerce.number().int().min(1900).max(2100).optional(),
   productionYear: z.coerce.number().int().min(1900).max(2100).optional(),
+  containerColorsRal: z.string().trim().max(320).optional(),
   price: z.string().trim().max(100).optional(),
   description: z.string().trim().max(16_000).optional(),
   companyName: z.string().trim().min(2).max(160),
@@ -230,6 +259,105 @@ function normalizeOptionalDescriptionHtml(value?: string): string | undefined {
   }
 
   return sanitized;
+}
+
+function parseJsonField<T>(value: FormDataEntryValue | null): T | null {
+  if (typeof value !== "string") {
+    return null;
+  }
+
+  try {
+    return JSON.parse(value) as T;
+  } catch {
+    return null;
+  }
+}
+
+function ensureImageFile(file: File, maxBytes: number, field: string): string | null {
+  if (!file.type.startsWith("image/")) {
+    return `${field} must be an image file`;
+  }
+
+  if (file.size > maxBytes) {
+    return `${field} exceeds size limit`;
+  }
+
+  return null;
+}
+
+function assetDataToBuffer(asset: ContainerListingImageAsset): Buffer {
+  if (!asset.data?.buffer) {
+    throw new Error("Missing processed image buffer");
+  }
+
+  return Buffer.from(asset.data.buffer);
+}
+
+function toStoredImageAsset(
+  asset: ContainerListingImageAsset,
+  blobUrl: string,
+): ContainerListingImageAsset {
+  return {
+    filename: asset.filename,
+    contentType: asset.contentType,
+    size: asset.size,
+    width: asset.width,
+    height: asset.height,
+    blobUrl,
+  };
+}
+
+async function uploadContainerImageAsset(input: {
+  listingId: ObjectId;
+  key: string;
+  asset: ContainerListingImageAsset;
+}): Promise<ContainerListingImageAsset> {
+  const buffer = assetDataToBuffer(input.asset);
+  const { url } = await uploadBlobFromBuffer({
+    pathname: buildBlobPath({
+      segments: ["containers", input.listingId.toHexString(), input.key],
+      filenameBase: input.asset.filename,
+      contentType: input.asset.contentType,
+    }),
+    contentType: input.asset.contentType,
+    access: "public",
+    cacheControlMaxAge: 31536000,
+    buffer,
+  });
+
+  return toStoredImageAsset(input.asset, url);
+}
+
+function toBlobUrls(
+  assets: Array<ContainerListingImageAsset | null | undefined>,
+): string[] {
+  return assets
+    .map((asset) => asset?.blobUrl?.trim() ?? "")
+    .filter(Boolean);
+}
+
+async function parsePatchBody(request: NextRequest): Promise<{
+  payload: unknown;
+  photoFiles: File[];
+  keepPhotoIndexesRaw: unknown[] | null;
+}> {
+  const contentType = request.headers.get("content-type") ?? "";
+  if (contentType.includes("multipart/form-data")) {
+    const formData = await request.formData();
+    return {
+      payload: parseJsonField<unknown>(formData.get("payload")),
+      photoFiles: formData
+        .getAll("photos")
+        .filter((item): item is File => item instanceof File && item.size > 0),
+      keepPhotoIndexesRaw: parseJsonField<unknown[]>(formData.get("keepPhotoIndexes")),
+    };
+  }
+
+  return {
+    payload: await request.json(),
+    photoFiles: [],
+    keepPhotoIndexesRaw: null,
+  };
 }
 
 function resolveAvailableFromDate(input: {
@@ -336,10 +464,64 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
       );
     }
 
-    const payload = await request.json();
+    const { payload, photoFiles, keepPhotoIndexesRaw } = await parsePatchBody(request);
 
     const updateParsed = updateSchema.safeParse(payload);
     if (updateParsed.success) {
+      if (photoFiles.length > MAX_LISTING_PHOTO_COUNT) {
+        return NextResponse.json(
+          {
+            error: "Invalid files",
+            issues: [`photos cannot exceed ${MAX_LISTING_PHOTO_COUNT} files`],
+          },
+          { status: 400 },
+        );
+      }
+      const fileIssues = photoFiles
+        .map((file, index) =>
+          ensureImageFile(file, MAX_LISTING_PHOTO_BYTES, `photo ${index + 1}`),
+        )
+        .filter((issue): issue is string => Boolean(issue));
+      if (fileIssues.length > 0) {
+        return NextResponse.json(
+          {
+            error: "Invalid files",
+            issues: fileIssues,
+          },
+          { status: 400 },
+        );
+      }
+      const existingPhotos = listing.photos ?? [];
+      const keepPhotoIndexes =
+        keepPhotoIndexesRaw === null
+          ? existingPhotos.map((_, index) => index)
+          : Array.from(
+              new Set(
+                keepPhotoIndexesRaw
+                  .map((value) => Number(value))
+                  .filter(
+                    (value) =>
+                      Number.isInteger(value) &&
+                      value >= 0 &&
+                      value < existingPhotos.length,
+                  ),
+              ),
+            );
+      const keptExistingPhotos = keepPhotoIndexes
+        .map((index) => existingPhotos[index])
+        .filter(Boolean);
+      const removedExistingPhotos = existingPhotos.filter(
+        (_photo, index) => !keepPhotoIndexes.includes(index),
+      );
+      if (keptExistingPhotos.length + photoFiles.length > MAX_LISTING_PHOTO_COUNT) {
+        return NextResponse.json(
+          {
+            error: "Invalid files",
+            issues: [`photos cannot exceed ${MAX_LISTING_PHOTO_COUNT} files`],
+          },
+          { status: 400 },
+        );
+      }
       const now = new Date();
       const legacyLocationAddressLabel = normalizeOptionalString(updateParsed.data.locationAddressLabel);
       const legacyLocationAddressParts = normalizeGeocodeAddressParts(updateParsed.data.locationAddressParts);
@@ -375,6 +557,27 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
       const normalizedDescription = normalizeOptionalDescriptionHtml(updateParsed.data.description);
       const normalizedPrice = normalizeOptionalString(updateParsed.data.price);
       const normalizedLogisticsComment = normalizeOptionalString(updateParsed.data.logisticsComment);
+      const hasContainerColorsRalInput = typeof updateParsed.data.containerColorsRal === "string";
+      const parsedContainerColors = hasContainerColorsRalInput
+        ? parseContainerRalColors(updateParsed.data.containerColorsRal)
+        : null;
+      if (parsedContainerColors?.tooMany) {
+        return NextResponse.json(
+          {
+            error: "containerColorsRal supports at most 8 RAL codes",
+          },
+          { status: 400 },
+        );
+      }
+      if (parsedContainerColors && parsedContainerColors.invalidCodes.length > 0) {
+        return NextResponse.json(
+          {
+            error: "Invalid RAL color code(s)",
+            issues: parsedContainerColors.invalidCodes,
+          },
+          { status: 400 },
+        );
+      }
       const normalizedPriceAmount =
         typeof updateParsed.data.priceAmount === "number" &&
         Number.isFinite(updateParsed.data.priceAmount)
@@ -421,6 +624,44 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
               now,
               fxContext,
             });
+      const uploadedBlobUrls: string[] = [];
+      let storedNextUploadedPhotos: ContainerListingImageAsset[] = [];
+      try {
+        const nextUploadedPhotos =
+          photoFiles.length > 0
+            ? await Promise.all(photoFiles.map((file) => processGalleryUpload(file, "photo")))
+            : [];
+        storedNextUploadedPhotos =
+          nextUploadedPhotos.length > 0
+            ? await Promise.all(
+                nextUploadedPhotos.map(async (asset, index) => {
+                  const stored = await uploadContainerImageAsset({
+                    listingId,
+                    key: `photos/${keepPhotoIndexes.length + index}`,
+                    asset,
+                  });
+                  if (stored.blobUrl) {
+                    uploadedBlobUrls.push(stored.blobUrl);
+                  }
+                  return stored;
+                }),
+              )
+            : [];
+      } catch (mediaError) {
+        if (uploadedBlobUrls.length > 0) {
+          await safeDeleteBlobUrls(uploadedBlobUrls);
+        }
+        const message =
+          mediaError instanceof Error ? mediaError.message : "image processing failed";
+        return NextResponse.json(
+          {
+            error: "Invalid files",
+            issues: [message],
+          },
+          { status: 400 },
+        );
+      }
+      const nextPhotos = [...keptExistingPhotos, ...storedNextUploadedPhotos];
       const unsetPatch: Record<string, 1> = {};
       unsetPatch.containerType = 1;
       if (!locationAddressLabel) {
@@ -454,6 +695,12 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
       if (normalizedLogisticsTransportFreeDistanceKm === undefined) {
         unsetPatch.logisticsTransportFreeDistanceKm = 1;
       }
+      if (hasContainerColorsRalInput && parsedContainerColors?.colors.length === 0) {
+        unsetPatch.containerColors = 1;
+      }
+      if (nextPhotos.length === 0) {
+        unsetPatch.photos = 1;
+      }
 
       if (
         normalizedDescription &&
@@ -465,77 +712,92 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
         );
       }
 
-      await listings.updateOne(
-        { _id: listingId },
-        {
-          $set: {
-            type: updateParsed.data.type,
-            ...(normalizedTitle ? { title: normalizedTitle } : {}),
-            container: {
-              size: updateParsed.data.container.size as ContainerSize,
-              height: updateParsed.data.container.height,
-              type: updateParsed.data.container.type,
-              features: Array.from(new Set(updateParsed.data.container.features)),
-              condition: updateParsed.data.container.condition,
+      try {
+        await listings.updateOne(
+          { _id: listingId },
+          {
+            $set: {
+              type: updateParsed.data.type,
+              ...(normalizedTitle ? { title: normalizedTitle } : {}),
+              container: {
+                size: updateParsed.data.container.size as ContainerSize,
+                height: updateParsed.data.container.height,
+                type: updateParsed.data.container.type,
+                features: Array.from(new Set(updateParsed.data.container.features)),
+                condition: updateParsed.data.container.condition,
+              },
+              ...(parsedContainerColors && parsedContainerColors.colors.length > 0
+                ? { containerColors: parsedContainerColors.colors }
+                : {}),
+              ...(nextPhotos.length > 0 ? { photos: nextPhotos } : {}),
+              quantity: updateParsed.data.quantity,
+              locationCity,
+              locationCountry,
+              locationLat: primaryLocation.locationLat,
+              locationLng: primaryLocation.locationLng,
+              ...(locationAddressLabel ? { locationAddressLabel } : {}),
+              ...(locationAddressParts ? { locationAddressParts } : {}),
+              locations: normalizedLocations,
+              availableNow: updateParsed.data.availableNow === true,
+              availableFromApproximate:
+                updateParsed.data.availableNow === true
+                  ? false
+                  : updateParsed.data.availableFromApproximate === true,
+              availableFrom: resolvedAvailableFrom,
+              ...(normalizedPricing ? { pricing: normalizedPricing } : {}),
+              ...(normalizedPriceAmount !== undefined || normalizedPricing?.original.amount !== null
+                ? { priceAmount: normalizedPriceAmount ?? normalizedPricing?.original.amount ?? undefined }
+                : {}),
+              priceNegotiable:
+                normalizedPricing?.original.negotiable === true ||
+                updateParsed.data.priceNegotiable === true,
+              logisticsTransportAvailable,
+              logisticsTransportIncluded:
+                logisticsTransportAvailable && logisticsTransportIncluded,
+              ...(normalizedLogisticsTransportFreeDistanceKm !== undefined
+                ? { logisticsTransportFreeDistanceKm: normalizedLogisticsTransportFreeDistanceKm }
+                : {}),
+              logisticsUnloadingAvailable,
+              logisticsUnloadingIncluded:
+                logisticsUnloadingAvailable && logisticsUnloadingIncluded,
+              ...(normalizedLogisticsComment ? { logisticsComment: normalizedLogisticsComment } : {}),
+              hasCscPlate: updateParsed.data.hasCscPlate === true,
+              hasCscCertification: updateParsed.data.hasCscCertification === true,
+              ...(normalizedCscValidToMonth !== undefined && normalizedCscValidToYear !== undefined
+                ? {
+                    cscValidToMonth: normalizedCscValidToMonth,
+                    cscValidToYear: normalizedCscValidToYear,
+                  }
+                : {}),
+              ...(typeof updateParsed.data.productionYear === "number"
+                ? { productionYear: updateParsed.data.productionYear }
+                : {}),
+              price:
+                normalizedPrice ??
+                (normalizedPriceAmount !== undefined
+                  ? String(normalizedPriceAmount)
+                  : normalizedPricing?.original.amount !== null
+                    ? String(normalizedPricing?.original.amount)
+                    : undefined),
+              ...(normalizedDescription ? { description: normalizedDescription } : {}),
+              companyName: updateParsed.data.companyName.trim(),
+              contactEmail: updateParsed.data.contactEmail.trim(),
+              contactPhone: normalizeOptionalString(updateParsed.data.contactPhone),
+              updatedAt: now,
             },
-            quantity: updateParsed.data.quantity,
-            locationCity,
-            locationCountry,
-            locationLat: primaryLocation.locationLat,
-            locationLng: primaryLocation.locationLng,
-            ...(locationAddressLabel ? { locationAddressLabel } : {}),
-            ...(locationAddressParts ? { locationAddressParts } : {}),
-            locations: normalizedLocations,
-            availableNow: updateParsed.data.availableNow === true,
-            availableFromApproximate:
-              updateParsed.data.availableNow === true
-                ? false
-                : updateParsed.data.availableFromApproximate === true,
-            availableFrom: resolvedAvailableFrom,
-            ...(normalizedPricing ? { pricing: normalizedPricing } : {}),
-            ...(normalizedPriceAmount !== undefined || normalizedPricing?.original.amount !== null
-              ? { priceAmount: normalizedPriceAmount ?? normalizedPricing?.original.amount ?? undefined }
-              : {}),
-            priceNegotiable:
-              normalizedPricing?.original.negotiable === true ||
-              updateParsed.data.priceNegotiable === true,
-            logisticsTransportAvailable,
-            logisticsTransportIncluded:
-              logisticsTransportAvailable && logisticsTransportIncluded,
-            ...(normalizedLogisticsTransportFreeDistanceKm !== undefined
-              ? { logisticsTransportFreeDistanceKm: normalizedLogisticsTransportFreeDistanceKm }
-              : {}),
-            logisticsUnloadingAvailable,
-            logisticsUnloadingIncluded:
-              logisticsUnloadingAvailable && logisticsUnloadingIncluded,
-            ...(normalizedLogisticsComment ? { logisticsComment: normalizedLogisticsComment } : {}),
-            hasCscPlate: updateParsed.data.hasCscPlate === true,
-            hasCscCertification: updateParsed.data.hasCscCertification === true,
-            ...(normalizedCscValidToMonth !== undefined && normalizedCscValidToYear !== undefined
-              ? {
-                  cscValidToMonth: normalizedCscValidToMonth,
-                  cscValidToYear: normalizedCscValidToYear,
-                }
-              : {}),
-            ...(typeof updateParsed.data.productionYear === "number"
-              ? { productionYear: updateParsed.data.productionYear }
-              : {}),
-            price:
-              normalizedPrice ??
-              (normalizedPriceAmount !== undefined
-                ? String(normalizedPriceAmount)
-                : normalizedPricing?.original.amount !== null
-                  ? String(normalizedPricing?.original.amount)
-                  : undefined),
-            ...(normalizedDescription ? { description: normalizedDescription } : {}),
-            companyName: updateParsed.data.companyName.trim(),
-            contactEmail: updateParsed.data.contactEmail.trim(),
-            contactPhone: normalizeOptionalString(updateParsed.data.contactPhone),
-            updatedAt: now,
+            ...(Object.keys(unsetPatch).length > 0 ? { $unset: unsetPatch } : {}),
           },
-          ...(Object.keys(unsetPatch).length > 0 ? { $unset: unsetPatch } : {}),
-        },
-      );
+        );
+      } catch (dbError) {
+        if (uploadedBlobUrls.length > 0) {
+          await safeDeleteBlobUrls(uploadedBlobUrls);
+        }
+        throw dbError;
+      }
+      const staleBlobUrls = toBlobUrls(removedExistingPhotos);
+      if (staleBlobUrls.length > 0) {
+        await safeDeleteBlobUrls(staleBlobUrls);
+      }
 
       const refreshed = await listings.findOne({ _id: listingId });
       return NextResponse.json({ item: refreshed ? mapContainerListingToItem(refreshed) : null });
@@ -628,7 +890,16 @@ export async function DELETE(request: NextRequest, context: RouteContext) {
 
     const listingId = new ObjectId(id);
     const listings = await getContainerListingsCollection();
-    const listing = await listings.findOne({ _id: listingId }, { projection: { _id: 1, createdByUserId: 1 } });
+    const listing = await listings.findOne(
+      { _id: listingId },
+      {
+        projection: {
+          _id: 1,
+          createdByUserId: 1,
+          "photos.blobUrl": 1,
+        },
+      },
+    );
     if (!listing?._id) {
       return NextResponse.json({ error: "Listing not found" }, { status: 404 });
     }
@@ -646,6 +917,10 @@ export async function DELETE(request: NextRequest, context: RouteContext) {
     }
 
     await listings.deleteOne({ _id: listingId });
+    const staleBlobUrls = toBlobUrls(listing.photos ?? []);
+    if (staleBlobUrls.length > 0) {
+      await safeDeleteBlobUrls(staleBlobUrls);
+    }
     await (await getContainerListingFavoritesCollection()).deleteMany({ listingId });
     return NextResponse.json({ ok: true });
   } catch (error) {

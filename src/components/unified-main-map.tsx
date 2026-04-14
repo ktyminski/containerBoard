@@ -10,7 +10,6 @@ import {
 } from "@/components/unified-main-map/popups";
 import {
   EMPTY_COMMUNICATION_LANGUAGES,
-  EMPTY_COMPANY_CATEGORIES,
   EMPTY_COMPANY_SPECIALIZATIONS,
   EMPTY_OPERATING_AREAS,
   type OfferMapItem,
@@ -38,7 +37,6 @@ export function UnifiedMainMap({
   keyword = "",
   operatingAreas,
   communicationLanguages,
-  companyCategories,
   companySpecializations,
   locationBbox = null,
   onLocationFilterRelease,
@@ -52,7 +50,6 @@ export function UnifiedMainMap({
   const activeOperatingAreas = operatingAreas ?? EMPTY_OPERATING_AREAS;
   const activeCommunicationLanguages =
     communicationLanguages ?? EMPTY_COMMUNICATION_LANGUAGES;
-  const activeCompanyCategories = companyCategories ?? EMPTY_COMPANY_CATEGORIES;
   const activeCompanySpecializations =
     companySpecializations ?? EMPTY_COMPANY_SPECIALIZATIONS;
 
@@ -80,7 +77,6 @@ export function UnifiedMainMap({
     keyword,
     operatingAreas: activeOperatingAreas,
     communicationLanguages: activeCommunicationLanguages,
-    companyCategories: activeCompanyCategories,
     companySpecializations: activeCompanySpecializations,
     locationBbox,
   });

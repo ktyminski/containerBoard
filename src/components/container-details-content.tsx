@@ -106,7 +106,10 @@ function getListingPriceDisplay(
 ): ListingPriceDisplay {
   const pricing = item.pricing;
 
-  if (pricing?.type === "request") {
+  if (
+    pricing &&
+    (pricing.original.amount === null || typeof pricing.original.amount !== "number")
+  ) {
     const metaParts = ["Zapytanie", "VAT do ustalenia"];
     if (pricing.original.negotiable === true || item.priceNegotiable === true) {
       metaParts.push("Do negocjacji");
@@ -125,7 +128,6 @@ function getListingPriceDisplay(
     pricing.original.currency &&
     pricing.original.taxMode
   ) {
-    const amountPrefix = pricing.type === "starting_from" ? "od " : "";
     const normalizedAmountSet =
       pricing.original.taxMode === "net"
         ? pricing.normalized.net
@@ -145,7 +147,7 @@ function getListingPriceDisplay(
         ) {
           return null;
         }
-        return `${amountPrefix}~${Math.round(normalizedAmount).toLocaleString("pl-PL")} ${PRICE_CURRENCY_LABEL[currency]}`;
+        return `~${Math.round(normalizedAmount).toLocaleString("pl-PL")} ${PRICE_CURRENCY_LABEL[currency]}`;
       })
       .filter((value): value is string => Boolean(value));
 
@@ -158,7 +160,7 @@ function getListingPriceDisplay(
     }
 
     return {
-      amountLabel: `${amountPrefix}${Math.round(pricing.original.amount).toLocaleString("pl-PL")} ${PRICE_CURRENCY_LABEL[pricing.original.currency]}`,
+      amountLabel: `${Math.round(pricing.original.amount).toLocaleString("pl-PL")} ${PRICE_CURRENCY_LABEL[pricing.original.currency]}`,
       metaLine: metaParts.join(" | "),
       isRequestPrice: false,
       additionalAmounts,
@@ -195,9 +197,9 @@ function getListingPriceDisplay(
   }
 
   return {
-    amountLabel: "Nie podano",
-    metaLine: "VAT n/d",
-    isRequestPrice: false,
+    amountLabel: "Zapytaj o cene",
+    metaLine: "Zapytanie | VAT do ustalenia",
+    isRequestPrice: true,
     additionalAmounts: [],
   };
 }
@@ -279,6 +281,7 @@ function resolveListingRealImages(
   listingItem: ContainerListingItem,
 ): string[] {
   const dynamicCandidates = [
+    ...(listingItem.photoUrls ?? []),
     ...extractImageUrls(listing),
     ...extractImageUrls(listingItem as unknown),
   ].filter(
@@ -524,6 +527,7 @@ export async function ContainerDetailsContent({
   const isPriceNegotiable =
     listingItem.priceNegotiable === true ||
     listingItem.pricing?.original.negotiable === true;
+  const containerColors = listingItem.containerColors ?? [];
 
   return (
     <div className="grid gap-4">
@@ -562,6 +566,7 @@ export async function ContainerDetailsContent({
                   images={[mainImage]}
                   title={resolvedTitle}
                   showMainImage
+                  mainImagePriority
                   showThumbnails={false}
                   className="mt-0"
                 />
@@ -682,6 +687,36 @@ export async function ContainerDetailsContent({
                 >
                   {label}
                 </span>
+              ))}
+            </div>
+          </section>
+        ) : null}
+
+        {containerColors.length > 0 ? (
+          <section className="mt-4 rounded-md border border-neutral-300 bg-white p-4">
+            <h2 className="text-sm font-semibold text-neutral-800">
+              Kolory kontenera (RAL)
+            </h2>
+            <div className="mt-3 grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
+              {containerColors.map((color) => (
+                <div
+                  key={`${listingItem.id}-color-${color.ral}`}
+                  className="flex items-center gap-3 rounded-md border border-neutral-300 bg-neutral-50 px-3 py-2"
+                >
+                  <span
+                    aria-hidden="true"
+                    className="h-7 w-7 shrink-0 rounded-md border border-neutral-300"
+                    style={{
+                      backgroundColor: `rgb(${color.rgb.r}, ${color.rgb.g}, ${color.rgb.b})`,
+                    }}
+                  />
+                  <div className="min-w-0">
+                    <p className="text-sm font-medium text-neutral-900">{color.ral}</p>
+                    <p className="truncate text-xs text-neutral-600">
+                      RGB {color.rgb.r}, {color.rgb.g}, {color.rgb.b}
+                    </p>
+                  </div>
+                </div>
               ))}
             </div>
           </section>

@@ -94,7 +94,6 @@ export function buildAppliedBaseFromFormValues(
     logisticsUnloadingOnly: values.logisticsUnloadingOnly,
     hasCscPlateOnly: values.hasCscPlateOnly,
     hasCscCertificationOnly: values.hasCscCertificationOnly,
-    priceType: values.priceType,
     priceCurrency: normalizedPriceCurrency,
     priceDisplayCurrency: values.priceDisplayCurrency,
     priceTaxMode: normalizedPriceTaxMode,
@@ -159,15 +158,11 @@ function createListQueryParams(appliedFilters: AppliedFilters, page: number): UR
 }
 
 function applyListingKindParams(params: URLSearchParams, listingKind: ListingKind): void {
-  if (listingKind === "rent") {
-    params.set("type", "available");
+  if (listingKind === "all") {
     return;
   }
 
-  if (listingKind === "available" || listingKind === "wanted") {
-    params.set("type", listingKind);
-    return;
-  }
+  params.set("type", listingKind);
 }
 
 function applyLocationParams(params: URLSearchParams, appliedFilters: AppliedFilters): void {

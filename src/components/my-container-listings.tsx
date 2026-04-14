@@ -1,8 +1,10 @@
 ﻿"use client";
 
 import Link from "next/link";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useState, type ReactNode } from "react";
 import { useToast } from "@/components/toast-provider";
+import { getSortParams } from "@/components/container-listings-utils";
+import { SORT_OPTIONS, type SortPreset } from "@/components/container-listings-shared";
 import { type ContainerListingItem } from "@/lib/container-listings";
 import {
   getContainerShortLabel,
@@ -22,8 +24,9 @@ type MineResponse = {
 };
 
 const LISTING_TYPE_LABEL: Record<ListingType, string> = {
-  available: "Dostepny",
-  wanted: "Poszukiwany",
+  sell: "Sprzedaz",
+  rent: "Wynajem",
+  buy: "Chce zakupic",
 };
 
 const DARK_BLUE_CTA_CLASS =
@@ -41,10 +44,48 @@ const STATUS_LABEL: Record<"active" | "expired" | "closed", string> = {
   closed: "Zamkniety",
 };
 
+function SelectWithChevron(props: {
+  value: string;
+  onChange: (value: string) => void;
+  className?: string;
+  children: ReactNode;
+}) {
+  const { value, onChange, className, children } = props;
+  return (
+    <div className={`relative min-w-0 ${className ?? ""}`}>
+      <select
+        value={value}
+        onChange={(event) => onChange(event.target.value)}
+        className="h-10 w-full min-w-0 appearance-none rounded-md border border-neutral-300 bg-white px-3 pr-10 text-sm text-neutral-900 transition"
+      >
+        {children}
+      </select>
+      <svg
+        viewBox="0 0 20 20"
+        aria-hidden="true"
+        className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-neutral-500"
+        fill="none"
+      >
+        <path
+          d="M5 7.5L10 12.5L15 7.5"
+          stroke="currentColor"
+          strokeWidth="1.75"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        />
+      </svg>
+    </div>
+  );
+}
+
 export function MyContainerListings() {
   const toast = useToast();
   const [items, setItems] = useState<ContainerListingItem[]>([]);
   const [status, setStatus] = useState<"all" | "active" | "expired" | "closed">("all");
+  const [sortPreset, setSortPreset] = useState<SortPreset>("newest");
+  const [page, setPage] = useState(1);
+  const [pageSize] = useState(20);
+  const [totalPages, setTotalPages] = useState(1);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -53,12 +94,19 @@ export function MyContainerListings() {
     setError(null);
 
     try {
+      const { sortBy, sortDir } = getSortParams(sortPreset);
       const params = new URLSearchParams({
         mine: "1",
-        pageSize: "100",
+        page: String(page),
+        pageSize: String(pageSize),
+        sortBy,
+        sortDir,
       });
       if (status !== "all") {
         params.set("status", status);
+      }
+      if (sortBy === "priceNet") {
+        params.set("priceCurrency", "PLN");
       }
 
       const response = await fetch(`/api/containers?${params.toString()}`, {
@@ -71,16 +119,27 @@ export function MyContainerListings() {
       }
 
       setItems(data.items ?? []);
+      setTotalPages(data.meta?.totalPages ?? 1);
+      const resolvedPage = data.meta?.page ?? page;
+      setPage((current) => (current === resolvedPage ? current : resolvedPage));
     } catch (loadError) {
       setError(loadError instanceof Error ? loadError.message : "Nie udalo sie pobrac listy");
     } finally {
       setIsLoading(false);
     }
-  }, [status]);
+  }, [page, pageSize, sortPreset, status]);
 
   useEffect(() => {
     void loadMine();
   }, [loadMine]);
+
+  const goToPreviousPage = () => {
+    setPage((current) => Math.max(1, current - 1));
+  };
+
+  const goToNextPage = () => {
+    setPage((current) => Math.min(totalPages, current + 1));
+  };
 
   async function runAction(id: string, action: "close" | "refresh" | "delete") {
     try {
@@ -108,21 +167,70 @@ export function MyContainerListings() {
     }
   }
 
+  const renderPaginationControls = () => {
+    if (totalPages <= 1) {
+      return null;
+    }
+
+    return (
+      <div className="flex items-center justify-end gap-2">
+        <button
+          type="button"
+          disabled={page <= 1 || isLoading}
+          onClick={goToPreviousPage}
+          className="rounded-md border border-neutral-300 px-3 py-1.5 text-sm text-neutral-700 disabled:cursor-not-allowed disabled:opacity-50"
+        >
+          Poprzednia
+        </button>
+        <span className="text-xs text-neutral-500">
+          {page} / {totalPages}
+        </span>
+        <button
+          type="button"
+          disabled={page >= totalPages || isLoading}
+          onClick={goToNextPage}
+          className="rounded-md border border-neutral-300 px-3 py-1.5 text-sm text-neutral-700 disabled:cursor-not-allowed disabled:opacity-50"
+        >
+          Nastepna
+        </button>
+      </div>
+    );
+  };
+
   return (
     <section className="grid gap-3">
       <div className="flex flex-wrap items-center justify-between gap-2 rounded-md border border-neutral-300 bg-neutral-50/95 p-3 shadow-sm backdrop-blur supports-[backdrop-filter]:bg-neutral-50/90">
-        <h1 className="text-2xl font-semibold text-neutral-900">Moje kontenery</h1>
-        <div className="flex items-center gap-2">
-          <select
+        <div className="flex flex-wrap items-center gap-2">
+          <h1 className="text-2xl font-semibold text-neutral-900">Moje kontenery</h1>
+        </div>
+        <div className="flex flex-wrap items-center justify-end gap-2">
+          <SelectWithChevron
             value={status}
-            onChange={(event) => setStatus(event.target.value as "all" | "active" | "expired" | "closed")}
-            className="h-10 rounded-md border border-neutral-300 bg-white px-3 text-sm text-neutral-900"
+            onChange={(value) => {
+              setStatus(value as "all" | "active" | "expired" | "closed");
+              setPage(1);
+            }}
+            className="w-[170px]"
           >
             <option value="all">Status: wszystkie</option>
             <option value="active">Aktywne</option>
             <option value="expired">Wygasle</option>
             <option value="closed">Zamkniete</option>
-          </select>
+          </SelectWithChevron>
+          <SelectWithChevron
+            value={sortPreset}
+            onChange={(value) => {
+              setSortPreset(value as SortPreset);
+              setPage(1);
+            }}
+            className="w-[205px]"
+          >
+            {SORT_OPTIONS.map((option) => (
+              <option key={option.value} value={option.value}>
+                {option.label}
+              </option>
+            ))}
+          </SelectWithChevron>
           <Link
             href="/containers/new"
             className={`inline-flex h-10 items-center rounded-md px-3 text-sm font-medium ${DARK_BLUE_CTA_CLASS}`}
@@ -133,6 +241,7 @@ export function MyContainerListings() {
       </div>
 
       <div className="rounded-md border border-neutral-300 bg-neutral-100/95 p-3 shadow-sm">
+        <div className="mb-3">{renderPaginationControls()}</div>
         {error ? <p className="text-sm text-rose-700">{error}</p> : null}
 
         {isLoading ? (
@@ -175,6 +284,12 @@ export function MyContainerListings() {
                   {item.companyName} - {item.locationCity}, {item.locationCountry}
                 </p>
                 <p>Ilosc: {item.quantity}</p>
+                {item.containerColors && item.containerColors.length > 0 ? (
+                  <p>
+                    Kolory:{" "}
+                    {item.containerColors.map((color) => color.ral).join(", ")}
+                  </p>
+                ) : null}
                 <p>Wygasa: {new Date(item.expiresAt).toLocaleDateString("pl-PL")}</p>
               </div>
 
@@ -226,6 +341,7 @@ export function MyContainerListings() {
             </li>
           ))}
         </ul>
+        <div className="mt-3">{renderPaginationControls()}</div>
       </div>
     </section>
   );

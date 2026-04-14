@@ -71,6 +71,7 @@ export default async function EditContainerPage({ params }: EditContainerPagePro
         successMessage="Kontener zaktualizowany"
         backHref={`/containers/${listing._id.toHexString()}`}
         backLabel="Powrot do szczegolow"
+        initialPhotoUrls={listingItem.photoUrls}
         initialValues={{
           type: listingItem.type,
           title: listingItem.title ?? "",
@@ -79,6 +80,8 @@ export default async function EditContainerPage({ params }: EditContainerPagePro
           containerType: listingItem.container.type,
           containerFeatures: listingItem.container.features,
           containerCondition: listingItem.container.condition,
+          containerColorsRal:
+            listingItem.containerColors?.map((color) => color.ral).join(", ") ?? "",
           hasCscPlate: listingItem.hasCscPlate,
           hasCscCertification: listingItem.hasCscCertification,
           cscValidToMonth:
@@ -105,6 +108,7 @@ export default async function EditContainerPage({ params }: EditContainerPagePro
           locationAddressLabel: listingItem.locationAddressLabel ?? "",
           locationStreet: listingItem.locationAddressParts?.street ?? "",
           locationHouseNumber: listingItem.locationAddressParts?.houseNumber ?? "",
+          locationPostalCode: listingItem.locationAddressParts?.postalCode ?? "",
           locationAddressCity: listingItem.locationAddressParts?.city ?? listingItem.locationCity,
           locationAddressCountry: listingItem.locationAddressParts?.country ?? listingItem.locationCountry,
           availableNow: listingItem.availableNow,
@@ -119,7 +123,6 @@ export default async function EditContainerPage({ params }: EditContainerPagePro
           logisticsUnloadingAvailable: listingItem.logisticsUnloadingAvailable,
           logisticsUnloadingIncluded: listingItem.logisticsUnloadingIncluded,
           logisticsComment: listingItem.logisticsComment ?? "",
-          priceType: listingItem.pricing?.type ?? "fixed",
           priceValueAmount:
             typeof listingItem.pricing?.original.amount === "number"
               ? String(Math.round(listingItem.pricing.original.amount))

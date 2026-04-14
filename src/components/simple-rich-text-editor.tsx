@@ -117,7 +117,7 @@ export function SimpleRichTextEditor({
           const nextHtml = normalizeEditorHtml(event.currentTarget.innerHTML);
           onChange(nextHtml);
         }}
-        className="min-h-32 rounded-md border border-neutral-300 bg-white px-3 py-2 text-sm text-neutral-900 focus:outline-none focus:ring-2 focus:ring-sky-300 empty:before:pointer-events-none empty:before:content-[attr(data-placeholder)] empty:before:text-neutral-400"
+        className="min-h-32 rounded-md border border-neutral-300 bg-white px-3 py-2 text-sm text-neutral-900 focus:outline-none focus:ring-2 focus:ring-[#4e86c3] empty:before:pointer-events-none empty:before:content-[attr(data-placeholder)] empty:before:text-neutral-400"
       />
 
       <p

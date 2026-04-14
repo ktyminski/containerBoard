@@ -171,14 +171,21 @@ export function UserAccountMenu({
               {adminPanelLabel}
             </Link>
           ) : null}
+          {myListingsLabel && myListingsHref ? (
+            <Link
+              href={myListingsHref}
+              className="whitespace-nowrap rounded-md px-3 py-2 text-left text-sm text-[#dbeafe] transition hover:bg-[#103969]"
+              onClick={() => {
+                setIsOpen(false);
+              }}
+            >
+              {myListingsLabel}
+            </Link>
+          ) : null}
           {companyPanelLabel && companyPanelHref ? (
             <Link
               href={companyPanelHref}
-              className={
-                hasBlockedCompany
-                  ? "inline-flex items-center justify-between gap-2 whitespace-nowrap rounded-md px-3 py-2 text-left text-sm text-rose-200 transition hover:bg-[#103969] md:hidden"
-                  : "inline-flex items-center justify-between gap-2 whitespace-nowrap rounded-md px-3 py-2 text-left text-sm text-emerald-200 transition hover:bg-[#103969] md:hidden"
-              }
+              className="inline-flex items-center justify-between gap-2 whitespace-nowrap rounded-md px-3 py-2 text-left text-sm text-[#dbeafe] transition hover:bg-[#103969]"
               onClick={() => {
                 setIsOpen(false);
               }}
@@ -193,17 +200,6 @@ export function UserAccountMenu({
                   !
                 </span>
               ) : null}
-            </Link>
-          ) : null}
-          {myListingsLabel && myListingsHref ? (
-            <Link
-              href={myListingsHref}
-              className="whitespace-nowrap rounded-md px-3 py-2 text-left text-sm text-[#dbeafe] transition hover:bg-[#103969]"
-              onClick={() => {
-                setIsOpen(false);
-              }}
-            >
-              {myListingsLabel}
             </Link>
           ) : null}
           <Link

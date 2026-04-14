@@ -1,4 +1,3 @@
-import type { CompanyCategory } from "@/types/company-category";
 import type { CompanyVerificationStatus } from "@/lib/company-verification";
 import type { CompanyOperatingArea } from "@/lib/company-operating-area";
 import type { CompanyCommunicationLanguage } from "@/types/company-communication-language";
@@ -9,7 +8,6 @@ export type CompanyMapItem = {
   name: string;
   slug: string;
   isPremium: boolean;
-  category: CompanyCategory;
   locationCity?: string;
   communicationLanguages?: CompanyCommunicationLanguage[];
   verificationStatus: CompanyVerificationStatus;

@@ -4,6 +4,7 @@ import Link from "next/link";
 import { cache } from "react";
 import { cookies } from "next/headers";
 import { notFound } from "next/navigation";
+import { CompanyDeletionRequestButton } from "@/components/company-deletion-request-button";
 import { CompanyLocationsAndBranches } from "@/components/company-locations-and-branches";
 import { CompanyOwnershipClaimButton } from "@/components/company-ownership-claim-button";
 import { SmartBackButton } from "@/components/smart-back-button";
@@ -28,8 +29,6 @@ import {
 import { buildShortAddressLabelFromParts } from "@/lib/geocode-address";
 import { buildPageMetadata, getAbsoluteUrl, getLocalizedCanonical } from "@/lib/seo";
 import {
-  getCompanyFallbackColor,
-  getCompanyFallbackGradient,
   getCompanyInitial,
 } from "@/lib/company-logo-fallback";
 import { USER_ROLE } from "@/lib/user-roles";
@@ -45,7 +44,6 @@ const COMPANY_PAGE_PROJECTION = {
   slug: 1,
   createdByUserId: 1,
   description: 1,
-  category: 1,
   operatingArea: 1,
   operatingAreaDetails: 1,
   nip: 1,
@@ -64,13 +62,10 @@ const COMPANY_PAGE_PROJECTION = {
   "logo.filename": 1,
   "background.size": 1,
   "background.filename": 1,
-  "photos.size": 1,
-  "photos.filename": 1,
   updatedAt: 1,
   "locations.label": 1,
   "locations.addressText": 1,
   "locations.addressParts": 1,
-  "locations.note": 1,
   "locations.phone": 1,
   "locations.email": 1,
   "locations.point": 1,
@@ -175,9 +170,12 @@ export default async function CompanyDetailsPage({
       currentUser?.role === USER_ROLE.ADMIN ||
       company.createdByUserId?.toHexString() === currentUser?._id?.toHexString()
     );
+  const isOwner =
+    Boolean(currentUser?._id) &&
+    company.createdByUserId?.toHexString() === currentUser?._id?.toHexString();
   const operatingArea = normalizeCompanyOperatingArea(company.operatingArea);
   const operatingAreaLabel = messages.companyCreate.operatingAreas[operatingArea];
-  const fallbackBackHref = withLang(canEdit ? "/companies/panel" : "/maps", locale);
+  const fallbackBackHref = withLang(canEdit ? "/containers/mine" : "/list", locale);
   const logoUrl = company.logo?.size || company.logo?.filename ? `/api/companies/${companyId}/logo` : null;
   const backgroundUrl = company.background?.size || company.background?.filename
     ? `/api/companies/${companyId}/background`
@@ -185,18 +183,22 @@ export default async function CompanyDetailsPage({
   const mediaVersion = company.updatedAt instanceof Date
     ? company.updatedAt.getTime()
     : 0;
-  const logoFallbackColor = getCompanyFallbackColor(companyId);
-  const backgroundFallbackGradient = getCompanyFallbackGradient(logoFallbackColor);
+  const logoFallbackColor = "#05244f";
+  const backgroundPlaceholderStyle = {
+    backgroundImage: "linear-gradient(180deg,#d4d4d8_0%,#a1a1aa_100%)",
+  };
   const logoFallbackInitial = getCompanyInitial(company.name);
   const withMediaVersion = (url: string) => `${url}?v=${mediaVersion}`;
-  const companyPhotos = (company.photos ?? []).map((_, index) => ({
-    id: `company-photo-${index}`,
-    url: withMediaVersion(`/api/companies/${companyId}/photos/${index}`),
-    alt: formatTemplate(messages.companyDetails.companyPhotoAlt, {
-      company: company.name,
-      index: index + 1,
-    }),
-  }));
+  const backgroundOverlayClass = backgroundUrl
+    ? "absolute inset-0 bg-gradient-to-t from-neutral-950/78 via-neutral-900/45 to-transparent"
+    : "";
+  const companyNameClass = backgroundUrl
+    ? "max-w-[400px] min-w-0 truncate text-lg font-semibold text-white drop-shadow-[0_2px_8px_rgba(0,0,0,0.7)] sm:text-2xl"
+    : "max-w-[400px] min-w-0 truncate text-lg font-semibold text-neutral-900 sm:text-2xl";
+  const neutralActionButtonClass =
+    "inline-flex items-center rounded-md border border-neutral-400 bg-white px-3 py-2 text-sm text-neutral-700 transition-colors hover:border-neutral-500 hover:bg-neutral-50";
+  const primaryActionButtonClass =
+    "inline-flex items-center rounded-md bg-[#05244f] px-4 py-2 text-sm font-medium text-white transition hover:bg-[#0a356d]";
 
   const locations = (company.locations ?? [])
     .map((location, index) => {
@@ -212,9 +214,8 @@ export default async function CompanyDetailsPage({
           parts: location.addressParts,
           fallbackLabel: location.addressText,
         }),
-        note: location.note,
-        phone: location.phone,
-        email: location.email,
+        phone: (location.phone ?? company.phone)?.trim() || undefined,
+        email: (location.email ?? company.email)?.trim() || undefined,
         point: {
           coordinates: point,
         },
@@ -243,7 +244,7 @@ export default async function CompanyDetailsPage({
     company.facebookUrl || company.instagramUrl || company.linkedinUrl,
   );
   const socialIconButtonClass =
-    "inline-flex h-[54px] w-[54px] items-center justify-center rounded-full border border-neutral-200/30 bg-neutral-900/65 text-neutral-100 backdrop-blur transition-colors hover:border-sky-300/70 hover:bg-sky-500/25 hover:text-white";
+    "inline-flex h-[54px] w-[54px] items-center justify-center rounded-full border border-neutral-300 bg-white/92 text-neutral-700 shadow-sm backdrop-blur transition-colors hover:border-neutral-400 hover:bg-white";
   const organizationSchema = {
     "@context": "https://schema.org",
     "@type": "Organization",
@@ -268,35 +269,37 @@ export default async function CompanyDetailsPage({
   };
 
   return (
-    <section className="relative overflow-hidden">
-      <div className="pointer-events-none absolute inset-0" aria-hidden="true">
-        <div className="absolute -left-28 top-10 h-64 w-64 rounded-full bg-sky-500/15 blur-3xl" />
-        <div className="absolute right-[-5rem] top-28 h-72 w-72 rounded-full bg-cyan-400/10 blur-3xl" />
-        <div className="absolute bottom-8 left-1/3 h-56 w-56 rounded-full bg-emerald-400/10 blur-3xl" />
-      </div>
-      <main className="relative mx-auto flex w-full max-w-5xl flex-col gap-6 px-4 py-6 sm:px-6">
-      <script
-        type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(organizationSchema) }}
-      />
-      <SmartBackButton
-        label={messages.companyDetails.back}
-        fallbackHref={fallbackBackHref}
-        className="inline-flex w-fit cursor-pointer items-center gap-2 rounded-md border border-neutral-700 px-3 py-2 text-sm text-neutral-200 transition-colors hover:border-neutral-500"
-      />
-        {canEdit ? (
-          <div>
+    <section>
+      <main className="mx-auto flex w-full max-w-5xl flex-col gap-4 px-4 py-6 sm:px-6">
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(organizationSchema) }}
+        />
+        <div className="flex flex-wrap items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2">
+            <SmartBackButton
+              label={messages.companyDetails.back}
+              fallbackHref={fallbackBackHref}
+              className={`${neutralActionButtonClass} w-fit cursor-pointer gap-2`}
+            />
+            <Link
+              href={withLang("/list", locale)}
+              className={neutralActionButtonClass}
+            >
+              {messages.companyDetails.backToMap}
+            </Link>
+          </div>
+          {canEdit ? (
             <Link
               href={withLang(`/companies/${company.slug}/edit`, locale)}
-              className="rounded-md border border-emerald-700 px-4 py-2 text-sm text-emerald-200 hover:border-emerald-500"
+              className={`${primaryActionButtonClass} ml-auto`}
             >
               {messages.companyDetails.editCompany}
             </Link>
-          </div>
-        ) : null}
-
-        <section className="overflow-hidden rounded-xl border border-neutral-800 bg-neutral-900/60">
-          <div className="relative aspect-[4/1] w-full overflow-hidden bg-neutral-950">
+          ) : null}
+        </div>
+        <section className="overflow-hidden rounded-xl border border-neutral-300 bg-white shadow-sm">
+          <div className="relative aspect-[4/1] w-full overflow-hidden bg-neutral-300">
             {backgroundUrl ? (
               <Image
                 src={withMediaVersion(backgroundUrl)}
@@ -306,9 +309,9 @@ export default async function CompanyDetailsPage({
                 sizes="(max-width: 1024px) 100vw, 1280px"
               />
             ) : (
-              <div className="h-full w-full" style={{ backgroundImage: backgroundFallbackGradient }} />
+              <div className="h-full w-full" style={backgroundPlaceholderStyle} />
             )}
-            <div className="absolute inset-0 bg-gradient-to-t from-neutral-950 via-neutral-900/70 to-transparent" />
+            {backgroundOverlayClass ? <div className={backgroundOverlayClass} /> : null}
             {hasSocialLinks ? (
               <div className="absolute right-5 top-1/2 z-20 hidden -translate-y-1/2 flex-col items-center gap-2 md:flex">
                 {company.facebookUrl ? (
@@ -348,7 +351,7 @@ export default async function CompanyDetailsPage({
             ) : null}
             <div className="absolute inset-x-4 bottom-6 z-10 flex items-end gap-3 sm:bottom-8">
               <div
-                className={`relative h-12 w-12 rounded-lg border-2 border-neutral-700 bg-neutral-950 shadow-lg sm:h-12 sm:w-12 md:h-24 md:w-24 lg:h-32 lg:w-32 ${
+                className={`relative h-12 w-12 rounded-lg border-2 border-neutral-300 bg-neutral-700 shadow-lg sm:h-12 sm:w-12 md:h-24 md:w-24 lg:h-32 lg:w-32 ${
                   isPremium ? "overflow-visible" : "overflow-hidden"
                 }`}
               >
@@ -373,7 +376,7 @@ export default async function CompanyDetailsPage({
                 </div>
                 {isPremium ? (
                   <span
-                    className="absolute left-0 top-0 z-20 inline-flex h-5 w-5 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full border border-amber-400/80 bg-neutral-950/90 text-amber-300 shadow-[0_0_10px_rgba(245,158,11,0.35)] md:h-6 md:w-6"
+                    className="absolute left-0 top-0 z-20 inline-flex h-5 w-5 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full border border-amber-300 bg-white/95 text-amber-600 shadow-[0_0_10px_rgba(245,158,11,0.25)] md:h-6 md:w-6"
                     aria-hidden="true"
                   >
                     <svg viewBox="0 0 20 20" className="h-3.5 w-3.5 md:h-4 md:w-4" aria-hidden="true">
@@ -387,18 +390,12 @@ export default async function CompanyDetailsPage({
               </div>
               <div className="min-w-0 pb-1">
                 <div className="flex min-w-0 items-center gap-2">
-                  <p
-                    className="max-w-[400px] min-w-0 truncate text-lg font-semibold text-white sm:text-2xl"
-                    style={{
-                      textShadow:
-                        "-1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000, 1px 1px 0 #000",
-                    }}
-                  >
+                  <p className={companyNameClass}>
                     {company.name}
                   </p>
                   {isVerified ? (
                     <span
-                      className="inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-full border border-emerald-400/70 bg-emerald-500/20 text-emerald-300"
+                      className="inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-full border border-emerald-300/80 bg-emerald-100/80 text-emerald-700"
                       aria-label={messages.companyStatus.verified}
                       title={messages.companyStatus.verified}
                     >
@@ -418,7 +415,7 @@ export default async function CompanyDetailsPage({
             </div>
           </div>
           {hasSocialLinks ? (
-            <div className="flex items-center justify-center gap-2 border-t border-neutral-800/70 bg-neutral-950/60 px-4 py-3 md:hidden">
+            <div className="flex items-center justify-center gap-2 border-t border-neutral-200 bg-neutral-50 px-4 py-3 md:hidden">
               {company.facebookUrl ? (
                 <a
                   href={company.facebookUrl}
@@ -454,7 +451,7 @@ export default async function CompanyDetailsPage({
               ) : null}
             </div>
           ) : null}
-          <div className="grid gap-5 p-5 text-sm text-neutral-200">
+          <div className="grid gap-5 p-5 text-sm text-neutral-700">
             <section className="grid gap-5 md:grid-cols-[minmax(0,1.65fr)_minmax(0,1fr)]">
               <div className="grid gap-2">
                 <p className="whitespace-pre-wrap">
@@ -463,29 +460,29 @@ export default async function CompanyDetailsPage({
                 {/* Tags and services intentionally hidden in company details view. */}
               </div>
 
-              <aside className="h-fit rounded-xl border border-neutral-700/80 bg-neutral-950/70 p-4">
+              <aside className="h-fit rounded-xl border border-neutral-200 bg-neutral-50 p-4">
                 <div className="grid gap-2">
                   {companyPhone ? (
-                    <div className="rounded-lg border border-neutral-800 bg-neutral-900/60 p-3">
-                      <p className="text-[11px] uppercase tracking-wide text-neutral-400">
+                    <div className="rounded-lg border border-neutral-200 bg-white p-3">
+                      <p className="text-[11px] uppercase tracking-wide text-neutral-500">
                         {messages.companyDetails.phoneLabel}
                       </p>
                       <a
                         href={`tel:${companyPhone.replace(/\s+/g, "")}`}
-                        className="mt-1 inline-flex text-sm text-neutral-100 transition-colors hover:text-sky-300"
+                        className="mt-1 inline-flex text-sm text-neutral-800 transition-colors hover:text-sky-700"
                       >
                         {companyPhone}
                       </a>
                     </div>
                   ) : null}
-                  <div className="rounded-lg border border-neutral-800 bg-neutral-900/60 p-3">
-                    <p className="text-[11px] uppercase tracking-wide text-neutral-400">
+                  <div className="rounded-lg border border-neutral-200 bg-white p-3">
+                    <p className="text-[11px] uppercase tracking-wide text-neutral-500">
                       {messages.companyDetails.emailLabel}
                     </p>
                     {company.email ? (
                       <a
                         href={`mailto:${company.email}`}
-                        className="mt-1 inline-flex text-sm text-neutral-100 transition-colors hover:text-sky-300"
+                        className="mt-1 inline-flex text-sm text-neutral-800 transition-colors hover:text-sky-700"
                       >
                         {company.email}
                       </a>
@@ -494,36 +491,36 @@ export default async function CompanyDetailsPage({
                     )}
                   </div>
                   {company.website ? (
-                    <div className="rounded-lg border border-neutral-800 bg-neutral-900/60 p-3">
-                      <p className="text-[11px] uppercase tracking-wide text-neutral-400">
+                    <div className="rounded-lg border border-neutral-200 bg-white p-3">
+                      <p className="text-[11px] uppercase tracking-wide text-neutral-500">
                         {messages.companyDetails.websiteLabel}
                       </p>
                       <a
                         href={company.website}
                         target="_blank"
                         rel="noreferrer"
-                        className="mt-1 inline-flex break-all text-sm text-sky-300 transition-colors hover:text-sky-200"
+                        className="mt-1 inline-flex break-all text-sm text-sky-700 transition-colors hover:text-sky-800"
                       >
                         {company.website}
                       </a>
                     </div>
                   ) : null}
                 </div>
-                <div className="mt-2 rounded-lg border border-neutral-800 bg-neutral-900/60 p-3">
-                  <p className="text-[11px] uppercase tracking-wide text-neutral-400">
+                <div className="mt-2 rounded-lg border border-neutral-200 bg-white p-3">
+                  <p className="text-[11px] uppercase tracking-wide text-neutral-500">
                     {messages.companyDetails.operatingAreaLabel}
                   </p>
-                  <p className="mt-1 text-sm text-neutral-100">{operatingAreaLabel}</p>
+                  <p className="mt-1 text-sm text-neutral-800">{operatingAreaLabel}</p>
                   {company.operatingAreaDetails ? (
-                    <p className="mt-1 text-xs text-neutral-300">{company.operatingAreaDetails}</p>
+                    <p className="mt-1 text-xs text-neutral-600">{company.operatingAreaDetails}</p>
                   ) : null}
                 </div>
                 {company.nip ? (
-                  <div className="mt-2 rounded-lg border border-neutral-800 bg-neutral-900/60 p-3">
-                    <p className="text-[11px] uppercase tracking-wide text-neutral-400">
+                  <div className="mt-2 rounded-lg border border-neutral-200 bg-white p-3">
+                    <p className="text-[11px] uppercase tracking-wide text-neutral-500">
                       {messages.companyDetails.nipLabel}
                     </p>
-                    <p className="mt-1 text-sm text-neutral-100">{company.nip}</p>
+                    <p className="mt-1 text-sm text-neutral-800">{company.nip}</p>
                   </div>
                 ) : null}
               </aside>
@@ -537,36 +534,14 @@ export default async function CompanyDetailsPage({
               labels={{
                 locationsTitle: messages.companyDetails.locationsTitle,
                 branchesTitle: messages.companyDetails.branchesTitle,
-                mainLocationBadge: messages.companyDetails.mainLocationBadge,
                 phoneLabel: messages.companyDetails.phoneLabel,
                 emailLabel: messages.companyDetails.emailLabel,
                 showMoreBranches: messages.companyDetails.showMoreBranches,
               }}
             />
 
-            {companyPhotos.length > 0 ? (
-              <section className="grid gap-3 border-t border-neutral-800 pt-5">
-                <div className="grid grid-cols-2 gap-3 md:grid-cols-3">
-                  {companyPhotos.map((photo) => (
-                    <div
-                      key={photo.id}
-                      className="group relative h-36 overflow-hidden rounded-lg border border-neutral-800 md:h-44"
-                    >
-                      <Image
-                        src={photo.url}
-                        alt={photo.alt}
-                        fill
-                        className="object-cover transition-transform duration-300 ease-out group-hover:scale-105"
-                        sizes="(max-width: 768px) 50vw, 33vw"
-                      />
-                    </div>
-                  ))}
-                </div>
-              </section>
-            ) : null}
-
             {!company.createdByUserId ? (
-              <section className="border-t border-neutral-800 pt-5">
+              <section className="border-t border-neutral-200 pt-5">
                 <CompanyOwnershipClaimButton
                   companyId={companyId}
                   locale={locale}
@@ -576,15 +551,16 @@ export default async function CompanyDetailsPage({
             ) : null}
           </div>
         </section>
-
-        <div>
-          <Link
-            href={withLang("/maps", locale)}
-            className="rounded-md border border-neutral-700 px-4 py-2 text-sm text-neutral-200 hover:border-neutral-500"
-          >
-            {messages.companyDetails.backToMap}
-          </Link>
-        </div>
+        {isOwner ? (
+          <div className="flex justify-end px-1">
+            <CompanyDeletionRequestButton
+              companyId={companyId}
+              locale={locale}
+              messages={messages.companyPanelPage}
+              triggerClassName="cursor-pointer text-xs text-neutral-500 underline underline-offset-2 transition-colors hover:text-rose-700"
+            />
+          </div>
+        ) : null}
       </main>
     </section>
   );

@@ -1,10 +1,12 @@
-export const LISTING_TYPES = ["available", "wanted"] as const;
+export const LISTING_TYPES = ["sell", "rent", "buy"] as const;
 export const LISTING_STATUSES = ["active", "expired", "closed"] as const;
 export const PRICE_CURRENCIES = ["PLN", "EUR", "USD"] as const;
-export const PRICE_TYPES = ["fixed", "starting_from", "request"] as const;
 export const PRICE_TAX_MODES = ["net", "gross"] as const;
 
 export const CONTAINER_SIZES = [10, 20, 40, 45, 53] as const;
+export const CONTAINER_SIZE = {
+  CUSTOM: 0,
+} as const;
 export const CONTAINER_HEIGHTS = ["standard", "HC"] as const;
 export const CONTAINER_TYPES = [
   "dry",
@@ -17,6 +19,17 @@ export const CONTAINER_TYPES = [
   "platform",
   "bulk",
 ] as const;
+export const CONTAINER_TYPE = {
+  DRY: "dry",
+  REEFER: "reefer",
+  OPEN_TOP: "open_top",
+  FLAT_RACK: "flat_rack",
+  TANK: "tank",
+  SIDE_OPEN: "side_open",
+  HARD_TOP: "hard_top",
+  PLATFORM: "platform",
+  BULK: "bulk",
+} as const;
 export const CONTAINER_FEATURES = [
   "double_door",
   "pallet_wide",
@@ -40,8 +53,9 @@ export const CONTAINER_CONDITIONS = [
 ] as const;
 
 export const LISTING_TYPE = {
-  AVAILABLE: "available",
-  WANTED: "wanted",
+  SELL: "sell",
+  RENT: "rent",
+  BUY: "buy",
 } as const;
 
 export const LISTING_STATUS = {
@@ -53,16 +67,14 @@ export const LISTING_STATUS = {
 export type ListingType = (typeof LISTING_TYPES)[number];
 export type ListingStatus = (typeof LISTING_STATUSES)[number];
 export type Currency = (typeof PRICE_CURRENCIES)[number];
-export type PriceType = (typeof PRICE_TYPES)[number];
 export type TaxMode = (typeof PRICE_TAX_MODES)[number];
-export type ContainerSize = (typeof CONTAINER_SIZES)[number];
+export type ContainerSize = (typeof CONTAINER_SIZES)[number] | (typeof CONTAINER_SIZE)[keyof typeof CONTAINER_SIZE];
 export type ContainerHeight = (typeof CONTAINER_HEIGHTS)[number];
 export type ContainerType = (typeof CONTAINER_TYPES)[number];
 export type ContainerFeature = (typeof CONTAINER_FEATURES)[number];
 export type ContainerCondition = (typeof CONTAINER_CONDITIONS)[number];
 
 export type ListingPrice = {
-  type: PriceType;
   original: {
     amount: number | null;
     currency: Currency | null;
@@ -140,19 +152,16 @@ export const PRICE_CURRENCY_LABEL: Record<Currency, string> = {
   USD: "USD",
 };
 
-export const PRICE_TYPE_LABEL: Record<PriceType, string> = {
-  fixed: "Cena stala",
-  starting_from: "Cena od",
-  request: "Zapytaj o cene",
-};
-
 export const PRICE_TAX_MODE_LABEL: Record<TaxMode, string> = {
   net: "Netto",
   gross: "Brutto",
 };
 
 export function getContainerShortLabel(container: Container): string {
-  const sizeLabel = `${container.size}'${container.height === "HC" ? "HC" : ""}`;
+  const sizeLabel =
+    container.size === CONTAINER_SIZE.CUSTOM
+      ? "Custom"
+      : `${container.size}'${container.height === "HC" ? "HC" : ""}`;
   const typeLabel = CONTAINER_TYPE_LABEL[container.type];
   return `${sizeLabel} ${typeLabel}`;
 }
