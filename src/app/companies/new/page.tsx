@@ -1,6 +1,7 @@
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { NewCompanyForm } from "@/components/new-company-form";
+import { SmartBackButton } from "@/components/smart-back-button";
 import { SESSION_COOKIE_NAME } from "@/lib/auth-session";
 import { getCurrentUserFromToken } from "@/lib/auth-user";
 import { getCompanyCreationLimitState } from "@/lib/company-creation-limit";
@@ -64,6 +65,11 @@ export default async function NewCompanyPage({ searchParams }: NewCompanyPagePro
   return (
     <section className="bg-neutral-200/90">
       <main className="relative mx-auto flex w-full max-w-5xl flex-col gap-6 px-4 py-6 sm:px-6">
+        <SmartBackButton
+          label="Wroc"
+          fallbackHref={withLang("/containers/mine", locale)}
+          className="inline-flex w-fit items-center gap-2 rounded-md border border-neutral-400 bg-white px-3 py-2 text-sm text-neutral-700 transition-colors hover:border-neutral-500"
+        />
         <header>
           <h1 className="text-2xl font-semibold text-neutral-900 sm:text-3xl">
             {messages.companyCreate.title}

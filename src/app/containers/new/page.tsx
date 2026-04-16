@@ -1,10 +1,11 @@
 import type { Metadata } from "next";
-import Link from "next/link";
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
-import { ContainerListingForm } from "@/components/container-listing-form";
+import { NewContainerPageClient } from "@/components/new-container-page-client";
 import { SESSION_COOKIE_NAME } from "@/lib/auth-session";
 import { getCurrentUserFromToken } from "@/lib/auth-user";
+import { getCompaniesCollection } from "@/lib/companies";
+import { buildShortAddressLabelFromParts } from "@/lib/geocode-address";
 
 export const metadata: Metadata = {
   title: "Dodaj kontener | ContainerBoard",
@@ -25,32 +26,83 @@ export default async function NewContainerPage() {
     redirect(`/login?next=${encodeURIComponent(nextPath)}`);
   }
 
-  return (
-    <main className="mx-auto w-full max-w-5xl px-4 py-6 sm:px-6">
-      <header className="mb-4 flex flex-wrap items-center justify-between gap-2">
-        <div>
-          <h1 className="text-2xl font-semibold text-neutral-100">Dodaj kontener</h1>
-          <p className="mt-1 text-sm text-neutral-300">Prosty formularz publikacji kontenera (wygasa po 14 dniach).</p>
-        </div>
-        <Link
-          href="/list"
-          className="inline-flex min-h-10 items-center rounded-md border border-[#2f639a] bg-[#082650]/80 px-4 text-sm font-medium text-[#e2efff] transition hover:border-[#4e86c3] hover:bg-[#0c3466] hover:text-white"
-        >
-          Wroc
-        </Link>
-      </header>
+  const companies = await getCompaniesCollection();
+  const ownedCompany = await companies.findOne(
+    { createdByUserId: user._id },
+    {
+      projection: {
+        _id: 1,
+        name: 1,
+        slug: 1,
+        email: 1,
+        phone: 1,
+        "locations.label": 1,
+        "locations.point": 1,
+        "locations.addressText": 1,
+        "locations.addressParts": 1,
+      },
+      sort: { updatedAt: -1 },
+    },
+  );
+  const companyLocationPrefillOptions = (ownedCompany?.locations ?? [])
+    .map((location, index) => {
+      const coordinates = location?.point?.coordinates;
+      const hasValidCoordinates =
+        Array.isArray(coordinates) &&
+        coordinates.length === 2 &&
+        typeof coordinates[0] === "number" &&
+        Number.isFinite(coordinates[0]) &&
+        typeof coordinates[1] === "number" &&
+        Number.isFinite(coordinates[1]);
+      if (!hasValidCoordinates) {
+        return null;
+      }
 
-      <ContainerListingForm
-        mode="create"
-        submitEndpoint="/api/containers"
-        submitMethod="POST"
-        submitLabel="Publikuj kontener"
-        successMessage="Kontener opublikowany"
-        backHref="/list"
-        backLabel="Powrot do listy kontenerow"
-      />
-    </main>
+      const shortAddress = buildShortAddressLabelFromParts({
+        parts: location?.addressParts,
+        fallbackLabel: location?.addressText,
+      });
+      return {
+        id: `company-location-${index + 1}`,
+        name:
+          location?.label?.trim() ||
+          shortAddress ||
+          `Lokalizacja ${index + 1}`,
+        locationLng: coordinates[0],
+        locationLat: coordinates[1],
+        locationAddressLabel: shortAddress || location?.addressText?.trim(),
+        locationAddressParts: location?.addressParts ?? null,
+      };
+    })
+    .filter((location) => location !== null);
+
+  const contactPrefill = {
+    companyName:
+      ownedCompany?.name?.trim() ||
+      user.name?.trim() ||
+      "",
+    contactEmail:
+      ownedCompany?.email?.trim() ||
+      user.email?.trim() ||
+      "",
+    contactPhone:
+      ownedCompany?.phone?.trim() ||
+      user.phone?.trim() ||
+      "",
+  };
+
+  return (
+    <NewContainerPageClient
+      contactPrefill={contactPrefill}
+      ownedCompanyProfile={
+        ownedCompany
+          ? {
+              name: ownedCompany.name,
+              slug: ownedCompany.slug,
+            }
+          : null
+      }
+      companyLocationPrefillOptions={companyLocationPrefillOptions}
+    />
   );
 }
-
-

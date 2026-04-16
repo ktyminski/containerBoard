@@ -1,6 +1,6 @@
 import ralToHex from "ral-to-hex";
 
-export const MAX_CONTAINER_RAL_COLORS = 8;
+export const MAX_CONTAINER_RAL_COLORS = 10;
 
 type RgbColor = {
   r: number;
@@ -15,11 +15,19 @@ export type ContainerRalColor = {
 };
 
 const RAL_CODE_PATTERN = /^(?:RAL)?\s*([0-9]{4})$/i;
+const PARTIAL_RAL_CODE_PATTERN = /^(?:RAL)?\s*[0-9]{0,3}$/i;
 const HEX_COLOR_PATTERN = /^#([0-9a-f]{6})$/i;
 
-function splitContainerRalColorTokens(input: string): string[] {
+function normalizeRalInputSeparators(input: string): string {
   return input
-    .split(/[\n,;|]+/)
+    .replace(/\r?\n+/g, ",")
+    .replace(/[;|.]+/g, ",")
+    .replace(/([0-9]{4})\s+(?=(?:RAL\s*)?[0-9])/gi, "$1,");
+}
+
+function splitContainerRalColorTokens(input: string): string[] {
+  return normalizeRalInputSeparators(input)
+    .split(/,+/)
     .map((entry) => entry.trim())
     .filter((entry) => entry.length > 0);
 }
@@ -101,7 +109,12 @@ function parseRgbColorCandidate(input: unknown): RgbColor | null {
   return { r, g, b };
 }
 
-export function parseContainerRalColors(input?: string): {
+export function parseContainerRalColors(
+  input?: string,
+  options?: {
+    ignoreIncompleteTrailingToken?: boolean;
+  },
+): {
   colors: ContainerRalColor[];
   invalidCodes: string[];
   tooMany: boolean;
@@ -110,7 +123,16 @@ export function parseContainerRalColors(input?: string): {
     return { colors: [], invalidCodes: [], tooMany: false };
   }
 
-  const tokens = splitContainerRalColorTokens(input);
+  let tokens = splitContainerRalColorTokens(input);
+  if (options?.ignoreIncompleteTrailingToken && tokens.length > 0) {
+    const trailingToken = tokens[tokens.length - 1];
+    if (
+      !normalizeRalCode(trailingToken) &&
+      PARTIAL_RAL_CODE_PATTERN.test(trailingToken)
+    ) {
+      tokens = tokens.slice(0, -1);
+    }
+  }
   if (tokens.length === 0) {
     return { colors: [], invalidCodes: [], tooMany: false };
   }
@@ -125,14 +147,6 @@ export function parseContainerRalColors(input?: string): {
       continue;
     }
     normalizedCodes.add(normalizedRalCode);
-  }
-
-  if (normalizedCodes.size > MAX_CONTAINER_RAL_COLORS) {
-    return {
-      colors: [],
-      invalidCodes: Array.from(invalidCodes),
-      tooMany: true,
-    };
   }
 
   const colors: ContainerRalColor[] = [];
@@ -152,9 +166,9 @@ export function parseContainerRalColors(input?: string): {
   }
 
   return {
-    colors,
+    colors: colors.length > MAX_CONTAINER_RAL_COLORS ? [] : colors,
     invalidCodes: Array.from(invalidCodes),
-    tooMany: false,
+    tooMany: colors.length > MAX_CONTAINER_RAL_COLORS,
   };
 }
 

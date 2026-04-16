@@ -97,7 +97,6 @@ function normalizeContainerSizeFromDocument(value: unknown): ContainerSize | nul
 export type ContainerListingDocument = {
   _id: ObjectId;
   type: ListingType;
-  title?: string;
   container?: Container;
   containerType?: string;
   containerColors?: ContainerRalColor[];
@@ -124,12 +123,16 @@ export type ContainerListingDocument = {
   logisticsComment?: string;
   hasCscPlate?: boolean;
   hasCscCertification?: boolean;
+  hasWarranty?: boolean;
   cscValidToMonth?: number;
   cscValidToYear?: number;
   productionYear?: number;
   price?: string;
   description?: string;
   companyName: string;
+  companySlug?: string;
+  companyIsVerified?: boolean;
+  publishedAsCompany?: boolean;
   contactEmail: string;
   contactPhone?: string;
   status: ListingStatus;
@@ -172,7 +175,6 @@ export type ContainerListingFavoriteDocument = {
 export type ContainerListingItem = {
   id: string;
   type: ListingType;
-  title?: string;
   container: Container;
   containerColors?: ContainerRalColor[];
   photoUrls?: string[];
@@ -198,12 +200,16 @@ export type ContainerListingItem = {
   logisticsComment?: string;
   hasCscPlate: boolean;
   hasCscCertification: boolean;
+  hasWarranty: boolean;
   cscValidToMonth?: number;
   cscValidToYear?: number;
   productionYear?: number;
   price?: string;
   description?: string;
   companyName: string;
+  companySlug?: string;
+  companyIsVerified: boolean;
+  publishedAsCompany: boolean;
   contactEmail: string;
   contactPhone?: string;
   status: ListingStatus;
@@ -379,7 +385,6 @@ export async function ensureContainerListingsIndexes(): Promise<void> {
       await listings.createIndex({ type: 1, "container.type": 1, createdAt: -1 });
       await listings.createIndex({ type: 1, containerType: 1, createdAt: -1 });
       await listings.createIndex({ "containerColors.ral": 1 });
-      await listings.createIndex({ title: 1 });
       await listings.createIndex({ "container.size": 1, "container.height": 1, "container.type": 1 });
       await listings.createIndex({ "container.condition": 1 });
       await listings.createIndex({ "container.features": 1 });
@@ -469,10 +474,6 @@ export function mapContainerListingToItem(doc: ContainerListingDocument): Contai
     new Set(
       (doc.photos ?? [])
         .map((photo, index) => {
-          const blobUrl = photo?.blobUrl?.trim() ?? "";
-          if (blobUrl) {
-            return blobUrl;
-          }
           if (!photo?.data && !photo?.filename && typeof photo?.size !== "number") {
             return "";
           }
@@ -486,7 +487,6 @@ export function mapContainerListingToItem(doc: ContainerListingDocument): Contai
   return {
     id: doc._id.toHexString(),
     type: doc.type,
-    title: doc.title,
     container: resolveContainerFromDocument(doc),
     ...(containerColors.length > 0 ? { containerColors } : {}),
     ...(photoUrls.length > 0 ? { photoUrls } : {}),
@@ -525,6 +525,7 @@ export function mapContainerListingToItem(doc: ContainerListingDocument): Contai
     logisticsComment: doc.logisticsComment?.trim() || undefined,
     hasCscPlate: doc.hasCscPlate === true,
     hasCscCertification: doc.hasCscCertification === true,
+    hasWarranty: doc.hasWarranty === true,
     cscValidToMonth:
       typeof doc.cscValidToMonth === "number" &&
       Number.isInteger(doc.cscValidToMonth) &&
@@ -546,6 +547,9 @@ export function mapContainerListingToItem(doc: ContainerListingDocument): Contai
     price: doc.price,
     description: doc.description,
     companyName: doc.companyName,
+    companySlug: doc.companySlug?.trim() || undefined,
+    companyIsVerified: doc.companyIsVerified === true,
+    publishedAsCompany: doc.publishedAsCompany === true,
     contactEmail: doc.contactEmail,
     contactPhone: doc.contactPhone,
     status: isExpired && doc.status === LISTING_STATUS.ACTIVE
@@ -949,7 +953,6 @@ export function buildContainerListingsFilter(input: {
     const pattern = new RegExp(escapeRegexPattern(input.q.trim()), "i");
     andConditions.push({
       $or: [
-        { title: pattern },
         { companyName: pattern },
         { description: pattern },
         { locationCity: pattern },

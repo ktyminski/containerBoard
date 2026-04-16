@@ -1,7 +1,7 @@
 "use client";
 
-import Image from "next/image";
 import { useEffect, useState } from "react";
+import { ContainerPhotoWithPlaceholder } from "@/components/container-photo-with-placeholder";
 
 type ContainerDetailsGalleryProps = {
   images: string[];
@@ -80,7 +80,7 @@ export function ContainerDetailsGallery({
             }}
             className="relative h-36 w-36 overflow-hidden rounded-md border border-neutral-200 bg-neutral-100 sm:h-44 sm:w-44"
           >
-            <Image
+            <ContainerPhotoWithPlaceholder
               src={selectedImage}
               alt={`Zdjecie glowne ogloszenia: ${title}`}
               fill
@@ -108,7 +108,7 @@ export function ContainerDetailsGallery({
                     isSelected ? "border-sky-400 ring-1 ring-sky-300" : "border-neutral-200"
                   }`}
                 >
-                  <Image
+                  <ContainerPhotoWithPlaceholder
                     src={imageSrc}
                     alt={`Zdjecie ${index + 1}: ${title}`}
                     fill
@@ -148,7 +148,7 @@ export function ContainerDetailsGallery({
             </div>
 
             <div className="relative h-[70vh] w-full overflow-hidden rounded-md border border-neutral-700 bg-neutral-900">
-              <Image
+              <ContainerPhotoWithPlaceholder
                 src={zoomedImage}
                 alt={`Podglad zdjecia: ${title}`}
                 fill

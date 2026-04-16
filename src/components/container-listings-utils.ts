@@ -46,6 +46,10 @@ export function getCoordinateKey(lat: number, lng: number): string {
 
 export function getContainerListingLocationLabel(item: ContainerListingItem): string {
   const primaryLocation = item.locations?.find((location) => location.isPrimary) ?? item.locations?.[0];
+  const postalCode =
+    primaryLocation?.locationAddressParts?.postalCode?.trim() ||
+    item.locationAddressParts?.postalCode?.trim() ||
+    "";
   const city =
     primaryLocation?.locationAddressParts?.city?.trim() ||
     primaryLocation?.locationCity?.trim() ||
@@ -56,7 +60,9 @@ export function getContainerListingLocationLabel(item: ContainerListingItem): st
     primaryLocation?.locationCountry?.trim() ||
     item.locationAddressParts?.country?.trim() ||
     item.locationCountry.trim();
-  const combined = [city, country].filter(Boolean).join(", ");
+  const combined = [postalCode, [city, country].filter(Boolean).join(", ")]
+    .filter(Boolean)
+    .join(" ");
   const locationLabel = combined || "Nie podano lokalizacji";
   const extraLocationsCount = Math.max(0, (item.locations?.length ?? 0) - 1);
 

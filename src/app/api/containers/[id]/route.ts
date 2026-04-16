@@ -17,6 +17,7 @@ import {
   mapContainerListingToItem,
   type ContainerListingImageAsset,
 } from "@/lib/container-listings";
+import { getCompaniesCollection } from "@/lib/companies";
 import {
   CONTAINER_SIZE,
   CONTAINER_CONDITIONS,
@@ -44,15 +45,18 @@ import {
 } from "@/lib/blob-storage";
 import { getLatestFxContext } from "@/lib/fx-rates";
 import { getRichTextLength, hasRichTextContent } from "@/lib/listing-rich-text";
-import { parseContainerRalColors } from "@/lib/container-ral-colors";
+import {
+  MAX_CONTAINER_RAL_COLORS,
+  parseContainerRalColors,
+} from "@/lib/container-ral-colors";
 import { USER_ROLE } from "@/lib/user-roles";
 import { logError } from "@/lib/server-logger";
 
 export const runtime = "nodejs";
 const DESCRIPTION_MAX_TEXT_LENGTH = 1000;
 const DESCRIPTION_ALLOWED_TAGS = ["p", "br", "strong", "em", "u", "ul", "ol", "li", "div"];
-const MAX_LISTING_PHOTO_COUNT = 5;
-const MAX_LISTING_PHOTO_BYTES = 6 * 1024 * 1024;
+const MAX_LISTING_PHOTO_COUNT = 4;
+const MAX_LISTING_PHOTO_BYTES = 5 * 1024 * 1024;
 
 const locationAddressPartsSchema = z.object({
   street: z.string().trim().min(1).max(120).optional(),
@@ -137,7 +141,6 @@ type RouteContext = {
 const updateSchema = z.object({
   action: z.literal("update"),
   type: listingTypeInputSchema,
-  title: z.string().trim().max(80).optional(),
   container: z.object({
     size: z.coerce.number().int().refine((value) => {
       return (
@@ -170,6 +173,7 @@ const updateSchema = z.object({
   logisticsComment: z.string().trim().max(600).optional(),
   hasCscPlate: z.coerce.boolean().optional(),
   hasCscCertification: z.coerce.boolean().optional(),
+  hasWarranty: z.coerce.boolean().optional(),
   cscValidToMonth: z.coerce.number().int().min(1).max(12).optional(),
   cscValidToYear: z.coerce.number().int().min(1900).max(2100).optional(),
   productionYear: z.coerce.number().int().min(1900).max(2100).optional(),
@@ -177,6 +181,7 @@ const updateSchema = z.object({
   price: z.string().trim().max(100).optional(),
   description: z.string().trim().max(16_000).optional(),
   companyName: z.string().trim().min(2).max(160),
+  publishedAsCompany: z.coerce.boolean().optional(),
   contactEmail: z.email().trim().max(160),
   contactPhone: z.string().trim().max(40).optional(),
 }).superRefine((value, context) => {
@@ -340,16 +345,21 @@ async function parsePatchBody(request: NextRequest): Promise<{
   payload: unknown;
   photoFiles: File[];
   keepPhotoIndexesRaw: unknown[] | null;
+  prependUploadedPhotos: boolean;
 }> {
   const contentType = request.headers.get("content-type") ?? "";
   if (contentType.includes("multipart/form-data")) {
     const formData = await request.formData();
+    const prependUploadedPhotosRaw = formData.get("prependUploadedPhotos");
     return {
       payload: parseJsonField<unknown>(formData.get("payload")),
       photoFiles: formData
         .getAll("photos")
         .filter((item): item is File => item instanceof File && item.size > 0),
       keepPhotoIndexesRaw: parseJsonField<unknown[]>(formData.get("keepPhotoIndexes")),
+      prependUploadedPhotos:
+        prependUploadedPhotosRaw === "1" ||
+        prependUploadedPhotosRaw === "true",
     };
   }
 
@@ -357,6 +367,7 @@ async function parsePatchBody(request: NextRequest): Promise<{
     payload: await request.json(),
     photoFiles: [],
     keepPhotoIndexesRaw: null,
+    prependUploadedPhotos: false,
   };
 }
 
@@ -464,7 +475,7 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
       );
     }
 
-    const { payload, photoFiles, keepPhotoIndexesRaw } = await parsePatchBody(request);
+    const { payload, photoFiles, keepPhotoIndexesRaw, prependUploadedPhotos } = await parsePatchBody(request);
 
     const updateParsed = updateSchema.safeParse(payload);
     if (updateParsed.success) {
@@ -553,7 +564,6 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
         availableFrom: updateParsed.data.availableFrom,
         now,
       });
-      const normalizedTitle = normalizeOptionalString(updateParsed.data.title);
       const normalizedDescription = normalizeOptionalDescriptionHtml(updateParsed.data.description);
       const normalizedPrice = normalizeOptionalString(updateParsed.data.price);
       const normalizedLogisticsComment = normalizeOptionalString(updateParsed.data.logisticsComment);
@@ -564,16 +574,7 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
       if (parsedContainerColors?.tooMany) {
         return NextResponse.json(
           {
-            error: "containerColorsRal supports at most 8 RAL codes",
-          },
-          { status: 400 },
-        );
-      }
-      if (parsedContainerColors && parsedContainerColors.invalidCodes.length > 0) {
-        return NextResponse.json(
-          {
-            error: "Invalid RAL color code(s)",
-            issues: parsedContainerColors.invalidCodes,
+            error: `containerColorsRal supports at most ${MAX_CONTAINER_RAL_COLORS} RAL codes`,
           },
           { status: 400 },
         );
@@ -624,6 +625,29 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
               now,
               fxContext,
             });
+      const companies = await getCompaniesCollection();
+      const ownerCompany = await companies.findOne(
+        {
+          createdByUserId: listing.createdByUserId,
+          isBlocked: { $ne: true },
+        },
+        {
+          projection: {
+            name: 1,
+            slug: 1,
+          },
+          sort: { updatedAt: -1 },
+        },
+      );
+      const publishAsCompanyRequested = updateParsed.data.publishedAsCompany === true;
+      const publishedAsCompany =
+        listing.publishedAsCompany === true || publishAsCompanyRequested;
+      const effectiveCompanyName = publishedAsCompany
+        ? ownerCompany?.name?.trim() || listing.companyName
+        : updateParsed.data.companyName.trim();
+      const effectiveCompanySlug = publishedAsCompany
+        ? ownerCompany?.slug?.trim() || listing.companySlug?.trim() || undefined
+        : undefined;
       const uploadedBlobUrls: string[] = [];
       let storedNextUploadedPhotos: ContainerListingImageAsset[] = [];
       try {
@@ -661,7 +685,9 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
           { status: 400 },
         );
       }
-      const nextPhotos = [...keptExistingPhotos, ...storedNextUploadedPhotos];
+      const nextPhotos = prependUploadedPhotos
+        ? [...storedNextUploadedPhotos, ...keptExistingPhotos]
+        : [...keptExistingPhotos, ...storedNextUploadedPhotos];
       const unsetPatch: Record<string, 1> = {};
       unsetPatch.containerType = 1;
       if (!locationAddressLabel) {
@@ -683,9 +709,6 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
         unsetPatch.cscValidToMonth = 1;
         unsetPatch.cscValidToYear = 1;
       }
-      if (!normalizedTitle) {
-        unsetPatch.title = 1;
-      }
       if (!normalizedDescription) {
         unsetPatch.description = 1;
       }
@@ -700,6 +723,9 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
       }
       if (nextPhotos.length === 0) {
         unsetPatch.photos = 1;
+      }
+      if (!effectiveCompanySlug) {
+        unsetPatch.companySlug = 1;
       }
 
       if (
@@ -717,8 +743,7 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
           { _id: listingId },
           {
             $set: {
-              type: updateParsed.data.type,
-              ...(normalizedTitle ? { title: normalizedTitle } : {}),
+              type: listing.type,
               container: {
                 size: updateParsed.data.container.size as ContainerSize,
                 height: updateParsed.data.container.height,
@@ -763,6 +788,7 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
               ...(normalizedLogisticsComment ? { logisticsComment: normalizedLogisticsComment } : {}),
               hasCscPlate: updateParsed.data.hasCscPlate === true,
               hasCscCertification: updateParsed.data.hasCscCertification === true,
+              hasWarranty: updateParsed.data.hasWarranty === true,
               ...(normalizedCscValidToMonth !== undefined && normalizedCscValidToYear !== undefined
                 ? {
                     cscValidToMonth: normalizedCscValidToMonth,
@@ -780,7 +806,9 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
                     ? String(normalizedPricing?.original.amount)
                     : undefined),
               ...(normalizedDescription ? { description: normalizedDescription } : {}),
-              companyName: updateParsed.data.companyName.trim(),
+              companyName: effectiveCompanyName,
+              ...(effectiveCompanySlug ? { companySlug: effectiveCompanySlug } : {}),
+              publishedAsCompany,
               contactEmail: updateParsed.data.contactEmail.trim(),
               contactPhone: normalizeOptionalString(updateParsed.data.contactPhone),
               updatedAt: now,

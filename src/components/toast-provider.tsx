@@ -41,7 +41,7 @@ const RATE_LIMIT_TOAST_COOLDOWN_MS = 5000;
 
 const TOAST_VARIANT_STYLE: Record<ToastVariant, string> = {
   success:
-    "border-emerald-700/80 bg-emerald-950/85 text-emerald-100 shadow-emerald-950/30",
+    "border-[#14532d] bg-emerald-950/85 text-emerald-100 shadow-emerald-950/30",
   info: "border-sky-700/80 bg-sky-950/85 text-sky-100 shadow-sky-950/30",
   warning:
     "border-amber-700/80 bg-amber-950/85 text-amber-100 shadow-amber-950/30",

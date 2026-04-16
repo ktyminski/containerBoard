@@ -8,10 +8,18 @@ const nextConfig: NextConfig = {
         hostname: "flagcdn.com",
         pathname: "/**",
       },
+      {
+        protocol: "https",
+        hostname: "**.blob.vercel-storage.com",
+        pathname: "/**",
+      },
     ],
     localPatterns: [
       {
         pathname: "/api/companies/**",
+      },
+      {
+        pathname: "/api/containers/**",
       },
       {
         pathname: "/photos/**",

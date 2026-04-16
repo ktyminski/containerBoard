@@ -3,14 +3,24 @@ import { ObjectId } from "mongodb";
 import { cookies } from "next/headers";
 import { notFound, redirect } from "next/navigation";
 import { ContainerListingForm } from "@/components/container-listing-form";
+import { SmartBackButton } from "@/components/smart-back-button";
 import { SESSION_COOKIE_NAME } from "@/lib/auth-session";
 import { getCurrentUserFromToken } from "@/lib/auth-user";
+import { getCompaniesCollection } from "@/lib/companies";
 import {
   ensureContainerListingsIndexes,
   getContainerListingsCollection,
   mapContainerListingToItem,
 } from "@/lib/container-listings";
+import type { ListingType } from "@/lib/container-listing-types";
+import { buildShortAddressLabelFromParts } from "@/lib/geocode-address";
 import { USER_ROLE } from "@/lib/user-roles";
+
+const LISTING_TYPE_LABEL: Record<ListingType, string> = {
+  sell: "Sprzedaz",
+  rent: "Wynajem",
+  buy: "Chce zakupic",
+};
 
 type EditContainerPageProps = {
   params: Promise<{ id: string }>;
@@ -56,11 +66,66 @@ export default async function EditContainerPage({ params }: EditContainerPagePro
   if (!canEdit) {
     redirect(`/containers/${id}`);
   }
+  const companies = await getCompaniesCollection();
+  const ownedCompany = await companies.findOne(
+    { createdByUserId: listing.createdByUserId },
+    {
+      projection: {
+        name: 1,
+        slug: 1,
+        "locations.label": 1,
+        "locations.point": 1,
+        "locations.addressText": 1,
+        "locations.addressParts": 1,
+      },
+      sort: { updatedAt: -1 },
+    },
+  );
+  const companyLocationPrefillOptions = (ownedCompany?.locations ?? [])
+    .map((location, index) => {
+      const coordinates = location?.point?.coordinates;
+      const hasValidCoordinates =
+        Array.isArray(coordinates) &&
+        coordinates.length === 2 &&
+        typeof coordinates[0] === "number" &&
+        Number.isFinite(coordinates[0]) &&
+        typeof coordinates[1] === "number" &&
+        Number.isFinite(coordinates[1]);
+      if (!hasValidCoordinates) {
+        return null;
+      }
+
+      const shortAddress = buildShortAddressLabelFromParts({
+        parts: location?.addressParts,
+        fallbackLabel: location?.addressText,
+      });
+      return {
+        id: `company-location-${index + 1}`,
+        name:
+          location?.label?.trim() ||
+          shortAddress ||
+          `Lokalizacja ${index + 1}`,
+        locationLng: coordinates[0],
+        locationLat: coordinates[1],
+        locationAddressLabel: shortAddress || location?.addressText?.trim(),
+        locationAddressParts: location?.addressParts ?? null,
+      };
+    })
+    .filter((location) => location !== null);
 
   return (
     <main className="mx-auto w-full max-w-5xl px-4 py-6 sm:px-6">
-      <header className="mb-4">
+      <SmartBackButton
+        label="Wroc"
+        fallbackHref={`/containers/${listing._id.toHexString()}`}
+        className="mb-4 inline-flex w-fit items-center gap-2 rounded-md border border-neutral-400 bg-white px-3 py-2 text-sm text-neutral-700 transition-colors hover:border-neutral-500"
+      />
+
+      <header className="mb-4 flex flex-wrap items-center gap-2">
         <h1 className="text-2xl font-semibold text-neutral-100">Edytuj kontener</h1>
+        <span className="inline-flex h-8 items-center rounded-md border border-neutral-700 bg-neutral-950 px-3 text-sm text-neutral-100">
+          {LISTING_TYPE_LABEL[listingItem.type]}
+        </span>
       </header>
 
       <ContainerListingForm
@@ -71,10 +136,26 @@ export default async function EditContainerPage({ params }: EditContainerPagePro
         successMessage="Kontener zaktualizowany"
         backHref={`/containers/${listing._id.toHexString()}`}
         backLabel="Powrot do szczegolow"
+        ownedCompanyProfile={
+          ownedCompany
+            ? {
+                name: ownedCompany.name,
+                slug: ownedCompany.slug,
+              }
+            : null
+        }
         initialPhotoUrls={listingItem.photoUrls}
+        initialAdditionalLocations={(listingItem.locations ?? [])
+          .slice(1)
+          .map((location) => ({
+            locationLat: location.locationLat,
+            locationLng: location.locationLng,
+            locationAddressLabel: location.locationAddressLabel,
+            locationAddressParts: location.locationAddressParts,
+          }))}
+        companyLocationPrefillOptions={companyLocationPrefillOptions}
         initialValues={{
           type: listingItem.type,
-          title: listingItem.title ?? "",
           containerSize: listingItem.container.size,
           containerHeight: listingItem.container.height,
           containerType: listingItem.container.type,
@@ -84,6 +165,7 @@ export default async function EditContainerPage({ params }: EditContainerPagePro
             listingItem.containerColors?.map((color) => color.ral).join(", ") ?? "",
           hasCscPlate: listingItem.hasCscPlate,
           hasCscCertification: listingItem.hasCscCertification,
+          hasWarranty: listingItem.hasWarranty,
           cscValidToMonth:
             typeof listingItem.cscValidToMonth === "number"
               ? String(listingItem.cscValidToMonth)
@@ -136,9 +218,9 @@ export default async function EditContainerPage({ params }: EditContainerPagePro
               ? String(listingItem.pricing.original.vatRate)
               : "",
           priceNegotiable: listingItem.priceNegotiable,
-          price: listingItem.price ?? "",
           description: listingItem.description ?? "",
           companyName: listingItem.companyName,
+          publishedAsCompany: listingItem.publishedAsCompany === true,
           contactEmail: listingItem.contactEmail,
           contactPhone: listingItem.contactPhone ?? "",
         }}

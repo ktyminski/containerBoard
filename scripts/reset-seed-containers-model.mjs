@@ -26,6 +26,18 @@ const CONTAINER_FEATURES = [
   "high_security_lockbox",
   "extra_vents",
 ];
+const RAL_PALETTE = [
+  { ral: "RAL 5010", hex: "#0E294B" },
+  { ral: "RAL 7016", hex: "#293133" },
+  { ral: "RAL 7035", hex: "#CBD0CC" },
+  { ral: "RAL 9005", hex: "#0A0A0D" },
+  { ral: "RAL 9010", hex: "#F1F0EA" },
+  { ral: "RAL 6018", hex: "#4B9B3D" },
+  { ral: "RAL 3020", hex: "#C1121C" },
+  { ral: "RAL 2004", hex: "#E25E08" },
+  { ral: "RAL 1023", hex: "#F9A900" },
+  { ral: "RAL 5015", hex: "#2271B3" },
+];
 const FX = {
   EUR: { PLN: 4.3, USD: 1.1 },
   PLN: { EUR: 1 / 4.3, USD: 1.1 / 4.3 },
@@ -140,29 +152,14 @@ function amountInAllCurrencies(amount, currency) {
   };
 }
 
-function getLegacyContainerType(container) {
-  if (container.type === "dry") {
-    if (container.size === 20) {
-      return "20DV";
-    }
-    if (container.size === 40 && container.height === "HC") {
-      return "40HC";
-    }
-    if (container.size === 40) {
-      return "40DV";
-    }
-    return "other";
-  }
-  if (container.type === "reefer") {
-    return "reefer";
-  }
-  if (container.type === "open_top") {
-    return "open_top";
-  }
-  if (container.type === "flat_rack") {
-    return "flat_rack";
-  }
-  return "other";
+function hexToRgb(hex) {
+  const normalized = hex.replace(/^#/, "");
+  const parsed = Number.parseInt(normalized, 16);
+  return {
+    r: (parsed >> 16) & 255,
+    g: (parsed >> 8) & 255,
+    b: parsed & 255,
+  };
 }
 
 function pickContainer() {
@@ -210,6 +207,26 @@ function pickContainer() {
     condition,
     features,
   };
+}
+
+function pickContainerColors() {
+  const count = pickWeighted([
+    { value: 0, weight: 58 },
+    { value: 1, weight: 24 },
+    { value: 2, weight: 14 },
+    { value: 3, weight: 4 },
+  ]);
+  if (count === 0) {
+    return [];
+  }
+
+  return shuffle(RAL_PALETTE)
+    .slice(0, count)
+    .map((color) => ({
+      ral: color.ral,
+      hex: color.hex,
+      rgb: hexToRgb(color.hex),
+    }));
 }
 
 function estimateBaseAmount({ container, unit }) {
@@ -385,6 +402,21 @@ function pickProductionYear(containerCondition) {
   return randomInt(1998, 2012);
 }
 
+function buildDescription({ listingType, container, primaryLocation, quantity }) {
+  const intentLabel =
+    listingType === "buy"
+      ? "Zapotrzebowanie"
+      : listingType === "rent"
+        ? "Oferta wynajmu"
+        : "Oferta sprzedazy";
+  const featureLabel =
+    container.features.length > 0
+      ? `Cechy: ${container.features.join(", ")}.`
+      : "Kontener bez dodatkowych cech.";
+
+  return `${intentLabel}. ${quantity} szt. Dostepnosc: ${primaryLocation.locationCity}, ${primaryLocation.locationCountry}. ${featureLabel}`;
+}
+
 function buildListing(index, now) {
   const hub = hubs[index % hubs.length];
   const company = `${pick(companies)} ${hub.city}`;
@@ -422,10 +454,12 @@ function buildListing(index, now) {
       : undefined;
   const hasCscPlate = Math.random() < 0.58;
   const hasCscCertification = Math.random() < 0.46;
+  const hasWarranty = Math.random() < 0.31;
   const hasAnyCsc = hasCscPlate || hasCscCertification;
   const cscValidToMonth = hasAnyCsc && Math.random() < 0.72 ? randomInt(1, 12) : undefined;
   const cscValidToYear =
     typeof cscValidToMonth === "number" ? randomInt(2026, 2035) : undefined;
+  const containerColors = pickContainerColors();
   const pricingPayload = buildPricing({
     listingType,
     container,
@@ -436,7 +470,7 @@ function buildListing(index, now) {
     _id: new ObjectId(),
     type: listingType,
     container,
-    containerType: getLegacyContainerType(container),
+    ...(containerColors.length > 0 ? { containerColors } : {}),
     quantity,
     locationCity: primaryLocation.locationCity,
     locationCountry: primaryLocation.locationCountry,
@@ -461,11 +495,18 @@ function buildListing(index, now) {
     ...(logisticsComment ? { logisticsComment } : {}),
     hasCscPlate,
     hasCscCertification,
+    hasWarranty,
     ...(typeof cscValidToMonth === "number" && typeof cscValidToYear === "number"
       ? { cscValidToMonth, cscValidToYear }
       : {}),
     productionYear: pickProductionYear(container.condition),
     price: pricingPayload.priceText,
+    description: buildDescription({
+      listingType,
+      container,
+      primaryLocation,
+      quantity,
+    }),
     companyName: company,
     contactEmail: `containers+${index + 1}@example.com`,
     contactPhone: `+48 600 ${String(100000 + index).slice(-6)}`,

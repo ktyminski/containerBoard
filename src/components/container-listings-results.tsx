@@ -2,9 +2,9 @@
 
 import Link from "next/link";
 import type { MouseEvent } from "react";
-import Image from "next/image";
 import { memo } from "react";
 import type { ContainerListingItem } from "@/lib/container-listings";
+import { ContainerPhotoWithPlaceholder } from "@/components/container-photo-with-placeholder";
 import {
   CONTAINER_CONDITION_LABEL,
   CONTAINER_FEATURE_LABEL,
@@ -85,7 +85,10 @@ function getAvailableFromLabel(item: ContainerListingItem): string {
   return item.availableFromApproximate ? `~${dateLabel}` : dateLabel;
 }
 
-function truncateTooltipText(value: string, maxLength = MAX_LOGISTICS_TOOLTIP_LENGTH): string {
+function truncateTooltipText(
+  value: string,
+  maxLength = MAX_LOGISTICS_TOOLTIP_LENGTH,
+): string {
   const normalizedValue = value.trim();
   if (normalizedValue.length <= maxLength) {
     return normalizedValue;
@@ -94,19 +97,22 @@ function truncateTooltipText(value: string, maxLength = MAX_LOGISTICS_TOOLTIP_LE
   return `${normalizedValue.slice(0, maxLength).trimEnd()}...`;
 }
 
-function formatVatRateLabel(vatRate: number | null): string {
+function formatVatRateLabel(vatRate: number | null): string | null {
   if (typeof vatRate !== "number" || !Number.isFinite(vatRate)) {
-    return "VAT n/d";
+    return null;
   }
 
   return `VAT${vatRate.toLocaleString("pl-PL")}%`;
 }
 
-function getNormalizedAmountByCurrency(input: {
-  amountPln: number | null;
-  amountEur: number | null;
-  amountUsd: number | null;
-}, currency: Exclude<PriceDisplayCurrency, "original">): number | null {
+function getNormalizedAmountByCurrency(
+  input: {
+    amountPln: number | null;
+    amountEur: number | null;
+    amountUsd: number | null;
+  },
+  currency: Exclude<PriceDisplayCurrency, "original">,
+): number | null {
   if (currency === "PLN") {
     return input.amountPln;
   }
@@ -124,9 +130,10 @@ function getListingPriceDisplay(
 
   if (
     pricing &&
-    (pricing.original.amount === null || typeof pricing.original.amount !== "number")
+    (pricing.original.amount === null ||
+      typeof pricing.original.amount !== "number")
   ) {
-    const metaParts = ["Zapytanie", "VAT do ustalenia"];
+    const metaParts: string[] = [];
     if (pricing.original.negotiable === true || item.priceNegotiable === true) {
       metaParts.push("Do negocjacji");
     }
@@ -158,17 +165,20 @@ function getListingPriceDisplay(
       shouldConvertAmount &&
       typeof normalizedAmount === "number" &&
       Number.isFinite(normalizedAmount);
-    const resolvedAmountRaw = hasConvertedAmount ? normalizedAmount : pricing.original.amount;
+    const resolvedAmountRaw = hasConvertedAmount
+      ? normalizedAmount
+      : pricing.original.amount;
     const resolvedAmount = Math.round(resolvedAmountRaw);
     const resolvedCurrency = hasConvertedAmount
       ? priceDisplayCurrency
       : pricing.original.currency;
     const convertedPrefix = hasConvertedAmount ? "~" : "";
 
-    const metaParts = [
-      pricing.original.taxMode === "net" ? "Netto" : "Brutto",
-      formatVatRateLabel(pricing.original.vatRate),
-    ];
+    const metaParts = [pricing.original.taxMode === "net" ? "Netto" : "Brutto"];
+    const vatRateLabel = formatVatRateLabel(pricing.original.vatRate);
+    if (vatRateLabel) {
+      metaParts.push(vatRateLabel);
+    }
     if (pricing.original.negotiable === true || item.priceNegotiable === true) {
       metaParts.push("Do negocjacji");
     }
@@ -180,8 +190,11 @@ function getListingPriceDisplay(
     };
   }
 
-  if (typeof item.priceAmount === "number" && Number.isFinite(item.priceAmount)) {
-    const metaParts = ["Netto", "VAT n/d"];
+  if (
+    typeof item.priceAmount === "number" &&
+    Number.isFinite(item.priceAmount)
+  ) {
+    const metaParts = ["Netto"];
     if (item.priceNegotiable === true) {
       metaParts.push("Do negocjacji");
     }
@@ -194,7 +207,7 @@ function getListingPriceDisplay(
   }
 
   if (item.price?.trim()) {
-    const metaParts = ["VAT n/d"];
+    const metaParts: string[] = [];
     if (item.priceNegotiable === true) {
       metaParts.push("Do negocjacji");
     }
@@ -208,7 +221,7 @@ function getListingPriceDisplay(
 
   return {
     amountLabel: "Zapytaj o cene",
-    metaLine: "Zapytanie | VAT do ustalenia",
+    metaLine: "",
     isRequestPrice: true,
   };
 }
@@ -252,13 +265,26 @@ function getCscValidityLabel(item: ContainerListingItem): string {
 }
 
 function getLocationLabel(input: {
-  locationAddressParts?: { city?: string; country?: string };
+  locationAddressParts?: {
+    postalCode?: string;
+    city?: string;
+    country?: string;
+  };
   locationCity?: string;
   locationCountry?: string;
 }): string {
-  const city = input.locationAddressParts?.city?.trim() || input.locationCity?.trim() || "";
-  const country = input.locationAddressParts?.country?.trim() || input.locationCountry?.trim() || "";
-  const combined = [city, country].filter(Boolean).join(", ");
+  const postalCode = input.locationAddressParts?.postalCode?.trim() || "";
+  const city =
+    input.locationAddressParts?.city?.trim() ||
+    input.locationCity?.trim() ||
+    "";
+  const country =
+    input.locationAddressParts?.country?.trim() ||
+    input.locationCountry?.trim() ||
+    "";
+  const combined = [postalCode, [city, country].filter(Boolean).join(", ")]
+    .filter(Boolean)
+    .join(" ");
   return combined || "Nie podano lokalizacji";
 }
 
@@ -305,6 +331,108 @@ function getContainerColorBadgeLabel(color: {
   return `${color.ral} (RGB ${color.rgb.r}, ${color.rgb.g}, ${color.rgb.b})`;
 }
 
+function getRalColorCode(value: string): string {
+  const normalized = value
+    .trim()
+    .replace(/^RAL[\s-]*/i, "")
+    .trim();
+  return normalized.length > 0 ? normalized : value.trim();
+}
+
+function getRalTileTextClass(color: {
+  r: number;
+  g: number;
+  b: number;
+}): string {
+  const luminance = (color.r * 299 + color.g * 587 + color.b * 114) / 1000;
+  return luminance > 160 ? "text-neutral-900" : "text-white";
+}
+
+function ContainerColorsInlineSummary({
+  colors,
+  itemId,
+}: {
+  colors: Array<{
+    ral: string;
+    rgb: { r: number; g: number; b: number };
+  }>;
+  itemId: string;
+}) {
+  if (colors.length === 0) {
+    return null;
+  }
+
+  const previewColors = colors.slice(0, 3);
+  const additionalCount = Math.max(colors.length - previewColors.length, 0);
+  const tooltipColumns = Math.min(colors.length, 5);
+  const tooltipContentWidthRem =
+    tooltipColumns * 4 + (tooltipColumns - 1) * 0.625;
+
+  return (
+    <div
+      className="group relative inline-flex items-center gap-2"
+      tabIndex={0}
+      aria-label={`Kolory RAL: ${colors.map((color) => color.ral).join(", ")}`}
+    >
+      <span className="text-sm text-neutral-700">Kolor:</span>
+      <div className="inline-flex items-center gap-1">
+        {previewColors.map((color, index) => (
+          <span
+            key={`${itemId}-preview-${color.ral}-${index}`}
+            className="h-3.5 w-3.5 rounded-[3px] border border-neutral-300"
+            style={{
+              backgroundColor: `rgb(${color.rgb.r}, ${color.rgb.g}, ${color.rgb.b})`,
+            }}
+            aria-label={getContainerColorBadgeLabel(color)}
+            title={color.ral}
+          />
+        ))}
+        {additionalCount > 0 ? (
+          <span className="text-xs font-medium text-neutral-600">
+            + {additionalCount}
+          </span>
+        ) : null}
+      </div>
+      <div className="pointer-events-none absolute bottom-full right-0 z-30 mb-2 w-fit translate-y-1 rounded-md border border-neutral-700 bg-neutral-900 p-2.5 opacity-0 shadow-xl transition duration-150 group-hover:delay-300 group-hover:translate-y-0 group-hover:opacity-100 group-focus-within:delay-300 group-focus-within:translate-y-0 group-focus-within:opacity-100">
+        <div
+          className="flex flex-wrap gap-2.5"
+          style={{
+            width: `${tooltipContentWidthRem}rem`,
+          }}
+        >
+          {colors.map((color, index) => {
+            const textClass = getRalTileTextClass(color.rgb);
+            return (
+              <span
+                key={`${itemId}-tooltip-${color.ral}-${index}`}
+                className={`relative inline-flex h-16 w-16 rounded-md border border-neutral-800/50 shadow-sm ${textClass}`}
+                style={{
+                  backgroundColor: `rgb(${color.rgb.r}, ${color.rgb.g}, ${color.rgb.b})`,
+                }}
+                aria-label={getContainerColorBadgeLabel(color)}
+                title={getContainerColorBadgeLabel(color)}
+              >
+                <span className="absolute bottom-1 right-1 inline-flex flex-col items-end leading-none">
+                  <span className="text-[9px] font-semibold uppercase tracking-[0.01em]">
+                    RAL
+                  </span>
+                  <span className="max-w-[56px] truncate text-right text-[13px] font-bold">
+                    {getRalColorCode(color.ral)}
+                  </span>
+                </span>
+              </span>
+            );
+          })}
+        </div>
+        <span
+          aria-hidden="true"
+          className="absolute -bottom-1 left-3 h-2 w-2 rotate-45 border-b border-r border-neutral-700 bg-neutral-900"
+        />
+      </div>
+    </div>
+  );
+}
+
 function CscInfoBadge({ item }: { item: ContainerListingItem }) {
   const validityLabel = getCscValidityLabel(item);
 
@@ -326,6 +454,7 @@ function CscInfoBadge({ item }: { item: ContainerListingItem }) {
       <div className="pointer-events-none absolute bottom-full right-0 z-30 mb-2 w-64 translate-y-1 rounded-md border border-neutral-700 bg-neutral-900 px-2.5 py-2 text-left text-xs leading-5 text-neutral-100 opacity-0 shadow-xl transition duration-150 group-hover:delay-500 group-hover:translate-y-0 group-hover:opacity-100 group-focus-within:delay-500 group-focus-within:translate-y-0 group-focus-within:opacity-100">
         <p>Tabliczka CSC: {item.hasCscPlate ? "Tak" : "Nie"}</p>
         <p>Certyfikacja CSC: {item.hasCscCertification ? "Tak" : "Nie"}</p>
+        <p>Gwarancja: {item.hasWarranty ? "Tak" : "Nie"}</p>
         <p>Waznosc CSC: {validityLabel}</p>
         <span
           aria-hidden="true"
@@ -364,7 +493,9 @@ function LocationInfoBadge({ item }: { item: ContainerListingItem }) {
         <path d="M12 22s7-6.2 7-12a7 7 0 1 0-14 0c0 5.8 7 12 7 12Z" />
         <circle cx="12" cy="10" r="2.5" />
       </svg>
-      <span className={`min-w-0 flex-1 truncate ${showTooltip ? "cursor-help" : ""}`}>
+      <span
+        className={`min-w-0 flex-1 truncate ${showTooltip ? "cursor-help" : ""}`}
+      >
         {locationLabel}
       </span>
       {showTooltip ? (
@@ -396,9 +527,7 @@ function getLogisticsSummaryLabels(item: ContainerListingItem): string[] {
           ? Math.trunc(item.logisticsTransportFreeDistanceKm)
           : null;
       labels.push(
-        distanceKm
-          ? `darmowy transport ${distanceKm} km`
-          : "darmowy transport",
+        distanceKm ? `darmowy transport ${distanceKm} km` : "darmowy transport",
       );
     } else {
       labels.push("mozliwy transport");
@@ -542,14 +671,13 @@ function ContainerListingsResultsComponent({
 
           <ul className="w-full space-y-3">
             {items.map((item, index) => {
-              const priceDisplay = getListingPriceDisplay(item, priceDisplayCurrency);
+              const priceDisplay = getListingPriceDisplay(
+                item,
+                priceDisplayCurrency,
+              );
               const expiresInLabel = getExpiresInLabel(item.expiresAt);
               const availableFromLabel = getAvailableFromLabel(item);
-              const normalizedTitle = item.title?.trim();
               const fallbackTitle = getContainerShortLabel(item.container);
-              const listingTitle = normalizedTitle && normalizedTitle.length > 0
-                ? normalizedTitle
-                : null;
               const logisticsSummaryLabels = getLogisticsSummaryLabels(item);
               const logisticsComment = item.logisticsComment?.trim();
               const logisticsTooltipText =
@@ -563,20 +691,17 @@ function ContainerListingsResultsComponent({
                   : `${detailsHrefPrefix}/${item.id}`;
               const containerFeatureLabels = item.container.features
                 .map((feature) => CONTAINER_FEATURE_LABEL[feature])
-                .filter((label) => typeof label === "string" && label.trim().length > 0);
+                .filter(
+                  (label) =>
+                    typeof label === "string" && label.trim().length > 0,
+                );
               const containerMetaParts = [
                 ...(typeof item.productionYear === "number"
                   ? [String(item.productionYear)]
                   : []),
                 ...containerFeatureLabels,
               ];
-              const containerMetaWithTitleParts = listingTitle
-                ? [...containerMetaParts, listingTitle]
-                : containerMetaParts;
               const containerColors = item.containerColors ?? [];
-              const containerColorsTitle = containerColors
-                .map((color) => getContainerColorBadgeLabel(color))
-                .join(", ");
               const shouldPrioritizeImage = page === 1 && index === 0;
 
               return (
@@ -585,34 +710,78 @@ function ContainerListingsResultsComponent({
                   className="w-full rounded-md border border-neutral-200 bg-white p-4 shadow-sm transition-colors duration-150 hover:border-sky-100 hover:bg-sky-50/60"
                 >
                   <div className="flex flex-col gap-4 sm:flex-row">
-                    <div className="relative aspect-square w-full shrink-0 overflow-hidden rounded-md border border-neutral-200 bg-neutral-100 sm:w-44">
-                      <Image
-                        src={getContainerPreviewSrc(item)}
-                        alt=""
-                        fill
-                        className={item.photoUrls && item.photoUrls.length > 0 ? "object-cover" : "object-contain p-1"}
-                        sizes="(max-width: 640px) 100vw, 176px"
-                        priority={shouldPrioritizeImage}
-                      />
+                    <div className="relative aspect-square w-full shrink-0 sm:w-44">
+                      <div className="absolute inset-0 overflow-hidden rounded-md border border-neutral-200 bg-neutral-100">
+                        <ContainerPhotoWithPlaceholder
+                          src={getContainerPreviewSrc(item)}
+                          alt=""
+                          fill
+                          className={
+                            item.photoUrls && item.photoUrls.length > 0
+                              ? "object-cover"
+                              : "object-contain p-1"
+                          }
+                          sizes="(max-width: 640px) 100vw, 176px"
+                          priority={shouldPrioritizeImage}
+                        />
+                      </div>
                     </div>
                     <div className="min-w-0 flex-1">
                       <div className="flex min-w-0 items-start gap-3">
                         <div className="w-0 flex-1">
-                          <p className="truncate text-xs uppercase tracking-wide text-neutral-500">
-                            {item.companyName}
-                          </p>
+                          {item.companySlug ? (
+                            <span className="inline-flex min-w-0 items-center gap-1">
+                              <Link
+                                href={`/companies/${item.companySlug}`}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="block min-w-0 truncate text-xs uppercase tracking-wide text-sky-700 decoration-sky-400 underline underline-offset-2 hover:text-sky-800"
+                                onClick={(event) => {
+                                  event.stopPropagation();
+                                }}
+                              >
+                                {item.companyName}
+                              </Link>
+                              {item.companyIsVerified ? (
+                                <span
+                                  className="inline-flex h-4 w-4 shrink-0 items-center justify-center rounded-full border border-emerald-300/80 bg-emerald-100/80 text-emerald-700"
+                                  aria-label="Firma zweryfikowana"
+                                  title="Firma zweryfikowana"
+                                >
+                                  <svg
+                                    viewBox="0 0 20 20"
+                                    fill="none"
+                                    className="h-3 w-3"
+                                    aria-hidden="true"
+                                  >
+                                    <path
+                                      d="M5 10.5l3.2 3.2L15 7"
+                                      stroke="currentColor"
+                                      strokeWidth="2"
+                                      strokeLinecap="round"
+                                      strokeLinejoin="round"
+                                    />
+                                  </svg>
+                                </span>
+                              ) : null}
+                            </span>
+                          ) : (
+                            <p className="truncate text-xs uppercase tracking-wide text-neutral-500">
+                              {item.companyName}
+                            </p>
+                          )}
                           <h3 className="mt-1 truncate text-xl font-semibold text-neutral-900">
                             {fallbackTitle}
                           </h3>
                           <div className="mt-1 min-w-0">
                             <LocationInfoBadge item={item} />
                           </div>
-                          {containerMetaWithTitleParts.length > 0 ? (
+                          {containerMetaParts.length > 0 ? (
                             <p
                               className="mt-1 w-full truncate text-xs text-neutral-500"
-                              title={containerMetaWithTitleParts.join(", ")}
+                              title={containerMetaParts.join(", ")}
                             >
-                              {containerMetaWithTitleParts.join(", ")}
+                              {containerMetaParts.join(", ")}
                             </p>
                           ) : null}
                         </div>
@@ -620,46 +789,23 @@ function ContainerListingsResultsComponent({
                           <div>
                             <p
                               className={`max-w-full overflow-hidden text-ellipsis whitespace-nowrap text-lg font-bold sm:text-xl ${
-                                priceDisplay.isRequestPrice ? "text-neutral-700" : "text-amber-600"
+                                priceDisplay.isRequestPrice
+                                  ? "text-neutral-700"
+                                  : "text-amber-600"
                               }`}
                             >
                               {priceDisplay.amountLabel}
                             </p>
-                            <p className="max-w-full overflow-hidden text-ellipsis whitespace-nowrap text-xs text-neutral-600">
-                              {priceDisplay.metaLine}
-                            </p>
+                            {priceDisplay.metaLine ? (
+                              <p className="max-w-full overflow-hidden text-ellipsis whitespace-nowrap text-xs text-neutral-600">
+                                {priceDisplay.metaLine}
+                              </p>
+                            ) : null}
                           </div>
                           <div className="flex flex-wrap items-center justify-end gap-2">
-                            {containerColors.length > 0 ? (
-                              <div
-                                className="flex flex-wrap items-center justify-end gap-1"
-                                title={containerColorsTitle}
-                              >
-                                {containerColors.slice(0, 3).map((color) => (
-                                  <span
-                                    key={`${item.id}-${color.ral}`}
-                                    className="inline-flex items-center gap-1 rounded-md border border-neutral-300 bg-neutral-100 px-1.5 py-0.5 text-[10px] text-neutral-700"
-                                    aria-label={getContainerColorBadgeLabel(color)}
-                                  >
-                                    <span
-                                      aria-hidden="true"
-                                      className="h-3 w-3 rounded-[3px] border border-neutral-300"
-                                      style={{
-                                        backgroundColor: `rgb(${color.rgb.r}, ${color.rgb.g}, ${color.rgb.b})`,
-                                      }}
-                                    />
-                                    <span>{color.ral.replace("RAL ", "")}</span>
-                                  </span>
-                                ))}
-                                {containerColors.length > 3 ? (
-                                  <span className="text-[10px] text-neutral-500">
-                                    +{containerColors.length - 3}
-                                  </span>
-                                ) : null}
-                              </div>
-                            ) : null}
                             {item.hasCscPlate ||
                             item.hasCscCertification ||
+                            item.hasWarranty ||
                             (typeof item.cscValidToMonth === "number" &&
                               typeof item.cscValidToYear === "number") ? (
                               <CscInfoBadge item={item} />
@@ -667,7 +813,11 @@ function ContainerListingsResultsComponent({
                             <span
                               className={`rounded-md border px-2 py-1 text-xs font-medium ${CONTAINER_CONDITION_COLOR_TOKENS[item.container.condition].badgeClassName}`}
                             >
-                              {CONTAINER_CONDITION_LABEL[item.container.condition]}
+                              {
+                                CONTAINER_CONDITION_LABEL[
+                                  item.container.condition
+                                ]
+                              }
                             </span>
                           </div>
                           <p className="text-right text-xs text-neutral-400">
@@ -693,10 +843,16 @@ function ContainerListingsResultsComponent({
                             return (
                               <span
                                 key={`${item.id}-${label}`}
-                                className={isFreeLabel ? "font-medium text-neutral-700" : undefined}
+                                className={
+                                  isFreeLabel
+                                    ? "font-medium text-neutral-700"
+                                    : undefined
+                                }
                               >
                                 {label}
-                                {index < logisticsSummaryLabels.length - 1 ? "," : ""}
+                                {index < logisticsSummaryLabels.length - 1
+                                  ? ","
+                                  : ""}
                               </span>
                             );
                           })}
@@ -722,13 +878,21 @@ function ContainerListingsResultsComponent({
                       </div>
 
                       <div className="mt-3 flex flex-wrap items-center justify-between gap-2">
-                        {item.quantity > 1 ? (
-                          <p className="text-sm text-neutral-700">
-                            Ilosc:{" "}
-                            <span className="font-medium text-neutral-900">
-                              {item.quantity}
-                            </span>
-                          </p>
+                        {item.quantity > 1 || containerColors.length > 0 ? (
+                          <div className="flex flex-wrap items-center gap-3">
+                            {item.quantity > 1 ? (
+                              <p className="text-sm text-neutral-700">
+                                Ilosc:{" "}
+                                <span className="font-medium text-neutral-900">
+                                  {item.quantity}
+                                </span>
+                              </p>
+                            ) : null}
+                            <ContainerColorsInlineSummary
+                              colors={containerColors}
+                              itemId={item.id}
+                            />
+                          </div>
                         ) : (
                           <span />
                         )}
@@ -741,13 +905,20 @@ function ContainerListingsResultsComponent({
                                 : "border-neutral-300 bg-white text-neutral-600 hover:border-neutral-400 hover:bg-neutral-100 hover:text-neutral-800"
                             } disabled:cursor-not-allowed disabled:opacity-60`}
                             onClick={() => {
-                              onToggleFavorite(item.id, item.isFavorite === true);
+                              onToggleFavorite(
+                                item.id,
+                                item.isFavorite === true,
+                              );
                             }}
                             aria-label={
-                              item.isFavorite ? "Usun z ulubionych" : "Dodaj do ulubionych"
+                              item.isFavorite
+                                ? "Usun z ulubionych"
+                                : "Dodaj do ulubionych"
                             }
                             title={
-                              item.isFavorite ? "Usun z ulubionych" : "Dodaj do ulubionych"
+                              item.isFavorite
+                                ? "Usun z ulubionych"
+                                : "Dodaj do ulubionych"
                             }
                             disabled={pendingFavoriteId === item.id}
                           >
@@ -815,4 +986,3 @@ function ContainerListingsResultsComponent({
 }
 
 export const ContainerListingsResults = memo(ContainerListingsResultsComponent);
-

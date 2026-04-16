@@ -22,6 +22,7 @@ import {
   type ContainerListingImageAsset,
   type ContainerListingItem,
 } from "@/lib/container-listings";
+import { getCompaniesCollection } from "@/lib/companies";
 import {
   CONTAINER_SIZE,
   CONTAINER_CONDITIONS,
@@ -51,7 +52,11 @@ import {
 } from "@/lib/blob-storage";
 import { getLatestFxContext } from "@/lib/fx-rates";
 import { getRichTextLength, hasRichTextContent } from "@/lib/listing-rich-text";
-import { parseContainerRalColors } from "@/lib/container-ral-colors";
+import {
+  MAX_CONTAINER_RAL_COLORS,
+  parseContainerRalColors,
+} from "@/lib/container-ral-colors";
+import { normalizeCompanyVerificationStatus } from "@/lib/company-verification";
 import { enforceRateLimitOrResponse } from "@/lib/request-rate-limit";
 import { logError } from "@/lib/server-logger";
 
@@ -60,8 +65,8 @@ const MAX_POPUP_DETAILS_IDS = 80;
 const MAX_MAP_POINTS = 50_000;
 const MAX_LOCAL_FAVORITE_IDS = 2_000;
 const DESCRIPTION_MAX_TEXT_LENGTH = 1000;
-const MAX_LISTING_PHOTO_COUNT = 5;
-const MAX_LISTING_PHOTO_BYTES = 6 * 1024 * 1024;
+const MAX_LISTING_PHOTO_COUNT = 4;
+const MAX_LISTING_PHOTO_BYTES = 5 * 1024 * 1024;
 const DESCRIPTION_ALLOWED_TAGS = ["p", "br", "strong", "em", "u", "ul", "ol", "li", "div"];
 
 const locationAddressPartsSchema = z.object({
@@ -358,19 +363,137 @@ async function getUserFavoriteListingIdSet(
   return new Set(rows.map((row) => row.listingId.toHexString()));
 }
 
-function mapItemsWithFavoriteFlag(
+type CompanyProfileByOwner = {
+  slug: string;
+  name: string;
+  isVerified: boolean;
+};
+
+function isSameCompanyName(left: string, right: string): boolean {
+  return left.trim().toLocaleLowerCase() === right.trim().toLocaleLowerCase();
+}
+
+function resolveListingCompanySlug(input: {
+  row: ContainerListingDocument;
+  item: ContainerListingItem;
+  byOwnerUserId: Map<string, CompanyProfileByOwner>;
+}): string | undefined {
+  if (input.item.companySlug) {
+    return input.item.companySlug;
+  }
+
+  const ownerUserId = input.row.createdByUserId?.toHexString();
+  if (!ownerUserId) {
+    return undefined;
+  }
+
+  const profile = input.byOwnerUserId.get(ownerUserId);
+  if (!profile) {
+    return undefined;
+  }
+
+  if (!isSameCompanyName(input.row.companyName, profile.name)) {
+    return undefined;
+  }
+
+  return profile.slug;
+}
+
+async function getCompanyProfilesByOwnerUserId(
   rows: ContainerListingDocument[],
-  favoriteIdSet: Set<string>,
+): Promise<Map<string, CompanyProfileByOwner>> {
+  const ownerUserIds = Array.from(
+    new Set(rows.map((row) => row.createdByUserId?.toHexString()).filter(Boolean)),
+  ).filter((value): value is string => Boolean(value) && ObjectId.isValid(value));
+
+  if (ownerUserIds.length === 0) {
+    return new Map<string, CompanyProfileByOwner>();
+  }
+
+  const companies = await getCompaniesCollection();
+  const companyRows = await companies
+    .find(
+      {
+        createdByUserId: { $in: ownerUserIds.map((value) => new ObjectId(value)) },
+        isBlocked: { $ne: true },
+      },
+      {
+        projection: {
+          createdByUserId: 1,
+          slug: 1,
+          name: 1,
+          verificationStatus: 1,
+          updatedAt: 1,
+        },
+        sort: { updatedAt: -1 },
+      },
+    )
+    .toArray();
+
+  const byOwnerUserId = new Map<string, CompanyProfileByOwner>();
+  for (const company of companyRows) {
+    const ownerUserId = company.createdByUserId?.toHexString();
+    if (!ownerUserId || byOwnerUserId.has(ownerUserId)) {
+      continue;
+    }
+    const slug = company.slug?.trim();
+    const name = company.name?.trim();
+    if (!slug || !name) {
+      continue;
+    }
+    byOwnerUserId.set(ownerUserId, {
+      slug,
+      name,
+      isVerified:
+        normalizeCompanyVerificationStatus(company.verificationStatus) === "verified",
+    });
+  }
+
+  return byOwnerUserId;
+}
+
+function mapRowsToItems(
+  rows: ContainerListingDocument[],
+  input?: {
+    favoriteIdSet?: Set<string>;
+    companyProfilesByOwnerUserId?: Map<string, CompanyProfileByOwner>;
+  },
 ): ContainerListingItem[] {
-  return rows.map((row) => ({
-    ...mapContainerListingToItem(row),
-    isFavorite: favoriteIdSet.has(row._id.toHexString()),
-  }));
+  const companyProfilesByOwnerUserId =
+    input?.companyProfilesByOwnerUserId ?? new Map<string, CompanyProfileByOwner>();
+  return rows.map((row) => {
+    const mapped = mapContainerListingToItem(row);
+    const ownerUserId = row.createdByUserId?.toHexString();
+    const ownerProfile = ownerUserId
+      ? companyProfilesByOwnerUserId.get(ownerUserId)
+      : undefined;
+    const companySlug = resolveListingCompanySlug({
+      row,
+      item: mapped,
+      byOwnerUserId: companyProfilesByOwnerUserId,
+    });
+    let companyIsVerified = mapped.companyIsVerified;
+    if (
+      companySlug &&
+      ownerProfile &&
+      isSameCompanyName(row.companyName, ownerProfile.name)
+    ) {
+      companyIsVerified = ownerProfile.isVerified;
+    }
+
+    return {
+      ...mapped,
+      ...(companySlug ? { companySlug } : {}),
+      companyIsVerified,
+      ...(input?.favoriteIdSet
+        ? { isFavorite: input.favoriteIdSet.has(row._id.toHexString()) }
+        : {}),
+    };
+  });
 }
 
 const createSchema = z.object({
   type: listingTypeInputSchema,
-  title: z.string().trim().max(80).optional(),
   container: z.object({
     size: z.coerce.number().int().refine((value) => {
       return (
@@ -403,6 +526,7 @@ const createSchema = z.object({
   logisticsComment: z.string().trim().max(600).optional(),
   hasCscPlate: z.coerce.boolean().optional(),
   hasCscCertification: z.coerce.boolean().optional(),
+  hasWarranty: z.coerce.boolean().optional(),
   cscValidToMonth: z.coerce.number().int().min(1).max(12).optional(),
   cscValidToYear: z.coerce.number().int().min(1900).max(2100).optional(),
   productionYear: z.coerce.number().int().min(1900).max(2100).optional(),
@@ -410,6 +534,7 @@ const createSchema = z.object({
   price: z.string().trim().max(100).optional(),
   description: z.string().trim().max(16_000).optional(),
   companyName: z.string().trim().min(2).max(160),
+  publishedAsCompany: z.coerce.boolean().optional(),
   contactEmail: z.email().trim().max(160),
   contactPhone: z.string().trim().max(40).optional(),
 }).superRefine((value, context) => {
@@ -802,10 +927,13 @@ export async function GET(request: NextRequest) {
       const ordered = requestedIds
         .map((id) => byId.get(id))
         .filter((row): row is ContainerListingDocument => Boolean(row));
+      const companyProfilesByOwnerUserId = await getCompanyProfilesByOwnerUserId(
+        ordered,
+      );
 
       if (!user?._id) {
         return NextResponse.json({
-          items: ordered.map(mapContainerListingToItem),
+          items: mapRowsToItems(ordered, { companyProfilesByOwnerUserId }),
         });
       }
 
@@ -817,7 +945,10 @@ export async function GET(request: NextRequest) {
           );
 
       return NextResponse.json({
-        items: mapItemsWithFavoriteFlag(ordered, favoriteIdSet),
+        items: mapRowsToItems(ordered, {
+          favoriteIdSet,
+          companyProfilesByOwnerUserId,
+        }),
       });
     }
 
@@ -910,10 +1041,13 @@ export async function GET(request: NextRequest) {
             .skip(skip)
             .limit(pageSize)
             .toArray();
+    const companyProfilesByOwnerUserId = await getCompanyProfilesByOwnerUserId(
+      rows,
+    );
 
     if (!user?._id) {
       return NextResponse.json({
-        items: rows.map(mapContainerListingToItem),
+        items: mapRowsToItems(rows, { companyProfilesByOwnerUserId }),
         meta: {
           page: currentPage,
           pageSize,
@@ -931,7 +1065,10 @@ export async function GET(request: NextRequest) {
         );
 
     return NextResponse.json({
-      items: mapItemsWithFavoriteFlag(rows, favoriteIdSet),
+      items: mapRowsToItems(rows, {
+        favoriteIdSet,
+        companyProfilesByOwnerUserId,
+      }),
       meta: {
         page: currentPage,
         pageSize,
@@ -1023,6 +1160,34 @@ export async function POST(request: NextRequest) {
 
     const now = new Date();
     const listing = parsed.data;
+    const companies = await getCompaniesCollection();
+    const ownerCompany = await companies.findOne(
+      {
+        createdByUserId: user._id,
+        isBlocked: { $ne: true },
+      },
+      {
+        projection: {
+          name: 1,
+          slug: 1,
+        },
+        sort: { updatedAt: -1 },
+      },
+    );
+    const publishAsCompanyRequested = listing.publishedAsCompany === true;
+    if (publishAsCompanyRequested && !ownerCompany?._id) {
+      return NextResponse.json(
+        { error: "Company profile not found for this user" },
+        { status: 400 },
+      );
+    }
+    const publishedAsCompany = publishAsCompanyRequested && Boolean(ownerCompany?._id);
+    const effectiveCompanyName = publishedAsCompany
+      ? ownerCompany?.name?.trim() || listing.companyName.trim()
+      : listing.companyName.trim();
+    const effectiveCompanySlug = publishedAsCompany
+      ? ownerCompany?.slug?.trim() || undefined
+      : undefined;
     const listingId = new ObjectId();
     const legacyLocationAddressLabel = normalizeOptionalString(listing.locationAddressLabel);
     const legacyLocationAddressParts = normalizeGeocodeAddressParts(listing.locationAddressParts);
@@ -1054,7 +1219,6 @@ export async function POST(request: NextRequest) {
       availableFrom: listing.availableFrom,
       now,
     });
-    const normalizedTitle = normalizeOptionalString(listing.title);
     const normalizedDescription = normalizeOptionalDescriptionHtml(listing.description);
     const normalizedPrice = normalizeOptionalString(listing.price);
     const normalizedPriceAmount =
@@ -1066,16 +1230,7 @@ export async function POST(request: NextRequest) {
     if (parsedContainerColors.tooMany) {
       return NextResponse.json(
         {
-          error: "containerColorsRal supports at most 8 RAL codes",
-        },
-        { status: 400 },
-      );
-    }
-    if (parsedContainerColors.invalidCodes.length > 0) {
-      return NextResponse.json(
-        {
-          error: "Invalid RAL color code(s)",
-          issues: parsedContainerColors.invalidCodes,
+          error: `containerColorsRal supports at most ${MAX_CONTAINER_RAL_COLORS} RAL codes`,
         },
         { status: 400 },
       );
@@ -1173,7 +1328,6 @@ export async function POST(request: NextRequest) {
       insertResult = await listings.insertOne({
         _id: listingId,
         type: listing.type,
-        ...(normalizedTitle ? { title: normalizedTitle } : {}),
         container: {
           size: listing.container.size as ContainerSize,
           height: listing.container.height,
@@ -1213,6 +1367,7 @@ export async function POST(request: NextRequest) {
         ...(normalizedLogisticsComment ? { logisticsComment: normalizedLogisticsComment } : {}),
         hasCscPlate: listing.hasCscPlate === true,
         hasCscCertification: listing.hasCscCertification === true,
+        hasWarranty: listing.hasWarranty === true,
         ...(normalizedCscValidToMonth !== undefined && normalizedCscValidToYear !== undefined
           ? {
               cscValidToMonth: normalizedCscValidToMonth,
@@ -1228,7 +1383,9 @@ export async function POST(request: NextRequest) {
               ? String(normalizedPricing?.original.amount)
               : undefined),
         ...(normalizedDescription ? { description: normalizedDescription } : {}),
-        companyName: listing.companyName.trim(),
+        companyName: effectiveCompanyName,
+        ...(effectiveCompanySlug ? { companySlug: effectiveCompanySlug } : {}),
+        publishedAsCompany,
         contactEmail: listing.contactEmail.trim(),
         contactPhone: normalizeOptionalString(listing.contactPhone),
         status: LISTING_STATUS.ACTIVE,

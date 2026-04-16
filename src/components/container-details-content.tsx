@@ -14,6 +14,8 @@ import { ContainerInquiryModalTrigger } from "@/components/container-inquiry-mod
 import { DetailsBackButton } from "@/components/details-back-button";
 import { SESSION_COOKIE_NAME } from "@/lib/auth-session";
 import { getCurrentUserFromToken } from "@/lib/auth-user";
+import { getCompaniesCollection } from "@/lib/companies";
+import { normalizeCompanyVerificationStatus } from "@/lib/company-verification";
 import type {
   ContainerListingItem,
   ContainerListingDocument,
@@ -77,9 +79,9 @@ function sanitizeDescriptionForDisplay(value?: string): string | undefined {
   return hasRichTextContent(sanitized) ? sanitized : undefined;
 }
 
-function formatVatRateLabel(vatRate: number | null): string {
+function formatVatRateLabel(vatRate: number | null): string | null {
   if (typeof vatRate !== "number" || !Number.isFinite(vatRate)) {
-    return "VAT n/d";
+    return null;
   }
   return `VAT${vatRate.toLocaleString("pl-PL")}%`;
 }
@@ -110,7 +112,7 @@ function getListingPriceDisplay(
     pricing &&
     (pricing.original.amount === null || typeof pricing.original.amount !== "number")
   ) {
-    const metaParts = ["Zapytanie", "VAT do ustalenia"];
+    const metaParts: string[] = [];
     if (pricing.original.negotiable === true || item.priceNegotiable === true) {
       metaParts.push("Do negocjacji");
     }
@@ -151,10 +153,11 @@ function getListingPriceDisplay(
       })
       .filter((value): value is string => Boolean(value));
 
-    const metaParts = [
-      `${PRICE_TAX_MODE_LABEL[pricing.original.taxMode]}`,
-      formatVatRateLabel(pricing.original.vatRate),
-    ];
+    const metaParts = [`${PRICE_TAX_MODE_LABEL[pricing.original.taxMode]}`];
+    const vatRateLabel = formatVatRateLabel(pricing.original.vatRate);
+    if (vatRateLabel) {
+      metaParts.push(vatRateLabel);
+    }
     if (pricing.original.negotiable === true || item.priceNegotiable === true) {
       metaParts.push("Do negocjacji");
     }
@@ -171,7 +174,7 @@ function getListingPriceDisplay(
     typeof item.priceAmount === "number" &&
     Number.isFinite(item.priceAmount)
   ) {
-    const metaParts = ["Netto", "VAT n/d"];
+    const metaParts = ["Netto"];
     if (item.priceNegotiable === true) {
       metaParts.push("Do negocjacji");
     }
@@ -184,7 +187,7 @@ function getListingPriceDisplay(
   }
 
   if (item.price?.trim()) {
-    const metaParts = ["VAT n/d"];
+    const metaParts: string[] = [];
     if (item.priceNegotiable === true) {
       metaParts.push("Do negocjacji");
     }
@@ -198,7 +201,7 @@ function getListingPriceDisplay(
 
   return {
     amountLabel: "Zapytaj o cene",
-    metaLine: "Zapytanie | VAT do ustalenia",
+    metaLine: "",
     isRequestPrice: true,
     additionalAmounts: [],
   };
@@ -293,6 +296,7 @@ function resolveListingRealImages(
 
 type LocationDisplayItem = {
   id: string;
+  postalCode?: string;
   streetLine?: string;
   city: string;
   country: string;
@@ -304,17 +308,19 @@ function getLocationDisplayItems(item: ContainerListingItem): LocationDisplayIte
   const seen = new Set<string>();
 
   const appendLocation = (input: {
+    postalCode?: string;
     street?: string;
     houseNumber?: string;
     city?: string;
     country?: string;
   }) => {
+    const postalCode = input.postalCode?.trim() ?? "";
     const street = input.street?.trim() ?? "";
     const houseNumber = input.houseNumber?.trim() ?? "";
     const city = input.city?.trim() ?? "";
     const country = input.country?.trim() ?? "";
     const streetLine = street ? [street, houseNumber].filter(Boolean).join(" ") : undefined;
-    const key = [streetLine ?? "", city, country].join("|").toLowerCase();
+    const key = [postalCode, streetLine ?? "", city, country].join("|").toLowerCase();
 
     if (!city && !country && !streetLine) {
       return;
@@ -326,6 +332,7 @@ function getLocationDisplayItems(item: ContainerListingItem): LocationDisplayIte
 
     items.push({
       id: `${items.length + 1}-${key}`,
+      ...(postalCode ? { postalCode } : {}),
       streetLine,
       city: city || "Nieznane miasto",
       country: country || "Nieznany kraj",
@@ -335,6 +342,7 @@ function getLocationDisplayItems(item: ContainerListingItem): LocationDisplayIte
 
   for (const location of item.locations ?? []) {
     appendLocation({
+      postalCode: location.locationAddressParts?.postalCode,
       street: location.locationAddressParts?.street,
       houseNumber: location.locationAddressParts?.houseNumber,
       city: location.locationAddressParts?.city ?? location.locationCity,
@@ -344,6 +352,7 @@ function getLocationDisplayItems(item: ContainerListingItem): LocationDisplayIte
 
   if (items.length === 0) {
     appendLocation({
+      postalCode: item.locationAddressParts?.postalCode,
       street: item.locationAddressParts?.street,
       houseNumber: item.locationAddressParts?.houseNumber,
       city: item.locationAddressParts?.city ?? item.locationCity,
@@ -445,6 +454,20 @@ function getQuantityDisplay(value: number): string {
   return String(Math.trunc(value));
 }
 
+function getRalColorCode(value: string): string {
+  const normalized = value.trim().replace(/^RAL[\s-]*/i, "").trim();
+  return normalized.length > 0 ? normalized : value.trim();
+}
+
+function getRalTileTextClass(color: { r: number; g: number; b: number }): string {
+  const luminance = (color.r * 299 + color.g * 587 + color.b * 114) / 1000;
+  return luminance > 160 ? "text-neutral-900" : "text-white";
+}
+
+function isSameCompanyName(left: string, right: string): boolean {
+  return left.trim().toLocaleLowerCase() === right.trim().toLocaleLowerCase();
+}
+
 export async function ContainerDetailsContent({
   listingId,
   listHref = "/list",
@@ -463,6 +486,38 @@ export async function ContainerDetailsContent({
     notFound();
   }
   const listingItem = mapContainerListingToItem(listing);
+  let isCompanyVerified = listingItem.companyIsVerified === true;
+  let companyProfileHref: string | null = listingItem.companySlug
+    ? `/companies/${listingItem.companySlug}`
+    : null;
+  const companies = await getCompaniesCollection();
+  const ownerCompany = await companies.findOne(
+    {
+      createdByUserId: listing.createdByUserId,
+      isBlocked: { $ne: true },
+    },
+    {
+      projection: {
+        slug: 1,
+        name: 1,
+        verificationStatus: 1,
+      },
+      sort: { updatedAt: -1 },
+    },
+  );
+  const ownerCompanyMatchesListing =
+    Boolean(ownerCompany?.name) &&
+    isSameCompanyName(ownerCompany!.name, listing.companyName);
+  const ownerCompanySlug = ownerCompany?.slug?.trim();
+  if (!companyProfileHref && ownerCompanySlug && ownerCompanyMatchesListing) {
+    companyProfileHref = `/companies/${ownerCompanySlug}`;
+  }
+  if (
+    ownerCompanyMatchesListing &&
+    normalizeCompanyVerificationStatus(ownerCompany?.verificationStatus) === "verified"
+  ) {
+    isCompanyVerified = true;
+  }
 
   const cookieStore = await cookies();
   const token = cookieStore.get(SESSION_COOKIE_NAME)?.value;
@@ -494,10 +549,7 @@ export async function ContainerDetailsContent({
     notFound();
   }
 
-  const defaultTitle = getContainerShortLabel(listingItem.container);
-  const resolvedTitle = listingItem.title?.trim()
-    ? listingItem.title
-    : defaultTitle;
+  const galleryTitle = getContainerShortLabel(listingItem.container);
   const sanitizedDescriptionHtml = sanitizeDescriptionForDisplay(
     listingItem.description,
   );
@@ -509,7 +561,8 @@ export async function ContainerDetailsContent({
   const realImages = resolveListingRealImages(listing, listingItem);
   const mainImage = realImages[0] ?? getContainerPlaceholderSrc(listingItem);
   const additionalRealImages = realImages.length > 1 ? realImages.slice(1) : [];
-  const hasAnyCsc = listingItem.hasCscPlate || listingItem.hasCscCertification;
+  const hasAnyCertification =
+    listingItem.hasCscPlate || listingItem.hasCscCertification || listingItem.hasWarranty;
   const quantityDisplay = getQuantityDisplay(listingItem.quantity);
   const locationItems = getLocationDisplayItems(listingItem);
   const locationMapPoints = getLocationMapPoints(listingItem);
@@ -564,7 +617,7 @@ export async function ContainerDetailsContent({
               <div className="grid h-fit justify-items-start">
                 <ContainerDetailsGallery
                   images={[mainImage]}
-                  title={resolvedTitle}
+                  title={galleryTitle}
                   showMainImage
                   mainImagePriority
                   showThumbnails={false}
@@ -573,9 +626,42 @@ export async function ContainerDetailsContent({
               </div>
 
               <div className="min-w-0">
-                <p className="text-sm text-neutral-600">
-                  {listing.companyName}
-                </p>
+                {companyProfileHref ? (
+                  <span className="inline-flex min-w-0 items-center gap-1">
+                    <Link
+                      href={companyProfileHref}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="min-w-0 truncate text-sm text-sky-700 decoration-sky-400 underline underline-offset-2 hover:text-sky-800"
+                    >
+                      {listing.companyName}
+                    </Link>
+                    {isCompanyVerified ? (
+                      <span
+                        className="inline-flex h-5 w-5 shrink-0 items-center justify-center rounded-full border border-emerald-300/80 bg-emerald-100/80 text-emerald-700"
+                        aria-label="Firma zweryfikowana"
+                        title="Firma zweryfikowana"
+                      >
+                        <svg
+                          viewBox="0 0 20 20"
+                          fill="none"
+                          className="h-3.5 w-3.5"
+                          aria-hidden="true"
+                        >
+                          <path
+                            d="M5 10.5l3.2 3.2L15 7"
+                            stroke="currentColor"
+                            strokeWidth="2"
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                          />
+                        </svg>
+                      </span>
+                    ) : null}
+                  </span>
+                ) : (
+                  <p className="text-sm text-neutral-600">{listing.companyName}</p>
+                )}
                 <h1 className="mt-2 text-3xl font-semibold text-neutral-900">
                   {getContainerShortLabel(listingItem.container)}
                 </h1>
@@ -612,6 +698,35 @@ export async function ContainerDetailsContent({
                 </div>
               </div>
             </div>
+            {containerColors.length > 0 ? (
+              <div className="mt-4 border-t border-neutral-200 pt-3">
+                <div className="flex flex-wrap gap-2.5">
+                  {containerColors.map((color, index) => {
+                    const textClass = getRalTileTextClass(color.rgb);
+                    return (
+                      <span
+                        key={`${listingItem.id}-details-color-${color.ral}-${index}`}
+                        className={`relative inline-flex h-16 w-16 rounded-md border border-neutral-800/50 shadow-sm ${textClass}`}
+                        style={{
+                          backgroundColor: `rgb(${color.rgb.r}, ${color.rgb.g}, ${color.rgb.b})`,
+                        }}
+                        aria-label={`${color.ral} (RGB ${color.rgb.r}, ${color.rgb.g}, ${color.rgb.b})`}
+                        title={`${color.ral} (RGB ${color.rgb.r}, ${color.rgb.g}, ${color.rgb.b})`}
+                      >
+                        <span className="absolute bottom-1 right-1 inline-flex flex-col items-end leading-none">
+                          <span className="text-[9px] font-semibold uppercase tracking-[0.01em]">
+                            RAL
+                          </span>
+                          <span className="max-w-[56px] truncate text-right text-[13px] font-bold">
+                            {getRalColorCode(color.ral)}
+                          </span>
+                        </span>
+                      </span>
+                    );
+                  })}
+                </div>
+              </div>
+            ) : null}
           </section>
 
           <div className="grid gap-4 lg:h-full lg:grid-rows-2">
@@ -635,14 +750,16 @@ export async function ContainerDetailsContent({
                   ))}
                 </div>
               ) : null}
-              <p className="mt-1 text-xs text-neutral-600">
-                {priceDisplay.metaLine}
-              </p>
+              {priceDisplay.metaLine ? (
+                <p className="mt-1 text-xs text-neutral-600">
+                  {priceDisplay.metaLine}
+                </p>
+              ) : null}
             </section>
 
             <section
               className={`rounded-md border p-4 ${
-                hasAnyCsc
+                hasAnyCertification
                   ? "border-green-300 bg-green-50"
                   : "border-neutral-300 bg-white"
               } h-full`}
@@ -661,6 +778,12 @@ export async function ContainerDetailsContent({
                   Certyfikacja CSC:{" "}
                   <span className="text-neutral-900">
                     {listingItem.hasCscCertification ? "Tak" : "Nie"}
+                  </span>
+                </p>
+                <p>
+                  Gwarancja:{" "}
+                  <span className="text-neutral-900">
+                    {listingItem.hasWarranty ? "Tak" : "Nie"}
                   </span>
                 </p>
                 <p>
@@ -692,44 +815,9 @@ export async function ContainerDetailsContent({
           </section>
         ) : null}
 
-        {containerColors.length > 0 ? (
-          <section className="mt-4 rounded-md border border-neutral-300 bg-white p-4">
-            <h2 className="text-sm font-semibold text-neutral-800">
-              Kolory kontenera (RAL)
-            </h2>
-            <div className="mt-3 grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
-              {containerColors.map((color) => (
-                <div
-                  key={`${listingItem.id}-color-${color.ral}`}
-                  className="flex items-center gap-3 rounded-md border border-neutral-300 bg-neutral-50 px-3 py-2"
-                >
-                  <span
-                    aria-hidden="true"
-                    className="h-7 w-7 shrink-0 rounded-md border border-neutral-300"
-                    style={{
-                      backgroundColor: `rgb(${color.rgb.r}, ${color.rgb.g}, ${color.rgb.b})`,
-                    }}
-                  />
-                  <div className="min-w-0">
-                    <p className="text-sm font-medium text-neutral-900">{color.ral}</p>
-                    <p className="truncate text-xs text-neutral-600">
-                      RGB {color.rgb.r}, {color.rgb.g}, {color.rgb.b}
-                    </p>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </section>
-        ) : null}
-
-        {sanitizedDescriptionHtml || resolvedTitle !== defaultTitle ? (
+        {sanitizedDescriptionHtml ? (
           <section className="mt-4 rounded-md border border-neutral-300 bg-white p-4">
             <h2 className="text-sm font-semibold text-neutral-800">Opis</h2>
-            {resolvedTitle !== defaultTitle ? (
-              <p className="mt-3 text-lg font-semibold text-neutral-900">
-                {resolvedTitle}
-              </p>
-            ) : null}
             {sanitizedDescriptionHtml ? (
               <div
                 className="mt-3 space-y-2 text-sm text-neutral-700 [&_ol]:list-decimal [&_ol]:pl-5 [&_p]:leading-6 [&_ul]:list-disc [&_ul]:pl-5"
@@ -760,6 +848,12 @@ export async function ContainerDetailsContent({
                   />
                 )}
                 <p className="min-w-0">
+                  {location.postalCode ? (
+                    <strong className="font-semibold text-neutral-900">
+                      {location.postalCode}
+                    </strong>
+                  ) : null}
+                  {location.postalCode ? <span> </span> : null}
                   {location.streetLine ? <span>{location.streetLine}, </span> : null}
                   <strong className="font-semibold text-neutral-900">{location.city}</strong>
                   <span>, </span>
@@ -857,7 +951,7 @@ export async function ContainerDetailsContent({
             <h2 className="text-sm font-semibold text-neutral-800">Galeria</h2>
             <ContainerDetailsGallery
               images={additionalRealImages}
-              title={resolvedTitle}
+              title={galleryTitle}
               showMainImage={false}
               showThumbnails
               className="mt-3"

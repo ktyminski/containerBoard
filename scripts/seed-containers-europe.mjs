@@ -12,8 +12,44 @@ const TOTAL_LISTINGS = 200;
 const TTL_DAYS = 14;
 const SYSTEM_USER_ID = new ObjectId("0000000000000000000000c0");
 
-const containerTypes = ["20DV", "40DV", "40HC", "reefer", "open_top", "flat_rack", "other"];
-
+const LISTING_TYPES = ["sell", "rent", "buy"];
+const CONTAINER_FEATURES = [
+  "double_door",
+  "pallet_wide",
+  "insulated",
+  "ventilated",
+  "dangerous_goods",
+  "food_grade",
+  "open_side_full",
+  "crane_lugs",
+  "forklift_pockets",
+  "removable_roof",
+  "high_security_lockbox",
+  "extra_vents",
+];
+const RAL_PALETTE = [
+  { ral: "RAL 5010", hex: "#0E294B" },
+  { ral: "RAL 7016", hex: "#293133" },
+  { ral: "RAL 7035", hex: "#CBD0CC" },
+  { ral: "RAL 9005", hex: "#0A0A0D" },
+  { ral: "RAL 9010", hex: "#F1F0EA" },
+  { ral: "RAL 6018", hex: "#4B9B3D" },
+  { ral: "RAL 3020", hex: "#C1121C" },
+  { ral: "RAL 2004", hex: "#E25E08" },
+  { ral: "RAL 1023", hex: "#F9A900" },
+  { ral: "RAL 5015", hex: "#2271B3" },
+];
+const FX = {
+  EUR: { PLN: 4.3, USD: 1.1 },
+  PLN: { EUR: 1 / 4.3, USD: 1.1 / 4.3 },
+  USD: { EUR: 1 / 1.1, PLN: 4.3 / 1.1 },
+};
+const LOGISTICS_COMMENTS = [
+  "Mozliwy odbior transportem drogowym po uzgodnieniu.",
+  "Transport organizowany przez sprzedajacego po potwierdzeniu terminu.",
+  "Rozladunek / HDS realizowany na terminalu w godzinach pracy magazynu.",
+  "Wsparcie przy rozladunku / HDS i dokumentach po stronie operatora placu.",
+];
 const companies = [
   "North Harbor Logistics",
   "Blue Anchor Depot",
@@ -36,7 +72,6 @@ const companies = [
   "EastWest Box Market",
   "Portside Logistics",
 ];
-
 const hubs = [
   { city: "Gdansk", country: "Polska", street: "Portowa", lat: 54.352, lng: 18.6466 },
   { city: "Gdynia", country: "Polska", street: "Kontenerowa", lat: 54.5189, lng: 18.5305 },
@@ -47,43 +82,17 @@ const hubs = [
   { city: "Antwerpia", country: "Belgia", street: "Kaaienlaan", lat: 51.2194, lng: 4.4025 },
   { city: "Amsterdam", country: "Holandia", street: "Terminalweg", lat: 52.3676, lng: 4.9041 },
   { city: "Le Havre", country: "Francja", street: "Rue du Port", lat: 49.4944, lng: 0.1079 },
-  { city: "Marsylia", country: "Francja", street: "Avenue Maritime", lat: 43.2965, lng: 5.3698 },
   { city: "Barcelona", country: "Hiszpania", street: "Carrer del Port", lat: 41.3851, lng: 2.1734 },
-  { city: "Walencja", country: "Hiszpania", street: "Avinguda de Terminal", lat: 39.4699, lng: -0.3763 },
   { city: "Lizbona", country: "Portugalia", street: "Rua do Porto", lat: 38.7223, lng: -9.1393 },
-  { city: "Madryt", country: "Hiszpania", street: "Avenida Logistica", lat: 40.4168, lng: -3.7038 },
   { city: "Mediolan", country: "Wlochy", street: "Via Container", lat: 45.4642, lng: 9.19 },
-  { city: "Genua", country: "Wlochy", street: "Via del Molo", lat: 44.4056, lng: 8.9463 },
-  { city: "Triest", country: "Wlochy", street: "Via Porto Vecchio", lat: 45.6495, lng: 13.7768 },
   { city: "Ateny", country: "Grecja", street: "Leoforos Limaniou", lat: 37.9838, lng: 23.7275 },
-  { city: "Pireus", country: "Grecja", street: "Akti Kondili", lat: 37.942, lng: 23.6465 },
-  { city: "Sofia", country: "Bulgaria", street: "Bulevard Transport", lat: 42.6977, lng: 23.3219 },
   { city: "Bukareszt", country: "Rumunia", street: "Strada Terminal", lat: 44.4268, lng: 26.1025 },
-  { city: "Konstanca", country: "Rumunia", street: "Bulevard Portului", lat: 44.1598, lng: 28.6348 },
-  { city: "Budapeszt", country: "Wegry", street: "Rakpart", lat: 47.4979, lng: 19.0402 },
-  { city: "Wieden", country: "Austria", street: "Logistikgasse", lat: 48.2082, lng: 16.3738 },
   { city: "Praga", country: "Czechy", street: "Pristavni", lat: 50.0755, lng: 14.4378 },
-  { city: "Bratyslawa", country: "Slowacja", street: "Pristavna", lat: 48.1486, lng: 17.1077 },
-  { city: "Ljubljana", country: "Slowenia", street: "Kontejnerska", lat: 46.0569, lng: 14.5058 },
-  { city: "Koper", country: "Slowenia", street: "Pristaniska", lat: 45.5481, lng: 13.7302 },
-  { city: "Zagrzeb", country: "Chorwacja", street: "Luka Ulica", lat: 45.815, lng: 15.9819 },
-  { city: "Rijeka", country: "Chorwacja", street: "Obalna", lat: 45.3271, lng: 14.4422 },
-  { city: "Tallin", country: "Estonia", street: "Sadama", lat: 59.437, lng: 24.7536 },
-  { city: "Ryga", country: "Lotwa", street: "Ostas", lat: 56.9496, lng: 24.1052 },
-  { city: "Wilno", country: "Litwa", street: "Terminalo", lat: 54.6872, lng: 25.2797 },
   { city: "Kopenhaga", country: "Dania", street: "Havnevej", lat: 55.6761, lng: 12.5683 },
-  { city: "Oslo", country: "Norwegia", street: "Havnsgata", lat: 59.9139, lng: 10.7522 },
   { city: "Sztokholm", country: "Szwecja", street: "Hamnvagen", lat: 59.3293, lng: 18.0686 },
-  { city: "Helsinki", country: "Finlandia", street: "Satamatie", lat: 60.1699, lng: 24.9384 },
-  { city: "Dublin", country: "Irlandia", street: "Dock Road", lat: 53.3498, lng: -6.2603 },
   { city: "Londyn", country: "Wielka Brytania", street: "Harbor Lane", lat: 51.5074, lng: -0.1278 },
-  { city: "Southampton", country: "Wielka Brytania", street: "Container Quay", lat: 50.9097, lng: -1.4044 },
-  { city: "Glasgow", country: "Wielka Brytania", street: "Freight Avenue", lat: 55.8642, lng: -4.2518 },
   { city: "Paryz", country: "Francja", street: "Rue Logistique", lat: 48.8566, lng: 2.3522 },
-  { city: "Lyon", country: "Francja", street: "Rue du Terminal", lat: 45.764, lng: 4.8357 },
   { city: "Berlin", country: "Niemcy", street: "Logistikallee", lat: 52.52, lng: 13.405 },
-  { city: "Monachium", country: "Niemcy", street: "Containerring", lat: 48.1351, lng: 11.582 },
-  { city: "Kolonia", country: "Niemcy", street: "Rheinhafen", lat: 50.9375, lng: 6.9603 },
   { city: "Warszawa", country: "Polska", street: "Terminalowa", lat: 52.2297, lng: 21.0122 },
   { city: "Lodz", country: "Polska", street: "Magazynowa", lat: 51.7592, lng: 19.456 },
   { city: "Wroclaw", country: "Polska", street: "Dokowa", lat: 51.1079, lng: 17.0385 },
@@ -102,59 +111,396 @@ function pick(array) {
   return array[randomInt(0, array.length - 1)];
 }
 
+function shuffle(array) {
+  return [...array].sort(() => Math.random() - 0.5);
+}
+
+function pickWeighted(choices) {
+  const total = choices.reduce((sum, choice) => sum + choice.weight, 0);
+  let cursor = Math.random() * total;
+  for (const choice of choices) {
+    cursor -= choice.weight;
+    if (cursor <= 0) {
+      return choice.value;
+    }
+  }
+  return choices[choices.length - 1].value;
+}
+
 function jitterCoordinate(value, spread) {
   return Number((value + randomFloat(-spread, spread)).toFixed(6));
+}
+
+function round2(value) {
+  return Number(value.toFixed(2));
+}
+
+function hexToRgb(hex) {
+  const normalized = hex.replace(/^#/, "");
+  const parsed = Number.parseInt(normalized, 16);
+  return {
+    r: (parsed >> 16) & 255,
+    g: (parsed >> 8) & 255,
+    b: parsed & 255,
+  };
+}
+
+function amountInAllCurrencies(amount, currency) {
+  if (currency === "EUR") {
+    return {
+      amountEur: round2(amount),
+      amountPln: round2(amount * FX.EUR.PLN),
+      amountUsd: round2(amount * FX.EUR.USD),
+    };
+  }
+  if (currency === "PLN") {
+    return {
+      amountPln: round2(amount),
+      amountEur: round2(amount * FX.PLN.EUR),
+      amountUsd: round2(amount * FX.PLN.USD),
+    };
+  }
+  return {
+    amountUsd: round2(amount),
+    amountEur: round2(amount * FX.USD.EUR),
+    amountPln: round2(amount * FX.USD.PLN),
+  };
+}
+
+function buildPostalCode(country) {
+  if (country === "Polska") {
+    return `${randomInt(10, 99)}-${randomInt(100, 999)}`;
+  }
+  return String(randomInt(10000, 99999));
+}
+
+function pickContainer() {
+  const type = pickWeighted([
+    { value: "dry", weight: 36 },
+    { value: "reefer", weight: 14 },
+    { value: "open_top", weight: 10 },
+    { value: "flat_rack", weight: 10 },
+    { value: "tank", weight: 8 },
+    { value: "side_open", weight: 8 },
+    { value: "hard_top", weight: 6 },
+    { value: "platform", weight: 5 },
+    { value: "bulk", weight: 3 },
+  ]);
+  const size = pickWeighted([
+    { value: 10, weight: 3 },
+    { value: 20, weight: 27 },
+    { value: 40, weight: 42 },
+    { value: 45, weight: 17 },
+    { value: 53, weight: 11 },
+  ]);
+  const height =
+    size === 10
+      ? "standard"
+      : pickWeighted([
+          { value: "standard", weight: 57 },
+          { value: "HC", weight: 43 },
+        ]);
+  const condition = pickWeighted([
+    { value: "new", weight: 14 },
+    { value: "one_trip", weight: 23 },
+    { value: "cargo_worthy", weight: 35 },
+    { value: "wind_water_tight", weight: 19 },
+    { value: "as_is", weight: 9 },
+  ]);
+
+  const featureCount = randomInt(0, 3);
+  const features = shuffle(CONTAINER_FEATURES).slice(0, featureCount);
+
+  return { size, height, type, condition, features };
+}
+
+function pickContainerColors() {
+  const count = pickWeighted([
+    { value: 0, weight: 56 },
+    { value: 1, weight: 25 },
+    { value: 2, weight: 14 },
+    { value: 3, weight: 5 },
+  ]);
+  if (count === 0) {
+    return [];
+  }
+
+  return shuffle(RAL_PALETTE)
+    .slice(0, count)
+    .map((color) => ({
+      ral: color.ral,
+      hex: color.hex,
+      rgb: hexToRgb(color.hex),
+    }));
+}
+
+function estimateBaseAmount({ container, unit }) {
+  const sizeMultiplier = container.size / 20;
+  const typeMultiplier = container.type === "reefer" ? 1.45 : container.type === "tank" ? 1.35 : 1.0;
+  const conditionMultiplier =
+    container.condition === "new"
+      ? 1.35
+      : container.condition === "one_trip"
+        ? 1.18
+        : container.condition === "cargo_worthy"
+          ? 1.0
+          : container.condition === "wind_water_tight"
+            ? 0.82
+            : 0.65;
+
+  if (unit === "per_month") {
+    return round2((220 + randomFloat(40, 620)) * sizeMultiplier * typeMultiplier * conditionMultiplier);
+  }
+
+  return round2((1200 + randomFloat(300, 5200)) * sizeMultiplier * typeMultiplier * conditionMultiplier);
+}
+
+function buildPricing({ listingType, container, now }) {
+  const maybeRequest =
+    listingType === "buy"
+      ? Math.random() < 0.56
+      : listingType === "rent"
+        ? Math.random() < 0.2
+        : Math.random() < 0.14;
+  if (maybeRequest) {
+    return {
+      pricing: {
+        original: {
+          amount: null,
+          currency: null,
+          taxMode: null,
+          vatRate: null,
+          negotiable: true,
+        },
+        normalized: {
+          net: { amountPln: null, amountEur: null, amountUsd: null },
+          gross: { amountPln: null, amountEur: null, amountUsd: null },
+          fxDate: now.toISOString().slice(0, 10),
+          fxSource: "seed-fixed",
+        },
+      },
+      priceAmount: undefined,
+      priceText: "Zapytaj o cene",
+      priceNegotiable: true,
+    };
+  }
+
+  const currency = pickWeighted([
+    { value: "EUR", weight: 55 },
+    { value: "PLN", weight: 30 },
+    { value: "USD", weight: 15 },
+  ]);
+  const taxMode = pickWeighted([
+    { value: "net", weight: 72 },
+    { value: "gross", weight: 28 },
+  ]);
+  const unit =
+    listingType === "rent"
+      ? "per_month"
+      : Math.random() < 0.25
+        ? "per_month"
+        : "per_container";
+  const vatRate = currency === "USD" ? 0 : 23;
+  const negotiable = Math.random() < 0.35;
+  const originalAmount = estimateBaseAmount({ container, unit });
+  const netAmount = taxMode === "net" ? originalAmount : round2(originalAmount / (1 + vatRate / 100));
+  const grossAmount = taxMode === "gross" ? originalAmount : round2(originalAmount * (1 + vatRate / 100));
+  const normalizedNet = amountInAllCurrencies(netAmount, currency);
+  const normalizedGross = amountInAllCurrencies(grossAmount, currency);
+  const suffix = unit === "per_month" ? "/mies." : "/kont.";
+  const taxSuffix = taxMode === "gross" ? "brutto" : "netto";
+
+  return {
+    pricing: {
+      original: {
+        amount: originalAmount,
+        currency,
+        taxMode,
+        vatRate,
+        negotiable,
+      },
+      normalized: {
+        net: normalizedNet,
+        gross: normalizedGross,
+        fxDate: now.toISOString().slice(0, 10),
+        fxSource: "seed-fixed",
+      },
+    },
+    priceAmount: originalAmount,
+    priceText: `${originalAmount} ${currency} ${suffix} ${taxSuffix}`,
+    priceNegotiable: negotiable,
+  };
+}
+
+function buildLocationEntry({ hub, lat, lng, isPrimary }) {
+  const houseNumber = String(randomInt(1, 199));
+  const postalCode = buildPostalCode(hub.country);
+  return {
+    locationCity: hub.city,
+    locationCountry: hub.country,
+    locationLat: lat,
+    locationLng: lng,
+    locationAddressLabel: `${hub.street} ${houseNumber}, ${postalCode} ${hub.city}, ${hub.country}`,
+    locationAddressParts: {
+      street: hub.street,
+      houseNumber,
+      postalCode,
+      city: hub.city,
+      country: hub.country,
+    },
+    isPrimary,
+  };
+}
+
+function buildListingLocations(primaryHub, primaryLat, primaryLng) {
+  const additionalLocationsCount = pickWeighted([
+    { value: 0, weight: 60 },
+    { value: 1, weight: 26 },
+    { value: 2, weight: 12 },
+    { value: 3, weight: 2 },
+  ]);
+  const selectedSecondaryHubs = shuffle(
+    hubs.filter((hub) => hub.city !== primaryHub.city),
+  ).slice(0, additionalLocationsCount);
+
+  const locations = [
+    buildLocationEntry({
+      hub: primaryHub,
+      lat: primaryLat,
+      lng: primaryLng,
+      isPrimary: true,
+    }),
+  ];
+
+  for (const secondaryHub of selectedSecondaryHubs) {
+    locations.push(
+      buildLocationEntry({
+        hub: secondaryHub,
+        lat: jitterCoordinate(secondaryHub.lat, 0.2),
+        lng: jitterCoordinate(secondaryHub.lng, 0.25),
+        isPrimary: false,
+      }),
+    );
+  }
+
+  return locations;
+}
+
+function pickProductionYear(containerCondition) {
+  if (containerCondition === "new") {
+    return randomInt(2023, 2026);
+  }
+  if (containerCondition === "one_trip") {
+    return randomInt(2020, 2025);
+  }
+  if (containerCondition === "cargo_worthy") {
+    return randomInt(2012, 2022);
+  }
+  if (containerCondition === "wind_water_tight") {
+    return randomInt(2007, 2018);
+  }
+  return randomInt(1998, 2012);
+}
+
+function buildDescription({ listingType, container, primaryLocation, quantity }) {
+  const intentLabel =
+    listingType === "buy"
+      ? "Zapotrzebowanie"
+      : listingType === "rent"
+        ? "Oferta wynajmu"
+        : "Oferta sprzedazy";
+  const featureLabel =
+    container.features.length > 0
+      ? `Cechy: ${container.features.join(", ")}.`
+      : "Kontener bez dodatkowych cech.";
+
+  return `${SEED_PREFIX} ${intentLabel}. ${quantity} szt. Dostepnosc: ${primaryLocation.locationCity}, ${primaryLocation.locationCountry}. ${featureLabel}`;
 }
 
 function buildListing(index, now) {
   const hub = hubs[index % hubs.length];
   const company = `${pick(companies)} ${hub.city}`;
-
+  const container = pickContainer();
+  const listingType = pickWeighted([
+    { value: LISTING_TYPES[0], weight: 64 },
+    { value: LISTING_TYPES[1], weight: 21 },
+    { value: LISTING_TYPES[2], weight: 15 },
+  ]);
+  const quantity = randomInt(1, 120);
   const lat = jitterCoordinate(hub.lat, 0.23);
   const lng = jitterCoordinate(hub.lng, 0.28);
-  const houseNumber = String(randomInt(1, 199));
-  const street = hub.street;
-  const typeRoll = Math.random();
-  const listingType = typeRoll < 0.62 ? "sell" : typeRoll < 0.82 ? "rent" : "buy";
-  const containerType = pick(containerTypes);
-  const isRentLikePricing = listingType === "rent" || Math.random() < 0.16;
-  const quantity = randomInt(1, 120);
+  const locations = buildListingLocations(hub, lat, lng);
+  const primaryLocation = locations[0];
   const createdAt = new Date(now.getTime() - randomInt(0, 4) * 24 * 60 * 60 * 1000 - randomInt(0, 720) * 60 * 1000);
   const updatedAt = new Date(createdAt.getTime() + randomInt(5, 96) * 60 * 1000);
-  const availableFrom = new Date(now.getTime() + randomInt(0, 25) * 24 * 60 * 60 * 1000);
+  const availableNow = Math.random() < 0.22;
+  const availableFromApproximate = !availableNow && Math.random() < 0.33;
+  const availableFrom = availableNow
+    ? new Date(now.getTime())
+    : new Date(now.getTime() + randomInt(0, 28) * 24 * 60 * 60 * 1000);
   const expiresAt = new Date(createdAt.getTime() + TTL_DAYS * 24 * 60 * 60 * 1000);
-
-  const priceValue =
-    listingType === "buy"
-      ? "Budzet do uzgodnienia"
-      : isRentLikePricing
-      ? `${randomInt(45, 380)} EUR / tydz.`
-      : `${randomInt(900, 4200)} EUR`;
-  const listingLabel =
-    listingType === "buy"
-      ? "Zapytanie zakupu"
-      : listingType === "rent"
-        ? "Oferta wynajmu"
-        : "Oferta sprzedazy";
+  const logisticsTransportAvailable = Math.random() < 0.72;
+  const logisticsTransportIncluded = logisticsTransportAvailable && Math.random() < 0.39;
+  const logisticsTransportFreeDistanceKm = logisticsTransportIncluded ? randomInt(25, 450) : undefined;
+  const logisticsUnloadingAvailable = Math.random() < 0.66;
+  const logisticsUnloadingIncluded = logisticsUnloadingAvailable && Math.random() < 0.33;
+  const logisticsComment =
+    logisticsTransportAvailable || logisticsUnloadingAvailable
+      ? Math.random() < 0.55
+        ? `${pick(LOGISTICS_COMMENTS)} (${primaryLocation.locationCity})`
+        : undefined
+      : undefined;
+  const hasCscPlate = Math.random() < 0.57;
+  const hasCscCertification = Math.random() < 0.44;
+  const hasWarranty = Math.random() < 0.31;
+  const hasAnyCsc = hasCscPlate || hasCscCertification;
+  const cscValidToMonth = hasAnyCsc && Math.random() < 0.72 ? randomInt(1, 12) : undefined;
+  const cscValidToYear =
+    typeof cscValidToMonth === "number" ? randomInt(2026, 2035) : undefined;
+  const containerColors = pickContainerColors();
+  const pricingPayload = buildPricing({ listingType, container, now });
 
   return {
+    _id: new ObjectId(),
     type: listingType,
-    containerType,
+    container,
+    ...(containerColors.length > 0 ? { containerColors } : {}),
     quantity,
-    locationCity: hub.city,
-    locationCountry: hub.country,
-    locationLat: lat,
-    locationLng: lng,
-    locationAddressLabel: `${street} ${houseNumber}, ${hub.city}, ${hub.country}`,
-    locationAddressParts: {
-      street,
-      houseNumber,
-      city: hub.city,
-      country: hub.country,
-    },
+    locationCity: primaryLocation.locationCity,
+    locationCountry: primaryLocation.locationCountry,
+    locationLat: primaryLocation.locationLat,
+    locationLng: primaryLocation.locationLng,
+    locationAddressLabel: primaryLocation.locationAddressLabel,
+    locationAddressParts: primaryLocation.locationAddressParts,
+    locations,
+    availableNow,
+    availableFromApproximate,
     availableFrom,
-    price: priceValue,
-    description: `${SEED_PREFIX} ${listingLabel} ${containerType} w lokalizacji ${hub.city}.`,
+    pricing: pricingPayload.pricing,
+    priceAmount: pricingPayload.priceAmount,
+    priceNegotiable: pricingPayload.priceNegotiable,
+    logisticsTransportAvailable,
+    logisticsTransportIncluded,
+    ...(typeof logisticsTransportFreeDistanceKm === "number"
+      ? { logisticsTransportFreeDistanceKm }
+      : {}),
+    logisticsUnloadingAvailable,
+    logisticsUnloadingIncluded,
+    ...(logisticsComment ? { logisticsComment } : {}),
+    hasCscPlate,
+    hasCscCertification,
+    hasWarranty,
+    ...(typeof cscValidToMonth === "number" && typeof cscValidToYear === "number"
+      ? { cscValidToMonth, cscValidToYear }
+      : {}),
+    productionYear: pickProductionYear(container.condition),
+    price: pricingPayload.priceText,
+    description: buildDescription({
+      listingType,
+      container,
+      primaryLocation,
+      quantity,
+    }),
     companyName: company,
     contactEmail: `containers+${index + 1}@example.com`,
     contactPhone: `+48 600 ${String(100000 + index).slice(-6)}`,
@@ -173,13 +519,6 @@ async function run() {
   const db = client.db(mongoDb);
   const listings = db.collection("container_listings");
 
-  await listings.createIndex({ status: 1, expiresAt: 1, createdAt: -1 });
-  await listings.createIndex({ createdByUserId: 1, createdAt: -1 });
-  await listings.createIndex({ type: 1, containerType: 1, createdAt: -1 });
-  await listings.createIndex({ locationCity: 1, locationCountry: 1 });
-  await listings.createIndex({ locationLat: 1, locationLng: 1 });
-  await listings.createIndex({ expiresAt: 1 });
-
   const deleted = await listings.deleteMany({
     description: { $regex: /^\[seed-eu\]/i },
   });
@@ -189,7 +528,7 @@ async function run() {
   const inserted = await listings.insertMany(docs, { ordered: false });
 
   console.log(
-    `Seed complete. Removed ${deleted.deletedCount} old seeded listings and inserted ${inserted.insertedCount} new listings.`,
+    `Seed complete. Removed ${deleted.deletedCount} old seeded listings and inserted ${inserted.insertedCount} listings in current model.`,
   );
 
   await client.close();
