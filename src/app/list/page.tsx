@@ -22,7 +22,7 @@ function resolveKind(
   if (raw === "sell" || raw === "rent" || raw === "buy") {
     return raw;
   }
-  return "all";
+  return "sell";
 }
 
 function resolveTab(value: string | string[] | undefined): "all" | "favorites" {

@@ -18,7 +18,7 @@ import {
   type TaxMode,
 } from "@/lib/container-listing-types";
 
-export type ListingKind = "all" | ListingType;
+export type ListingKind = ListingType;
 export type SortPreset =
   | "newest"
   | "quantity_desc"
@@ -131,7 +131,7 @@ export const CONTAINER_CONDITION_COLOR_TOKENS: Record<
 };
 
 export const FILTER_FORM_DEFAULTS: FiltersFormValues = {
-  listingKind: "all",
+  listingKind: "sell",
   locationInput: "",
   locationRadiusKmInput: "50",
   containerSizes: [],
@@ -157,7 +157,6 @@ export const FILTER_FORM_DEFAULTS: FiltersFormValues = {
 };
 
 export const LISTING_KIND_OPTIONS: Array<{ value: ListingKind; label: string }> = [
-  { value: "all", label: "Dowolne" },
   { value: "sell", label: "Sprzedaz" },
   { value: "rent", label: "Wynajem" },
   { value: "buy", label: "Chce zakupic" },

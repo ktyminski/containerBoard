@@ -176,10 +176,6 @@ function createListQueryParams(appliedFilters: AppliedFilters, page: number): UR
 }
 
 function applyListingKindParams(params: URLSearchParams, listingKind: ListingKind): void {
-  if (listingKind === "all") {
-    return;
-  }
-
   params.set("type", listingKind);
 }
 

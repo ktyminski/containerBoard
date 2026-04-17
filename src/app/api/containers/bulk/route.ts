@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
 import { ObjectId } from "mongodb";
-import sanitizeHtml from "sanitize-html";
 import { read, utils } from "xlsx";
 import { getCurrentUserFromRequest } from "@/lib/auth-user";
 import { getCompaniesCollection } from "@/lib/companies";
@@ -38,7 +37,11 @@ import { normalizeGeocodeAddressParts } from "@/lib/geocode-address";
 import { MAX_LISTING_LOCATIONS, normalizeListingLocations } from "@/lib/listing-locations";
 import { parseContainerRalColors, MAX_CONTAINER_RAL_COLORS } from "@/lib/container-ral-colors";
 import { getLatestFxContext } from "@/lib/fx-rates";
-import { getRichTextLength, hasRichTextContent } from "@/lib/listing-rich-text";
+import { getRichTextLength } from "@/lib/listing-rich-text";
+import {
+  LISTING_DESCRIPTION_MAX_TEXT_LENGTH,
+  normalizeOptionalListingDescriptionHtml,
+} from "@/lib/listing-description-html";
 import { enforceRateLimitOrResponse } from "@/lib/request-rate-limit";
 import { logError } from "@/lib/server-logger";
 
@@ -46,8 +49,6 @@ export const runtime = "nodejs";
 
 const MAX_BULK_ROWS = 250;
 const MAX_CSV_CHARS = 1_000_000;
-const DESCRIPTION_MAX_TEXT_LENGTH = 1000;
-const DESCRIPTION_ALLOWED_TAGS = ["p", "br", "strong", "em", "u", "ul", "li", "div"];
 
 type BulkRowFailure = {
   rowNumber: number;
@@ -269,24 +270,6 @@ function parseDateString(value: string | undefined): Date | undefined {
 
 function isValidEmail(value: string): boolean {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value);
-}
-
-function normalizeOptionalDescriptionHtml(value?: string): string | undefined {
-  const trimmed = value?.trim();
-  if (!trimmed || !hasRichTextContent(trimmed)) {
-    return undefined;
-  }
-  const normalizedListsMarkup = trimmed
-    .replace(/<ol(\s[^>]*)?>/gi, (_match, attrs: string | undefined) => `<ul${attrs ?? ""}>`)
-    .replace(/<\/ol>/gi, "</ul>");
-  const sanitized = sanitizeHtml(normalizedListsMarkup, {
-    allowedTags: DESCRIPTION_ALLOWED_TAGS,
-    allowedAttributes: {},
-  }).trim();
-  if (!sanitized || !hasRichTextContent(sanitized)) {
-    return undefined;
-  }
-  return sanitized;
 }
 
 function splitMultiValueField(value: string | undefined): string[] {
@@ -597,9 +580,14 @@ function parseBulkRow(input: {
   const hasWarranty = parseBooleanFlag(get("has_warranty")) === true;
   const hasBranding = parseBooleanFlag(get("has_branding")) === true;
 
-  const description = normalizeOptionalDescriptionHtml(get("description"));
-  if (description && getRichTextLength(description) > DESCRIPTION_MAX_TEXT_LENGTH) {
-    return { error: `Opis przekracza ${DESCRIPTION_MAX_TEXT_LENGTH} znakow` };
+  const description = normalizeOptionalListingDescriptionHtml(get("description"));
+  if (
+    description &&
+    getRichTextLength(description) > LISTING_DESCRIPTION_MAX_TEXT_LENGTH
+  ) {
+    return {
+      error: `Opis przekracza ${LISTING_DESCRIPTION_MAX_TEXT_LENGTH} znakow`,
+    };
   }
 
   const contactEmail = normalizeOptionalString(get("contact_email")) ?? input.fallbackContactEmail;

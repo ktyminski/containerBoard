@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
 import { ObjectId, type Filter } from "mongodb";
-import sanitizeHtml from "sanitize-html";
 import { z } from "zod";
 import { SESSION_COOKIE_NAME } from "@/lib/auth-session";
 import { getCurrentUserFromRequest } from "@/lib/auth-user";
@@ -51,7 +50,11 @@ import {
   uploadBlobFromBuffer,
 } from "@/lib/blob-storage";
 import { getLatestFxContext } from "@/lib/fx-rates";
-import { getRichTextLength, hasRichTextContent } from "@/lib/listing-rich-text";
+import { getRichTextLength } from "@/lib/listing-rich-text";
+import {
+  LISTING_DESCRIPTION_MAX_TEXT_LENGTH,
+  normalizeOptionalListingDescriptionHtml,
+} from "@/lib/listing-description-html";
 import {
   MAX_CONTAINER_RAL_COLORS,
   parseContainerRalColors,
@@ -64,10 +67,8 @@ export const runtime = "nodejs";
 const MAX_POPUP_DETAILS_IDS = 80;
 const MAX_MAP_POINTS = 50_000;
 const MAX_LOCAL_FAVORITE_IDS = 2_000;
-const DESCRIPTION_MAX_TEXT_LENGTH = 1000;
 const MAX_LISTING_PHOTO_COUNT = 4;
 const MAX_LISTING_PHOTO_BYTES = 5 * 1024 * 1024;
-const DESCRIPTION_ALLOWED_TAGS = ["p", "br", "strong", "em", "u", "ul", "li", "div"];
 
 const locationAddressPartsSchema = z.object({
   street: z.string().trim().min(1).max(120).optional(),
@@ -602,30 +603,6 @@ function normalizeOptionalString(value?: string): string | undefined {
   return trimmed ? trimmed : undefined;
 }
 
-function normalizeOptionalDescriptionHtml(value?: string): string | undefined {
-  const trimmed = value?.trim();
-  if (!trimmed || !hasRichTextContent(trimmed)) {
-    return undefined;
-  }
-
-  const normalizedListsMarkup = trimmed
-    .replace(/<ol(\s[^>]*)?>/gi, (_match, attrs: string | undefined) => {
-      return `<ul${attrs ?? ""}>`;
-    })
-    .replace(/<\/ol>/gi, "</ul>");
-
-  const sanitized = sanitizeHtml(normalizedListsMarkup, {
-    allowedTags: DESCRIPTION_ALLOWED_TAGS,
-    allowedAttributes: {},
-  }).trim();
-
-  if (!sanitized || !hasRichTextContent(sanitized)) {
-    return undefined;
-  }
-
-  return sanitized;
-}
-
 function parseJsonField<T>(value: FormDataEntryValue | null): T | null {
   if (typeof value !== "string") {
     return null;
@@ -1002,7 +979,7 @@ export async function GET(request: NextRequest) {
               .aggregate<
                 Pick<
                   ContainerListingDocument,
-                  "_id" | "type" | "locationLat" | "locationLng" | "locations"
+                  "_id" | "type" | "quantity" | "locationLat" | "locationLng" | "locations"
                 >
               >([
                 { $match: typedFilter },
@@ -1015,7 +992,16 @@ export async function GET(request: NextRequest) {
                 },
                 { $sort: { __sortPriceValue: sortDirection, createdAt: -1 } },
                 { $limit: all ? MAX_MAP_POINTS : pageSize },
-                { $project: { _id: 1, type: 1, locationLat: 1, locationLng: 1, locations: 1 } },
+                {
+                  $project: {
+                    _id: 1,
+                    type: 1,
+                    quantity: 1,
+                    locationLat: 1,
+                    locationLng: 1,
+                    locations: 1,
+                  },
+                },
               ])
               .toArray()
           : await listings
@@ -1025,6 +1011,7 @@ export async function GET(request: NextRequest) {
               .project({
                 _id: 1,
                 type: 1,
+                quantity: 1,
                 locationLat: 1,
                 locationLng: 1,
                 locations: 1,
@@ -1035,7 +1022,7 @@ export async function GET(request: NextRequest) {
         mapContainerListingToMapPoints(
           row as Pick<
             ContainerListingDocument,
-            "_id" | "type" | "locationLat" | "locationLng" | "locations"
+            "_id" | "type" | "quantity" | "locationLat" | "locationLng" | "locations"
           >,
           { bounds: mapLocationBounds },
         ),
@@ -1262,7 +1249,9 @@ export async function POST(request: NextRequest) {
       availableFrom: listing.availableFrom,
       now,
     });
-    const normalizedDescription = normalizeOptionalDescriptionHtml(listing.description);
+    const normalizedDescription = normalizeOptionalListingDescriptionHtml(
+      listing.description,
+    );
     const normalizedPrice = normalizeOptionalString(listing.price);
     const normalizedPriceAmount =
       typeof listing.priceAmount === "number" && Number.isFinite(listing.priceAmount)
@@ -1318,10 +1307,13 @@ export async function POST(request: NextRequest) {
 
     if (
       normalizedDescription &&
-      getRichTextLength(normalizedDescription) > DESCRIPTION_MAX_TEXT_LENGTH
+      getRichTextLength(normalizedDescription) >
+        LISTING_DESCRIPTION_MAX_TEXT_LENGTH
     ) {
       return NextResponse.json(
-        { error: `description exceeds ${DESCRIPTION_MAX_TEXT_LENGTH} characters` },
+        {
+          error: `description exceeds ${LISTING_DESCRIPTION_MAX_TEXT_LENGTH} characters`,
+        },
         { status: 400 },
       );
     }

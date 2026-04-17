@@ -44,7 +44,7 @@ export default async function AdminPage({ searchParams }: AdminPageProps) {
       <header className="rounded-xl border border-neutral-800 bg-neutral-900/60 p-5">
         <h1 className="text-2xl font-semibold sm:text-3xl">Panel administratora</h1>
         <p className="mt-2 text-sm text-neutral-300">
-          Zarzadzaj kontenerami, uzytkownikami i firmami.
+          Zarzadzaj kontenerami, uzytkownikami, firmami i zleceniami concierge.
         </p>
       </header>
       <AdminPanelTabs

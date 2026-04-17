@@ -11,7 +11,6 @@ import { useToast } from "@/components/toast-provider";
 import { usePageScrollLock } from "@/components/use-page-scroll-lock";
 import {
   FILTER_FORM_DEFAULTS,
-  LISTING_TYPE_LABEL,
   areNonLocationFiltersEqual,
   pickNonLocationFilters,
   type AppliedFilters,
@@ -22,7 +21,6 @@ import {
 import {
   buildAppliedBaseFromFormValues,
   buildContainersApiUrl,
-  getContainerListingLocationLabel,
   getCoordinateKey,
 } from "@/components/container-listings-utils";
 import type {
@@ -30,6 +28,9 @@ import type {
   ContainerListingMapPoint,
 } from "@/lib/container-listings";
 import {
+  CONTAINER_CONDITION_LABEL,
+  CONTAINER_FEATURE_LABEL,
+  PRICE_CURRENCY_LABEL,
   getContainerShortLabel,
   type ListingType,
 } from "@/lib/container-listing-types";
@@ -89,6 +90,7 @@ type MapFeature = {
   properties: {
     id: string;
     type: ListingType;
+    quantity: number;
   };
 };
 
@@ -239,6 +241,7 @@ function buildMapPopupListNode(
   totalItemsCount = listings.length,
   detailsHrefPrefix = "/containers",
   detailsQueryString = "",
+  locationHintsByListingId?: Map<string, { lat: number; lng: number }>,
 ): HTMLElement {
   const scroll = document.createElement("div");
   scroll.className = "company-map-popup-scroll max-h-72 overflow-y-auto pr-1";
@@ -249,18 +252,61 @@ function buildMapPopupListNode(
   const visibleItems = listings.slice(0, MAX_POPUP_VISIBLE_ITEMS);
 
   for (const item of visibleItems) {
-    const entry = document.createElement("a");
-    entry.href = detailsQueryString
+    const detailsHref = detailsQueryString
       ? `${detailsHrefPrefix}/${item.id}?${detailsQueryString}`
       : `${detailsHrefPrefix}/${item.id}`;
+    const entry = document.createElement("article");
     entry.className = "company-map-popup-item";
 
     const card = document.createElement("article");
     card.className = "company-map-popup-card";
 
-    const name = document.createElement("p");
-    name.className = "company-map-popup-card__name";
-    name.textContent = `${getContainerShortLabel(item.container)} - ${LISTING_TYPE_LABEL[item.type]}`;
+    const header = document.createElement("div");
+    header.style.display = "flex";
+    header.style.alignItems = "flex-start";
+    header.style.justifyContent = "space-between";
+    header.style.gap = "8px";
+
+    const titleLink = document.createElement("a");
+    titleLink.className = "company-map-popup-card__name";
+    titleLink.href = detailsHref;
+    titleLink.textContent = `${getContainerShortLabel(item.container)} - ${CONTAINER_CONDITION_LABEL[item.container.condition]}`;
+    titleLink.style.flex = "1 1 auto";
+    titleLink.style.minWidth = "0";
+    titleLink.style.overflow = "hidden";
+    titleLink.style.textOverflow = "ellipsis";
+    titleLink.style.whiteSpace = "nowrap";
+
+    const priceDisplay = getPopupPriceDisplay(item);
+    if (priceDisplay) {
+      const price = document.createElement("div");
+      price.className = "company-map-popup-card__summary";
+      price.style.marginLeft = "auto";
+      price.style.flex = "0 0 auto";
+      price.style.textAlign = "right";
+      price.style.whiteSpace = "nowrap";
+      price.style.lineHeight = "1.05";
+
+      const amount = document.createElement("span");
+      amount.textContent = priceDisplay.amountLabel;
+      amount.style.display = "block";
+      amount.style.fontSize = "13px";
+      amount.style.fontWeight = "800";
+      amount.style.color = "#b45309";
+
+      const unit = document.createElement("span");
+      unit.textContent = priceDisplay.unitLabel;
+      unit.style.display = "block";
+      unit.style.marginTop = "2px";
+      unit.style.fontSize = "10px";
+      unit.style.fontWeight = "700";
+      unit.style.color = "#b45309";
+
+      price.append(amount, unit);
+      header.append(titleLink, price);
+    } else {
+      header.append(titleLink);
+    }
 
     const company = document.createElement("p");
     company.className = "company-map-popup-card__category";
@@ -268,13 +314,23 @@ function buildMapPopupListNode(
 
     const location = document.createElement("p");
     location.className = "company-map-popup-card__summary";
-    location.textContent = getContainerListingLocationLabel(item);
+    location.textContent = getPopupLocationLabel(
+      item,
+      locationHintsByListingId?.get(item.id),
+    );
 
     const meta = document.createElement("p");
     meta.className = "company-map-popup-card__summary";
-    meta.textContent = `Ilosc: ${item.quantity}`;
+    const featureLabels = item.container.features
+      .map((feature) => CONTAINER_FEATURE_LABEL[feature])
+      .filter((label) => label.trim().length > 0);
+    const metaParts = [`Ilosc: ${item.quantity}`];
+    if (featureLabels.length > 0) {
+      metaParts.push(featureLabels.join(", "));
+    }
+    meta.textContent = metaParts.join(" | ");
 
-    card.append(name, company, location, meta);
+    card.append(header, company, location, meta);
     entry.append(card);
     list.append(entry);
   }
@@ -291,12 +347,123 @@ function buildMapPopupListNode(
   return scroll;
 }
 
+function getPopupPriceDisplay(item: ContainerListingItem):
+  | { amountLabel: string; unitLabel: string }
+  | undefined {
+  const pricingAmount = item.pricing?.original.amount;
+  const pricingCurrency = item.pricing?.original.currency;
+  const pricingTaxMode = item.pricing?.original.taxMode;
+  if (
+    typeof pricingAmount === "number" &&
+    Number.isFinite(pricingAmount) &&
+    pricingAmount >= 0
+  ) {
+    const currencyLabel = pricingCurrency
+      ? PRICE_CURRENCY_LABEL[pricingCurrency]
+      : "PLN";
+    return {
+      amountLabel: `${Math.round(pricingAmount).toLocaleString("pl-PL")}`,
+      unitLabel:
+        pricingTaxMode === "gross"
+          ? currencyLabel
+          : `${currencyLabel} + VAT`,
+    };
+  }
+
+  if (
+    typeof item.priceAmount === "number" &&
+    Number.isFinite(item.priceAmount) &&
+    item.priceAmount >= 0
+  ) {
+    return {
+      amountLabel: `${Math.round(item.priceAmount).toLocaleString("pl-PL")}`,
+      unitLabel: "PLN + VAT",
+    };
+  }
+
+  return undefined;
+}
+
+function getPopupLocationLabel(
+  item: ContainerListingItem,
+  hint?: { lat: number; lng: number },
+): string {
+  const locations = item.locations ?? [];
+  const locationToDisplay =
+    locations.length > 0
+      ? resolveBestLocationByHint(locations, hint)
+      : null;
+
+  const postalCode =
+    locationToDisplay?.locationAddressParts?.postalCode?.trim() ||
+    item.locationAddressParts?.postalCode?.trim() ||
+    "";
+  const city =
+    locationToDisplay?.locationAddressParts?.city?.trim() ||
+    locationToDisplay?.locationCity?.trim() ||
+    item.locationAddressParts?.city?.trim() ||
+    item.locationCity.trim();
+  const country =
+    locationToDisplay?.locationAddressParts?.country?.trim() ||
+    locationToDisplay?.locationCountry?.trim() ||
+    item.locationAddressParts?.country?.trim() ||
+    item.locationCountry.trim();
+
+  const parts = [postalCode, city, country].filter((value): value is string => {
+    return Boolean(value && value.trim().length > 0);
+  });
+  return parts.length > 0 ? parts.join(" ") : "Brak lokalizacji";
+}
+
+function resolveBestLocationByHint(
+  locations: NonNullable<ContainerListingItem["locations"]>,
+  hint?: { lat: number; lng: number },
+) {
+  if (!hint || !Number.isFinite(hint.lat) || !Number.isFinite(hint.lng)) {
+    return locations.find((location) => location.isPrimary) ?? locations[0];
+  }
+
+  const epsilon = 0.00001;
+  const exact = locations.find((location) => {
+    return (
+      Math.abs(location.locationLat - hint.lat) <= epsilon &&
+      Math.abs(location.locationLng - hint.lng) <= epsilon
+    );
+  });
+  if (exact) {
+    return exact;
+  }
+
+  let closest = locations[0];
+  let closestDistance = Number.POSITIVE_INFINITY;
+  for (const location of locations) {
+    const latDiff = location.locationLat - hint.lat;
+    const lngDiff = location.locationLng - hint.lng;
+    const distance = latDiff * latDiff + lngDiff * lngDiff;
+    if (distance < closestDistance) {
+      closestDistance = distance;
+      closest = location;
+    }
+  }
+
+  return closest;
+}
+
+type PopupAnchor =
+  | "top"
+  | "bottom"
+  | "top-left"
+  | "top-right"
+  | "bottom-left"
+  | "bottom-right";
+
 function resolvePopupPlacement(
   map: maplibregl.Map,
-  point: { y: number },
+  point: { x: number; y: number },
   itemCount: number,
-): { anchor: "top" | "bottom"; offset: number } {
+): { anchor: PopupAnchor; offset: number } {
   const mapRect = map.getContainer().getBoundingClientRect();
+  const markerViewportX = mapRect.left + point.x;
   const markerViewportY = mapRect.top + point.y;
   const stickyHeader = document.querySelector("header.sticky");
   const stickyHeaderBottom =
@@ -305,25 +472,60 @@ function resolvePopupPlacement(
       : 0;
   const safeTopEdge = Math.max(8, stickyHeaderBottom + 8);
   const safeBottomEdge = 8;
+  const safeHorizontalEdge = 12;
   const spaceAbove = markerViewportY - safeTopEdge;
   const spaceBelow = window.innerHeight - markerViewportY - safeBottomEdge;
+  const spaceLeft = markerViewportX - mapRect.left - safeHorizontalEdge;
+  const spaceRight = mapRect.right - markerViewportX - safeHorizontalEdge;
+  const estimatedPopupWidth = 336;
   const estimatedPopupHeight = Math.min(320, 92 + Math.max(0, itemCount - 1) * 62);
-  const requiredSpace = estimatedPopupHeight + 12;
+  const requiredVerticalSpace = estimatedPopupHeight + 12;
 
-  const canOpenAboveMarker = spaceAbove >= requiredSpace;
-  const canOpenBelowMarker = spaceBelow >= requiredSpace;
+  const canOpenAboveMarker = spaceAbove >= requiredVerticalSpace;
+  const canOpenBelowMarker = spaceBelow >= requiredVerticalSpace;
+  const verticalAnchor: "top" | "bottom" =
+    canOpenAboveMarker || (!canOpenBelowMarker && spaceAbove >= spaceBelow)
+      ? "bottom"
+      : "top";
 
-  if (canOpenAboveMarker) {
-    return { anchor: "bottom", offset: 8 };
+  const canCenterHorizontally =
+    spaceLeft >= estimatedPopupWidth && spaceRight >= estimatedPopupWidth;
+  if (canCenterHorizontally) {
+    return { anchor: verticalAnchor, offset: 8 };
   }
 
-  if (canOpenBelowMarker) {
-    return { anchor: "top", offset: 8 };
+  const shouldOpenRight = spaceRight >= spaceLeft;
+  if (verticalAnchor === "bottom") {
+    return { anchor: shouldOpenRight ? "bottom-left" : "bottom-right", offset: 8 };
+  }
+  return { anchor: shouldOpenRight ? "top-left" : "top-right", offset: 8 };
+}
+
+function ensurePopupVisibility(map: maplibregl.Map, popup: maplibregl.Popup): void {
+  const popupElement = popup.getElement();
+  const mapRect = map.getContainer().getBoundingClientRect();
+  const popupRect = popupElement.getBoundingClientRect();
+  const edgePadding = 12;
+
+  const overflowLeft = Math.max(0, mapRect.left + edgePadding - popupRect.left);
+  const overflowRight = Math.max(0, popupRect.right - (mapRect.right - edgePadding));
+  const overflowTop = Math.max(0, mapRect.top + edgePadding - popupRect.top);
+  const overflowBottom = Math.max(
+    0,
+    popupRect.bottom - (window.innerHeight - edgePadding),
+  );
+
+  const panX = overflowLeft > 0 ? overflowLeft : overflowRight > 0 ? -overflowRight : 0;
+  const panY = overflowTop > 0 ? overflowTop : overflowBottom > 0 ? -overflowBottom : 0;
+
+  if (Math.abs(panX) < 1 && Math.abs(panY) < 1) {
+    return;
   }
 
-  return spaceAbove >= spaceBelow
-    ? { anchor: "bottom", offset: 8 }
-    : { anchor: "top", offset: 8 };
+  map.panBy([panX, panY], {
+    duration: 180,
+    easing: (value) => value,
+  });
 }
 
 function setSourceData(map: maplibregl.Map, data: MapFeatureCollection): void {
@@ -382,6 +584,7 @@ const ListingsMap = memo(function ListingsMap({
         properties: {
           id: item.id,
           type: item.type,
+          quantity: item.quantity,
         },
       })),
     }),
@@ -460,6 +663,9 @@ const ListingsMap = memo(function ListingsMap({
           type: "geojson",
           data: featureCollectionRef.current,
           cluster: true,
+          clusterProperties: {
+            containerCount: ["+", ["get", "quantity"]],
+          },
           clusterMaxZoom: 12,
           clusterRadius: 52,
         });
@@ -475,11 +681,11 @@ const ListingsMap = memo(function ListingsMap({
             "circle-color": [
               "step",
               ["get", "point_count"],
-              "#e2e8f0",
+              "#d1d5db",
               10,
-              "#94a3b8",
+              "#64748b",
               40,
-              "#475569",
+              "#334155",
             ],
             "circle-radius": [
               "step",
@@ -503,12 +709,23 @@ const ListingsMap = memo(function ListingsMap({
           source: MAP_SOURCE_ID,
           filter: ["has", "point_count"],
           layout: {
-            "text-field": "{point_count_abbreviated}",
+            "text-field": [
+              "to-string",
+              ["coalesce", ["get", "containerCount"], ["get", "point_count"]],
+            ],
             "text-size": 12,
             "text-font": ["Open Sans Semibold", "Arial Unicode MS Bold"],
           },
           paint: {
-            "text-color": "#0f172a",
+            "text-color": ["step", ["get", "point_count"], "#0f172a", 10, "#f8fafc"],
+            "text-halo-color": [
+              "step",
+              ["get", "point_count"],
+              "rgba(255, 255, 255, 0.9)",
+              10,
+              "rgba(15, 23, 42, 0.55)",
+            ],
+            "text-halo-width": 1,
           },
         });
       }
@@ -521,15 +738,7 @@ const ListingsMap = memo(function ListingsMap({
           filter: ["!", ["has", "point_count"]],
           paint: {
             "circle-radius": 7,
-            "circle-color": [
-              "match",
-              ["get", "type"],
-              "buy",
-              "#78716c",
-              "rent",
-              "#0ea5e9",
-              "#64748b",
-            ],
+            "circle-color": "#64748b",
             "circle-stroke-width": 2,
             "circle-stroke-color": "#ffffff",
           },
@@ -584,13 +793,30 @@ const ListingsMap = memo(function ListingsMap({
         void source
           .getClusterLeaves(clusterId, MAX_CLUSTER_POPUP_ITEMS, 0)
           .then(async (clusterFeatures) => {
-            const ids = Array.from(
-              new Set(
-                clusterFeatures.map((clusterFeature) =>
-                  String(clusterFeature.properties?.id ?? ""),
-                ),
-              ),
-            ).filter(Boolean);
+            const idsSet = new Set<string>();
+            const locationHintsByListingId = new Map<
+              string,
+              { lat: number; lng: number }
+            >();
+            for (const clusterFeature of clusterFeatures) {
+              const id = String(clusterFeature.properties?.id ?? "");
+              if (!id) {
+                continue;
+              }
+              idsSet.add(id);
+              if (locationHintsByListingId.has(id)) {
+                continue;
+              }
+              if (clusterFeature.geometry.type !== "Point") {
+                continue;
+              }
+              const [lng, lat] = clusterFeature.geometry.coordinates;
+              if (!Number.isFinite(lat) || !Number.isFinite(lng)) {
+                continue;
+              }
+              locationHintsByListingId.set(id, { lat, lng });
+            }
+            const ids = Array.from(idsSet);
             const grouped = await loadPopupDetailsByIds(ids);
 
             if (requestSeq !== popupRequestSeqRef.current || grouped.length === 0) {
@@ -601,7 +827,7 @@ const ListingsMap = memo(function ListingsMap({
               .coordinates as [number, number];
             const popupPlacement = resolvePopupPlacement(map, clickPoint, grouped.length);
             popupRef.current?.remove();
-            popupRef.current = new maplibregl.Popup({
+            const nextPopup = new maplibregl.Popup({
               offset: popupPlacement.offset,
               anchor: popupPlacement.anchor,
               className: "company-map-popup",
@@ -618,9 +844,16 @@ const ListingsMap = memo(function ListingsMap({
                     : grouped.length,
                   detailsHrefPrefix,
                   detailsQueryString,
+                  locationHintsByListingId,
                 ),
               )
               .addTo(map);
+            popupRef.current = nextPopup;
+            window.requestAnimationFrame(() => {
+              if (popupRef.current === nextPopup) {
+                ensurePopupVisibility(map, nextPopup);
+              }
+            });
           })
           .catch(() => {
             // Ignore cluster popup errors and keep map interaction responsive.
@@ -665,6 +898,7 @@ const ListingsMap = memo(function ListingsMap({
                   : featureTypeRaw === "rent"
                     ? "rent"
                     : "sell",
+              quantity: 1,
               locationLat: clickedLat,
               locationLng: clickedLng,
             } satisfies ContainerListingMapPoint,
@@ -676,6 +910,30 @@ const ListingsMap = memo(function ListingsMap({
         if (groupedIds.length === 0 && listingId) {
           groupedIds.push(listingId);
         }
+        const locationHintsByListingId = new Map<string, { lat: number; lng: number }>();
+        for (const groupedItem of grouped) {
+          if (
+            groupedItem.locationLat === null ||
+            groupedItem.locationLng === null ||
+            !Number.isFinite(groupedItem.locationLat) ||
+            !Number.isFinite(groupedItem.locationLng)
+          ) {
+            continue;
+          }
+          if (locationHintsByListingId.has(groupedItem.id)) {
+            continue;
+          }
+          locationHintsByListingId.set(groupedItem.id, {
+            lat: groupedItem.locationLat,
+            lng: groupedItem.locationLng,
+          });
+        }
+        if (listingId && !locationHintsByListingId.has(listingId)) {
+          locationHintsByListingId.set(listingId, {
+            lat: clickedLat,
+            lng: clickedLng,
+          });
+        }
 
         void loadPopupDetailsByIds(groupedIds).then((details) => {
           if (requestSeq !== popupRequestSeqRef.current || details.length === 0) {
@@ -684,7 +942,7 @@ const ListingsMap = memo(function ListingsMap({
 
           const popupPlacement = resolvePopupPlacement(map, event.point, details.length);
           popupRef.current?.remove();
-          popupRef.current = new maplibregl.Popup({
+          const nextPopup = new maplibregl.Popup({
             offset: popupPlacement.offset,
             anchor: popupPlacement.anchor,
             className: "company-map-popup",
@@ -699,9 +957,16 @@ const ListingsMap = memo(function ListingsMap({
                 groupedIds.length,
                 detailsHrefPrefix,
                 detailsQueryString,
+                locationHintsByListingId,
               ),
             )
             .addTo(map);
+          popupRef.current = nextPopup;
+          window.requestAnimationFrame(() => {
+            if (popupRef.current === nextPopup) {
+              ensurePopupVisibility(map, nextPopup);
+            }
+          });
         });
       });
 
@@ -785,7 +1050,7 @@ ListingsMap.displayName = "ListingsMap";
 
 export function ContainerListingsBoard({
   isLoggedIn,
-  initialKind = "all",
+  initialKind = "sell",
   initialTab = "all",
   initialMine = false,
   hiddenCompanySlug,
@@ -1302,7 +1567,7 @@ export function ContainerListingsBoard({
   const clearAllFilters = useCallback(() => {
     reset(FILTER_FORM_DEFAULTS);
     setAppliedFilters({
-      listingKind: "all",
+      listingKind: "sell",
       locationQuery: "",
       locationCenter: null,
       locationRadiusKm: FILTER_FORM_DEFAULTS.locationRadiusKmInput,

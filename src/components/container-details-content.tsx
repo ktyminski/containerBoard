@@ -1,11 +1,12 @@
 import Link from "next/link";
 import Image from "next/image";
 import { ObjectId } from "mongodb";
-import sanitizeHtml from "sanitize-html";
 import { cookies } from "next/headers";
 import { notFound } from "next/navigation";
 import { CONTAINER_CONDITION_COLOR_TOKENS } from "@/components/container-listings-shared";
 import { ContainerDetailsGallery } from "@/components/container-details-gallery";
+import { ContainerDetailsRelatedListings } from "@/components/container-details-related-listings";
+import { ContainerDetailsScrollTop } from "@/components/container-details-scroll-top";
 import {
   ContainerDetailsLocationsMap,
   type ContainerDetailsLocationPoint,
@@ -37,24 +38,14 @@ import {
   type Currency,
 } from "@/lib/container-listing-types";
 import { getCountryFlagSvgUrl } from "@/lib/country-flags";
-import { hasRichTextContent } from "@/lib/listing-rich-text";
+import { normalizeOptionalListingDescriptionHtml } from "@/lib/listing-description-html";
 import { getTurnstileSiteKey } from "@/lib/turnstile";
 import { USER_ROLE } from "@/lib/user-roles";
-
-const DESCRIPTION_ALLOWED_TAGS = [
-  "p",
-  "br",
-  "strong",
-  "em",
-  "u",
-  "ul",
-  "li",
-  "div",
-];
 type ContainerDetailsContentProps = {
   listingId: string;
   listHref?: string;
   preferHistoryBack?: boolean;
+  showRelatedListings?: boolean;
 };
 
 type ListingPriceDisplay = {
@@ -63,26 +54,6 @@ type ListingPriceDisplay = {
   isRequestPrice: boolean;
   additionalAmounts: string[];
 };
-
-function sanitizeDescriptionForDisplay(value?: string): string | undefined {
-  const trimmed = value?.trim();
-  if (!trimmed || !hasRichTextContent(trimmed)) {
-    return undefined;
-  }
-
-  const normalizedListsMarkup = trimmed
-    .replace(/<ol(\s[^>]*)?>/gi, (_match, attrs: string | undefined) => {
-      return `<ul${attrs ?? ""}>`;
-    })
-    .replace(/<\/ol>/gi, "</ul>");
-
-  const sanitized = sanitizeHtml(normalizedListsMarkup, {
-    allowedTags: DESCRIPTION_ALLOWED_TAGS,
-    allowedAttributes: {},
-  }).trim();
-
-  return hasRichTextContent(sanitized) ? sanitized : undefined;
-}
 
 function formatVatRateLabel(vatRate: number | null): string | null {
   if (typeof vatRate !== "number" || !Number.isFinite(vatRate)) {
@@ -477,6 +448,7 @@ export async function ContainerDetailsContent({
   listingId,
   listHref = "/list",
   preferHistoryBack = false,
+  showRelatedListings = true,
 }: ContainerDetailsContentProps) {
   await ensureContainerListingsIndexes();
   await expireContainerListingsIfNeeded();
@@ -523,6 +495,11 @@ export async function ContainerDetailsContent({
   ) {
     isCompanyVerified = true;
   }
+  const relatedCompanySlug =
+    listingItem.publishedAsCompany === true
+      ? listingItem.companySlug?.trim() ||
+        (ownerCompanyMatchesListing ? ownerCompanySlug : undefined)
+      : undefined;
 
   const cookieStore = await cookies();
   const token = cookieStore.get(SESSION_COOKIE_NAME)?.value;
@@ -555,7 +532,7 @@ export async function ContainerDetailsContent({
   }
 
   const galleryTitle = getContainerShortLabel(listingItem.container);
-  const sanitizedDescriptionHtml = sanitizeDescriptionForDisplay(
+  const sanitizedDescriptionHtml = normalizeOptionalListingDescriptionHtml(
     listingItem.description,
   );
   const availableFromLabel = listingItem.availableNow
@@ -589,6 +566,7 @@ export async function ContainerDetailsContent({
 
   return (
     <div className="grid gap-4">
+      <ContainerDetailsScrollTop listingId={listing._id.toHexString()} />
       <div className="flex flex-wrap items-center justify-between gap-2">
         <DetailsBackButton
           href={listHref}
@@ -980,6 +958,14 @@ export async function ContainerDetailsContent({
           initialInquiryValues={inquiryInitialValues}
         />
       </div>
+      {showRelatedListings ? (
+        <ContainerDetailsRelatedListings
+          currentListingId={listing._id.toHexString()}
+          companySlug={relatedCompanySlug}
+          isLoggedIn={isLoggedIn}
+          limit={3}
+        />
+      ) : null}
     </div>
   );
 }

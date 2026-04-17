@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
 import { ObjectId } from "mongodb";
-import sanitizeHtml from "sanitize-html";
 import { z } from "zod";
 import { getCurrentUserFromRequest } from "@/lib/auth-user";
 import { normalizeGeocodeAddressParts } from "@/lib/geocode-address";
@@ -44,7 +43,11 @@ import {
   uploadBlobFromBuffer,
 } from "@/lib/blob-storage";
 import { getLatestFxContext } from "@/lib/fx-rates";
-import { getRichTextLength, hasRichTextContent } from "@/lib/listing-rich-text";
+import { getRichTextLength } from "@/lib/listing-rich-text";
+import {
+  LISTING_DESCRIPTION_MAX_TEXT_LENGTH,
+  normalizeOptionalListingDescriptionHtml,
+} from "@/lib/listing-description-html";
 import {
   MAX_CONTAINER_RAL_COLORS,
   parseContainerRalColors,
@@ -53,8 +56,6 @@ import { USER_ROLE } from "@/lib/user-roles";
 import { logError } from "@/lib/server-logger";
 
 export const runtime = "nodejs";
-const DESCRIPTION_MAX_TEXT_LENGTH = 1000;
-const DESCRIPTION_ALLOWED_TAGS = ["p", "br", "strong", "em", "u", "ul", "li", "div"];
 const MAX_LISTING_PHOTO_COUNT = 4;
 const MAX_LISTING_PHOTO_BYTES = 5 * 1024 * 1024;
 
@@ -247,30 +248,6 @@ const adminSetStatusSchema = z.object({
 function normalizeOptionalString(value?: string): string | undefined {
   const trimmed = value?.trim();
   return trimmed ? trimmed : undefined;
-}
-
-function normalizeOptionalDescriptionHtml(value?: string): string | undefined {
-  const trimmed = value?.trim();
-  if (!trimmed || !hasRichTextContent(trimmed)) {
-    return undefined;
-  }
-
-  const normalizedListsMarkup = trimmed
-    .replace(/<ol(\s[^>]*)?>/gi, (_match, attrs: string | undefined) => {
-      return `<ul${attrs ?? ""}>`;
-    })
-    .replace(/<\/ol>/gi, "</ul>");
-
-  const sanitized = sanitizeHtml(normalizedListsMarkup, {
-    allowedTags: DESCRIPTION_ALLOWED_TAGS,
-    allowedAttributes: {},
-  }).trim();
-
-  if (!sanitized || !hasRichTextContent(sanitized)) {
-    return undefined;
-  }
-
-  return sanitized;
 }
 
 function parseJsonField<T>(value: FormDataEntryValue | null): T | null {
@@ -571,7 +548,9 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
         availableFrom: updateParsed.data.availableFrom,
         now,
       });
-      const normalizedDescription = normalizeOptionalDescriptionHtml(updateParsed.data.description);
+      const normalizedDescription = normalizeOptionalListingDescriptionHtml(
+        updateParsed.data.description,
+      );
       const normalizedPrice = normalizeOptionalString(updateParsed.data.price);
       const normalizedLogisticsComment = normalizeOptionalString(updateParsed.data.logisticsComment);
       const hasContainerColorsRalInput = typeof updateParsed.data.containerColorsRal === "string";
@@ -737,10 +716,13 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
 
       if (
         normalizedDescription &&
-        getRichTextLength(normalizedDescription) > DESCRIPTION_MAX_TEXT_LENGTH
+        getRichTextLength(normalizedDescription) >
+          LISTING_DESCRIPTION_MAX_TEXT_LENGTH
       ) {
         return NextResponse.json(
-          { error: `description exceeds ${DESCRIPTION_MAX_TEXT_LENGTH} characters` },
+          {
+            error: `description exceeds ${LISTING_DESCRIPTION_MAX_TEXT_LENGTH} characters`,
+          },
           { status: 400 },
         );
       }

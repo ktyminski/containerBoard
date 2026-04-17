@@ -40,6 +40,7 @@ export default async function ListContainerOverlayPage({
         listingId={id}
         listHref={listHref}
         preferHistoryBack
+        showRelatedListings={false}
       />
     </ListDetailsOverlayFrame>
   );

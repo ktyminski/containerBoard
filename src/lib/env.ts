@@ -19,6 +19,7 @@ const envSchema = z.object({
   RESEND_API_KEY: z.string().min(1).optional(),
   MAIL_FROM: z.email().optional(),
   MAIL_REPLY_TO: z.email().optional(),
+  CONCIERGE_NOTIFICATION_EMAIL: z.email().optional(),
   ADMIN_TOKEN: z.string().min(1).optional(),
   CRON_SECRET: z.string().min(1).optional(),
   FX_FALLBACK_PLN_PER_EUR: z.string().min(1).optional(),

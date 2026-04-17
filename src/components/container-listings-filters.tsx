@@ -309,7 +309,7 @@ function ContainerListingsFiltersComponent({
     [openMultiFilters],
   );
 
-  const listingKind = useWatch({ control, name: "listingKind" }) ?? "all";
+  const listingKind = useWatch({ control, name: "listingKind" }) ?? "sell";
   const selectedContainerSizes =
     useWatch({ control, name: "containerSizes" }) ?? [];
   const selectedContainerHeights =

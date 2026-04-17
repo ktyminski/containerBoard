@@ -3491,7 +3491,7 @@ export function ContainerListingForm({
             <FormSection
               title="Opis ogloszenia"
             >
-            <label className="grid gap-1 text-sm">
+            <div className="grid gap-1 text-sm">
               <span className="text-neutral-700">Opis (opcjonalnie)</span>
               <Controller
                 name="description"
@@ -3516,7 +3516,7 @@ export function ContainerListingForm({
                   {errors.description.message}
                 </span>
               ) : null}
-            </label>
+            </div>
 
             <div className="grid gap-3 sm:grid-cols-2 sm:items-center">
               <div className="grid gap-2 text-sm">

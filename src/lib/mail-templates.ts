@@ -383,3 +383,70 @@ export function buildContainerInquiryMail(input: {
   };
 }
 
+export function buildConciergeStockUploadMail(input: {
+  companyName: string;
+  companySlug?: string;
+  userName: string;
+  userEmail: string;
+  contactEmail?: string;
+  contactPhone?: string;
+  fileName: string;
+  fileSizeBytes: number;
+  fileContentType: string;
+  fileUrl: string;
+  note?: string;
+  requestedAtIso: string;
+}): MailTemplateContent {
+  const subject = `Nowe zgloszenie Concierge - ${input.companyName}`;
+
+  const textSections = [
+    "Nowe zgloszenie concierge bulk import.",
+    `Firma: ${input.companyName}`,
+    input.companySlug ? `Slug firmy: ${input.companySlug}` : "",
+    `Uzytkownik: ${input.userName} (${input.userEmail})`,
+    input.contactEmail ? `Email kontaktowy: ${input.contactEmail}` : "",
+    input.contactPhone ? `Telefon kontaktowy: ${input.contactPhone}` : "",
+    `Plik: ${input.fileName}`,
+    `Typ pliku: ${input.fileContentType}`,
+    `Rozmiar: ${input.fileSizeBytes} B`,
+    `URL pliku: ${input.fileUrl}`,
+    `Data zgloszenia: ${input.requestedAtIso}`,
+    input.note ? `Notatka: ${input.note}` : "",
+  ].filter((line) => line.trim().length > 0);
+
+  const htmlLines = [
+    "<strong>Nowe zgloszenie concierge bulk import</strong><br/>",
+    `<strong>Firma:</strong> ${escapeHtml(input.companyName)}<br/>`,
+    input.companySlug
+      ? `<strong>Slug firmy:</strong> ${escapeHtml(input.companySlug)}<br/>`
+      : "",
+    `<strong>Uzytkownik:</strong> ${escapeHtml(input.userName)} (${escapeHtml(input.userEmail)})<br/>`,
+    input.contactEmail
+      ? `<strong>Email kontaktowy:</strong> ${escapeHtml(input.contactEmail)}<br/>`
+      : "",
+    input.contactPhone
+      ? `<strong>Telefon kontaktowy:</strong> ${escapeHtml(input.contactPhone)}<br/>`
+      : "",
+    `<strong>Plik:</strong> ${escapeHtml(input.fileName)}<br/>`,
+    `<strong>Typ pliku:</strong> ${escapeHtml(input.fileContentType)}<br/>`,
+    `<strong>Rozmiar:</strong> ${input.fileSizeBytes} B<br/>`,
+    `<strong>Data zgloszenia:</strong> ${escapeHtml(input.requestedAtIso)}<br/>`,
+    `<strong>URL pliku:</strong> <a href="${escapeHtml(input.fileUrl)}" style="color:${MAIL_COLORS.link};text-decoration:underline;word-break:break-all;">${escapeHtml(input.fileUrl)}</a><br/>`,
+    input.note
+      ? `<br/><strong>Notatka:</strong><br/>${escapeHtml(input.note).replaceAll("\n", "<br/>")}`
+      : "",
+  ]
+    .filter((line) => line.trim().length > 0)
+    .join("");
+
+  return {
+    subject,
+    text: renderTextLayout({ sections: textSections }),
+    html: renderHtmlLayout({
+      preheader: "Nowe zgloszenie concierge upload",
+      title: subject,
+      contentHtml: htmlParagraphRaw(htmlLines),
+    }),
+  };
+}
+

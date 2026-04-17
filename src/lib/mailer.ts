@@ -1,5 +1,6 @@
 import { getEnv } from "@/lib/env";
 import {
+  buildConciergeStockUploadMail,
   buildContainerInquiryMail,
   buildClaimDecisionMail,
   buildClaimSubmittedMail,
@@ -247,6 +248,44 @@ export async function sendContainerInquiryEmail(input: {
     inquiryMessage: input.inquiryMessage,
     requestedQuantity: input.requestedQuantity,
     offeredPrice: input.offeredPrice,
+  });
+
+  return sendMail({
+    to: input.to,
+    subject: template.subject,
+    text: template.text,
+    html: template.html,
+  });
+}
+
+export async function sendConciergeStockUploadNotificationEmail(input: {
+  to: string;
+  companyName: string;
+  companySlug?: string;
+  userName: string;
+  userEmail: string;
+  contactEmail?: string;
+  contactPhone?: string;
+  fileName: string;
+  fileSizeBytes: number;
+  fileContentType: string;
+  fileUrl: string;
+  note?: string;
+  requestedAtIso: string;
+}): Promise<SendMailResult> {
+  const template = buildConciergeStockUploadMail({
+    companyName: input.companyName,
+    companySlug: input.companySlug,
+    userName: input.userName,
+    userEmail: input.userEmail,
+    contactEmail: input.contactEmail,
+    contactPhone: input.contactPhone,
+    fileName: input.fileName,
+    fileSizeBytes: input.fileSizeBytes,
+    fileContentType: input.fileContentType,
+    fileUrl: input.fileUrl,
+    note: input.note,
+    requestedAtIso: input.requestedAtIso,
   });
 
   return sendMail({

@@ -226,6 +226,7 @@ export type ContainerListingItem = {
 export type ContainerListingMapPoint = {
   id: string;
   type: ListingType;
+  quantity: number;
   locationLat: number | null;
   locationLng: number | null;
 };
@@ -567,12 +568,19 @@ export function mapContainerListingToItem(doc: ContainerListingDocument): Contai
 }
 
 export function mapContainerListingToMapPoints(
-  doc: Pick<ContainerListingDocument, "_id" | "type" | "locationLat" | "locationLng" | "locations">,
+  doc: Pick<
+    ContainerListingDocument,
+    "_id" | "type" | "quantity" | "locationLat" | "locationLng" | "locations"
+  >,
   options?: {
     bounds?: MapPointBounds | null;
   },
 ): ContainerListingMapPoint[] {
   const listingId = doc._id.toHexString();
+  const listingQuantity =
+    typeof doc.quantity === "number" && Number.isFinite(doc.quantity) && doc.quantity > 0
+      ? Math.trunc(doc.quantity)
+      : 1;
   const points: ContainerListingMapPoint[] = [];
   const seenCoordinates = new Set<string>();
   const bounds = options?.bounds ?? null;
@@ -603,6 +611,7 @@ export function mapContainerListingToMapPoints(
     points.push({
       id: listingId,
       type: doc.type,
+      quantity: listingQuantity,
       locationLat: lat,
       locationLng: lng,
     });

@@ -1,12 +1,13 @@
 "use client";
 
 import { useState } from "react";
+import { AdminConciergeRequestsTable } from "@/components/admin-concierge-requests-table";
 import { AdminCompaniesTable } from "@/components/admin-companies-table";
 import { AdminContainersTable } from "@/components/admin-containers-table";
 import { AdminUsersTable } from "@/components/admin-users-table";
 import type { AppLocale, AppMessages } from "@/lib/i18n";
 
-type AdminTabKey = "containers" | "users" | "companies";
+type AdminTabKey = "containers" | "users" | "companies" | "concierge";
 
 type AdminPanelTabsProps = {
   locale: AppLocale;
@@ -17,11 +18,12 @@ type AdminPanelTabsProps = {
   roleMessages: AppMessages["roles"];
 };
 
-const ADMIN_TABS: AdminTabKey[] = ["containers", "users", "companies"];
+const ADMIN_TABS: AdminTabKey[] = ["containers", "users", "companies", "concierge"];
 const TAB_LABELS: Record<AdminTabKey, string> = {
   containers: "Kontenery",
   users: "Uzytkownicy",
   companies: "Firmy",
+  concierge: "Concierge",
 };
 
 function resolveAdminTab(value?: string): AdminTabKey {
@@ -75,6 +77,7 @@ export function AdminPanelTabs({
           statusMessages={companyStatusMessages}
         />
       ) : null}
+      {activeTab === "concierge" ? <AdminConciergeRequestsTable locale={locale} /> : null}
     </section>
   );
 }
