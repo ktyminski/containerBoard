@@ -42,6 +42,7 @@ export type FiltersFormValues = {
   containerTypes: ContainerType[];
   containerConditions: ContainerCondition[];
   containerFeatures: ContainerFeature[];
+  containerRalInput: string;
   priceNegotiableOnly: boolean;
   logisticsTransportOnly: boolean;
   logisticsUnloadingOnly: boolean;
@@ -68,6 +69,7 @@ export type AppliedFilters = {
   containerTypes: ContainerType[];
   containerConditions: ContainerCondition[];
   containerFeatures: ContainerFeature[];
+  containerRalColors: string[];
   priceNegotiableOnly: boolean;
   logisticsTransportOnly: boolean;
   logisticsUnloadingOnly: boolean;
@@ -84,7 +86,12 @@ export type AppliedFilters = {
   sortPreset: SortPreset;
 };
 
-export type MultiFilterKey = "sizes" | "heights" | "types" | "conditions" | "features";
+export type MultiFilterKey =
+  | "sizes"
+  | "heights"
+  | "types"
+  | "conditions"
+  | "features";
 
 export const LOCATION_RADIUS_OPTIONS = [20, 50, 100, 200] as const;
 export type LocationRadiusKm = (typeof LOCATION_RADIUS_OPTIONS)[number];
@@ -132,6 +139,7 @@ export const FILTER_FORM_DEFAULTS: FiltersFormValues = {
   containerTypes: [],
   containerConditions: [],
   containerFeatures: [],
+  containerRalInput: "",
   priceNegotiableOnly: false,
   logisticsTransportOnly: false,
   logisticsUnloadingOnly: false,
@@ -211,6 +219,7 @@ export type NonLocationFilters = Pick<
   | "containerTypes"
   | "containerConditions"
   | "containerFeatures"
+  | "containerRalColors"
   | "priceNegotiableOnly"
   | "logisticsTransportOnly"
   | "logisticsUnloadingOnly"
@@ -262,6 +271,7 @@ export function areNonLocationFiltersEqual(
     areArraysEqual(left.containerTypes, right.containerTypes) &&
     areArraysEqual(left.containerConditions, right.containerConditions) &&
     areArraysEqual(left.containerFeatures, right.containerFeatures) &&
+    areArraysEqual(left.containerRalColors, right.containerRalColors) &&
     left.priceNegotiableOnly === right.priceNegotiableOnly &&
     left.logisticsTransportOnly === right.logisticsTransportOnly &&
     left.logisticsUnloadingOnly === right.logisticsUnloadingOnly &&
@@ -291,6 +301,7 @@ export function pickNonLocationFilters(filters: AppliedFilters): NonLocationFilt
     containerTypes: toNormalizedArray(filters.containerTypes),
     containerConditions: toNormalizedArray(filters.containerConditions),
     containerFeatures: toNormalizedArray(filters.containerFeatures),
+    containerRalColors: toNormalizedArray(filters.containerRalColors),
     priceNegotiableOnly: filters.priceNegotiableOnly,
     logisticsTransportOnly: filters.logisticsTransportOnly,
     logisticsUnloadingOnly: filters.logisticsUnloadingOnly,

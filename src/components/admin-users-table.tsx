@@ -41,6 +41,26 @@ type AdminUsersTableProps = {
   roleMessages: AppMessages["roles"];
 };
 
+const ADMIN_BUTTON_NEUTRAL_MD_CLASS =
+  "rounded-md border border-neutral-600 bg-neutral-800/90 px-3 py-1 text-sm text-neutral-100 hover:border-neutral-500 hover:bg-neutral-700/90";
+const ADMIN_BUTTON_NEUTRAL_XS_CLASS =
+  "rounded-md border border-neutral-600 bg-neutral-800/90 px-2 py-1 text-xs text-neutral-100 hover:border-neutral-500 hover:bg-neutral-700/90";
+const ADMIN_BUTTON_NEUTRAL_MODAL_CLASS =
+  "rounded-md border border-neutral-600 bg-neutral-800/90 px-3 py-1.5 text-xs text-neutral-100 hover:border-neutral-500 hover:bg-neutral-700/90";
+const ADMIN_BUTTON_INFO_MD_CLASS =
+  "rounded-md border border-sky-500/85 bg-sky-700/50 px-3 py-1 text-sm text-sky-50 hover:border-sky-400 hover:bg-sky-700/65";
+const ADMIN_BUTTON_INFO_MODAL_CLASS =
+  "rounded-md border border-sky-500/85 bg-sky-700/50 px-3 py-1.5 text-xs text-sky-50 hover:border-sky-400 hover:bg-sky-700/65 disabled:cursor-not-allowed disabled:opacity-70";
+const ADMIN_BUTTON_SUCCESS_XS_CLASS =
+  "rounded-md border border-emerald-500/85 bg-emerald-700/45 px-2 py-1 text-xs text-emerald-50 hover:border-emerald-400 hover:bg-emerald-700/60";
+const ADMIN_BUTTON_DANGER_XS_CLASS =
+  "rounded-md border border-rose-500/85 bg-rose-700/45 px-2 py-1 text-xs text-rose-50 hover:border-rose-400 hover:bg-rose-700/60";
+const ADMIN_BUTTON_DANGER_MODAL_CLASS =
+  "rounded-md border border-rose-500/85 bg-rose-700/50 px-3 py-1.5 text-xs text-rose-50 hover:border-rose-400 hover:bg-rose-700/65 disabled:cursor-not-allowed disabled:opacity-70";
+const ADMIN_BADGE_SUCCESS_TONE = "border-emerald-500/80 bg-emerald-700/45 text-emerald-50";
+const ADMIN_BADGE_WARNING_TONE = "border-amber-500/80 bg-amber-700/45 text-amber-50";
+const ADMIN_BADGE_DANGER_TONE = "border-rose-500/80 bg-rose-700/45 text-rose-50";
+
 export function AdminUsersTable({
   locale,
   messages,
@@ -271,7 +291,7 @@ export function AdminUsersTable({
         <div className="flex gap-2">
           <button
             type="button"
-            className="rounded-md border border-sky-700 px-3 py-1 text-sm text-sky-200 hover:border-sky-500 disabled:opacity-50"
+            className={`${ADMIN_BUTTON_INFO_MD_CLASS} disabled:opacity-50`}
             disabled={items.length === 0 || availableCompanies.length === 0}
             onClick={openAssignModal}
           >
@@ -279,7 +299,7 @@ export function AdminUsersTable({
           </button>
           <button
             type="button"
-            className="rounded-md border border-neutral-700 px-3 py-1 text-sm text-neutral-200 hover:border-neutral-500"
+            className={ADMIN_BUTTON_NEUTRAL_MD_CLASS}
             onClick={() => {
               void loadUsers({ keepData: true });
             }}
@@ -423,7 +443,7 @@ export function AdminUsersTable({
                     </span>
                     {user.isBlocked ? (
                       <span
-                        className="inline-flex h-5 w-5 items-center justify-center rounded-full border border-rose-600 bg-rose-500/10 text-[11px] font-bold text-rose-300"
+                        className="inline-flex h-5 w-5 items-center justify-center rounded-full border border-rose-500/85 bg-rose-700/55 text-[11px] font-bold text-rose-50"
                         title={messages.blocked}
                         aria-label={messages.blocked}
                       >
@@ -441,8 +461,8 @@ export function AdminUsersTable({
                   <span
                     className={
                       user.isEmailVerified
-                        ? "inline-flex min-w-[140px] justify-center rounded-md border border-emerald-700 bg-emerald-500/10 px-2 py-1 text-center text-xs text-emerald-200 whitespace-nowrap"
-                        : "inline-flex min-w-[140px] justify-center rounded-md border border-amber-700 bg-amber-500/10 px-2 py-1 text-center text-xs text-amber-200 whitespace-nowrap"
+                        ? `inline-flex min-w-[140px] justify-center rounded-md border px-2 py-1 text-center text-xs whitespace-nowrap ${ADMIN_BADGE_SUCCESS_TONE}`
+                        : `inline-flex min-w-[140px] justify-center rounded-md border px-2 py-1 text-center text-xs whitespace-nowrap ${ADMIN_BADGE_WARNING_TONE}`
                     }
                   >
                     {user.isEmailVerified ? messages.emailVerified : messages.emailNotVerified}
@@ -460,7 +480,7 @@ export function AdminUsersTable({
                           <span>{company.name}</span>
                           <button
                             type="button"
-                            className="rounded border border-rose-700 px-1 text-[10px] text-rose-200 hover:border-rose-500 disabled:opacity-50"
+                            className="rounded border border-rose-500/85 bg-rose-700/45 px-1 text-[10px] text-rose-50 hover:border-rose-400 hover:bg-rose-700/60 disabled:opacity-50"
                             disabled={updatingId === user.id}
                             onClick={() => {
                               setRemoveConfirm({
@@ -490,8 +510,8 @@ export function AdminUsersTable({
                   <span
                     className={
                       user.isBlocked
-                        ? "inline-flex min-w-[150px] justify-center rounded-md border border-rose-700 bg-rose-500/10 px-2 py-1 text-center text-xs text-rose-200 whitespace-nowrap"
-                        : "inline-flex min-w-[150px] justify-center rounded-md border border-emerald-700 bg-emerald-500/10 px-2 py-1 text-center text-xs text-emerald-200 whitespace-nowrap"
+                        ? `inline-flex min-w-[150px] justify-center rounded-md border px-2 py-1 text-center text-xs whitespace-nowrap ${ADMIN_BADGE_DANGER_TONE}`
+                        : `inline-flex min-w-[150px] justify-center rounded-md border px-2 py-1 text-center text-xs whitespace-nowrap ${ADMIN_BADGE_SUCCESS_TONE}`
                     }
                   >
                     {user.isBlocked ? messages.blocked : messages.active}
@@ -506,8 +526,8 @@ export function AdminUsersTable({
                       type="button"
                       className={
                         user.isBlocked
-                          ? "min-w-[120px] rounded-md border border-emerald-700 px-2 py-1 text-center text-xs text-emerald-200 whitespace-nowrap hover:border-emerald-500 disabled:opacity-50"
-                          : "min-w-[120px] rounded-md border border-rose-700 px-2 py-1 text-center text-xs text-rose-200 whitespace-nowrap hover:border-rose-500 disabled:opacity-50"
+                          ? `min-w-[120px] text-center whitespace-nowrap ${ADMIN_BUTTON_SUCCESS_XS_CLASS} disabled:opacity-50`
+                          : `min-w-[120px] text-center whitespace-nowrap ${ADMIN_BUTTON_DANGER_XS_CLASS} disabled:opacity-50`
                       }
                       disabled={updatingId === user.id}
                       onClick={() => {
@@ -520,7 +540,7 @@ export function AdminUsersTable({
                       <button
                         key={role}
                         type="button"
-                        className="min-w-[96px] rounded-md border border-neutral-700 px-2 py-1 text-center text-xs text-neutral-200 whitespace-nowrap hover:border-neutral-500 disabled:opacity-50"
+                        className={`min-w-[96px] text-center whitespace-nowrap ${ADMIN_BUTTON_NEUTRAL_XS_CLASS} disabled:opacity-50`}
                         disabled={updatingId === user.id || user.role === role}
                         onClick={() => {
                           void updateRole(user.id, role);
@@ -546,7 +566,7 @@ export function AdminUsersTable({
         <div className="flex items-center gap-2">
           <button
             type="button"
-            className="rounded-md border border-neutral-700 px-2 py-1 text-xs text-neutral-200 hover:border-neutral-500 disabled:opacity-50"
+            className={`${ADMIN_BUTTON_NEUTRAL_XS_CLASS} disabled:opacity-50`}
             disabled={page <= 1}
             onClick={() => {
               setPage((current) => Math.max(1, current - 1));
@@ -556,7 +576,7 @@ export function AdminUsersTable({
           </button>
           <button
             type="button"
-            className="rounded-md border border-neutral-700 px-2 py-1 text-xs text-neutral-200 hover:border-neutral-500 disabled:opacity-50"
+            className={`${ADMIN_BUTTON_NEUTRAL_XS_CLASS} disabled:opacity-50`}
             disabled={page >= meta.totalPages}
             onClick={() => {
               setPage((current) => Math.min(meta.totalPages, current + 1));
@@ -612,7 +632,7 @@ export function AdminUsersTable({
             <div className="mt-4 flex justify-end gap-2">
               <button
                 type="button"
-                className="rounded-md border border-neutral-700 px-3 py-1.5 text-xs text-neutral-300 hover:border-neutral-500"
+                className={ADMIN_BUTTON_NEUTRAL_MODAL_CLASS}
                 onClick={() => {
                   setIsAssignModalOpen(false);
                 }}
@@ -621,7 +641,7 @@ export function AdminUsersTable({
               </button>
               <button
                 type="button"
-                className="rounded-md border border-sky-700 px-3 py-1.5 text-xs text-sky-200 hover:border-sky-500 disabled:cursor-not-allowed disabled:opacity-70"
+                className={ADMIN_BUTTON_INFO_MODAL_CLASS}
                 onClick={() => {
                   void assignCompany();
                 }}
@@ -649,7 +669,7 @@ export function AdminUsersTable({
             <div className="mt-4 flex justify-end gap-2">
               <button
                 type="button"
-                className="rounded-md border border-neutral-700 px-3 py-1.5 text-xs text-neutral-300 hover:border-neutral-500"
+                className={ADMIN_BUTTON_NEUTRAL_MODAL_CLASS}
                 onClick={() => {
                   setRemoveConfirm(null);
                 }}
@@ -658,7 +678,7 @@ export function AdminUsersTable({
               </button>
               <button
                 type="button"
-                className="rounded-md border border-rose-700 px-3 py-1.5 text-xs text-rose-200 hover:border-rose-500 disabled:cursor-not-allowed disabled:opacity-70"
+                className={ADMIN_BUTTON_DANGER_MODAL_CLASS}
                 onClick={() => {
                   void removeAssignment(removeConfirm.userId, removeConfirm.companyId);
                 }}

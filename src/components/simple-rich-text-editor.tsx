@@ -1,6 +1,8 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import StarterKit from "@tiptap/starter-kit";
+import { EditorContent, useEditor } from "@tiptap/react";
+import { type MouseEvent, useEffect, useRef } from "react";
 import { getRichTextLength } from "@/lib/listing-rich-text";
 
 type SimpleRichTextEditorProps = {
@@ -12,7 +14,12 @@ type SimpleRichTextEditorProps = {
 };
 
 function normalizeEditorHtml(input: string): string {
-  const normalized = input.trim();
+  const normalized = input
+    .replace(/<ol(\s[^>]*)?>/gi, (_match, attrs: string | undefined) => {
+      return `<ul${attrs ?? ""}>`;
+    })
+    .replace(/<\/ol>/gi, "</ul>")
+    .trim();
   if (
     normalized === "<br>" ||
     normalized === "<div><br></div>" ||
@@ -31,31 +38,85 @@ export function SimpleRichTextEditor({
   placeholder = "Wpisz opis...",
   disabled = false,
 }: SimpleRichTextEditorProps) {
-  const editorRef = useRef<HTMLDivElement | null>(null);
+  const onChangeRef = useRef(onChange);
+
+  useEffect(() => {
+    onChangeRef.current = onChange;
+  }, [onChange]);
 
   const currentLength = getRichTextLength(value);
   const isLimitExceeded = currentLength > maxCharacters;
+  const isEmpty = currentLength === 0;
+
+  const editor = useEditor(
+    {
+      immediatelyRender: false,
+      editable: !disabled,
+      extensions: [
+        StarterKit.configure({
+          heading: false,
+          blockquote: false,
+          code: false,
+          codeBlock: false,
+          horizontalRule: false,
+          orderedList: false,
+          strike: false,
+        }),
+      ],
+      content: normalizeEditorHtml(value) || "<p></p>",
+      editorProps: {
+        attributes: {
+          class:
+            "min-h-32 px-3 py-2 text-sm text-neutral-900 outline-none [&_p]:m-0 [&_p+p]:mt-2 [&_li]:leading-6 [&_ul]:list-disc [&_ul]:space-y-1 [&_ul]:pl-5",
+        },
+      },
+      onUpdate: ({ editor: nextEditor }) => {
+        const nextHtml = normalizeEditorHtml(nextEditor.getHTML());
+        onChangeRef.current(nextHtml);
+      },
+    },
+    [],
+  );
 
   useEffect(() => {
-    const editor = editorRef.current;
     if (!editor) {
       return;
     }
 
-    if (editor.innerHTML !== value) {
-      editor.innerHTML = value;
-    }
-  }, [value]);
+    editor.setEditable(!disabled);
+  }, [disabled, editor]);
 
-  const runCommand = (command: "bold" | "italic" | "insertUnorderedList" | "insertOrderedList") => {
-    if (disabled) {
+  useEffect(() => {
+    if (!editor) {
       return;
     }
 
-    editorRef.current?.focus();
-    document.execCommand(command);
-    const html = normalizeEditorHtml(editorRef.current?.innerHTML ?? "");
-    onChange(html);
+    const normalizedCurrent = normalizeEditorHtml(editor.getHTML());
+    const normalizedIncoming = normalizeEditorHtml(value);
+    if (normalizedCurrent !== normalizedIncoming) {
+      editor.commands.setContent(normalizedIncoming || "<p></p>", {
+        emitUpdate: false,
+      });
+    }
+  }, [editor, value]);
+
+  const onToolbarMouseDown = (
+    event: MouseEvent<HTMLButtonElement>,
+    action: () => void,
+  ) => {
+    event.preventDefault();
+    if (disabled || !editor) {
+      return;
+    }
+    action();
+  };
+
+  const onClear = () => {
+    if (disabled || !editor) {
+      return;
+    }
+    editor.commands.clearContent();
+    editor.chain().focus("start").run();
   };
 
   return (
@@ -63,44 +124,71 @@ export function SimpleRichTextEditor({
       <div className="flex flex-wrap items-center gap-2">
         <button
           type="button"
-          onClick={() => runCommand("bold")}
-          disabled={disabled}
-          className="rounded-md border border-neutral-300 bg-white px-2.5 py-1 text-xs font-semibold text-neutral-800 hover:bg-neutral-100 disabled:cursor-not-allowed disabled:opacity-60"
+          onMouseDown={(event) => {
+            onToolbarMouseDown(event, () => {
+              const nextEditor = editor;
+              if (!nextEditor) {
+                return;
+              }
+              nextEditor.chain().focus().toggleBold().run();
+            });
+          }}
+          disabled={disabled || !editor}
+          className={`rounded-md border px-2.5 py-1 text-xs font-semibold transition disabled:cursor-not-allowed disabled:opacity-60 ${
+            editor?.isActive("bold")
+              ? "border-[#2f639a] bg-[#0f2b4f] text-[#e2efff]"
+              : "border-neutral-300 bg-white text-neutral-800 hover:bg-neutral-100"
+          }`}
           title="Pogrubienie"
         >
           B
         </button>
         <button
           type="button"
-          onClick={() => runCommand("italic")}
-          disabled={disabled}
-          className="rounded-md border border-neutral-300 bg-white px-2.5 py-1 text-xs text-neutral-800 italic hover:bg-neutral-100 disabled:cursor-not-allowed disabled:opacity-60"
+          onMouseDown={(event) => {
+            onToolbarMouseDown(event, () => {
+              const nextEditor = editor;
+              if (!nextEditor) {
+                return;
+              }
+              nextEditor.chain().focus().toggleItalic().run();
+            });
+          }}
+          disabled={disabled || !editor}
+          className={`rounded-md border px-2.5 py-1 text-xs italic transition disabled:cursor-not-allowed disabled:opacity-60 ${
+            editor?.isActive("italic")
+              ? "border-[#2f639a] bg-[#0f2b4f] text-[#e2efff]"
+              : "border-neutral-300 bg-white text-neutral-800 hover:bg-neutral-100"
+          }`}
           title="Kursywa"
         >
           I
         </button>
         <button
           type="button"
-          onClick={() => runCommand("insertUnorderedList")}
-          disabled={disabled}
-          className="rounded-md border border-neutral-300 bg-white px-2.5 py-1 text-xs text-neutral-800 hover:bg-neutral-100 disabled:cursor-not-allowed disabled:opacity-60"
+          onMouseDown={(event) => {
+            onToolbarMouseDown(event, () => {
+              const nextEditor = editor;
+              if (!nextEditor) {
+                return;
+              }
+              nextEditor.chain().focus().toggleBulletList().run();
+            });
+          }}
+          disabled={disabled || !editor}
+          className={`rounded-md border px-2.5 py-1 text-xs transition disabled:cursor-not-allowed disabled:opacity-60 ${
+            editor?.isActive("bulletList")
+              ? "border-[#2f639a] bg-[#0f2b4f] text-[#e2efff]"
+              : "border-neutral-300 bg-white text-neutral-800 hover:bg-neutral-100"
+          }`}
           title="Lista punktowana"
         >
           Lista
         </button>
         <button
           type="button"
-          onClick={() => runCommand("insertOrderedList")}
-          disabled={disabled}
-          className="rounded-md border border-neutral-300 bg-white px-2.5 py-1 text-xs text-neutral-800 hover:bg-neutral-100 disabled:cursor-not-allowed disabled:opacity-60"
-          title="Lista numerowana"
-        >
-          1.
-        </button>
-        <button
-          type="button"
-          onClick={() => onChange("")}
-          disabled={disabled}
+          onClick={onClear}
+          disabled={disabled || !editor}
           className="rounded-md border border-neutral-300 bg-white px-2.5 py-1 text-xs text-neutral-800 hover:bg-neutral-100 disabled:cursor-not-allowed disabled:opacity-60"
           title="Wyczysc opis"
         >
@@ -109,16 +197,19 @@ export function SimpleRichTextEditor({
       </div>
 
       <div
-        ref={editorRef}
-        contentEditable={!disabled}
-        suppressContentEditableWarning
-        data-placeholder={placeholder}
-        onInput={(event) => {
-          const nextHtml = normalizeEditorHtml(event.currentTarget.innerHTML);
-          onChange(nextHtml);
-        }}
-        className="min-h-32 rounded-md border border-neutral-300 bg-white px-3 py-2 text-sm text-neutral-900 focus:outline-none focus:ring-2 focus:ring-[#4e86c3] empty:before:pointer-events-none empty:before:content-[attr(data-placeholder)] empty:before:text-neutral-400"
-      />
+        className={`relative rounded-md border bg-white transition ${
+          disabled
+            ? "border-neutral-200 bg-neutral-100/60"
+            : "border-neutral-300 focus-within:ring-2 focus-within:ring-[#4e86c3]"
+        }`}
+      >
+        {isEmpty ? (
+          <span className="pointer-events-none absolute left-3 top-2 z-[1] text-sm text-neutral-400">
+            {placeholder}
+          </span>
+        ) : null}
+        <EditorContent editor={editor} />
+      </div>
 
       <p
         className={`text-xs ${

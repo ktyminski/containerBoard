@@ -1,23 +1,27 @@
 "use client";
 
 import { useState } from "react";
+import { AdminCompaniesTable } from "@/components/admin-companies-table";
 import { AdminContainersTable } from "@/components/admin-containers-table";
 import { AdminUsersTable } from "@/components/admin-users-table";
 import type { AppLocale, AppMessages } from "@/lib/i18n";
 
-type AdminTabKey = "containers" | "users";
+type AdminTabKey = "containers" | "users" | "companies";
 
 type AdminPanelTabsProps = {
   locale: AppLocale;
   initialTab?: string;
   usersMessages: AppMessages["adminUsers"];
+  companiesMessages: AppMessages["adminCompanies"];
+  companyStatusMessages: AppMessages["companyStatus"];
   roleMessages: AppMessages["roles"];
 };
 
-const ADMIN_TABS: AdminTabKey[] = ["containers", "users"];
+const ADMIN_TABS: AdminTabKey[] = ["containers", "users", "companies"];
 const TAB_LABELS: Record<AdminTabKey, string> = {
   containers: "Kontenery",
   users: "Uzytkownicy",
+  companies: "Firmy",
 };
 
 function resolveAdminTab(value?: string): AdminTabKey {
@@ -30,6 +34,8 @@ export function AdminPanelTabs({
   locale,
   initialTab,
   usersMessages,
+  companiesMessages,
+  companyStatusMessages,
   roleMessages,
 }: AdminPanelTabsProps) {
   const [activeTab, setActiveTab] = useState<AdminTabKey>(resolveAdminTab(initialTab));
@@ -48,8 +54,8 @@ export function AdminPanelTabs({
               }}
               className={
                 isActive
-                  ? "rounded-md border border-sky-500 bg-sky-500/15 px-3 py-1.5 text-sm font-medium text-sky-100"
-                  : "rounded-md border border-neutral-700 bg-neutral-900 px-3 py-1.5 text-sm text-neutral-300 hover:border-neutral-500 hover:text-neutral-100"
+                  ? "rounded-md border border-sky-400 bg-sky-700/35 px-3 py-1.5 text-sm font-medium text-sky-100 shadow-[0_0_0_1px_rgba(56,189,248,0.2)]"
+                  : "rounded-md border border-neutral-600 bg-neutral-800/90 px-3 py-1.5 text-sm text-neutral-100 hover:border-neutral-500 hover:bg-neutral-700/90"
               }
             >
               {TAB_LABELS[tab]}
@@ -61,6 +67,13 @@ export function AdminPanelTabs({
       {activeTab === "containers" ? <AdminContainersTable locale={locale} /> : null}
       {activeTab === "users" ? (
         <AdminUsersTable locale={locale} messages={usersMessages} roleMessages={roleMessages} />
+      ) : null}
+      {activeTab === "companies" ? (
+        <AdminCompaniesTable
+          locale={locale}
+          messages={companiesMessages}
+          statusMessages={companyStatusMessages}
+        />
       ) : null}
     </section>
   );

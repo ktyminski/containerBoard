@@ -7,6 +7,8 @@ import { CompanyLocationsMap } from "@/components/company-locations-map";
 type CompanyLocationWithMedia = {
   label: string;
   addressText: string;
+  postalCode?: string;
+  country?: string;
   phone?: string;
   email?: string;
   point: {
@@ -41,6 +43,8 @@ export function CompanyLocationsAndBranches({
     () =>
       locations.map((location) => ({
         addressText: location.addressText,
+        postalCode: location.postalCode,
+        country: location.country,
         point: location.point.coordinates,
       })),
     [locations],

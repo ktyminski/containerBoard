@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import Image from "next/image";
+import { getCountryFlagEmoji, getCountryFlagSvgUrl } from "@/lib/country-flags";
 
 type BranchPhoto = {
   id: string;
@@ -12,6 +13,8 @@ type BranchPhoto = {
 type BranchLocation = {
   label: string;
   addressText: string;
+  postalCode?: string;
+  country?: string;
   phone?: string;
   email?: string;
   photos: BranchPhoto[];
@@ -26,6 +29,34 @@ type CompanyBranchesListProps = {
 };
 
 const INITIAL_VISIBLE_BRANCHES = 3;
+
+function LocationFlag({ country }: { country?: string }) {
+  const flagUrl = getCountryFlagSvgUrl(country);
+  if (flagUrl) {
+    return (
+      <Image
+        src={flagUrl}
+        alt=""
+        aria-hidden="true"
+        width={16}
+        height={12}
+        unoptimized
+        className="inline-block h-3 w-4 shrink-0 rounded-[2px] border border-neutral-400/60 object-cover"
+      />
+    );
+  }
+
+  const emoji = getCountryFlagEmoji(country);
+  if (emoji === "??") {
+    return null;
+  }
+
+  return (
+    <span aria-hidden="true" className="shrink-0 text-xs leading-none">
+      {emoji}
+    </span>
+  );
+}
 
 export function CompanyBranchesList({
   locations,
@@ -46,7 +77,16 @@ export function CompanyBranchesList({
             <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
               <div className="min-w-0">
                 <p className="text-sm font-semibold text-neutral-100">{location.label}</p>
-                <p className="mt-1 text-sm text-neutral-300">{location.addressText}</p>
+                <p className="mt-1 flex min-w-0 items-start gap-2 text-sm text-neutral-300">
+                  <LocationFlag country={location.country} />
+                  <span className="min-w-0 break-words">
+                    {location.postalCode ? (
+                      <span className="font-semibold text-neutral-100">{location.postalCode}</span>
+                    ) : null}
+                    {location.postalCode ? " " : null}
+                    {location.addressText}
+                  </span>
+                </p>
               </div>
               {(location.phone || location.email) ? (
                 <div className="grid gap-2 text-left sm:min-w-[220px] sm:justify-items-end sm:text-right">

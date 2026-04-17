@@ -45,6 +45,24 @@ type AdminCompaniesTableProps = {
   statusMessages: AppMessages["companyStatus"];
 };
 
+const ADMIN_BUTTON_NEUTRAL_MD_CLASS =
+  "rounded-md border border-neutral-600 bg-neutral-800/90 px-3 py-1 text-sm text-neutral-100 hover:border-neutral-500 hover:bg-neutral-700/90";
+const ADMIN_BUTTON_NEUTRAL_XS_CLASS =
+  "rounded-md border border-neutral-600 bg-neutral-800/90 px-2 py-1 text-xs text-neutral-100 hover:border-neutral-500 hover:bg-neutral-700/90";
+const ADMIN_BUTTON_NEUTRAL_MODAL_CLASS =
+  "rounded-md border border-neutral-600 bg-neutral-800/90 px-3 py-1.5 text-xs text-neutral-100 hover:border-neutral-500 hover:bg-neutral-700/90";
+const ADMIN_BUTTON_SUCCESS_XS_CLASS =
+  "rounded-md border border-emerald-500/85 bg-emerald-700/45 px-2 py-1 text-xs text-emerald-50 hover:border-emerald-400 hover:bg-emerald-700/60";
+const ADMIN_BUTTON_WARNING_XS_CLASS =
+  "rounded-md border border-amber-500/85 bg-amber-700/45 px-2 py-1 text-xs text-amber-50 hover:border-amber-400 hover:bg-amber-700/60";
+const ADMIN_BUTTON_DANGER_XS_CLASS =
+  "rounded-md border border-rose-500/85 bg-rose-700/45 px-2 py-1 text-xs text-rose-50 hover:border-rose-400 hover:bg-rose-700/60";
+const ADMIN_BUTTON_DANGER_MODAL_CLASS =
+  "rounded-md border border-rose-500/85 bg-rose-700/50 px-3 py-1.5 text-xs text-rose-50 hover:border-rose-400 hover:bg-rose-700/65 disabled:cursor-not-allowed disabled:opacity-70";
+const ADMIN_BADGE_SUCCESS_TONE = "border-emerald-500/80 bg-emerald-700/45 text-emerald-50";
+const ADMIN_BADGE_WARNING_TONE = "border-amber-500/80 bg-amber-700/45 text-amber-50";
+const ADMIN_BADGE_DANGER_TONE = "border-rose-500/80 bg-rose-700/45 text-rose-50";
+
 export function AdminCompaniesTable({
   locale,
   messages,
@@ -264,7 +282,7 @@ export function AdminCompaniesTable({
         <h2 className="text-lg font-semibold text-neutral-100">{messages.title}</h2>
         <button
           type="button"
-          className="rounded-md border border-neutral-700 px-3 py-1 text-sm text-neutral-200 hover:border-neutral-500"
+          className={ADMIN_BUTTON_NEUTRAL_MD_CLASS}
           onClick={() => {
             void loadCompanies({ keepData: true });
           }}
@@ -419,7 +437,7 @@ export function AdminCompaniesTable({
                       </Link>
                       {company.isBlocked ? (
                         <span
-                          className="inline-flex h-5 w-5 items-center justify-center rounded-full border border-rose-600 bg-rose-500/10 text-[11px] font-bold text-rose-300"
+                          className="inline-flex h-5 w-5 items-center justify-center rounded-full border border-rose-500/85 bg-rose-700/55 text-[11px] font-bold text-rose-50"
                           title={messages.blocked}
                           aria-label={messages.blocked}
                         >
@@ -442,8 +460,8 @@ export function AdminCompaniesTable({
                     <span
                       className={
                         company.verificationStatus === "verified"
-                          ? "inline-flex min-w-[150px] justify-center rounded-md border border-emerald-700 bg-emerald-500/10 px-2 py-1 text-center text-xs text-emerald-200 whitespace-nowrap"
-                          : "inline-flex min-w-[150px] justify-center rounded-md border border-amber-700 bg-amber-500/10 px-2 py-1 text-center text-xs text-amber-200 whitespace-nowrap"
+                          ? `inline-flex min-w-[150px] justify-center rounded-md border px-2 py-1 text-center text-xs whitespace-nowrap ${ADMIN_BADGE_SUCCESS_TONE}`
+                          : `inline-flex min-w-[150px] justify-center rounded-md border px-2 py-1 text-center text-xs whitespace-nowrap ${ADMIN_BADGE_WARNING_TONE}`
                       }
                     >
                       {statusMessages[company.verificationStatus]}
@@ -453,8 +471,8 @@ export function AdminCompaniesTable({
                     <span
                       className={
                         company.isBlocked
-                          ? "inline-flex min-w-[150px] justify-center rounded-md border border-rose-700 bg-rose-500/10 px-2 py-1 text-center text-xs text-rose-200 whitespace-nowrap"
-                          : "inline-flex min-w-[150px] justify-center rounded-md border border-emerald-700 bg-emerald-500/10 px-2 py-1 text-center text-xs text-emerald-200 whitespace-nowrap"
+                          ? `inline-flex min-w-[150px] justify-center rounded-md border px-2 py-1 text-center text-xs whitespace-nowrap ${ADMIN_BADGE_DANGER_TONE}`
+                          : `inline-flex min-w-[150px] justify-center rounded-md border px-2 py-1 text-center text-xs whitespace-nowrap ${ADMIN_BADGE_SUCCESS_TONE}`
                       }
                     >
                       {company.isBlocked ? messages.blocked : messages.active}
@@ -464,7 +482,7 @@ export function AdminCompaniesTable({
                     <span
                       className={
                         company.isPremium
-                          ? "inline-flex min-w-[150px] justify-center rounded-md border border-amber-600 bg-amber-500/10 px-2 py-1 text-center text-xs text-amber-200 whitespace-nowrap"
+                          ? `inline-flex min-w-[150px] justify-center rounded-md border px-2 py-1 text-center text-xs whitespace-nowrap ${ADMIN_BADGE_WARNING_TONE}`
                           : "inline-flex min-w-[150px] justify-center rounded-md border border-neutral-700 bg-neutral-800/60 px-2 py-1 text-center text-xs text-neutral-300 whitespace-nowrap"
                       }
                     >
@@ -474,13 +492,13 @@ export function AdminCompaniesTable({
                   <td className="py-2 pr-3">
                     {company.deletionRequest.isRequested ? (
                       <div className="grid gap-1">
-                        <span className="inline-flex w-fit rounded-md border border-rose-700 bg-rose-500/10 px-2 py-1 text-xs text-rose-200">
+                        <span className="inline-flex w-fit rounded-md border border-rose-500/80 bg-rose-700/45 px-2 py-1 text-xs text-rose-50">
                           {messages.deletionRequested}
                         </span>
                         {company.deletionRequest.reason ? (
                           <button
                             type="button"
-                            className="w-fit cursor-pointer text-xs text-rose-200 underline underline-offset-2 hover:text-rose-100"
+                            className="w-fit cursor-pointer text-xs text-rose-100 underline underline-offset-2 hover:text-rose-50"
                             onClick={() => {
                               setReasonPreview({
                                 companyName: company.name,
@@ -530,8 +548,8 @@ export function AdminCompaniesTable({
                         type="button"
                         className={
                           company.isBlocked
-                            ? "min-w-[130px] rounded-md border border-emerald-700 px-2 py-1 text-center text-xs text-emerald-200 whitespace-nowrap hover:border-emerald-500 disabled:opacity-50"
-                            : "min-w-[130px] rounded-md border border-rose-700 px-2 py-1 text-center text-xs text-rose-200 whitespace-nowrap hover:border-rose-500 disabled:opacity-50"
+                            ? `min-w-[130px] text-center whitespace-nowrap ${ADMIN_BUTTON_SUCCESS_XS_CLASS} disabled:opacity-50`
+                            : `min-w-[130px] text-center whitespace-nowrap ${ADMIN_BUTTON_DANGER_XS_CLASS} disabled:opacity-50`
                         }
                         disabled={updatingId === company.id}
                         onClick={() => {
@@ -544,8 +562,8 @@ export function AdminCompaniesTable({
                         type="button"
                         className={
                           company.verificationStatus === "verified"
-                            ? "min-w-[150px] rounded-md border border-amber-700 px-2 py-1 text-center text-xs text-amber-200 whitespace-nowrap hover:border-amber-500 disabled:opacity-50"
-                            : "min-w-[150px] rounded-md border border-emerald-700 px-2 py-1 text-center text-xs text-emerald-200 whitespace-nowrap hover:border-emerald-500 disabled:opacity-50"
+                            ? `min-w-[150px] text-center whitespace-nowrap ${ADMIN_BUTTON_WARNING_XS_CLASS} disabled:opacity-50`
+                            : `min-w-[150px] text-center whitespace-nowrap ${ADMIN_BUTTON_SUCCESS_XS_CLASS} disabled:opacity-50`
                         }
                         disabled={updatingId === company.id}
                         onClick={() => {
@@ -565,8 +583,8 @@ export function AdminCompaniesTable({
                         type="button"
                         className={
                           company.isPremium
-                            ? "min-w-[140px] rounded-md border border-neutral-700 px-2 py-1 text-center text-xs text-neutral-200 whitespace-nowrap hover:border-neutral-500 disabled:opacity-50"
-                            : "min-w-[140px] rounded-md border border-amber-700 px-2 py-1 text-center text-xs text-amber-200 whitespace-nowrap hover:border-amber-500 disabled:opacity-50"
+                            ? "min-w-[140px] rounded-md border border-neutral-600 bg-neutral-800/90 px-2 py-1 text-center text-xs text-neutral-100 whitespace-nowrap hover:border-neutral-500 hover:bg-neutral-700/90 disabled:opacity-50"
+                            : `min-w-[140px] text-center whitespace-nowrap ${ADMIN_BUTTON_WARNING_XS_CLASS} disabled:opacity-50`
                         }
                         disabled={updatingId === company.id}
                         onClick={() => {
@@ -579,7 +597,7 @@ export function AdminCompaniesTable({
                       </button>
                       <button
                         type="button"
-                        className="min-w-[110px] rounded-md border border-rose-700 px-2 py-1 text-center text-xs text-rose-200 whitespace-nowrap hover:border-rose-500 disabled:opacity-50"
+                        className={`min-w-[110px] text-center whitespace-nowrap ${ADMIN_BUTTON_DANGER_XS_CLASS} disabled:opacity-50`}
                         disabled={updatingId === company.id}
                         onClick={() => {
                           setDeleteConfirm({
@@ -608,7 +626,7 @@ export function AdminCompaniesTable({
         <div className="flex items-center gap-2">
           <button
             type="button"
-            className="rounded-md border border-neutral-700 px-2 py-1 text-xs text-neutral-200 hover:border-neutral-500 disabled:opacity-50"
+            className={`${ADMIN_BUTTON_NEUTRAL_XS_CLASS} disabled:opacity-50`}
             disabled={page <= 1}
             onClick={() => {
               setPage((current) => Math.max(1, current - 1));
@@ -618,7 +636,7 @@ export function AdminCompaniesTable({
           </button>
           <button
             type="button"
-            className="rounded-md border border-neutral-700 px-2 py-1 text-xs text-neutral-200 hover:border-neutral-500 disabled:opacity-50"
+            className={`${ADMIN_BUTTON_NEUTRAL_XS_CLASS} disabled:opacity-50`}
             disabled={page >= meta.totalPages}
             onClick={() => {
               setPage((current) => Math.min(meta.totalPages, current + 1));
@@ -650,7 +668,7 @@ export function AdminCompaniesTable({
             <div className="mt-4 flex justify-end">
               <button
                 type="button"
-                className="cursor-pointer rounded-md border border-neutral-700 px-3 py-2 text-sm text-neutral-200 hover:border-neutral-500"
+                className="cursor-pointer rounded-md border border-neutral-600 bg-neutral-800/90 px-3 py-2 text-sm text-neutral-100 hover:border-neutral-500 hover:bg-neutral-700/90"
                 onClick={() => {
                   setReasonPreview(null);
                 }}
@@ -677,7 +695,7 @@ export function AdminCompaniesTable({
             <div className="mt-4 flex justify-end gap-2">
               <button
                 type="button"
-                className="rounded-md border border-neutral-700 px-3 py-1.5 text-xs text-neutral-300 hover:border-neutral-500"
+                className={ADMIN_BUTTON_NEUTRAL_MODAL_CLASS}
                 onClick={() => {
                   setDeleteConfirm(null);
                 }}
@@ -686,7 +704,7 @@ export function AdminCompaniesTable({
               </button>
               <button
                 type="button"
-                className="rounded-md border border-rose-700 px-3 py-1.5 text-xs text-rose-200 hover:border-rose-500 disabled:cursor-not-allowed disabled:opacity-70"
+                className={ADMIN_BUTTON_DANGER_MODAL_CLASS}
                 onClick={() => {
                   void deleteCompany(deleteConfirm.companyId);
                 }}

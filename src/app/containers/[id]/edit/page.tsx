@@ -165,6 +165,7 @@ export default async function EditContainerPage({ params }: EditContainerPagePro
             listingItem.containerColors?.map((color) => color.ral).join(", ") ?? "",
           hasCscPlate: listingItem.hasCscPlate,
           hasCscCertification: listingItem.hasCscCertification,
+          hasBranding: listingItem.hasBranding,
           hasWarranty: listingItem.hasWarranty,
           cscValidToMonth:
             typeof listingItem.cscValidToMonth === "number"

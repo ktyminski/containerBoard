@@ -65,6 +65,7 @@ type ContainerListingFormValues = {
   containerColorsRal: string;
   hasCscPlate: boolean;
   hasCscCertification: boolean;
+  hasBranding: boolean;
   hasWarranty: boolean;
   cscValidToMonth: string;
   cscValidToYear: string;
@@ -109,6 +110,7 @@ const CREATE_FLOW_PRECHECK_FIELDS: Array<keyof ContainerListingFormValues> = [
   "containerColorsRal",
   "hasCscPlate",
   "hasCscCertification",
+  "hasBranding",
   "hasWarranty",
   "cscValidToMonth",
   "cscValidToYear",
@@ -640,7 +642,8 @@ function hasInitialDescriptionSectionContent(
 ): boolean {
   return (
     (initialValues?.description?.trim().length ?? 0) > 0 ||
-    (initialValues?.containerColorsRal?.trim().length ?? 0) > 0
+    (initialValues?.containerColorsRal?.trim().length ?? 0) > 0 ||
+    initialValues?.hasBranding === true
   );
 }
 
@@ -1249,6 +1252,7 @@ function getDefaultValues(
     containerColorsRal: initialValues?.containerColorsRal ?? "",
     hasCscPlate: initialValues?.hasCscPlate ?? false,
     hasCscCertification: initialValues?.hasCscCertification ?? false,
+    hasBranding: initialValues?.hasBranding ?? false,
     hasWarranty: initialValues?.hasWarranty ?? false,
     cscValidToMonth: initialValues?.cscValidToMonth ?? "",
     cscValidToYear: initialValues?.cscValidToYear ?? "",
@@ -2805,6 +2809,7 @@ export function ContainerListingForm({
       priceNegotiable: values.priceNegotiable,
       hasCscPlate: values.hasCscPlate,
       hasCscCertification: values.hasCscCertification,
+      hasBranding: values.hasBranding,
       hasWarranty: values.hasWarranty,
       ...(hasCscValidToMonth && hasCscValidToYear
         ? {
@@ -3514,9 +3519,12 @@ export function ContainerListingForm({
             </label>
 
             <div className="grid gap-3 sm:grid-cols-2 sm:items-center">
-              <label className="grid gap-2 text-sm">
-                <span className="text-neutral-700">Kolory RAL Classic</span>
+              <div className="grid gap-2 text-sm">
+                <label htmlFor="containerColorsRal" className="text-neutral-700">
+                  Kolory RAL Classic
+                </label>
                 <input
+                  id="containerColorsRal"
                   {...register("containerColorsRal", {
                     validate: validateContainerRalColorsInput,
                     maxLength: {
@@ -3536,7 +3544,15 @@ export function ContainerListingForm({
                     {errors.containerColorsRal.message}
                   </span>
                 ) : null}
-              </label>
+                <label className="mt-1 inline-flex h-9 w-fit items-center gap-2 rounded-md border border-neutral-700 bg-neutral-900/70 px-3 text-sm text-neutral-200">
+                  <input
+                    type="checkbox"
+                    {...register("hasBranding")}
+                    className="h-4 w-4 rounded border-neutral-600 bg-neutral-950 text-[#2f639a] focus:ring-[#4e86c3]"
+                  />
+                  <span>Branded (kontener ma branding)</span>
+                </label>
+              </div>
               <div className="flex w-full flex-wrap items-start justify-end gap-2">
                 {shouldShowRalColorsPreview
                   ? parsedRalColorsPreview.colors.map((color) => {
@@ -4545,9 +4561,15 @@ export function ContainerListingForm({
               role="dialog"
               aria-modal="true"
               aria-label="Kontener opublikowano pomyslnie"
+              onMouseDown={(event) => {
+                if (event.target !== event.currentTarget) {
+                  return;
+                }
+                setIsPublishSuccessModalOpen(false);
+              }}
             >
               <div className="w-full max-w-md rounded-xl border border-neutral-700 bg-neutral-900 p-5 shadow-2xl">
-                <h3 className="text-base font-semibold text-emerald-400">
+                <h3 className="inline-flex w-fit rounded-md border border-emerald-700/70 bg-emerald-950/70 px-2.5 py-1 text-base font-semibold text-emerald-200">
                   Kontener opublikowano pomyslnie!
                 </h3>
                 <p className="mt-2 text-sm text-neutral-300">Co chcesz zrobic?</p>

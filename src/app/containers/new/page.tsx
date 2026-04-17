@@ -12,8 +12,24 @@ export const metadata: Metadata = {
   description: "Dodaj nowe ogloszenie kontenera w mniej niz minute.",
 };
 
-export default async function NewContainerPage() {
-  const nextPath = "/containers/new";
+type NewContainerPageProps = {
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
+};
+
+export default async function NewContainerPage({
+  searchParams,
+}: NewContainerPageProps) {
+  const params = await searchParams;
+  const intentParam = Array.isArray(params.intent)
+    ? params.intent[0]
+    : params.intent;
+  const initialListingIntent =
+    intentParam === "sell" || intentParam === "rent" || intentParam === "buy"
+      ? intentParam
+      : undefined;
+  const nextPath = initialListingIntent
+    ? `/containers/new?intent=${initialListingIntent}`
+    : "/containers/new";
 
   const cookieStore = await cookies();
   const token = cookieStore.get(SESSION_COOKIE_NAME)?.value;
@@ -94,6 +110,7 @@ export default async function NewContainerPage() {
   return (
     <NewContainerPageClient
       contactPrefill={contactPrefill}
+      initialListingIntent={initialListingIntent}
       ownedCompanyProfile={
         ownedCompany
           ? {

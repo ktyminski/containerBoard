@@ -123,6 +123,7 @@ export type ContainerListingDocument = {
   logisticsComment?: string;
   hasCscPlate?: boolean;
   hasCscCertification?: boolean;
+  hasBranding?: boolean;
   hasWarranty?: boolean;
   cscValidToMonth?: number;
   cscValidToYear?: number;
@@ -200,6 +201,7 @@ export type ContainerListingItem = {
   logisticsComment?: string;
   hasCscPlate: boolean;
   hasCscCertification: boolean;
+  hasBranding: boolean;
   hasWarranty: boolean;
   cscValidToMonth?: number;
   cscValidToYear?: number;
@@ -525,6 +527,7 @@ export function mapContainerListingToItem(doc: ContainerListingDocument): Contai
     logisticsComment: doc.logisticsComment?.trim() || undefined,
     hasCscPlate: doc.hasCscPlate === true,
     hasCscCertification: doc.hasCscCertification === true,
+    hasBranding: doc.hasBranding === true,
     hasWarranty: doc.hasWarranty === true,
     cscValidToMonth:
       typeof doc.cscValidToMonth === "number" &&
@@ -619,12 +622,15 @@ export function mapContainerListingToMapPoints(
 export function buildContainerListingsFilter(input: {
   q?: string;
   type?: ListingType;
+  companySlug?: string;
+  companyName?: string;
   containerSizes?: ContainerSize[];
   includeCustomContainerSize?: boolean;
   containerHeights?: ContainerHeight[];
   containerTypes?: Container["type"][];
   containerFeatures?: ContainerFeature[];
   containerConditions?: ContainerCondition[];
+  containerRalColors?: string[];
   priceMin?: number;
   priceMax?: number;
   priceCurrency?: Currency;
@@ -662,6 +668,25 @@ export function buildContainerListingsFilter(input: {
 
   if (input.type) {
     filter.type = input.type;
+  }
+
+  const normalizedCompanySlug = input.companySlug?.trim();
+  const normalizedCompanyName = input.companyName?.trim();
+  if (normalizedCompanySlug && normalizedCompanyName) {
+    andConditions.push({
+      $or: [
+        { companySlug: normalizedCompanySlug } as Filter<ContainerListingDocument>,
+        {
+          companyName: new RegExp(`^${escapeRegexPattern(normalizedCompanyName)}$`, "i"),
+        } as Filter<ContainerListingDocument>,
+      ],
+    } as Filter<ContainerListingDocument>);
+  } else if (normalizedCompanySlug) {
+    filter.companySlug = normalizedCompanySlug;
+  } else if (normalizedCompanyName) {
+    andConditions.push({
+      companyName: new RegExp(`^${escapeRegexPattern(normalizedCompanyName)}$`, "i"),
+    } as Filter<ContainerListingDocument>);
   }
 
   if (
@@ -760,6 +785,12 @@ export function buildContainerListingsFilter(input: {
   if (input.containerFeatures && input.containerFeatures.length > 0) {
     andConditions.push({
       "container.features": { $in: input.containerFeatures },
+    } as Filter<ContainerListingDocument>);
+  }
+
+  if (input.containerRalColors && input.containerRalColors.length > 0) {
+    andConditions.push({
+      "containerColors.ral": { $in: input.containerRalColors },
     } as Filter<ContainerListingDocument>);
   }
 

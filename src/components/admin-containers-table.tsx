@@ -21,6 +21,15 @@ type AdminContainersTableProps = {
   locale: string;
 };
 
+const ADMIN_NEUTRAL_BUTTON_CLASS =
+  "rounded-md border border-neutral-600 bg-neutral-800/90 px-2 py-1 text-xs text-neutral-100 hover:border-neutral-500 hover:bg-neutral-700/90";
+const ADMIN_SUCCESS_BUTTON_CLASS =
+  "rounded-md border border-emerald-500/85 bg-emerald-700/45 px-2 py-1 text-xs text-emerald-50 hover:border-emerald-400 hover:bg-emerald-700/60";
+const ADMIN_WARNING_BUTTON_CLASS =
+  "rounded-md border border-amber-500/85 bg-amber-700/45 px-2 py-1 text-xs text-amber-50 hover:border-amber-400 hover:bg-amber-700/60";
+const ADMIN_DANGER_BUTTON_CLASS =
+  "rounded-md border border-rose-500/85 bg-rose-700/45 px-2 py-1 text-xs text-rose-50 hover:border-rose-400 hover:bg-rose-700/60";
+
 export function AdminContainersTable({ locale }: AdminContainersTableProps) {
   const toast = useToast();
   const [items, setItems] = useState<ContainerListingItem[]>([]);
@@ -177,7 +186,7 @@ export function AdminContainersTable({ locale }: AdminContainersTableProps) {
                     <Link
                       href={`/containers/${item.id}`}
                       target="_blank"
-                      className="rounded-md border border-neutral-700 px-2 py-1 text-xs text-neutral-200 hover:border-neutral-500"
+                      className={ADMIN_NEUTRAL_BUTTON_CLASS}
                     >
                       Podglad
                     </Link>
@@ -186,7 +195,7 @@ export function AdminContainersTable({ locale }: AdminContainersTableProps) {
                       onClick={() => {
                         void setListingStatus(item.id, "active");
                       }}
-                      className="rounded-md border border-emerald-700 px-2 py-1 text-xs text-emerald-200 hover:border-emerald-500"
+                      className={ADMIN_SUCCESS_BUTTON_CLASS}
                     >
                       Aktywuj
                     </button>
@@ -195,7 +204,7 @@ export function AdminContainersTable({ locale }: AdminContainersTableProps) {
                       onClick={() => {
                         void setListingStatus(item.id, "expired");
                       }}
-                      className="rounded-md border border-amber-700 px-2 py-1 text-xs text-amber-200 hover:border-amber-500"
+                      className={ADMIN_WARNING_BUTTON_CLASS}
                     >
                       Wygas
                     </button>
@@ -204,7 +213,7 @@ export function AdminContainersTable({ locale }: AdminContainersTableProps) {
                       onClick={() => {
                         void setListingStatus(item.id, "closed");
                       }}
-                      className="rounded-md border border-neutral-700 px-2 py-1 text-xs text-neutral-200 hover:border-neutral-500"
+                      className={ADMIN_NEUTRAL_BUTTON_CLASS}
                     >
                       Zamknij
                     </button>
@@ -215,7 +224,7 @@ export function AdminContainersTable({ locale }: AdminContainersTableProps) {
                           void deleteListing(item.id);
                         }
                       }}
-                      className="rounded-md border border-rose-700 px-2 py-1 text-xs text-rose-200 hover:border-rose-500"
+                      className={ADMIN_DANGER_BUTTON_CLASS}
                     >
                       Usun
                     </button>
@@ -232,7 +241,7 @@ export function AdminContainersTable({ locale }: AdminContainersTableProps) {
           type="button"
           disabled={page <= 1}
           onClick={() => setPage((current) => Math.max(1, current - 1))}
-          className="rounded-md border border-neutral-700 px-2 py-1 text-xs text-neutral-200 disabled:opacity-50"
+          className={`${ADMIN_NEUTRAL_BUTTON_CLASS} disabled:opacity-50`}
         >
           Poprzednia
         </button>
@@ -241,7 +250,7 @@ export function AdminContainersTable({ locale }: AdminContainersTableProps) {
           type="button"
           disabled={page >= totalPages}
           onClick={() => setPage((current) => Math.min(totalPages, current + 1))}
-          className="rounded-md border border-neutral-700 px-2 py-1 text-xs text-neutral-200 disabled:opacity-50"
+          className={`${ADMIN_NEUTRAL_BUTTON_CLASS} disabled:opacity-50`}
         >
           Nastepna
         </button>

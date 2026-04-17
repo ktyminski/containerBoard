@@ -13,6 +13,7 @@ import {
   type SelectHTMLAttributes,
 } from "react";
 import { useFormContext, useWatch } from "react-hook-form";
+import { parseContainerRalColors } from "@/lib/container-ral-colors";
 import {
   PRICE_CURRENCY_LABEL,
   PRICE_TAX_MODES,
@@ -319,6 +320,8 @@ function ContainerListingsFiltersComponent({
     useWatch({ control, name: "containerConditions" }) ?? [];
   const selectedContainerFeatures =
     useWatch({ control, name: "containerFeatures" }) ?? [];
+  const containerRalInputValue =
+    useWatch({ control, name: "containerRalInput" }) ?? "";
   const priceNegotiableOnlyValue =
     useWatch({ control, name: "priceNegotiableOnly" }) ?? false;
   const logisticsTransportOnlyValue =
@@ -342,6 +345,13 @@ function ContainerListingsFiltersComponent({
   const cityValue = useWatch({ control, name: "city" }) ?? "";
   const countryValue = useWatch({ control, name: "country" }) ?? "";
   const sortPresetValue = useWatch({ control, name: "sortPreset" }) ?? "newest";
+  const parsedRalColors = useMemo(
+    () =>
+      parseContainerRalColors(containerRalInputValue, {
+        ignoreIncompleteTrailingToken: true,
+      }),
+    [containerRalInputValue],
+  );
 
   const draftNonLocationFilters = useMemo<NonLocationFilters>(() => {
     const normalizedPriceMinInput = priceMinInputValue.trim();
@@ -356,6 +366,9 @@ function ContainerListingsFiltersComponent({
       containerTypes: toNormalizedArray(selectedContainerTypes),
       containerConditions: toNormalizedArray(selectedContainerConditions),
       containerFeatures: toNormalizedArray(selectedContainerFeatures),
+      containerRalColors: toNormalizedArray(
+        parsedRalColors.colors.map((color) => color.ral),
+      ),
       priceNegotiableOnly: priceNegotiableOnlyValue,
       logisticsTransportOnly: logisticsTransportOnlyValue,
       logisticsUnloadingOnly: logisticsUnloadingOnlyValue,
@@ -378,6 +391,7 @@ function ContainerListingsFiltersComponent({
     selectedContainerTypes,
     selectedContainerConditions,
     selectedContainerFeatures,
+    parsedRalColors.colors,
     priceNegotiableOnlyValue,
     logisticsTransportOnlyValue,
     logisticsUnloadingOnlyValue,
@@ -877,6 +891,19 @@ function ContainerListingsFiltersComponent({
                   <span>Certyfikacja CSC</span>
                 </label>
               </div>
+            </div>
+
+            <div className="grid gap-1 text-sm">
+              <span className="text-neutral-600">Kolory RAL</span>
+              <input
+                {...register("containerRalInput")}
+                placeholder="np. 5010, RAL 9010"
+                className={`w-full min-w-0 rounded-md border px-3 py-2 text-neutral-900 ${
+                  containerRalInputValue.trim().length > 0
+                    ? "border-sky-400 bg-sky-100/70 shadow-[0_0_0_1px_rgba(56,189,248,0.15)]"
+                    : "border-neutral-300 bg-white"
+                }`}
+              />
             </div>
 
             <button

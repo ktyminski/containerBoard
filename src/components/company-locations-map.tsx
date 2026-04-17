@@ -7,6 +7,8 @@ import { MAP_STYLE_URL } from "@/components/map-shared";
 
 type CompanyLocationMapItem = {
   addressText: string;
+  postalCode?: string;
+  country?: string;
   point: [number, number];
 };
 
@@ -26,13 +28,32 @@ function toFeatures(locations: CompanyLocationMapItem[]): GeoJSON.Feature<GeoJSO
     properties: {
       id: String(index),
       addressText: location.addressText,
+      postalCode: location.postalCode ?? "",
+      country: location.country ?? "",
     },
   }));
 }
 
-function buildPopupHtml(input: { addressText: string }): string {
-  return `<div style="font-family:sans-serif; min-width:220px; padding:10px;">
-    <div style="font-size:12px; color:#cbd5e1;">${input.addressText}</div>
+function escapeHtml(value: string): string {
+  return value
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll("\"", "&quot;")
+    .replaceAll("'", "&#39;");
+}
+
+function buildPopupHtml(input: {
+  addressText: string;
+  postalCode?: string;
+}): string {
+  const safeAddressText = escapeHtml(input.addressText);
+  const safePostalCode = escapeHtml((input.postalCode ?? "").trim());
+
+  return `<div style="font-family:sans-serif; min-width:230px; max-width:300px; padding:10px 11px;">
+    <div style="font-size:13px; line-height:1.35; color:#0f172a;">
+      ${safePostalCode ? `<strong>${safePostalCode}</strong> ` : ""}${safeAddressText}
+    </div>
   </div>`;
 }
 
@@ -89,6 +110,7 @@ export function CompanyLocationsMap({
         }
 
         const addressText = String(feature.properties?.addressText ?? "");
+        const postalCode = String(feature.properties?.postalCode ?? "");
         const coordinates = feature.geometry.coordinates as [number, number];
 
         popupRef.current?.remove();
@@ -97,7 +119,7 @@ export function CompanyLocationsMap({
           className: "company-map-popup",
         })
           .setLngLat(coordinates)
-          .setHTML(buildPopupHtml({ addressText }))
+          .setHTML(buildPopupHtml({ addressText, postalCode }))
           .addTo(map);
       });
 
@@ -173,7 +195,12 @@ export function CompanyLocationsMap({
       className: "company-map-popup",
     })
       .setLngLat(target.point)
-      .setHTML(buildPopupHtml({ addressText: target.addressText }))
+      .setHTML(
+        buildPopupHtml({
+          addressText: target.addressText,
+          postalCode: target.postalCode,
+        }),
+      )
       .addTo(map);
   }, [focusRequestId, focusedLocationIndex, locations]);
 

@@ -1,4 +1,5 @@
 import type { ContainerListingItem } from "@/lib/container-listings";
+import { parseContainerRalColors } from "@/lib/container-ral-colors";
 import {
   type AppliedFilters,
   type FiltersFormValues,
@@ -19,6 +20,7 @@ type BuildContainersApiUrlOptions = {
   favoritesOnly?: boolean;
   localFavoriteIds?: string[];
   mineOnly?: boolean;
+  companySlug?: string;
 };
 
 export function getSortParams(preset: SortPreset): SortParams {
@@ -86,6 +88,9 @@ export function buildAppliedBaseFromFormValues(
     normalizedPriceMinInput.length > 0 || normalizedPriceMaxInput.length > 0
       ? values.priceTaxMode
       : "net";
+  const parsedRalColors = parseContainerRalColors(values.containerRalInput ?? "", {
+    ignoreIncompleteTrailingToken: true,
+  });
 
   return {
     listingKind: values.listingKind,
@@ -95,6 +100,9 @@ export function buildAppliedBaseFromFormValues(
     containerTypes: toNormalizedArray(values.containerTypes),
     containerConditions: toNormalizedArray(values.containerConditions),
     containerFeatures: toNormalizedArray(values.containerFeatures),
+    containerRalColors: toNormalizedArray(
+      parsedRalColors.colors.map((color) => color.ral),
+    ),
     priceNegotiableOnly: values.priceNegotiableOnly,
     logisticsTransportOnly: values.logisticsTransportOnly,
     logisticsUnloadingOnly: values.logisticsUnloadingOnly,
@@ -119,6 +127,7 @@ export function buildContainersApiUrl({
   favoritesOnly = false,
   localFavoriteIds = [],
   mineOnly = false,
+  companySlug,
 }: BuildContainersApiUrlOptions): string {
   const params = mapView
     ? new URLSearchParams({
@@ -138,6 +147,9 @@ export function buildContainersApiUrl({
   }
   if (mineOnly) {
     params.set("mine", "1");
+  }
+  if (companySlug?.trim()) {
+    params.set("company", companySlug.trim());
   }
 
   return `/api/containers?${params.toString()}`;
@@ -206,6 +218,9 @@ function applyContainerParams(
   }
   if (appliedFilters.containerFeatures.length > 0) {
     params.set("containerFeature", appliedFilters.containerFeatures.join(","));
+  }
+  if (appliedFilters.containerRalColors.length > 0) {
+    params.set("containerRal", appliedFilters.containerRalColors.join(","));
   }
   if (appliedFilters.priceNegotiableOnly) {
     params.set("priceNegotiable", "1");

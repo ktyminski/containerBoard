@@ -110,7 +110,7 @@ export default async function MyContainersPage({
           </div>
         </div>
       </section>
-      <MyContainerListings />
+      <MyContainerListings canUseBulkImport={hasOwnedCompany} />
     </main>
   );
 }

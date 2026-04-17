@@ -35,6 +35,15 @@ function resolveMine(value: string | string[] | undefined): boolean {
   return raw === "1" || raw === "true";
 }
 
+function resolveCompanySlug(value: string | string[] | undefined): string | undefined {
+  const raw = typeof value === "string" ? value : value?.[0];
+  const trimmed = raw?.trim();
+  if (!trimmed) {
+    return undefined;
+  }
+  return trimmed.slice(0, 160);
+}
+
 function toSearchParams(
   params: Record<string, string | string[] | undefined>,
 ): URLSearchParams {
@@ -53,6 +62,7 @@ export default async function ListPage({ searchParams }: ListPageProps) {
   const initialKind = resolveKind(params.kind);
   const initialTab = resolveTab(params.tab);
   const initialMine = resolveMine(params.mine);
+  const hiddenCompanySlug = resolveCompanySlug(params.company);
   const cookieStore = await cookies();
   const isLoggedIn = Boolean(cookieStore.get(SESSION_COOKIE_NAME)?.value);
 
@@ -69,6 +79,7 @@ export default async function ListPage({ searchParams }: ListPageProps) {
         initialKind={initialKind}
         initialTab={initialTab}
         initialMine={initialMine}
+        hiddenCompanySlug={hiddenCompanySlug}
       />
     </main>
   );

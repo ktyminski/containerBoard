@@ -48,7 +48,6 @@ const DESCRIPTION_ALLOWED_TAGS = [
   "em",
   "u",
   "ul",
-  "ol",
   "li",
   "div",
 ];
@@ -71,7 +70,13 @@ function sanitizeDescriptionForDisplay(value?: string): string | undefined {
     return undefined;
   }
 
-  const sanitized = sanitizeHtml(trimmed, {
+  const normalizedListsMarkup = trimmed
+    .replace(/<ol(\s[^>]*)?>/gi, (_match, attrs: string | undefined) => {
+      return `<ul${attrs ?? ""}>`;
+    })
+    .replace(/<\/ol>/gi, "</ul>");
+
+  const sanitized = sanitizeHtml(normalizedListsMarkup, {
     allowedTags: DESCRIPTION_ALLOWED_TAGS,
     allowedAttributes: {},
   }).trim();
@@ -820,7 +825,7 @@ export async function ContainerDetailsContent({
             <h2 className="text-sm font-semibold text-neutral-800">Opis</h2>
             {sanitizedDescriptionHtml ? (
               <div
-                className="mt-3 space-y-2 text-sm text-neutral-700 [&_ol]:list-decimal [&_ol]:pl-5 [&_p]:leading-6 [&_ul]:list-disc [&_ul]:pl-5"
+                className="mt-3 space-y-2 text-sm text-neutral-700 [&_p]:leading-6 [&_ul]:list-disc [&_ul]:pl-5"
                 dangerouslySetInnerHTML={{ __html: sanitizedDescriptionHtml }}
               />
             ) : null}

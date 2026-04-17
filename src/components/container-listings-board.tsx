@@ -77,6 +77,7 @@ type ContainerListingsBoardProps = {
   initialKind?: ListingKind;
   initialTab?: "all" | "favorites";
   initialMine?: boolean;
+  hiddenCompanySlug?: string;
 };
 
 type MapFeature = {
@@ -787,6 +788,7 @@ export function ContainerListingsBoard({
   initialKind = "all",
   initialTab = "all",
   initialMine = false,
+  hiddenCompanySlug,
 }: ContainerListingsBoardProps) {
   const toast = useToast();
   const router = useRouter();
@@ -848,6 +850,7 @@ export function ContainerListingsBoard({
     containerTypes: FILTER_FORM_DEFAULTS.containerTypes,
     containerConditions: FILTER_FORM_DEFAULTS.containerConditions,
     containerFeatures: FILTER_FORM_DEFAULTS.containerFeatures,
+    containerRalColors: [],
     priceNegotiableOnly: FILTER_FORM_DEFAULTS.priceNegotiableOnly,
     logisticsTransportOnly: FILTER_FORM_DEFAULTS.logisticsTransportOnly,
     logisticsUnloadingOnly: FILTER_FORM_DEFAULTS.logisticsUnloadingOnly,
@@ -1145,8 +1148,16 @@ export function ContainerListingsBoard({
         favoritesOnly: isFavoritesTab,
         localFavoriteIds: localFavoriteIdsForApi,
         mineOnly: initialMine,
+        companySlug: hiddenCompanySlug,
       }),
-    [appliedFilters, initialMine, isFavoritesTab, localFavoriteIdsForApi, page],
+    [
+      appliedFilters,
+      hiddenCompanySlug,
+      initialMine,
+      isFavoritesTab,
+      localFavoriteIdsForApi,
+      page,
+    ],
   );
 
   const mapRequestUrl = useMemo(
@@ -1157,8 +1168,9 @@ export function ContainerListingsBoard({
         favoritesOnly: isFavoritesTab,
         localFavoriteIds: localFavoriteIdsForApi,
         mineOnly: initialMine,
+        companySlug: hiddenCompanySlug,
       }),
-    [appliedFilters, initialMine, isFavoritesTab, localFavoriteIdsForApi],
+    [appliedFilters, hiddenCompanySlug, initialMine, isFavoritesTab, localFavoriteIdsForApi],
   );
 
   useEffect(() => {
@@ -1299,6 +1311,7 @@ export function ContainerListingsBoard({
       containerTypes: [],
       containerConditions: [],
       containerFeatures: [],
+      containerRalColors: [],
       priceNegotiableOnly: false,
       logisticsTransportOnly: false,
       logisticsUnloadingOnly: false,

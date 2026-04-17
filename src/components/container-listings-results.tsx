@@ -1,7 +1,7 @@
 ﻿"use client";
 
 import Link from "next/link";
-import type { MouseEvent } from "react";
+import type { MouseEvent, ReactNode } from "react";
 import { memo } from "react";
 import type { ContainerListingItem } from "@/lib/container-listings";
 import { ContainerPhotoWithPlaceholder } from "@/components/container-photo-with-placeholder";
@@ -22,6 +22,7 @@ type ContainerListingsResultsProps = {
   total: number;
   page: number;
   totalPages: number;
+  showSummaryBar?: boolean;
   isLoading: boolean;
   error: string | null;
   activeTab: "all" | "favorites";
@@ -37,6 +38,7 @@ type ContainerListingsResultsProps = {
   detailsHrefPrefix?: string;
   detailsQueryString?: string;
   priceDisplayCurrency: PriceDisplayCurrency;
+  footerContent?: ReactNode;
 };
 
 type ListingPriceDisplay = {
@@ -549,6 +551,7 @@ function ContainerListingsResultsComponent({
   total,
   page,
   totalPages,
+  showSummaryBar = true,
   isLoading,
   error,
   activeTab,
@@ -564,6 +567,7 @@ function ContainerListingsResultsComponent({
   detailsHrefPrefix = "/containers",
   detailsQueryString,
   priceDisplayCurrency,
+  footerContent,
 }: ContainerListingsResultsProps) {
   const renderPaginationControls = (extraClassName?: string) => {
     if (totalPages <= 1) {
@@ -604,46 +608,48 @@ function ContainerListingsResultsComponent({
 
   return (
     <section className="grid content-start gap-3">
-      <div className="flex flex-wrap items-center justify-between gap-2 rounded-md border border-neutral-300 bg-neutral-50/95 p-3 shadow-sm backdrop-blur supports-[backdrop-filter]:bg-neutral-50/90">
-        <div className="flex flex-wrap items-center gap-2">
-          <p className="text-sm text-neutral-700">
-            Wyniki wyszukiwania: <span className="font-semibold">{total}</span>
-          </p>
-          {showFavoritesToggle ? (
-            <div className="ml-0 flex items-center gap-2 sm:ml-2">
-              <button
-                type="button"
-                onClick={() => {
-                  onTabChange("all");
-                }}
-                className={`rounded-md border px-3 py-1.5 text-sm font-medium transition-colors ${
-                  activeTab === "all"
-                    ? "border-sky-400 bg-sky-100 text-sky-900 shadow-[0_0_0_1px_rgba(56,189,248,0.15)]"
-                    : "border-neutral-300 bg-white text-neutral-700 hover:bg-neutral-100"
-                }`}
-              >
-                Wszystkie
-              </button>
-              <button
-                type="button"
-                onClick={() => {
-                  onTabChange("favorites");
-                }}
-                className={`rounded-md border px-3 py-1.5 text-sm font-medium transition-colors ${
-                  activeTab === "favorites"
-                    ? "border-sky-400 bg-sky-100 text-sky-900 shadow-[0_0_0_1px_rgba(56,189,248,0.15)]"
-                    : "border-neutral-300 bg-white text-neutral-700 hover:bg-neutral-100"
-                }`}
-              >
-                Ulubione
-              </button>
-            </div>
-          ) : null}
+      {showSummaryBar ? (
+        <div className="flex flex-wrap items-center justify-between gap-2 rounded-md border border-neutral-300 bg-neutral-50/95 p-3 shadow-sm backdrop-blur supports-[backdrop-filter]:bg-neutral-50/90">
+          <div className="flex flex-wrap items-center gap-2">
+            <p className="text-sm text-neutral-700">
+              Wyniki wyszukiwania: <span className="font-semibold">{total}</span>
+            </p>
+            {showFavoritesToggle ? (
+              <div className="ml-0 flex items-center gap-2 sm:ml-2">
+                <button
+                  type="button"
+                  onClick={() => {
+                    onTabChange("all");
+                  }}
+                  className={`rounded-md border px-3 py-1.5 text-sm font-medium transition-colors ${
+                    activeTab === "all"
+                      ? "border-sky-400 bg-sky-100 text-sky-900 shadow-[0_0_0_1px_rgba(56,189,248,0.15)]"
+                      : "border-neutral-300 bg-white text-neutral-700 hover:bg-neutral-100"
+                  }`}
+                >
+                  Wszystkie
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    onTabChange("favorites");
+                  }}
+                  className={`rounded-md border px-3 py-1.5 text-sm font-medium transition-colors ${
+                    activeTab === "favorites"
+                      ? "border-sky-400 bg-sky-100 text-sky-900 shadow-[0_0_0_1px_rgba(56,189,248,0.15)]"
+                      : "border-neutral-300 bg-white text-neutral-700 hover:bg-neutral-100"
+                  }`}
+                >
+                  Ulubione
+                </button>
+              </div>
+            ) : null}
+          </div>
+          <div className="flex items-center gap-4">
+            {renderPaginationControls()}
+          </div>
         </div>
-        <div className="flex items-center gap-4">
-          {renderPaginationControls()}
-        </div>
-      </div>
+      ) : null}
 
       {isLoading ? (
         <div className="rounded-md border border-neutral-300 bg-neutral-50/95 p-5 shadow-sm">
@@ -663,72 +669,87 @@ function ContainerListingsResultsComponent({
 
           {items.length === 0 ? (
             <div className="flex min-h-[220px] items-center justify-center px-4 text-center">
-              <p className="text-xl font-medium text-neutral-400 sm:text-2xl">
-                Brak kontenerow dla aktualnych filtrow.
-              </p>
+              <div className="flex max-w-2xl flex-col items-center gap-4">
+                <p className="text-xl font-medium text-neutral-500 sm:text-2xl">
+                  <span className="block">
+                    Nie znalazles kontenera ktorego szukasz?
+                  </span>
+                  <span className="mt-1 block">
+                    Dodaj ogloszenie, a my zajmiemy sie reszta! 🚛📦
+                  </span>
+                </p>
+                <Link
+                  href="/containers/new?intent=buy"
+                  className={`inline-flex h-10 items-center gap-2 rounded-md px-4 text-sm font-semibold ${darkBlueCtaClass}`}
+                >
+                  Szukam kontenera +
+                </Link>
+              </div>
             </div>
           ) : null}
 
-          <ul className="w-full space-y-3">
-            {items.map((item, index) => {
-              const priceDisplay = getListingPriceDisplay(
-                item,
-                priceDisplayCurrency,
-              );
-              const expiresInLabel = getExpiresInLabel(item.expiresAt);
-              const availableFromLabel = getAvailableFromLabel(item);
-              const fallbackTitle = getContainerShortLabel(item.container);
-              const logisticsSummaryLabels = getLogisticsSummaryLabels(item);
-              const logisticsComment = item.logisticsComment?.trim();
-              const logisticsTooltipText =
-                logisticsComment && logisticsComment.length > 0
-                  ? truncateTooltipText(logisticsComment)
-                  : "Skontaktuj sie aby poznac szczegoly";
-              const showLogisticsTooltip = logisticsSummaryLabels.length > 0;
-              const detailsHref =
-                detailsQueryString && detailsQueryString.length > 0
-                  ? `${detailsHrefPrefix}/${item.id}?${detailsQueryString}`
-                  : `${detailsHrefPrefix}/${item.id}`;
-              const containerFeatureLabels = item.container.features
-                .map((feature) => CONTAINER_FEATURE_LABEL[feature])
-                .filter(
-                  (label) =>
-                    typeof label === "string" && label.trim().length > 0,
-                );
-              const containerMetaParts = [
-                ...(typeof item.productionYear === "number"
-                  ? [String(item.productionYear)]
-                  : []),
-                ...containerFeatureLabels,
-              ];
-              const containerColors = item.containerColors ?? [];
-              const shouldPrioritizeImage = page === 1 && index === 0;
+          {items.length > 0 ? (
+            <>
+              <ul className="w-full space-y-3">
+                {items.map((item, index) => {
+                  const priceDisplay = getListingPriceDisplay(
+                    item,
+                    priceDisplayCurrency,
+                  );
+                  const expiresInLabel = getExpiresInLabel(item.expiresAt);
+                  const availableFromLabel = getAvailableFromLabel(item);
+                  const fallbackTitle = getContainerShortLabel(item.container);
+                  const logisticsSummaryLabels = getLogisticsSummaryLabels(item);
+                  const logisticsComment = item.logisticsComment?.trim();
+                  const logisticsTooltipText =
+                    logisticsComment && logisticsComment.length > 0
+                      ? truncateTooltipText(logisticsComment)
+                      : "Skontaktuj sie aby poznac szczegoly";
+                  const showLogisticsTooltip = logisticsSummaryLabels.length > 0;
+                  const detailsHref =
+                    detailsQueryString && detailsQueryString.length > 0
+                      ? `${detailsHrefPrefix}/${item.id}?${detailsQueryString}`
+                      : `${detailsHrefPrefix}/${item.id}`;
+                  const containerFeatureLabels = item.container.features
+                    .map((feature) => CONTAINER_FEATURE_LABEL[feature])
+                    .filter(
+                      (label) =>
+                        typeof label === "string" && label.trim().length > 0,
+                    );
+                  const containerMetaParts = [
+                    ...(typeof item.productionYear === "number"
+                      ? [String(item.productionYear)]
+                      : []),
+                    ...containerFeatureLabels,
+                  ];
+                  const containerColors = item.containerColors ?? [];
+                  const shouldPrioritizeImage = page === 1 && index === 0;
 
-              return (
-                <li
-                  key={item.id}
-                  className="w-full rounded-md border border-neutral-200 bg-white p-4 shadow-sm transition-colors duration-150 hover:border-sky-100 hover:bg-sky-50/60"
-                >
-                  <div className="flex flex-col gap-4 sm:flex-row">
-                    <div className="relative aspect-square w-full shrink-0 sm:w-44">
-                      <div className="absolute inset-0 overflow-hidden rounded-md border border-neutral-200 bg-neutral-100">
-                        <ContainerPhotoWithPlaceholder
-                          src={getContainerPreviewSrc(item)}
-                          alt=""
-                          fill
-                          className={
-                            item.photoUrls && item.photoUrls.length > 0
-                              ? "object-cover"
-                              : "object-contain p-1"
-                          }
-                          sizes="(max-width: 640px) 100vw, 176px"
-                          priority={shouldPrioritizeImage}
-                        />
-                      </div>
-                    </div>
-                    <div className="min-w-0 flex-1">
-                      <div className="flex min-w-0 items-start gap-3">
-                        <div className="w-0 flex-1">
+                  return (
+                    <li
+                      key={item.id}
+                      className="w-full rounded-md border border-neutral-200 bg-white p-4 shadow-sm transition-colors duration-150 hover:border-sky-100 hover:bg-sky-50/60"
+                    >
+                      <div className="flex flex-col gap-4 sm:flex-row">
+                        <div className="relative aspect-square w-full shrink-0 sm:w-44">
+                          <div className="absolute inset-0 overflow-hidden rounded-md border border-neutral-200 bg-neutral-100">
+                            <ContainerPhotoWithPlaceholder
+                              src={getContainerPreviewSrc(item)}
+                              alt=""
+                              fill
+                              className={
+                                item.photoUrls && item.photoUrls.length > 0
+                                  ? "object-cover"
+                                  : "object-contain p-1"
+                              }
+                              sizes="(max-width: 640px) 100vw, 176px"
+                              priority={shouldPrioritizeImage}
+                            />
+                          </div>
+                        </div>
+                        <div className="min-w-0 flex-1">
+                          <div className="flex min-w-0 items-start gap-3">
+                            <div className="w-0 flex-1">
                           {item.companySlug ? (
                             <span className="inline-flex min-w-0 items-center gap-1">
                               <Link
@@ -969,16 +990,19 @@ function ContainerListingsResultsComponent({
                           >
                             Szczegoly i zapytanie
                           </Link>
+                          </div>
                         </div>
                       </div>
                     </div>
-                  </div>
-                </li>
-              );
-            })}
-          </ul>
+                    </li>
+                  );
+                })}
+              </ul>
 
-          {renderPaginationControls("mt-4")}
+              {renderPaginationControls("mt-4")}
+              {footerContent ? <div className="mt-3">{footerContent}</div> : null}
+            </>
+          ) : null}
         </div>
       ) : null}
     </section>

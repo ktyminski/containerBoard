@@ -54,7 +54,7 @@ import { logError } from "@/lib/server-logger";
 
 export const runtime = "nodejs";
 const DESCRIPTION_MAX_TEXT_LENGTH = 1000;
-const DESCRIPTION_ALLOWED_TAGS = ["p", "br", "strong", "em", "u", "ul", "ol", "li", "div"];
+const DESCRIPTION_ALLOWED_TAGS = ["p", "br", "strong", "em", "u", "ul", "li", "div"];
 const MAX_LISTING_PHOTO_COUNT = 4;
 const MAX_LISTING_PHOTO_BYTES = 5 * 1024 * 1024;
 
@@ -173,6 +173,7 @@ const updateSchema = z.object({
   logisticsComment: z.string().trim().max(600).optional(),
   hasCscPlate: z.coerce.boolean().optional(),
   hasCscCertification: z.coerce.boolean().optional(),
+  hasBranding: z.coerce.boolean().optional(),
   hasWarranty: z.coerce.boolean().optional(),
   cscValidToMonth: z.coerce.number().int().min(1).max(12).optional(),
   cscValidToYear: z.coerce.number().int().min(1900).max(2100).optional(),
@@ -254,7 +255,13 @@ function normalizeOptionalDescriptionHtml(value?: string): string | undefined {
     return undefined;
   }
 
-  const sanitized = sanitizeHtml(trimmed, {
+  const normalizedListsMarkup = trimmed
+    .replace(/<ol(\s[^>]*)?>/gi, (_match, attrs: string | undefined) => {
+      return `<ul${attrs ?? ""}>`;
+    })
+    .replace(/<\/ol>/gi, "</ul>");
+
+  const sanitized = sanitizeHtml(normalizedListsMarkup, {
     allowedTags: DESCRIPTION_ALLOWED_TAGS,
     allowedAttributes: {},
   }).trim();
@@ -788,6 +795,7 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
               ...(normalizedLogisticsComment ? { logisticsComment: normalizedLogisticsComment } : {}),
               hasCscPlate: updateParsed.data.hasCscPlate === true,
               hasCscCertification: updateParsed.data.hasCscCertification === true,
+              hasBranding: updateParsed.data.hasBranding === true,
               hasWarranty: updateParsed.data.hasWarranty === true,
               ...(normalizedCscValidToMonth !== undefined && normalizedCscValidToYear !== undefined
                 ? {

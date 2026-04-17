@@ -163,7 +163,7 @@ export function UserAccountMenu({
           {adminPanelLabel && adminPanelHref ? (
             <Link
               href={adminPanelHref}
-              className="whitespace-nowrap rounded-md px-3 py-2 text-left text-sm text-[#a7e0ff] transition hover:bg-[#103969] md:hidden"
+              className="whitespace-nowrap rounded-md px-3 py-2 text-left text-sm text-[#a7e0ff] transition hover:bg-[#103969]"
               onClick={() => {
                 setIsOpen(false);
               }}

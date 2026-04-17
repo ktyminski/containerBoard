@@ -5,8 +5,8 @@ import { cache } from "react";
 import { cookies } from "next/headers";
 import { notFound } from "next/navigation";
 import { CompanyDeletionRequestButton } from "@/components/company-deletion-request-button";
+import { CompanyProfileListings } from "@/components/company-profile-listings";
 import { CompanyLocationsAndBranches } from "@/components/company-locations-and-branches";
-import { CompanyOwnershipClaimButton } from "@/components/company-ownership-claim-button";
 import { SmartBackButton } from "@/components/smart-back-button";
 import { FacebookIcon, InstagramIcon, LinkedInIcon } from "@/components/social-icons";
 import { SESSION_COOKIE_NAME } from "@/lib/auth-session";
@@ -72,7 +72,6 @@ const COMPANY_PAGE_PROJECTION = {
   "locations.photos.size": 1,
   "locations.photos.filename": 1,
 } as const;
-
 const getCompanyBySlug = cache(async (slug: string) => {
   const companies = await getCompaniesCollection();
   return companies.findOne(
@@ -214,6 +213,8 @@ export default async function CompanyDetailsPage({
           parts: location.addressParts,
           fallbackLabel: location.addressText,
         }),
+        postalCode: location.addressParts?.postalCode?.trim() ?? "",
+        country: location.addressParts?.country?.trim() ?? "",
         phone: (location.phone ?? company.phone)?.trim() || undefined,
         email: (location.email ?? company.email)?.trim() || undefined,
         point: {
@@ -231,6 +232,10 @@ export default async function CompanyDetailsPage({
       };
     })
     .filter((location): location is NonNullable<typeof location> => location !== null);
+  const allCompanyListingsHref = withLang(
+    `/list?company=${encodeURIComponent(company.slug)}`,
+    locale,
+  );
 
   const companyUrl = getLocalizedCanonical(`/companies/${company.slug}`, locale);
   const companyPhone = company.phone?.trim() || undefined;
@@ -298,7 +303,7 @@ export default async function CompanyDetailsPage({
             </Link>
           ) : null}
         </div>
-        <section className="overflow-hidden rounded-xl border border-neutral-300 bg-white shadow-sm">
+        <section className="overflow-hidden rounded-xl border border-neutral-300 bg-neutral-100/95 shadow-sm">
           <div className="relative aspect-[4/1] w-full overflow-hidden bg-neutral-300">
             {backgroundUrl ? (
               <Image
@@ -539,17 +544,40 @@ export default async function CompanyDetailsPage({
                 showMoreBranches: messages.companyDetails.showMoreBranches,
               }}
             />
-
-            {!company.createdByUserId ? (
-              <section className="border-t border-neutral-200 pt-5">
-                <CompanyOwnershipClaimButton
-                  companyId={companyId}
-                  locale={locale}
-                  messages={messages.companyDetails.ownershipClaim}
-                />
-              </section>
-            ) : null}
           </div>
+        </section>
+        <section className="grid gap-3">
+          <div className="flex flex-wrap items-center justify-between gap-2 px-1">
+            <h2 className="text-lg font-semibold text-neutral-900">
+              Ostatnie ogloszenia firmy
+            </h2>
+            <Link
+              href={allCompanyListingsHref}
+              className="inline-flex items-center gap-1 text-sm font-medium text-neutral-500 transition-colors hover:text-neutral-700"
+            >
+              <span>Zobacz wszystkie</span>
+              <svg
+                viewBox="0 0 20 20"
+                fill="none"
+                className="h-4 w-4"
+                aria-hidden="true"
+              >
+                <path
+                  d="M7 5l5 5-5 5"
+                  stroke="currentColor"
+                  strokeWidth="1.8"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                />
+              </svg>
+            </Link>
+          </div>
+          <CompanyProfileListings
+            companySlug={company.slug}
+            isLoggedIn={Boolean(currentUser?._id)}
+            limit={3}
+            allListingsHref={allCompanyListingsHref}
+          />
         </section>
         {isOwner ? (
           <div className="flex justify-end px-1">

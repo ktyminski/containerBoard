@@ -50,14 +50,6 @@ export async function AuthNav({ locale, roleMessages }: AuthNavProps) {
 
   return (
     <div className="flex min-w-0 flex-nowrap items-center justify-end gap-2 text-sm whitespace-nowrap">
-      {user.role === USER_ROLE.ADMIN ? (
-        <Link
-          href={withLang("/admin", locale)}
-          className="hidden h-9 shrink-0 items-center rounded-md border border-[#46a4e0] bg-[#093161]/80 px-3 text-sm text-[#a7e0ff] whitespace-nowrap transition hover:border-[#74c1ec] hover:bg-[#0f3f75] md:inline-flex"
-        >
-          Admin
-        </Link>
-      ) : null}
       <Link
         href={myListingsHref}
         className="hidden h-9 shrink-0 items-center rounded-md border border-[#2f639a] bg-[#082650]/80 px-3 text-sm text-[#dbeafe] whitespace-nowrap transition hover:border-[#4e86c3] hover:bg-[#0c3466] md:inline-flex"

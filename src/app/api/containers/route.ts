@@ -67,7 +67,7 @@ const MAX_LOCAL_FAVORITE_IDS = 2_000;
 const DESCRIPTION_MAX_TEXT_LENGTH = 1000;
 const MAX_LISTING_PHOTO_COUNT = 4;
 const MAX_LISTING_PHOTO_BYTES = 5 * 1024 * 1024;
-const DESCRIPTION_ALLOWED_TAGS = ["p", "br", "strong", "em", "u", "ul", "ol", "li", "div"];
+const DESCRIPTION_ALLOWED_TAGS = ["p", "br", "strong", "em", "u", "ul", "li", "div"];
 
 const locationAddressPartsSchema = z.object({
   street: z.string().trim().min(1).max(120).optional(),
@@ -147,12 +147,14 @@ const querySchema = z.object({
   page: z.coerce.number().int().min(1).default(1),
   pageSize: z.coerce.number().int().min(1).max(500).default(20),
   q: z.string().trim().min(1).max(120).optional(),
+  company: z.string().trim().min(1).max(160).optional(),
   type: listingTypeInputSchema.optional(),
   containerSize: z.string().trim().max(120).optional(),
   containerHeight: z.string().trim().max(160).optional(),
   containerType: z.string().trim().max(240).optional(),
   containerFeature: z.string().trim().max(320).optional(),
   containerCondition: z.string().trim().max(240).optional(),
+  containerRal: z.string().trim().max(2_000).optional(),
   priceMin: z.string().trim().max(32).optional(),
   priceMax: z.string().trim().max(32).optional(),
   priceCurrency: z.enum(PRICE_CURRENCIES).optional(),
@@ -213,6 +215,17 @@ function parseEnumList<T extends string>(value: string | undefined, allowed: rea
         .filter((item): item is T => allowedSet.has(item as T)),
     ),
   );
+}
+
+function parseRalCodesList(value: string | undefined): string[] {
+  if (!value) {
+    return [];
+  }
+
+  const parsed = parseContainerRalColors(value, {
+    ignoreIncompleteTrailingToken: true,
+  });
+  return parsed.colors.map((color) => color.ral);
 }
 
 function parseContainerSizeList(value: string | undefined): {
@@ -526,6 +539,7 @@ const createSchema = z.object({
   logisticsComment: z.string().trim().max(600).optional(),
   hasCscPlate: z.coerce.boolean().optional(),
   hasCscCertification: z.coerce.boolean().optional(),
+  hasBranding: z.coerce.boolean().optional(),
   hasWarranty: z.coerce.boolean().optional(),
   cscValidToMonth: z.coerce.number().int().min(1).max(12).optional(),
   cscValidToYear: z.coerce.number().int().min(1900).max(2100).optional(),
@@ -594,7 +608,13 @@ function normalizeOptionalDescriptionHtml(value?: string): string | undefined {
     return undefined;
   }
 
-  const sanitized = sanitizeHtml(trimmed, {
+  const normalizedListsMarkup = trimmed
+    .replace(/<ol(\s[^>]*)?>/gi, (_match, attrs: string | undefined) => {
+      return `<ul${attrs ?? ""}>`;
+    })
+    .replace(/<\/ol>/gi, "</ul>");
+
+  const sanitized = sanitizeHtml(normalizedListsMarkup, {
     allowedTags: DESCRIPTION_ALLOWED_TAGS,
     allowedAttributes: {},
   }).trim();
@@ -738,12 +758,14 @@ export async function GET(request: NextRequest) {
       page,
       pageSize,
       q,
+      company,
       type,
       containerSize,
       containerHeight,
       containerType,
       containerFeature,
       containerCondition,
+      containerRal,
       priceMin,
       priceMax,
       priceCurrency,
@@ -775,6 +797,7 @@ export async function GET(request: NextRequest) {
     const containerTypes = parseEnumList(containerType, CONTAINER_TYPES);
     const containerFeatures = parseEnumList(containerFeature, CONTAINER_FEATURES);
     const containerConditions = parseEnumList(containerCondition, CONTAINER_CONDITIONS);
+    const containerRalColors = parseRalCodesList(containerRal);
     const parsedPriceMin = parseOptionalNumber(priceMin);
     const parsedPriceMax = parseOptionalNumber(priceMax);
     const parsedProductionYear = parseOptionalYear(productionYear);
@@ -817,16 +840,36 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
+    let companyFilterSlug: string | undefined;
+    let companyFilterName: string | undefined;
+    if (company?.trim()) {
+      const companies = await getCompaniesCollection();
+      const companyRecord = await companies.findOne(
+        { slug: company.trim(), isBlocked: { $ne: true } },
+        { projection: { slug: 1, name: 1 } },
+      );
+      if (companyRecord?.slug?.trim()) {
+        companyFilterSlug = companyRecord.slug.trim();
+        companyFilterName = companyRecord.name?.trim() || undefined;
+      } else {
+        companyFilterSlug = "__no_company_match__";
+      }
+    }
+
     const includeOnlyPublic = !mine;
     const filter = buildContainerListingsFilter({
       q,
       type,
+      companySlug: companyFilterSlug,
+      companyName: companyFilterName,
       containerSizes: containerSizes.length > 0 ? containerSizes : undefined,
       includeCustomContainerSize: includeCustomSize,
       containerHeights: containerHeights.length > 0 ? containerHeights : undefined,
       containerTypes: containerTypes.length > 0 ? containerTypes : undefined,
       containerFeatures: containerFeatures.length > 0 ? containerFeatures : undefined,
       containerConditions: containerConditions.length > 0 ? containerConditions : undefined,
+      containerRalColors:
+        containerRalColors.length > 0 ? containerRalColors : undefined,
       priceMin: parsedPriceMin,
       priceMax: parsedPriceMax,
       priceCurrency,
@@ -1367,6 +1410,7 @@ export async function POST(request: NextRequest) {
         ...(normalizedLogisticsComment ? { logisticsComment: normalizedLogisticsComment } : {}),
         hasCscPlate: listing.hasCscPlate === true,
         hasCscCertification: listing.hasCscCertification === true,
+        hasBranding: listing.hasBranding === true,
         hasWarranty: listing.hasWarranty === true,
         ...(normalizedCscValidToMonth !== undefined && normalizedCscValidToYear !== undefined
           ? {
