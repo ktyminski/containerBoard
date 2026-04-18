@@ -848,6 +848,10 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
             expiresAt: getDefaultListingExpiration(now),
             updatedAt: now,
           },
+          $unset: {
+            expiryReminder7dSentAt: "",
+            expiryReminder2dSentAt: "",
+          },
         },
       );
 
@@ -870,10 +874,19 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
         patch.expiresAt = getDefaultListingExpiration(now);
       }
 
-      await listings.updateOne(
-        { _id: listingId },
-        { $set: patch },
-      );
+      await listings.updateOne({
+        _id: listingId,
+      }, {
+        $set: patch,
+        ...(patch.status === LISTING_STATUS.ACTIVE
+          ? {
+              $unset: {
+                expiryReminder7dSentAt: "",
+                expiryReminder2dSentAt: "",
+              },
+            }
+          : {}),
+      });
 
       return NextResponse.json({ ok: true });
     }

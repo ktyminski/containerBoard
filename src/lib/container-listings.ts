@@ -31,7 +31,9 @@ import {
 } from "@/lib/container-listing-types";
 import { escapeRegexPattern } from "@/lib/escape-regex-pattern";
 
-export const LISTING_TTL_DAYS = 14;
+export const LISTING_TTL_DAYS = 30;
+export const LISTING_REMINDER_FIRST_DAYS = 7;
+export const LISTING_REMINDER_FINAL_DAYS = 2;
 
 type LegacyContainerTypeCode =
   | "20DV"
@@ -141,6 +143,8 @@ export type ContainerListingDocument = {
   createdAt: Date;
   updatedAt: Date;
   expiresAt: Date;
+  expiryReminder7dSentAt?: Date;
+  expiryReminder2dSentAt?: Date;
 };
 
 export type ContainerListingImageAsset = {
@@ -384,6 +388,12 @@ export async function ensureContainerListingsIndexes(): Promise<void> {
       const favorites = await getContainerListingFavoritesCollection();
 
       await listings.createIndex({ status: 1, expiresAt: 1, createdAt: -1 });
+      await listings.createIndex({
+        status: 1,
+        expiresAt: 1,
+        expiryReminder7dSentAt: 1,
+        expiryReminder2dSentAt: 1,
+      });
       await listings.createIndex({ createdByUserId: 1, createdAt: -1 });
       await listings.createIndex({ type: 1, "container.type": 1, createdAt: -1 });
       await listings.createIndex({ type: 1, containerType: 1, createdAt: -1 });

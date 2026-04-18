@@ -5,6 +5,7 @@ import {
   buildClaimDecisionMail,
   buildClaimSubmittedMail,
   buildEmailVerificationMail,
+  buildListingExpiryReminderMail,
   buildOfferPublishedMail,
   buildPasswordResetMail,
   buildWelcomeMail,
@@ -286,6 +287,34 @@ export async function sendConciergeStockUploadNotificationEmail(input: {
     fileUrl: input.fileUrl,
     note: input.note,
     requestedAtIso: input.requestedAtIso,
+  });
+
+  return sendMail({
+    to: input.to,
+    subject: template.subject,
+    text: template.text,
+    html: template.html,
+  });
+}
+
+export async function sendListingExpiryReminderEmail(input: {
+  to: string;
+  name?: string;
+  companyName: string;
+  quantity: number;
+  expiresAtIso: string;
+  reminderDays: number;
+  manageUrl: string;
+  editUrl: string;
+}): Promise<SendMailResult> {
+  const template = buildListingExpiryReminderMail({
+    name: input.name,
+    companyName: input.companyName,
+    quantity: input.quantity,
+    expiresAtIso: input.expiresAtIso,
+    reminderDays: input.reminderDays,
+    manageUrl: input.manageUrl,
+    editUrl: input.editUrl,
   });
 
   return sendMail({

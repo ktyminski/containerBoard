@@ -49,6 +49,14 @@ export const runtime = "nodejs";
 
 const MAX_BULK_ROWS = 250;
 const MAX_CSV_CHARS = 1_000_000;
+const CONTAINER_FEATURE_SLOT_KEYS = [
+  "container_feature_1",
+  "container_feature_2",
+  "container_feature_3",
+  "container_feature_4",
+  "container_feature_5",
+  "container_feature_6",
+] as const;
 
 type BulkRowFailure = {
   rowNumber: number;
@@ -113,6 +121,24 @@ const HEADER_ALIASES: Record<string, string> = {
   container_features: "container_features",
   features: "container_features",
   cechy: "container_features",
+  container_feature_1: "container_feature_1",
+  container_feature_2: "container_feature_2",
+  container_feature_3: "container_feature_3",
+  container_feature_4: "container_feature_4",
+  container_feature_5: "container_feature_5",
+  container_feature_6: "container_feature_6",
+  feature_1: "container_feature_1",
+  feature_2: "container_feature_2",
+  feature_3: "container_feature_3",
+  feature_4: "container_feature_4",
+  feature_5: "container_feature_5",
+  feature_6: "container_feature_6",
+  cecha_1: "container_feature_1",
+  cecha_2: "container_feature_2",
+  cecha_3: "container_feature_3",
+  cecha_4: "container_feature_4",
+  cecha_5: "container_feature_5",
+  cecha_6: "container_feature_6",
   quantity: "quantity",
   ilosc: "quantity",
   location_address: "location_address",
@@ -569,7 +595,15 @@ function parseBulkRow(input: {
   const logisticsUnloadingAvailable =
     parseBooleanFlag(get("logistics_unloading_available")) === true || logisticsUnloadingIncluded;
 
-  const containerFeatures = splitMultiValueField(get("container_features"))
+  const parsedFeatureSlots = CONTAINER_FEATURE_SLOT_KEYS.map((key) =>
+    normalizeOptionalString(get(key)),
+  )
+    .filter((feature): feature is string => Boolean(feature))
+    .flatMap((feature) => splitMultiValueField(feature));
+  const containerFeatures = [
+    ...splitMultiValueField(get("container_features")),
+    ...parsedFeatureSlots,
+  ]
     .map((feature) => feature.toLowerCase())
     .filter((feature): feature is ContainerFeature =>
       CONTAINER_FEATURES.includes(feature as ContainerFeature),

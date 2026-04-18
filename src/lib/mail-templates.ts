@@ -450,3 +450,63 @@ export function buildConciergeStockUploadMail(input: {
   };
 }
 
+export function buildListingExpiryReminderMail(input: {
+  name?: string;
+  companyName: string;
+  quantity: number;
+  expiresAtIso: string;
+  reminderDays: number;
+  manageUrl: string;
+  editUrl: string;
+}): MailTemplateContent {
+  const intro = greeting(input.name);
+  const expiresAt = new Date(input.expiresAtIso);
+  const expiresAtLabel = Number.isFinite(expiresAt.getTime())
+    ? expiresAt.toLocaleDateString("pl-PL")
+    : input.expiresAtIso;
+  const subject =
+    input.reminderDays <= 2
+      ? "Ostatnie przypomnienie: ogloszenie wygasa za 2 dni"
+      : "Przypomnienie: ogloszenie wygasa za 7 dni";
+
+  const textSections = [
+    `Twoje ogloszenie (${input.companyName}) wygasa: ${expiresAtLabel}.`,
+    `Aktualna ilosc kontenerow: ${input.quantity}.`,
+    "Przed przedluzeniem sprawdz, czy ilosc i cena sa nadal aktualne.",
+    `Przejdz do moich kontenerow: ${input.manageUrl}`,
+    `Jesli cos sie zmienilo, edytuj ogloszenie: ${input.editUrl}`,
+  ];
+
+  const htmlSections =
+    htmlParagraphRaw(
+      `Twoje ogloszenie (<strong>${escapeHtml(input.companyName)}</strong>) wygasa: <strong>${escapeHtml(expiresAtLabel)}</strong>.`,
+    ) +
+    htmlParagraphRaw(
+      `Aktualna ilosc kontenerow: <strong>${Math.max(1, Math.trunc(input.quantity))}</strong>.`,
+    ) +
+    htmlParagraph(
+      "Przed przedluzeniem sprawdz, czy ilosc i cena sa nadal aktualne.",
+    ) +
+    htmlButton(input.manageUrl, "Przejdz do moich kontenerow") +
+    htmlParagraphRaw(
+      `Jesli cos sie zmienilo, przejdz do edycji ogloszenia:<br/><a href="${escapeHtml(input.editUrl)}" style="color:${MAIL_COLORS.link};text-decoration:underline;word-break:break-all;">${escapeHtml(input.editUrl)}</a>`,
+    );
+
+  return {
+    subject,
+    text: renderTextLayout({
+      intro,
+      sections: textSections,
+    }),
+    html: renderHtmlLayout({
+      preheader:
+        input.reminderDays <= 2
+          ? "Ostatnie przypomnienie o wygasaniu ogloszenia."
+          : "Przypomnienie o wygasaniu ogloszenia.",
+      title: subject,
+      intro,
+      contentHtml: htmlSections,
+    }),
+  };
+}
+

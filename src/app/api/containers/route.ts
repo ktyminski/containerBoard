@@ -334,6 +334,23 @@ function getPriceSortValueExpression(sortPriceField: string): Record<string, unk
   };
 }
 
+function getPriceMissingSortExpression(sortPriceField: string): Record<string, unknown> {
+  return {
+    $cond: [
+      {
+        $eq: [
+          {
+            $ifNull: [`$${sortPriceField}`, null],
+          },
+          null,
+        ],
+      },
+      1,
+      0,
+    ],
+  };
+}
+
 function getLocationBoundsFromRadius(input: {
   lat: number;
   lng: number;
@@ -777,6 +794,8 @@ export async function GET(request: NextRequest) {
     const containerRalColors = parseRalCodesList(containerRal);
     const parsedPriceMin = parseOptionalNumber(priceMin);
     const parsedPriceMax = parseOptionalNumber(priceMax);
+    const hasPriceRangeFilter =
+      typeof parsedPriceMin === "number" || typeof parsedPriceMax === "number";
     const parsedProductionYear = parseOptionalYear(productionYear);
     const parsedPriceNegotiable = parseBooleanFlag(priceNegotiable);
     const parsedLogisticsTransport = parseBooleanFlag(logisticsTransport);
@@ -787,7 +806,7 @@ export async function GET(request: NextRequest) {
       localFavoriteIds,
       MAX_LOCAL_FAVORITE_IDS,
     );
-    if ((parsedPriceMin !== undefined || parsedPriceMax !== undefined) && !priceCurrency) {
+    if (hasPriceRangeFilter && !priceCurrency) {
       return NextResponse.json(
         { error: "priceCurrency is required when filtering by price range" },
         { status: 400 },
@@ -849,7 +868,7 @@ export async function GET(request: NextRequest) {
         containerRalColors.length > 0 ? containerRalColors : undefined,
       priceMin: parsedPriceMin,
       priceMax: parsedPriceMax,
-      priceCurrency,
+      priceCurrency: hasPriceRangeFilter ? priceCurrency : undefined,
       priceTaxMode,
       productionYear: parsedProductionYear,
       priceNegotiable: parsedPriceNegotiable,
@@ -985,12 +1004,21 @@ export async function GET(request: NextRequest) {
                 { $match: typedFilter },
                 {
                   $addFields: {
+                    __sortPriceMissing: getPriceMissingSortExpression(
+                      getPriceNetFieldForCurrency(priceCurrency ?? "PLN"),
+                    ),
                     __sortPriceValue: getPriceSortValueExpression(
                       getPriceNetFieldForCurrency(priceCurrency ?? "PLN"),
                     ),
                   },
                 },
-                { $sort: { __sortPriceValue: sortDirection, createdAt: -1 } },
+                {
+                  $sort: {
+                    __sortPriceMissing: 1,
+                    __sortPriceValue: sortDirection,
+                    createdAt: -1,
+                  },
+                },
                 { $limit: all ? MAX_MAP_POINTS : pageSize },
                 {
                   $project: {
@@ -1054,15 +1082,24 @@ export async function GET(request: NextRequest) {
               { $match: typedFilter },
               {
                 $addFields: {
+                  __sortPriceMissing: getPriceMissingSortExpression(
+                    getPriceNetFieldForCurrency(priceCurrency ?? "PLN"),
+                  ),
                   __sortPriceValue: getPriceSortValueExpression(
                     getPriceNetFieldForCurrency(priceCurrency ?? "PLN"),
                   ),
                 },
               },
-              { $sort: { __sortPriceValue: sortDirection, createdAt: -1 } },
+              {
+                $sort: {
+                  __sortPriceMissing: 1,
+                  __sortPriceValue: sortDirection,
+                  createdAt: -1,
+                },
+              },
               { $skip: skip },
               { $limit: pageSize },
-              { $project: { __sortPriceValue: 0 } },
+              { $project: { __sortPriceMissing: 0, __sortPriceValue: 0 } },
             ])
             .toArray()
         : await listings

@@ -32,6 +32,7 @@ import {
   CONTAINER_FEATURE_LABEL,
   PRICE_CURRENCY_LABEL,
   getContainerShortLabel,
+  type ContainerCondition,
   type ListingType,
 } from "@/lib/container-listing-types";
 
@@ -270,12 +271,20 @@ function buildMapPopupListNode(
     const titleLink = document.createElement("a");
     titleLink.className = "company-map-popup-card__name";
     titleLink.href = detailsHref;
-    titleLink.textContent = `${getContainerShortLabel(item.container)} - ${CONTAINER_CONDITION_LABEL[item.container.condition]}`;
     titleLink.style.flex = "1 1 auto";
     titleLink.style.minWidth = "0";
     titleLink.style.overflow = "hidden";
     titleLink.style.textOverflow = "ellipsis";
     titleLink.style.whiteSpace = "nowrap";
+    const titleBase = document.createElement("span");
+    titleBase.textContent = getContainerShortLabel(item.container);
+    const titleSeparator = document.createElement("span");
+    titleSeparator.textContent = " | ";
+    titleSeparator.style.color = "#94a3b8";
+    const titleCondition = document.createElement("span");
+    titleCondition.textContent = CONTAINER_CONDITION_LABEL[item.container.condition];
+    titleCondition.style.color = getPopupConditionColor(item.container.condition);
+    titleLink.append(titleBase, titleSeparator, titleCondition);
 
     const priceDisplay = getPopupPriceDisplay(item);
     if (priceDisplay) {
@@ -382,6 +391,22 @@ function getPopupPriceDisplay(item: ContainerListingItem):
   }
 
   return undefined;
+}
+
+function getPopupConditionColor(condition: ContainerCondition): string {
+  if (condition === "new") {
+    return "#1e3a8a";
+  }
+  if (condition === "one_trip") {
+    return "#115e59";
+  }
+  if (condition === "cargo_worthy") {
+    return "#065f46";
+  }
+  if (condition === "wind_water_tight") {
+    return "#3f6212";
+  }
+  return "#854d0e";
 }
 
 function getPopupLocationLabel(

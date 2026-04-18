@@ -3,6 +3,7 @@ import Link from "next/link";
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { MyContainerListings } from "@/components/my-container-listings";
+import { NoCompanyBenefitsBanner } from "@/components/no-company-benefits-banner";
 import { CompanyDeletionRequestButton } from "@/components/company-deletion-request-button";
 import { SESSION_COOKIE_NAME } from "@/lib/auth-session";
 import { getCurrentUserFromToken } from "@/lib/auth-user";
@@ -67,12 +68,6 @@ export default async function MyContainersPage({
                 ? `Moja firma - ${ownedCompany.name}`
                 : "Moja firma"}
             </h2>
-            {!hasOwnedCompany ? (
-              <p className="mt-1 text-sm text-neutral-700">
-                Nie masz jeszcze firmy. Dodaj firme, aby uzupelnic profil i
-                zarzadzac wizytowka.
-              </p>
-            ) : null}
           </div>
           <div className="ml-auto flex flex-wrap items-center justify-end gap-2">
             {hasOwnedCompany && ownedCompany?.slug ? (
@@ -99,16 +94,11 @@ export default async function MyContainersPage({
                 ) : null}
               </>
             ) : null}
-            {!hasOwnedCompany ? (
-              <Link
-                href="/companies/new"
-                className="rounded-md border border-[#2f639a] bg-[linear-gradient(180deg,#082650_0%,#0c3466_100%)] px-3 py-2 text-sm font-medium text-[#e2efff] shadow-sm transition hover:border-[#67c7ff] hover:text-white"
-              >
-                Dodaj firme +
-              </Link>
-            ) : null}
           </div>
         </div>
+        {!hasOwnedCompany ? (
+          <NoCompanyBenefitsBanner className="mt-3" />
+        ) : null}
       </section>
       <MyContainerListings canUseBulkImport={hasOwnedCompany} />
     </main>

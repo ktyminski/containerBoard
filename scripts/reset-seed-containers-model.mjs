@@ -8,7 +8,7 @@ if (!mongoUri || !mongoDb) {
 }
 
 const TOTAL_LISTINGS = 220;
-const TTL_DAYS = 14;
+const TTL_DAYS = 30;
 const SYSTEM_USER_ID = new ObjectId("0000000000000000000000c0");
 
 const LISTING_TYPES = ["sell", "rent", "buy"];

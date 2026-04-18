@@ -5,6 +5,7 @@ import type { MouseEvent, ReactNode } from "react";
 import { memo } from "react";
 import type { ContainerListingItem } from "@/lib/container-listings";
 import { ContainerPhotoWithPlaceholder } from "@/components/container-photo-with-placeholder";
+import { CopyLinkIcon } from "@/components/icons/copy-link-icon";
 import {
   CONTAINER_CONDITION_LABEL,
   CONTAINER_FEATURE_LABEL,
@@ -963,17 +964,7 @@ function ContainerListingsResultsComponent({
                             aria-label="Kopiuj link do ogloszenia"
                             title="Kopiuj link do ogloszenia"
                           >
-                            <svg
-                              className="h-4 w-4"
-                              viewBox="0 0 24 24"
-                              fill="none"
-                              stroke="currentColor"
-                              strokeWidth="2"
-                              aria-hidden="true"
-                            >
-                              <rect x="9" y="9" width="11" height="11" rx="2" />
-                              <rect x="4" y="4" width="11" height="11" rx="2" />
-                            </svg>
+                            <CopyLinkIcon className="h-4 w-4" />
                           </button>
                           <Link
                             href={detailsHref}

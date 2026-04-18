@@ -6,6 +6,7 @@ import {
   type CompanyLocationPrefillOption,
   type ListingIntent,
 } from "@/components/container-listing-form";
+import { NoCompanyBenefitsBanner } from "@/components/no-company-benefits-banner";
 import { SmartBackButton } from "@/components/smart-back-button";
 
 const LISTING_INTENT_OPTIONS: Array<{ value: ListingIntent; label: string }> = [
@@ -80,6 +81,10 @@ export function NewContainerPageClient({
           </p>
         </div>
       </header>
+
+      {!ownedCompanyProfile?.name?.trim() && listingIntent !== "buy" ? (
+        <NoCompanyBenefitsBanner className="mb-3" />
+      ) : null}
 
       <ContainerListingForm
         mode="create"

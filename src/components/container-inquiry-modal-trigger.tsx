@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { createPortal } from "react-dom";
 import { ContainerInquiryForm } from "@/components/container-inquiry-form";
+import { CopyLinkIcon } from "@/components/icons/copy-link-icon";
 import { useToast } from "@/components/toast-provider";
 import { usePageScrollLock } from "@/components/use-page-scroll-lock";
 
@@ -282,10 +283,7 @@ export function ContainerInquiryModalTrigger({
           className="inline-flex items-center gap-2 rounded-md border border-neutral-300 bg-white px-3 py-2 text-sm text-neutral-700 hover:bg-neutral-100"
         >
           Kopiuj link
-          <svg aria-hidden="true" viewBox="0 0 20 20" className="h-4 w-4">
-            <path d="M8 7.5h6A2.5 2.5 0 0 1 16.5 10v5A2.5 2.5 0 0 1 14 17.5H8A2.5 2.5 0 0 1 5.5 15v-5A2.5 2.5 0 0 1 8 7.5Z" fill="none" stroke="currentColor" strokeWidth="1.6" />
-            <path d="M6 12.5H5A2.5 2.5 0 0 1 2.5 10V5A2.5 2.5 0 0 1 5 2.5h6A2.5 2.5 0 0 1 13.5 5v1" fill="none" stroke="currentColor" strokeWidth="1.6" />
-          </svg>
+          <CopyLinkIcon className="h-4 w-4" />
         </button>
         <button
           type="button"
