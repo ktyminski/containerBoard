@@ -3741,7 +3741,7 @@ export function ContainerListingForm({
                   <input
                     {...register("companyName", COMPANY_NAME_VALIDATION)}
                     disabled={publishedAsCompanyValue}
-                    className="rounded-md border border-neutral-700 bg-neutral-950 px-3 py-2 text-neutral-100 disabled:cursor-not-allowed disabled:bg-neutral-900/60 disabled:text-neutral-400"
+                    className="rounded-md border border-neutral-700 bg-neutral-950 px-3 py-2 font-medium text-neutral-950 placeholder:text-neutral-400 disabled:cursor-not-allowed disabled:border-neutral-300 disabled:bg-neutral-100 disabled:text-neutral-700"
                   />
                   {errors.companyName?.message ? (
                     <span className="text-xs text-red-700">
@@ -3754,7 +3754,7 @@ export function ContainerListingForm({
                   <input
                     type="email"
                     {...register("contactEmail", CONTACT_EMAIL_VALIDATION)}
-                    className="rounded-md border border-neutral-700 bg-neutral-950 px-3 py-2 text-neutral-100"
+                    className="rounded-md border border-neutral-700 bg-neutral-950 px-3 py-2 font-medium text-neutral-950 placeholder:text-neutral-400"
                   />
                   {errors.contactEmail?.message ? (
                     <span className="text-xs text-red-700">
@@ -3768,7 +3768,7 @@ export function ContainerListingForm({
                 <span className="text-neutral-700">Telefon kontaktowy</span>
                 <input
                   {...register("contactPhone")}
-                  className="rounded-md border border-neutral-700 bg-neutral-950 px-3 py-2 text-neutral-100"
+                  className="rounded-md border border-neutral-700 bg-neutral-950 px-3 py-2 font-medium text-neutral-950 placeholder:text-neutral-400"
                   placeholder="np. +48 600 000 000"
                 />
               </label>
@@ -4478,7 +4478,7 @@ export function ContainerListingForm({
                       autoComplete="organization"
                       {...register("companyName", COMPANY_NAME_VALIDATION)}
                       disabled={publishedAsCompanyValue}
-                      className="rounded-md border border-neutral-700 bg-neutral-950 px-3 py-2 text-neutral-100 disabled:cursor-not-allowed disabled:bg-neutral-900/60 disabled:text-neutral-400"
+                      className="rounded-md border border-neutral-700 bg-neutral-950 px-3 py-2 font-medium text-neutral-950 placeholder:text-neutral-400 disabled:cursor-not-allowed disabled:border-neutral-300 disabled:bg-neutral-100 disabled:text-neutral-700"
                     />
                     {errors.companyName?.message ? (
                       <span className="text-xs text-red-700">
@@ -4493,7 +4493,7 @@ export function ContainerListingForm({
                       type="email"
                       autoComplete="email"
                       {...register("contactEmail", CONTACT_EMAIL_VALIDATION)}
-                      className="rounded-md border border-neutral-700 bg-neutral-950 px-3 py-2 text-neutral-100"
+                      className="rounded-md border border-neutral-700 bg-neutral-950 px-3 py-2 font-medium text-neutral-950 placeholder:text-neutral-400"
                     />
                     {errors.contactEmail?.message ? (
                       <span className="text-xs text-red-700">
@@ -4508,7 +4508,7 @@ export function ContainerListingForm({
                       type="tel"
                       autoComplete="tel"
                       {...register("contactPhone")}
-                      className="rounded-md border border-neutral-700 bg-neutral-950 px-3 py-2 text-neutral-100"
+                      className="rounded-md border border-neutral-700 bg-neutral-950 px-3 py-2 font-medium text-neutral-950 placeholder:text-neutral-400"
                       placeholder="np. +48 600 000 000"
                     />
                   </label>
@@ -4568,13 +4568,21 @@ export function ContainerListingForm({
                 setIsPublishSuccessModalOpen(false);
               }}
             >
-              <div className="w-full max-w-md rounded-xl border border-neutral-700 bg-neutral-900 p-5 shadow-2xl">
-                <h3 className="inline-flex w-fit rounded-md border border-emerald-700/70 bg-emerald-950/70 px-2.5 py-1 text-base font-semibold text-emerald-200">
+              <div className="relative w-full max-w-md overflow-hidden rounded-xl border border-neutral-700 bg-neutral-900 p-5 shadow-2xl">
+                <div aria-hidden="true" className="cb-success-burst">
+                  <span />
+                  <span />
+                  <span />
+                  <span />
+                  <span />
+                  <span />
+                </div>
+                <h3 className="relative z-10 text-base font-semibold text-emerald-700">
                   Kontener opublikowano pomyslnie!
                 </h3>
-                <p className="mt-2 text-sm text-neutral-300">Co chcesz zrobic?</p>
+                <p className="relative z-10 mt-2 text-sm text-neutral-300">Co chcesz zrobic?</p>
 
-                <div className="mt-5 grid gap-2">
+                <div className="relative z-10 mt-5 grid gap-2">
                   <button
                     type="button"
                     className="inline-flex h-10 items-center justify-center rounded-md border border-neutral-400 bg-white px-4 text-sm font-medium text-neutral-700 transition hover:border-neutral-500"
