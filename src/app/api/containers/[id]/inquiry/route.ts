@@ -44,6 +44,7 @@ export async function POST(request: NextRequest, context: RouteContext) {
       scope: "containers:inquiry:ip",
       limit: 25,
       windowMs: 60_000,
+      onError: "block",
     });
     if (rateLimitResponse) {
       return rateLimitResponse;

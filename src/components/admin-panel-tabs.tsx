@@ -12,6 +12,10 @@ type AdminTabKey = "containers" | "users" | "companies" | "concierge";
 type AdminPanelTabsProps = {
   locale: AppLocale;
   initialTab?: string;
+  messages: AppMessages["adminPage"];
+  containersMessages: AppMessages["adminContainers"];
+  conciergeMessages: AppMessages["adminConcierge"];
+  listingMessages: AppMessages["containerListings"];
   usersMessages: AppMessages["adminUsers"];
   companiesMessages: AppMessages["adminCompanies"];
   companyStatusMessages: AppMessages["companyStatus"];
@@ -19,12 +23,6 @@ type AdminPanelTabsProps = {
 };
 
 const ADMIN_TABS: AdminTabKey[] = ["containers", "users", "companies", "concierge"];
-const TAB_LABELS: Record<AdminTabKey, string> = {
-  containers: "Kontenery",
-  users: "Uzytkownicy",
-  companies: "Firmy",
-  concierge: "Concierge",
-};
 
 function resolveAdminTab(value?: string): AdminTabKey {
   return ADMIN_TABS.includes(value as AdminTabKey)
@@ -35,12 +33,22 @@ function resolveAdminTab(value?: string): AdminTabKey {
 export function AdminPanelTabs({
   locale,
   initialTab,
+  messages,
+  containersMessages,
+  conciergeMessages,
+  listingMessages,
   usersMessages,
   companiesMessages,
   companyStatusMessages,
   roleMessages,
 }: AdminPanelTabsProps) {
   const [activeTab, setActiveTab] = useState<AdminTabKey>(resolveAdminTab(initialTab));
+  const tabLabels: Record<AdminTabKey, string> = {
+    containers: messages.tabs.containers,
+    users: messages.tabs.users,
+    companies: messages.tabs.companies,
+    concierge: messages.tabs.concierge,
+  };
 
   return (
     <section className="min-w-0 rounded-xl border border-neutral-800 bg-neutral-900/40 p-3">
@@ -60,13 +68,19 @@ export function AdminPanelTabs({
                   : "rounded-md border border-neutral-600 bg-neutral-800/90 px-3 py-1.5 text-sm text-neutral-100 hover:border-neutral-500 hover:bg-neutral-700/90"
               }
             >
-              {TAB_LABELS[tab]}
+              {tabLabels[tab]}
             </button>
           );
         })}
       </div>
 
-      {activeTab === "containers" ? <AdminContainersTable locale={locale} /> : null}
+      {activeTab === "containers" ? (
+        <AdminContainersTable
+          locale={locale}
+          messages={containersMessages}
+          listingMessages={listingMessages}
+        />
+      ) : null}
       {activeTab === "users" ? (
         <AdminUsersTable locale={locale} messages={usersMessages} roleMessages={roleMessages} />
       ) : null}
@@ -77,7 +91,9 @@ export function AdminPanelTabs({
           statusMessages={companyStatusMessages}
         />
       ) : null}
-      {activeTab === "concierge" ? <AdminConciergeRequestsTable locale={locale} /> : null}
+      {activeTab === "concierge" ? (
+        <AdminConciergeRequestsTable locale={locale} messages={conciergeMessages} />
+      ) : null}
     </section>
   );
 }

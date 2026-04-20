@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { type Filter } from "mongodb";
+import { enforceAuthenticatedRateLimitOrResponse } from "@/lib/app-rate-limit";
 import { getCurrentUserFromRequest } from "@/lib/auth-user";
 import {
   ensureContainerListingsIndexes,
@@ -31,8 +32,18 @@ const querySchema = z.object({
 export async function GET(request: NextRequest) {
   try {
     const user = await getCurrentUserFromRequest(request);
-    if (!user || user.role !== USER_ROLE.ADMIN) {
+    if (!user?._id || user.role !== USER_ROLE.ADMIN) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    }
+    const rateLimitResponse = await enforceAuthenticatedRateLimitOrResponse({
+      request,
+      scope: "admin:containers:read",
+      userId: user._id.toHexString(),
+      ipLimit: 240,
+      userLimit: 120,
+    });
+    if (rateLimitResponse) {
+      return rateLimitResponse;
     }
 
     await ensureContainerListingsIndexes();

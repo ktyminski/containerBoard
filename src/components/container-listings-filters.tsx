@@ -10,29 +10,33 @@ import {
   type KeyboardEvent as ReactKeyboardEvent,
   type ReactNode,
   type RefObject,
-  type SelectHTMLAttributes,
 } from "react";
 import { useFormContext, useWatch } from "react-hook-form";
+import {
+  getContainerConditionOptions,
+  getContainerFeatureOptions,
+  getContainerHeightOptions,
+  getContainerSizeOptions,
+  getContainerTypeOptions,
+  getListingKindOptions,
+  getPriceDisplayOptions,
+  getPriceTaxModeLabel,
+  getSortOptions,
+  type ContainerListingsMessages,
+} from "@/components/container-listings-i18n";
+import { SelectWithChevron } from "@/components/ui/select-with-chevron";
 import { parseContainerRalColors } from "@/lib/container-ral-colors";
 import {
+  PRICE_CURRENCIES,
   PRICE_CURRENCY_LABEL,
   PRICE_TAX_MODES,
-  PRICE_TAX_MODE_LABEL,
   type Currency,
 } from "@/lib/container-listing-types";
 import {
   AUTO_APPLY_FILTERS_DEBOUNCE_MS,
   AUTO_APPLY_TYPED_FILTERS_DEBOUNCE_MS,
   CONTAINER_CONDITION_COLOR_TOKENS,
-  CONTAINER_CONDITION_OPTIONS,
-  CONTAINER_FEATURE_OPTIONS,
-  CONTAINER_HEIGHT_OPTIONS,
-  CONTAINER_SIZE_OPTIONS,
-  CONTAINER_TYPE_OPTIONS,
-  LISTING_KIND_OPTIONS,
   LOCATION_RADIUS_OPTIONS,
-  SORT_OPTIONS,
-  type PriceDisplayCurrency,
   areNonLocationFiltersEqual,
   pickNonLocationFilters,
   shouldUseTypedDebounce,
@@ -43,53 +47,9 @@ import {
   type MultiFilterKey,
   type NonLocationFilters,
 } from "@/components/container-listings-shared";
+import { formatTemplate } from "@/lib/i18n";
 
-const PRICE_FILTER_CURRENCIES: Currency[] = ["EUR", "PLN", "USD"];
-const PRICE_DISPLAY_OPTIONS: Array<{
-  value: PriceDisplayCurrency;
-  label: string;
-}> = [
-  { value: "original", label: "Oryginalne" },
-  { value: "PLN", label: "PLN" },
-  { value: "EUR", label: "EUR" },
-  { value: "USD", label: "USD" },
-];
-
-type SelectWithChevronProps = SelectHTMLAttributes<HTMLSelectElement> & {
-  wrapperClassName?: string;
-};
-
-function SelectWithChevron({
-  className,
-  children,
-  wrapperClassName,
-  ...selectProps
-}: SelectWithChevronProps) {
-  return (
-    <div className={`relative min-w-0 ${wrapperClassName ?? ""}`}>
-      <select
-        {...selectProps}
-        className={`h-10 w-full min-w-0 appearance-none rounded-md border border-neutral-300 bg-white px-3 pr-10 text-sm text-neutral-900 transition ${className ?? ""}`}
-      >
-        {children}
-      </select>
-      <svg
-        viewBox="0 0 20 20"
-        aria-hidden="true"
-        className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-neutral-500"
-        fill="none"
-      >
-        <path
-          d="M5 7.5L10 12.5L15 7.5"
-          stroke="currentColor"
-          strokeWidth="1.75"
-          strokeLinecap="round"
-          strokeLinejoin="round"
-        />
-      </svg>
-    </div>
-  );
-}
+const PRICE_FILTER_CURRENCIES = [...PRICE_CURRENCIES] as Currency[];
 
 function handleCheckboxEnterToggle(
   event: ReactKeyboardEvent<HTMLInputElement>,
@@ -102,6 +62,7 @@ function handleCheckboxEnterToggle(
 }
 
 type MultiCheckboxFilterProps<T extends string> = {
+  messages: ContainerListingsMessages["filters"];
   label: string;
   emptyLabel?: string;
   values: T[];
@@ -115,8 +76,9 @@ type MultiCheckboxFilterProps<T extends string> = {
 };
 
 function MultiCheckboxFilter<T extends string>({
+  messages,
   label,
-  emptyLabel = "Dowolne",
+  emptyLabel = messages.any,
   values,
   options,
   getOptionAccentClassName,
@@ -137,8 +99,8 @@ function MultiCheckboxFilter<T extends string>({
     selectedCount === 0
       ? emptyLabel
       : selectedCount === 1
-        ? (singleSelectedOption ?? "1 wybrane")
-        : `${selectedCount} wybrane`;
+        ? (singleSelectedOption ?? messages.oneSelected)
+        : formatTemplate(messages.selectedCount, { count: selectedCount });
 
   useEffect(() => {
     const handlePointerDown = (event: PointerEvent) => {
@@ -263,7 +225,7 @@ function MultiCheckboxFilter<T extends string>({
           onClick={onClear}
           className="mt-2 w-full rounded-md border border-neutral-300 bg-white px-3 py-1.5 text-xs font-medium text-neutral-700 hover:border-neutral-400 hover:bg-neutral-100"
         >
-          Wyczysc
+          {messages.clear}
         </button>
       </div>
     </details>
@@ -271,6 +233,7 @@ function MultiCheckboxFilter<T extends string>({
 }
 
 type ContainerListingsFiltersProps = {
+  messages: ContainerListingsMessages;
   children: ReactNode;
   locationControlsRef: RefObject<HTMLDivElement | null>;
   appliedFilters: AppliedFilters;
@@ -280,10 +243,12 @@ type ContainerListingsFiltersProps = {
   isResolvingLocation: boolean;
   locationFilterError: string | null;
   onApplyNonLocationFilters: (nextFilters: NonLocationFilters) => void;
+  clearLocationFilter: () => void;
   clearAllFilters: () => void;
 };
 
 function ContainerListingsFiltersComponent({
+  messages,
   children,
   locationControlsRef,
   appliedFilters,
@@ -291,9 +256,11 @@ function ContainerListingsFiltersComponent({
   isResolvingLocation,
   locationFilterError,
   onApplyNonLocationFilters,
+  clearLocationFilter,
   clearAllFilters,
 }: ContainerListingsFiltersProps) {
   const { register, setValue, control } = useFormContext<FiltersFormValues>();
+  const filterMessages = messages.filters;
   const [openMultiFilters, setOpenMultiFilters] = useState<
     Record<MultiFilterKey, boolean>
   >({
@@ -310,16 +277,46 @@ function ContainerListingsFiltersComponent({
   );
 
   const listingKind = useWatch({ control, name: "listingKind" }) ?? "sell";
-  const selectedContainerSizes =
-    useWatch({ control, name: "containerSizes" }) ?? [];
-  const selectedContainerHeights =
-    useWatch({ control, name: "containerHeights" }) ?? [];
-  const selectedContainerTypes =
-    useWatch({ control, name: "containerTypes" }) ?? [];
-  const selectedContainerConditions =
-    useWatch({ control, name: "containerConditions" }) ?? [];
-  const selectedContainerFeatures =
-    useWatch({ control, name: "containerFeatures" }) ?? [];
+  const selectedContainerSizesValue = useWatch({
+    control,
+    name: "containerSizes",
+  });
+  const selectedContainerHeightsValue = useWatch({
+    control,
+    name: "containerHeights",
+  });
+  const selectedContainerTypesValue = useWatch({
+    control,
+    name: "containerTypes",
+  });
+  const selectedContainerConditionsValue = useWatch({
+    control,
+    name: "containerConditions",
+  });
+  const selectedContainerFeaturesValue = useWatch({
+    control,
+    name: "containerFeatures",
+  });
+  const selectedContainerSizes = useMemo(
+    () => selectedContainerSizesValue ?? [],
+    [selectedContainerSizesValue],
+  );
+  const selectedContainerHeights = useMemo(
+    () => selectedContainerHeightsValue ?? [],
+    [selectedContainerHeightsValue],
+  );
+  const selectedContainerTypes = useMemo(
+    () => selectedContainerTypesValue ?? [],
+    [selectedContainerTypesValue],
+  );
+  const selectedContainerConditions = useMemo(
+    () => selectedContainerConditionsValue ?? [],
+    [selectedContainerConditionsValue],
+  );
+  const selectedContainerFeatures = useMemo(
+    () => selectedContainerFeaturesValue ?? [],
+    [selectedContainerFeaturesValue],
+  );
   const containerRalInputValue =
     useWatch({ control, name: "containerRalInput" }) ?? "";
   const priceNegotiableOnlyValue =
@@ -344,6 +341,7 @@ function ContainerListingsFiltersComponent({
     useWatch({ control, name: "productionYearInput" }) ?? "";
   const cityValue = useWatch({ control, name: "city" }) ?? "";
   const countryValue = useWatch({ control, name: "country" }) ?? "";
+  const countryCodeValue = useWatch({ control, name: "countryCode" }) ?? "";
   const sortPresetValue = useWatch({ control, name: "sortPreset" }) ?? "newest";
   const parsedRalColors = useMemo(
     () =>
@@ -351,6 +349,35 @@ function ContainerListingsFiltersComponent({
         ignoreIncompleteTrailingToken: true,
       }),
     [containerRalInputValue],
+  );
+  const priceDisplayOptions = useMemo(
+    () => getPriceDisplayOptions(messages),
+    [messages],
+  );
+  const sortOptions = useMemo(() => getSortOptions(messages), [messages]);
+  const listingKindOptions = useMemo(
+    () => getListingKindOptions(messages),
+    [messages],
+  );
+  const containerSizeOptions = useMemo(
+    () => getContainerSizeOptions(messages),
+    [messages],
+  );
+  const containerHeightOptions = useMemo(
+    () => getContainerHeightOptions(messages),
+    [messages],
+  );
+  const containerTypeOptions = useMemo(
+    () => getContainerTypeOptions(messages),
+    [messages],
+  );
+  const containerConditionOptions = useMemo(
+    () => getContainerConditionOptions(messages),
+    [messages],
+  );
+  const containerFeatureOptions = useMemo(
+    () => getContainerFeatureOptions(messages),
+    [messages],
   );
 
   const draftNonLocationFilters = useMemo<NonLocationFilters>(() => {
@@ -382,29 +409,31 @@ function ContainerListingsFiltersComponent({
       productionYearInput: productionYearInputValue,
       city: cityValue,
       country: countryValue,
+      countryCode: countryCodeValue.trim().toUpperCase(),
       sortPreset: sortPresetValue,
     };
   }, [
-    listingKind,
-    selectedContainerSizes,
-    selectedContainerHeights,
-    selectedContainerTypes,
-    selectedContainerConditions,
-    selectedContainerFeatures,
-    parsedRalColors.colors,
-    priceNegotiableOnlyValue,
-    logisticsTransportOnlyValue,
-    logisticsUnloadingOnlyValue,
-    hasCscPlateOnlyValue,
-    hasCscCertificationOnlyValue,
-    priceCurrencyValue,
-    priceDisplayCurrencyValue,
-    priceTaxModeValue,
-    priceMinInputValue,
-    priceMaxInputValue,
-    productionYearInputValue,
     cityValue,
     countryValue,
+    countryCodeValue,
+    listingKind,
+    logisticsTransportOnlyValue,
+    logisticsUnloadingOnlyValue,
+    parsedRalColors.colors,
+    priceCurrencyValue,
+    priceDisplayCurrencyValue,
+    priceMaxInputValue,
+    priceMinInputValue,
+    priceNegotiableOnlyValue,
+    priceTaxModeValue,
+    productionYearInputValue,
+    selectedContainerConditions,
+    selectedContainerFeatures,
+    selectedContainerHeights,
+    selectedContainerSizes,
+    selectedContainerTypes,
+    hasCscCertificationOnlyValue,
+    hasCscPlateOnlyValue,
     sortPresetValue,
   ]);
 
@@ -456,9 +485,10 @@ function ContainerListingsFiltersComponent({
       <section className="sticky top-[4.5rem] z-30 rounded-md border border-neutral-300 bg-neutral-50/95 p-3 shadow-sm backdrop-blur supports-[backdrop-filter]:bg-neutral-50/90">
         <div className="grid gap-2 grid-cols-[minmax(100px,0.85fr)_minmax(100px,0.85fr)_minmax(100px,1fr)_minmax(100px,1fr)_minmax(360px,3fr)]">
           <MultiCheckboxFilter
-            label="Rozmiar"
+            messages={filterMessages}
+            label={filterMessages.size}
             values={selectedContainerSizes}
-            options={CONTAINER_SIZE_OPTIONS}
+            options={containerSizeOptions}
             onOpenChange={(isOpen) => {
               setOpenMultiFilters((current) => ({ ...current, sizes: isOpen }));
             }}
@@ -481,9 +511,10 @@ function ContainerListingsFiltersComponent({
           />
 
           <MultiCheckboxFilter
-            label="Wysokosc"
+            messages={filterMessages}
+            label={filterMessages.height}
             values={selectedContainerHeights}
-            options={CONTAINER_HEIGHT_OPTIONS}
+            options={containerHeightOptions}
             onOpenChange={(isOpen) => {
               setOpenMultiFilters((current) => ({
                 ...current,
@@ -509,9 +540,10 @@ function ContainerListingsFiltersComponent({
           />
 
           <MultiCheckboxFilter
-            label="Typ"
+            messages={filterMessages}
+            label={filterMessages.type}
             values={selectedContainerTypes}
-            options={CONTAINER_TYPE_OPTIONS}
+            options={containerTypeOptions}
             onOpenChange={(isOpen) => {
               setOpenMultiFilters((current) => ({ ...current, types: isOpen }));
             }}
@@ -534,10 +566,13 @@ function ContainerListingsFiltersComponent({
           />
 
           <MultiCheckboxFilter
-            label="Stan"
+            messages={filterMessages}
+            label={filterMessages.condition}
             values={selectedContainerConditions}
-            options={CONTAINER_CONDITION_OPTIONS}
-            getOptionAccentClassName={(value) => CONTAINER_CONDITION_COLOR_TOKENS[value].dotClassName}
+            options={containerConditionOptions}
+            getOptionAccentClassName={(value) =>
+              CONTAINER_CONDITION_COLOR_TOKENS[value].dotClassName
+            }
             onOpenChange={(isOpen) => {
               setOpenMultiFilters((current) => ({
                 ...current,
@@ -561,21 +596,33 @@ function ContainerListingsFiltersComponent({
               });
             }}
           />
-
           <div
             ref={locationControlsRef}
             className="grid h-full self-stretch gap-2 grid-cols-[minmax(220px,1fr)_minmax(100px,130px)_auto]"
           >
-            <input
-              {...register("locationInput")}
-              placeholder="Dowolna lokalizacja"
-              className={`h-full min-h-12 w-full rounded-md border px-3 py-2 text-sm text-neutral-900 ${
-                isLocationApplied
-                  ? "border-sky-400 bg-sky-100/70 shadow-[0_0_0_1px_rgba(56,189,248,0.15)]"
-                  : "border-neutral-300 bg-white"
-              }`}
-              onBlur={restoreAppliedLocationOnBlur}
-            />
+            <div className="relative">
+              <input
+                {...register("locationInput")}
+                placeholder={filterMessages.anyLocation}
+                className={`h-full min-h-12 w-full rounded-md border px-3 py-2 text-sm text-neutral-900 ${
+                  isLocationApplied
+                    ? "border-sky-400 bg-sky-100/70 pr-11 shadow-[0_0_0_1px_rgba(56,189,248,0.15)]"
+                    : "border-neutral-300 bg-white"
+                }`}
+                onBlur={restoreAppliedLocationOnBlur}
+              />
+              {isLocationApplied ? (
+                <button
+                  type="button"
+                  onClick={clearLocationFilter}
+                  className="absolute right-2 top-1/2 inline-flex h-7 w-7 -translate-y-1/2 items-center justify-center rounded-md border border-sky-300 bg-white/85 text-sm font-semibold text-sky-800 transition hover:border-sky-400 hover:bg-white"
+                  aria-label={filterMessages.clearLocation}
+                  title={filterMessages.clearLocation}
+                >
+                  x
+                </button>
+              ) : null}
+            </div>
             <SelectWithChevron
               {...register("locationRadiusKmInput")}
               className={`h-full min-h-12 rounded-md border px-3 py-2 pr-10 ${
@@ -596,7 +643,9 @@ function ContainerListingsFiltersComponent({
               disabled={isResolvingLocation}
               className="h-full min-h-12 shrink-0 whitespace-nowrap rounded-md border border-rose-500 bg-gradient-to-r from-rose-500 to-fuchsia-500 px-3.5 text-sm font-semibold text-white transition-colors duration-200 hover:from-rose-600 hover:to-fuchsia-600 active:translate-y-px disabled:cursor-not-allowed disabled:opacity-60"
             >
-              {isResolvingLocation ? "Szukam..." : "Szukaj"}
+              {isResolvingLocation
+                ? filterMessages.searching
+                : filterMessages.search}
             </button>
           </div>
         </div>
@@ -609,7 +658,7 @@ function ContainerListingsFiltersComponent({
         <aside className="h-fit min-w-0 rounded-md border border-neutral-300 bg-neutral-50/95 p-4 shadow-sm lg:sticky lg:top-[11rem] lg:z-20 lg:max-h-[calc(100dvh-12rem)] lg:overflow-y-auto">
           <div className="grid gap-3">
             <label className="grid gap-1 text-sm">
-              <span className="text-neutral-600">Sortowanie</span>
+              <span className="text-neutral-600">{filterMessages.sort}</span>
               <SelectWithChevron
                 {...register("sortPreset")}
                 className={`rounded-md border px-3 py-2 text-neutral-900 ${
@@ -618,16 +667,18 @@ function ContainerListingsFiltersComponent({
                     : "border-neutral-300 bg-white"
                 }`}
               >
-                {SORT_OPTIONS.map((option) => (
+                {sortOptions.map((option) => (
                   <option key={option.value} value={option.value}>
                     {option.label}
-                </option>
-              ))}
+                  </option>
+                ))}
               </SelectWithChevron>
             </label>
 
             <label className="grid gap-1 text-sm">
-              <span className="text-neutral-600">Przelicz ceny na</span>
+              <span className="text-neutral-600">
+                {filterMessages.convertPricesTo}
+              </span>
               <SelectWithChevron
                 {...register("priceDisplayCurrency")}
                 className={`rounded-md border px-3 py-2 text-neutral-900 ${
@@ -636,7 +687,7 @@ function ContainerListingsFiltersComponent({
                     : "border-neutral-300 bg-white"
                 }`}
               >
-                {PRICE_DISPLAY_OPTIONS.map((option) => (
+                {priceDisplayOptions.map((option) => (
                   <option key={option.value} value={option.value}>
                     {option.label}
                   </option>
@@ -647,9 +698,11 @@ function ContainerListingsFiltersComponent({
             <div className="border-t border-neutral-300" aria-hidden="true" />
 
             <div className="grid gap-1 text-sm">
-              <span className="text-neutral-600">Rodzaj ogloszenia</span>
+              <span className="text-neutral-600">
+                {filterMessages.listingKind}
+              </span>
               <div className="grid w-full grid-cols-1 overflow-hidden rounded-md border border-neutral-300 text-sm">
-                {LISTING_KIND_OPTIONS.map((option) => (
+                {listingKindOptions.map((option) => (
                   <button
                     key={option.value}
                     type="button"
@@ -676,11 +729,12 @@ function ContainerListingsFiltersComponent({
             </div>
 
             <div className="grid gap-1 text-sm">
-              <span className="text-neutral-600">Cecha</span>
+              <span className="text-neutral-600">{filterMessages.feature}</span>
               <MultiCheckboxFilter
-                label="Cecha"
+                messages={filterMessages}
+                label={filterMessages.feature}
                 values={selectedContainerFeatures}
-                options={CONTAINER_FEATURE_OPTIONS}
+                options={containerFeatureOptions}
                 onOpenChange={(isOpen) => {
                   setOpenMultiFilters((current) => ({
                     ...current,
@@ -722,12 +776,12 @@ function ContainerListingsFiltersComponent({
                   onKeyDown={handleCheckboxEnterToggle}
                   className="h-4 w-4 rounded border-neutral-400 text-neutral-700 focus:ring-neutral-400"
                 />
-                <span>Cena do negocjacji</span>
+                <span>{filterMessages.negotiablePrice}</span>
               </label>
             </div>
 
             <div className="grid gap-1 text-sm">
-              <span className="text-neutral-600">Logistyka</span>
+              <span className="text-neutral-600">{filterMessages.logistics}</span>
               <div className="grid gap-2">
                 <label
                   className={`inline-flex items-center gap-2 rounded-md border px-3 py-2 text-sm ${
@@ -742,7 +796,7 @@ function ContainerListingsFiltersComponent({
                     onKeyDown={handleCheckboxEnterToggle}
                     className="h-4 w-4 rounded border-neutral-400 text-neutral-700 focus:ring-neutral-400"
                   />
-                  <span>+ transport</span>
+                  <span>{filterMessages.transport}</span>
                 </label>
                 <label
                   className={`inline-flex items-center gap-2 rounded-md border px-3 py-2 text-sm ${
@@ -757,13 +811,13 @@ function ContainerListingsFiltersComponent({
                     onKeyDown={handleCheckboxEnterToggle}
                     className="h-4 w-4 rounded border-neutral-400 text-neutral-700 focus:ring-neutral-400"
                   />
-                  <span>+ rozladunek / HDS</span>
+                  <span>{filterMessages.unloading}</span>
                 </label>
               </div>
             </div>
 
             <div className="grid gap-1 text-sm">
-              <span className="text-neutral-600">Cena</span>
+              <span className="text-neutral-600">{filterMessages.price}</span>
               <div
                 className={`grid gap-2 rounded-md border p-3 transition-colors ${
                   isPriceFilterApplied
@@ -773,7 +827,9 @@ function ContainerListingsFiltersComponent({
               >
                 <div className="grid gap-2 sm:grid-cols-2">
                   <label className="grid gap-1">
-                    <span className="text-xs text-neutral-500">Waluta</span>
+                    <span className="text-xs text-neutral-500">
+                      {filterMessages.currency}
+                    </span>
                     <SelectWithChevron
                       {...register("priceCurrency")}
                       className="h-10 rounded-md border border-neutral-300 bg-white px-3 py-2 pr-10 text-neutral-900"
@@ -786,14 +842,16 @@ function ContainerListingsFiltersComponent({
                     </SelectWithChevron>
                   </label>
                   <label className="grid gap-1">
-                    <span className="text-xs text-neutral-500">Wariant</span>
+                    <span className="text-xs text-neutral-500">
+                      {filterMessages.variant}
+                    </span>
                     <SelectWithChevron
                       {...register("priceTaxMode")}
                       className="h-10 rounded-md border border-neutral-300 bg-white px-3 py-2 pr-10 text-neutral-900"
                     >
                       {PRICE_TAX_MODES.map((priceTaxMode) => (
                         <option key={priceTaxMode} value={priceTaxMode}>
-                          {PRICE_TAX_MODE_LABEL[priceTaxMode]}
+                          {getPriceTaxModeLabel(messages, priceTaxMode)}
                         </option>
                       ))}
                     </SelectWithChevron>
@@ -802,7 +860,9 @@ function ContainerListingsFiltersComponent({
 
                 <div className="grid gap-2 sm:grid-cols-2">
                   <label className="grid gap-1">
-                    <span className="text-xs text-neutral-500">Min</span>
+                    <span className="text-xs text-neutral-500">
+                      {filterMessages.min}
+                    </span>
                     <input
                       type="number"
                       min={0}
@@ -814,11 +874,13 @@ function ContainerListingsFiltersComponent({
                           ? "border-sky-400 bg-sky-100/70 shadow-[0_0_0_1px_rgba(56,189,248,0.15)]"
                           : "border-neutral-300 bg-white"
                       }`}
-                      placeholder="od"
+                      placeholder={filterMessages.fromPlaceholder}
                     />
                   </label>
                   <label className="grid gap-1">
-                    <span className="text-xs text-neutral-500">Max</span>
+                    <span className="text-xs text-neutral-500">
+                      {filterMessages.max}
+                    </span>
                     <input
                       type="number"
                       min={0}
@@ -830,7 +892,7 @@ function ContainerListingsFiltersComponent({
                           ? "border-sky-400 bg-sky-100/70 shadow-[0_0_0_1px_rgba(56,189,248,0.15)]"
                           : "border-neutral-300 bg-white"
                       }`}
-                      placeholder="do"
+                      placeholder={filterMessages.toPlaceholder}
                     />
                   </label>
                 </div>
@@ -839,7 +901,9 @@ function ContainerListingsFiltersComponent({
 
             <div className="grid gap-1 text-sm">
               <label className="grid min-w-0 gap-1">
-                <span className="text-neutral-600">Rok produkcji od</span>
+                <span className="text-neutral-600">
+                  {filterMessages.productionYearFrom}
+                </span>
                 <input
                   type="number"
                   min={1900}
@@ -852,13 +916,15 @@ function ContainerListingsFiltersComponent({
                       ? "border-sky-400 bg-sky-100/70 shadow-[0_0_0_1px_rgba(56,189,248,0.15)]"
                       : "border-neutral-300 bg-white"
                   }`}
-                  placeholder="np. 2018"
+                  placeholder={filterMessages.productionYearPlaceholder}
                 />
               </label>
             </div>
 
             <div className="grid gap-1 text-sm">
-              <span className="text-neutral-600">Certyfikacja</span>
+              <span className="text-neutral-600">
+                {filterMessages.certification}
+              </span>
               <div className="grid gap-2">
                 <label
                   className={`inline-flex items-center gap-2 rounded-md border px-3 py-2 text-sm ${
@@ -873,7 +939,7 @@ function ContainerListingsFiltersComponent({
                     onKeyDown={handleCheckboxEnterToggle}
                     className="h-4 w-4 rounded border-neutral-400 text-neutral-700 focus:ring-neutral-400"
                   />
-                  <span>Tabliczka CSC</span>
+                  <span>{filterMessages.cscPlate}</span>
                 </label>
                 <label
                   className={`inline-flex items-center gap-2 rounded-md border px-3 py-2 text-sm ${
@@ -888,16 +954,16 @@ function ContainerListingsFiltersComponent({
                     onKeyDown={handleCheckboxEnterToggle}
                     className="h-4 w-4 rounded border-neutral-400 text-neutral-700 focus:ring-neutral-400"
                   />
-                  <span>Certyfikacja CSC</span>
+                  <span>{filterMessages.cscCertification}</span>
                 </label>
               </div>
             </div>
 
             <div className="grid gap-1 text-sm">
-              <span className="text-neutral-600">Kolory RAL</span>
+              <span className="text-neutral-600">{filterMessages.ralColors}</span>
               <input
                 {...register("containerRalInput")}
-                placeholder="np. 5010, RAL 9010"
+                placeholder={filterMessages.ralPlaceholder}
                 className={`w-full min-w-0 rounded-md border px-3 py-2 text-neutral-900 ${
                   containerRalInputValue.trim().length > 0
                     ? "border-sky-400 bg-sky-100/70 shadow-[0_0_0_1px_rgba(56,189,248,0.15)]"
@@ -920,7 +986,7 @@ function ContainerListingsFiltersComponent({
               }}
               className="rounded-md border border-neutral-500 bg-neutral-300 px-3 py-2 text-sm font-semibold text-neutral-900 shadow-[0_6px_14px_-10px_rgba(15,23,42,0.65)] transition-colors hover:bg-neutral-400"
             >
-              Wyczysc wszystkie filtry
+              {filterMessages.clearAll}
             </button>
           </div>
         </aside>
@@ -932,10 +998,3 @@ function ContainerListingsFiltersComponent({
 }
 
 export const ContainerListingsFilters = memo(ContainerListingsFiltersComponent);
-
-
-
-
-
-
-

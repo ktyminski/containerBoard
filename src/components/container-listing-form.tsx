@@ -10,9 +10,24 @@ import {
   useRef,
   useState,
   type ReactNode,
-  type SelectHTMLAttributes,
 } from "react";
 import { Controller, useForm } from "react-hook-form";
+import {
+  ContactPublishModal,
+  PublishSuccessModal,
+} from "@/components/container-listing-form-dialogs";
+import {
+  type ContainerModuleMessages,
+} from "@/components/container-modules-i18n";
+import {
+  getContainerConditionOptions,
+  getContainerFeatureLabel,
+  getContainerFeatureOptions,
+  getContainerHeightOptions,
+  getContainerTypeOptions,
+  getListingKindLabel,
+  type ContainerListingsMessages,
+} from "@/components/container-listings-i18n";
 import { MapLocationPicker } from "@/components/map-location-picker";
 import { ImageCropModal } from "@/components/new-company-form/image-crop-modal";
 import { cropImageFile } from "@/components/new-company-form/helpers";
@@ -21,12 +36,14 @@ import { ImageGrid } from "@/components/new-company-form/image-grid";
 import type { ImageCropState } from "@/components/new-company-form/types";
 import { SimpleRichTextEditor } from "@/components/simple-rich-text-editor";
 import { useToast } from "@/components/toast-provider";
+import { SelectWithChevron } from "@/components/ui/select-with-chevron";
 import type { GeocodeAddressParts } from "@/lib/geocode-address";
 import {
   MAX_CONTAINER_RAL_COLORS,
   parseContainerRalColors,
 } from "@/lib/container-ral-colors";
 import { getCountryFlagEmoji, getCountryFlagSvgUrl } from "@/lib/country-flags";
+import { formatTemplate, getMessages, type AppLocale } from "@/lib/i18n";
 import { getRichTextLength, hasRichTextContent } from "@/lib/listing-rich-text";
 import { MAX_LISTING_LOCATIONS } from "@/lib/listing-locations";
 import {
@@ -35,16 +52,10 @@ import {
   CONTAINER_FEATURES,
   CONTAINER_HEIGHTS,
   CONTAINER_SIZES,
-  CONTAINER_CONDITION_LABEL,
-  CONTAINER_FEATURE_LABEL,
-  CONTAINER_HEIGHT_LABEL,
-  CONTAINER_TYPE_LABEL,
   CONTAINER_TYPES,
   LISTING_TYPES,
   PRICE_CURRENCIES,
-  PRICE_CURRENCY_LABEL,
   PRICE_TAX_MODES,
-  PRICE_TAX_MODE_LABEL,
   type ContainerCondition,
   type ContainerFeature,
   type ContainerHeight,
@@ -157,6 +168,9 @@ type ContainerListingFormProps = {
   successMessage: string;
   backHref: string;
   backLabel: string;
+  locale: AppLocale;
+  messages: ContainerModuleMessages;
+  listingMessages?: ContainerListingsMessages;
   initialValues?: Partial<ContainerListingFormValues>;
   initialAdditionalLocations?: AdditionalLocationInitialValue[];
   initialPhotoUrls?: string[];
@@ -217,28 +231,6 @@ type ReverseGeocodeResponse = {
   error?: string;
 };
 
-const LISTING_TYPE_LABEL: Record<ListingType, string> = {
-  sell: "Sprzedaz",
-  rent: "Wynajem",
-  buy: "Chce zakupic",
-};
-const LISTING_INTENT_OPTIONS: Array<{
-  value: ListingIntent;
-  label: string;
-}> = [
-  {
-    value: "sell",
-    label: "Sprzedaz",
-  },
-  {
-    value: "rent",
-    label: "Wynajem",
-  },
-  {
-    value: "buy",
-    label: "Chce zakupic",
-  },
-];
 const LISTING_INTENT_BUTTON_THEME: Record<
   ListingIntent,
   { inactive: string; active: string }
@@ -269,20 +261,6 @@ const MAX_ADDITIONAL_LOCATIONS = MAX_LISTING_LOCATIONS - 1;
 const PRIMARY_LOCATION_MAP_ID = "primary-location";
 const MAX_CLIENT_IMAGE_DIMENSION = 2200;
 const IMAGE_OPTIMIZATION_QUALITY_STEPS = [0.9, 0.84, 0.78] as const;
-const COMPANY_NAME_VALIDATION = {
-  required: "Podaj nazwe firmy",
-  minLength: { value: 2, message: "Min. 2 znaki" },
-} as const;
-const CONTACT_EMAIL_VALIDATION = {
-  required: "Podaj email kontaktowy",
-} as const;
-const CONTAINER_FEATURE_OPTIONS: Array<{
-  value: ContainerFeature;
-  label: string;
-}> = CONTAINER_FEATURES.map((feature) => ({
-  value: feature,
-  label: CONTAINER_FEATURE_LABEL[feature],
-}));
 
 function mapListingIntentToType(intent: ListingIntent): ListingType {
   return intent;
@@ -343,7 +321,7 @@ async function loadImageFromFile(file: File): Promise<HTMLImageElement> {
     image.src = objectUrl;
     await new Promise<void>((resolve, reject) => {
       image.onload = () => resolve();
-      image.onerror = () => reject(new Error("Nie udalo sie wczytac obrazu"));
+      image.onerror = () => reject(new Error("Failed to load image"));
     });
     return image;
   } finally {
@@ -360,7 +338,7 @@ async function canvasToBlob(
     canvas.toBlob(
       (result) => {
         if (!result) {
-          reject(new Error("Nie udalo sie zapisac obrazu"));
+          reject(new Error("Failed to save image"));
           return;
         }
         resolve(result);
@@ -440,7 +418,7 @@ async function optimizeListingImageForUpload(
 function validateContainerRalColorsInput(input: string): true | string {
   const parsed = parseContainerRalColors(input);
   if (parsed.tooMany) {
-    return `Maksymalnie ${MAX_CONTAINER_RAL_COLORS} kolorow RAL`;
+    return `Maximum ${MAX_CONTAINER_RAL_COLORS} RAL colors`;
   }
   return true;
 }
@@ -771,10 +749,8 @@ type ContainerFeaturesMultiSelectProps = {
   values: ContainerFeature[];
   onChange: (next: ContainerFeature[]) => void;
   onBlur: () => void;
-};
-
-type SelectWithChevronProps = SelectHTMLAttributes<HTMLSelectElement> & {
-  wrapperClassName?: string;
+  messages: ContainerModuleMessages["shared"];
+  listingMessages: ContainerListingsMessages;
 };
 
 type FormSectionProps = {
@@ -786,38 +762,6 @@ type FormSectionProps = {
   contentClassName?: string;
   children: ReactNode;
 };
-
-function SelectWithChevron({
-  className,
-  children,
-  wrapperClassName,
-  ...selectProps
-}: SelectWithChevronProps) {
-  return (
-    <div className={`relative min-w-0 ${wrapperClassName ?? ""}`}>
-      <select
-        {...selectProps}
-        className={`h-10 w-full min-w-0 appearance-none rounded-md border border-neutral-700 bg-neutral-950 px-3 pr-11 text-neutral-100 transition ${className ?? ""}`}
-      >
-        {children}
-      </select>
-      <svg
-        viewBox="0 0 20 20"
-        aria-hidden="true"
-        className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-neutral-400"
-        fill="none"
-      >
-        <path
-          d="M5 7.5L10 12.5L15 7.5"
-          stroke="currentColor"
-          strokeWidth="1.75"
-          strokeLinecap="round"
-          strokeLinejoin="round"
-        />
-      </svg>
-    </div>
-  );
-}
 
 function FormSection({
   id,
@@ -854,6 +798,7 @@ type CompanyLocationPrefillDropdownProps = {
   onApply: (selectedOptions: CompanyLocationPrefillOption[]) => void;
   onClear: () => void;
   variant?: "light" | "dark";
+  messages: ContainerModuleMessages["shared"];
 };
 
 function CompanyLocationPrefillDropdown({
@@ -861,31 +806,22 @@ function CompanyLocationPrefillDropdown({
   onApply,
   onClear,
   variant = "dark",
+  messages,
 }: CompanyLocationPrefillDropdownProps) {
   const detailsRef = useRef<HTMLDetailsElement | null>(null);
   const isLight = variant === "light";
-  const [checkedIds, setCheckedIds] = useState<string[]>([]);
-
-  useEffect(() => {
-    setCheckedIds((current) => {
-      const validCurrent = current.filter((id) =>
-        options.some((option) => option.id === id),
-      );
-      const next =
-        validCurrent.length > 0
-          ? validCurrent
-          : options.length === 0
-            ? []
-            : [options[0].id];
-      if (
-        next.length === current.length &&
-        next.every((id, index) => id === current[index])
-      ) {
-        return current;
-      }
-      return next;
-    });
-  }, [options]);
+  const [checkedIds, setCheckedIds] = useState<string[]>(() =>
+    options.length > 0 ? [options[0].id] : [],
+  );
+  const resolvedCheckedIds = useMemo(() => {
+    const validCheckedIds = checkedIds.filter((id) =>
+      options.some((option) => option.id === id),
+    );
+    if (validCheckedIds.length > 0 || checkedIds.length === 0) {
+      return validCheckedIds;
+    }
+    return options.length > 0 ? [options[0].id] : [];
+  }, [checkedIds, options]);
 
   useEffect(() => {
     const handlePointerDown = (event: PointerEvent) => {
@@ -943,7 +879,7 @@ function CompanyLocationPrefillDropdown({
             : "inline-flex h-9 items-center rounded-md border border-neutral-600 px-3 text-sm font-normal text-neutral-200 transition hover:border-neutral-500 hover:bg-neutral-800 hover:text-white"
         }
       >
-        Ustaw z danych firmy
+        {messages.setFromCompany}
       </button>
     );
   }
@@ -957,7 +893,7 @@ function CompanyLocationPrefillDropdown({
             : "border border-neutral-600 text-neutral-200 hover:border-neutral-500 hover:bg-neutral-800 hover:text-white"
         }`}
       >
-        Ustaw z danych firmy
+        {messages.setFromCompany}
         <svg
           viewBox="0 0 20 20"
           aria-hidden="true"
@@ -984,7 +920,7 @@ function CompanyLocationPrefillDropdown({
       >
         <div className="max-h-64 overflow-y-auto p-1">
           {options.map((option) => {
-            const isChecked = checkedIds.includes(option.id);
+            const isChecked = resolvedCheckedIds.includes(option.id);
             return (
               <label
                 key={option.id}
@@ -1038,14 +974,14 @@ function CompanyLocationPrefillDropdown({
                 : "text-neutral-300 hover:bg-neutral-800"
             }`}
           >
-            Wyczysc
+            {messages.clear}
           </button>
           <button
             type="button"
-            disabled={checkedIds.length === 0}
+            disabled={resolvedCheckedIds.length === 0}
             onClick={() => {
               const selectedOptions = options.filter((option) =>
-                checkedIds.includes(option.id),
+                resolvedCheckedIds.includes(option.id),
               );
               if (selectedOptions.length === 0) {
                 return;
@@ -1059,7 +995,7 @@ function CompanyLocationPrefillDropdown({
                 : "border border-neutral-600 text-neutral-200 hover:border-neutral-500 hover:bg-neutral-800 hover:text-white"
             } disabled:cursor-not-allowed disabled:opacity-50`}
           >
-            Zastosuj
+            {messages.apply}
           </button>
         </div>
       </div>
@@ -1071,15 +1007,19 @@ function ContainerFeaturesMultiSelect({
   values,
   onChange,
   onBlur,
+  messages,
+  listingMessages,
 }: ContainerFeaturesMultiSelectProps) {
   const detailsRef = useRef<HTMLDetailsElement | null>(null);
   const selectedCount = values.length;
   const selectedSummaryLabel =
     selectedCount === 0
-      ? "Dowolne"
+      ? messages.any
       : selectedCount === 1
-        ? (CONTAINER_FEATURE_LABEL[values[0]] ?? "1 wybrane")
-        : `${selectedCount} wybrane`;
+        ? (values[0]
+            ? getContainerFeatureLabel(listingMessages, values[0])
+            : messages.oneSelected)
+        : formatTemplate(messages.selectedCount, { count: selectedCount });
 
   useEffect(() => {
     const handlePointerDown = (event: PointerEvent) => {
@@ -1169,7 +1109,7 @@ function ContainerFeaturesMultiSelect({
         </summary>
         <div className="absolute left-0 top-full z-40 mt-1 w-full rounded-md border border-neutral-700 bg-neutral-900 p-2 shadow-lg">
           <div className="max-h-64 space-y-1 overflow-y-auto pr-1">
-            {CONTAINER_FEATURE_OPTIONS.map((option) => (
+            {getContainerFeatureOptions(listingMessages).map((option) => (
               <label
                 key={option.value}
                 className="flex cursor-pointer items-center gap-2 rounded-md px-2 py-1.5 text-sm text-neutral-200 hover:bg-neutral-800"
@@ -1193,7 +1133,7 @@ function ContainerFeaturesMultiSelect({
             }}
             className="mt-2 w-full rounded-md border border-neutral-600 bg-neutral-900 px-3 py-1.5 text-xs font-medium text-neutral-200 hover:border-neutral-500 hover:bg-neutral-800"
           >
-            Wyczysc
+            {messages.clear}
           </button>
         </div>
       </details>
@@ -1205,14 +1145,16 @@ function ContainerFeaturesMultiSelect({
               key={feature}
               className="inline-flex items-center gap-1 rounded-md border border-neutral-700 bg-neutral-900 px-2.5 py-1 text-xs font-medium text-neutral-200"
             >
-              <span>{CONTAINER_FEATURE_LABEL[feature]}</span>
+              <span>{getContainerFeatureLabel(listingMessages, feature)}</span>
               <button
                 type="button"
                 onClick={() => {
                   toggleFeature(feature);
                 }}
                 className="rounded px-1 text-neutral-200 hover:bg-neutral-800"
-                aria-label={`Usun ${CONTAINER_FEATURE_LABEL[feature]}`}
+                aria-label={formatTemplate(messages.removeFeature, {
+                  label: getContainerFeatureLabel(listingMessages, feature),
+                })}
               >
                 x
               </button>
@@ -1301,6 +1243,9 @@ export function ContainerListingForm({
   successMessage,
   backHref,
   backLabel,
+  locale,
+  messages,
+  listingMessages,
   initialValues,
   initialAdditionalLocations,
   initialPhotoUrls,
@@ -1313,6 +1258,23 @@ export function ContainerListingForm({
 }: ContainerListingFormProps) {
   const router = useRouter();
   const toast = useToast();
+  const resolvedListingMessages = listingMessages ?? getMessages(locale).containerListings;
+  const companyNameValidation = useMemo(
+    () => ({
+      required: messages.form.companyNameRequired,
+      minLength: {
+        value: 2,
+        message: messages.form.companyNameMinLength,
+      },
+    }),
+    [messages.form.companyNameMinLength, messages.form.companyNameRequired],
+  );
+  const contactEmailValidation = useMemo(
+    () => ({
+      required: messages.form.contactEmailRequired,
+    }),
+    [messages.form.contactEmailRequired],
+  );
   const isCreateMode = mode === "create";
   const [showTransportSection, setShowTransportSection] = useState(
     hasInitialTransportSectionContent(initialValues),
@@ -1426,9 +1388,7 @@ export function ContainerListingForm({
   const locationAddressCountryValue = watch("locationAddressCountry");
   const quantityValue = watch("quantity");
   const availableNowValue = watch("availableNow");
-  const logisticsTransportAvailableValue = watch("logisticsTransportAvailable");
   const logisticsTransportIncludedValue = watch("logisticsTransportIncluded");
-  const logisticsUnloadingAvailableValue = watch("logisticsUnloadingAvailable");
   const companyNameValue = watch("companyName");
   const publishedAsCompanyValue = watch("publishedAsCompany");
   const contactEmailValue = watch("contactEmail");
@@ -1568,16 +1528,18 @@ export function ContainerListingForm({
   );
   const activeMapLocationLabel = useMemo(() => {
     if (activeMapLocationId === PRIMARY_LOCATION_MAP_ID) {
-      return "Lokalizacja 1";
+      return formatTemplate(messages.shared.locationLabelTemplate, { index: 1 });
     }
     const additionalLocationIndex = additionalLocations.findIndex(
       (location) => location.id === activeMapLocationId,
     );
     if (additionalLocationIndex >= 0) {
-      return `Lokalizacja ${additionalLocationIndex + 2}`;
+      return formatTemplate(messages.shared.locationLabelTemplate, {
+        index: additionalLocationIndex + 2,
+      });
     }
-    return "Lokalizacja 1";
-  }, [activeMapLocationId, additionalLocations]);
+    return formatTemplate(messages.shared.locationLabelTemplate, { index: 1 });
+  }, [activeMapLocationId, additionalLocations, messages.shared.locationLabelTemplate]);
 
   useEffect(() => {
     setKeptInitialPhotoIndexes(stableInitialPhotoUrls.map((_, index) => index));
@@ -1845,7 +1807,7 @@ export function ContainerListingForm({
 
       try {
         const response = await fetch(
-          `/api/geocode/reverse?lat=${encodeURIComponent(next.lat.toFixed(6))}&lng=${encodeURIComponent(next.lng.toFixed(6))}&lang=pl`,
+          `/api/geocode/reverse?lat=${encodeURIComponent(next.lat.toFixed(6))}&lng=${encodeURIComponent(next.lng.toFixed(6))}&lang=${locale}`,
         );
         const data = (await response.json()) as ReverseGeocodeResponse;
 
@@ -1882,27 +1844,27 @@ export function ContainerListingForm({
       query: string,
     ): Promise<NonNullable<GeocodeSearchResponse["item"]>> => {
       const response = await fetch(
-        `/api/geocode?q=${encodeURIComponent(query)}&lang=pl&limit=1`,
+        `/api/geocode?q=${encodeURIComponent(query)}&lang=${locale}&limit=1`,
       );
       const data = (await response.json()) as GeocodeSearchResponse;
 
       if (!response.ok || data.error) {
-        throw new Error(data.error ?? "Nie udalo sie pobrac lokalizacji");
+        throw new Error(data.error ?? messages.form.locationFetchError);
       }
 
       if (!data.item) {
-        throw new Error("Brak wynikow. Sprobuj doprecyzowac adres.");
+        throw new Error(messages.form.locationNoResults);
       }
 
       return data.item;
     },
-    [],
+    [locale, messages.form.locationFetchError, messages.form.locationNoResults],
   );
 
   const handleSearchLocation = useCallback(async () => {
     const query = locationSearch.trim();
     if (query.length < 3) {
-      toast.error("Wpisz minimum 3 znaki adresu.");
+      toast.error(messages.form.locationMinChars);
       return;
     }
 
@@ -1923,7 +1885,7 @@ export function ContainerListingForm({
       toast.error(
         error instanceof Error
           ? error.message
-          : "Nie udalo sie wyszukac lokalizacji",
+          : messages.form.locationSearchError,
       );
     } finally {
       setIsSearchingLocation(false);
@@ -1940,7 +1902,9 @@ export function ContainerListingForm({
   const handleAddAdditionalLocation = useCallback(() => {
     if (additionalLocations.length >= MAX_ADDITIONAL_LOCATIONS) {
       toast.warning(
-        `Mozesz dodac maksymalnie ${MAX_LISTING_LOCATIONS} lokalizacji.`,
+        formatTemplate(messages.form.maxLocations, {
+          count: MAX_LISTING_LOCATIONS,
+        }),
       );
       return;
     }
@@ -2059,7 +2023,9 @@ export function ContainerListingForm({
         shouldTouch: true,
       });
       clearErrors(["locationLat", "locationLng"]);
-      toast.info("Usunieto lokalizacje 1.");
+      toast.info(
+        formatTemplate(messages.form.locationRemoved, { index: 1 }),
+      );
       return;
     }
 
@@ -2089,7 +2055,7 @@ export function ContainerListingForm({
     }
     additionalReverseLookupRequestRef.current = nextReverseLookupMap;
 
-    toast.info("Usunieto lokalizacje 1 i przeniesiono kolejna na glowna.");
+    toast.info(messages.form.locationPromoted);
   }, [
     additionalLocations,
     applyPrimaryLocationFromDraft,
@@ -2122,12 +2088,12 @@ export function ContainerListingForm({
         return;
       }
 
-      setActiveMapLocationId(id);
-      const query = target.search.trim();
-      if (query.length < 3) {
-        toast.error("Wpisz minimum 3 znaki adresu.");
-        return;
-      }
+    setActiveMapLocationId(id);
+    const query = target.search.trim();
+    if (query.length < 3) {
+      toast.error(messages.form.locationMinChars);
+      return;
+    }
 
       setAdditionalLocations((current) =>
         current.map((location) =>
@@ -2173,7 +2139,7 @@ export function ContainerListingForm({
         toast.error(
           error instanceof Error
             ? error.message
-            : "Nie udalo sie wyszukac lokalizacji",
+            : messages.form.locationSearchError,
         );
       }
     },
@@ -2201,7 +2167,7 @@ export function ContainerListingForm({
 
       try {
         const response = await fetch(
-          `/api/geocode/reverse?lat=${encodeURIComponent(next.lat.toFixed(6))}&lng=${encodeURIComponent(next.lng.toFixed(6))}&lang=pl`,
+          `/api/geocode/reverse?lat=${encodeURIComponent(next.lat.toFixed(6))}&lng=${encodeURIComponent(next.lng.toFixed(6))}&lang=${locale}`,
         );
         const data = (await response.json()) as ReverseGeocodeResponse;
 
@@ -2302,7 +2268,9 @@ export function ContainerListingForm({
 
       if (dedupedOptions.length > MAX_LISTING_LOCATIONS) {
         toast.warning(
-          `Mozesz ustawic maksymalnie ${MAX_LISTING_LOCATIONS} lokalizacji.`,
+          formatTemplate(messages.form.maxLocations, {
+            count: MAX_LISTING_LOCATIONS,
+          }),
         );
       }
       const limitedOptions = dedupedOptions.slice(0, MAX_LISTING_LOCATIONS);
@@ -2413,19 +2381,21 @@ export function ContainerListingForm({
     });
 
     clearErrors(["locationLat", "locationLng"]);
-    toast.success("Wyczyszczono ustawione lokalizacje.");
+    toast.success(messages.form.locationsCleared);
   }, [clearErrors, setValue, toast]);
 
   const handleCoverPhotoFilesAdded = useCallback(
     (files: File[]) => {
       const firstImage = files.find((file) => file.type.startsWith("image/"));
       if (!firstImage) {
-        toast.warning("Dodaj plik graficzny.");
+        toast.warning(messages.form.addGraphicFile);
         return;
       }
       if (!coverPhotoItem && totalPhotoCount >= MAX_CONTAINER_PHOTOS) {
         toast.warning(
-          `Usun jedno zdjecie, aby dodac nowe glowne (limit ${MAX_CONTAINER_PHOTOS}).`,
+          formatTemplate(messages.form.removePhotoForCover, {
+            count: MAX_CONTAINER_PHOTOS,
+          }),
         );
         return;
       }
@@ -2498,7 +2468,7 @@ export function ContainerListingForm({
     async (files: File[]) => {
       const imageFiles = files.filter((file) => file.type.startsWith("image/"));
       if (imageFiles.length !== files.length) {
-        toast.warning("Dodawaj tylko pliki graficzne.");
+        toast.warning(messages.form.imagesOnly);
       }
       if (imageFiles.length === 0) {
         return;
@@ -2510,7 +2480,9 @@ export function ContainerListingForm({
       );
       if (remainingSlots === 0) {
         toast.warning(
-          `Mozesz dodac maksymalnie ${MAX_CONTAINER_PHOTOS} zdjec.`,
+          formatTemplate(messages.form.maxPhotosTotal, {
+            count: MAX_CONTAINER_PHOTOS,
+          }),
         );
         return;
       }
@@ -2518,7 +2490,11 @@ export function ContainerListingForm({
       let candidateFiles = imageFiles;
       if (candidateFiles.length > remainingSlots) {
         candidateFiles = candidateFiles.slice(0, remainingSlots);
-        toast.warning(`Mozesz dodac jeszcze ${remainingSlots} zdjec.`);
+        toast.warning(
+          formatTemplate(messages.form.remainingPhotos, {
+            count: remainingSlots,
+          }),
+        );
       }
 
       setIsProcessingImages(true);
@@ -2534,7 +2510,9 @@ export function ContainerListingForm({
         );
         if (acceptedFiles.length !== optimizedFiles.length) {
           toast.warning(
-            `Kazde zdjecie moze miec maksymalnie ${MAX_CONTAINER_PHOTO_MB} MB.`,
+            formatTemplate(messages.form.photoLimitPerFile, {
+              count: MAX_CONTAINER_PHOTO_MB,
+            }),
           );
         }
 
@@ -2548,16 +2526,16 @@ export function ContainerListingForm({
         setIsProcessingImages(false);
       }
     },
-    [toast, totalPhotoCount],
+    [messages.form.imagesOnly, messages.form.maxPhotosTotal, messages.form.remainingPhotos, toast, totalPhotoCount],
   );
 
   const onSubmit = async (values: ContainerListingFormValues) => {
     if (isCreateMode && !resolvedListingIntent) {
       setError("type", {
         type: "validate",
-        message: "Wybierz typ ogloszenia",
+        message: messages.shared.selectListingType,
       });
-      toast.error("Najpierw wybierz typ ogloszenia");
+      toast.error(messages.form.selectListingTypeFirst);
       return;
     }
 
@@ -2567,13 +2545,13 @@ export function ContainerListingForm({
     if (locationLat === null || locationLng === null) {
       setError("locationLat", {
         type: "validate",
-        message: "Wybierz lokalizacje na mapie lub wyszukaj adres",
+        message: messages.form.chooseLocationOnMap,
       });
       setError("locationLng", {
         type: "validate",
-        message: "Wybierz lokalizacje na mapie lub wyszukaj adres",
+        message: messages.form.chooseLocationOnMap,
       });
-      toast.error("Dodanie kontenera wymaga geolokalizacji");
+      toast.error(messages.form.geolocationRequired);
       return;
     }
 
@@ -2613,9 +2591,7 @@ export function ContainerListingForm({
       }
 
       if (location.locationLat === null || location.locationLng === null) {
-        toast.error(
-          "Kazda dodatkowa lokalizacja musi byc wyszukana albo usunieta.",
-        );
+        toast.error(messages.form.additionalLocationNeedsCoordinates);
         return;
       }
 
@@ -2688,18 +2664,18 @@ export function ContainerListingForm({
     if (!values.availableNow && trimmedAvailableFrom.length === 0) {
       setError("availableFrom", {
         type: "validate",
-        message: "Podaj date albo zaznacz Dostepny teraz",
+        message: messages.form.provideDateOrNow,
       });
-      toast.error("Podaj date dostepnosci albo zaznacz Dostepny teraz");
+      toast.error(messages.form.provideDateOrNow);
       return;
     }
 
     if (descriptionLength > 1000) {
       setError("description", {
         type: "validate",
-        message: "Opis moze miec maksymalnie 1000 znakow",
+        message: messages.form.descriptionMaxLength,
       });
-      toast.error("Opis moze miec maksymalnie 1000 znakow");
+      toast.error(messages.form.descriptionMaxLength);
       return;
     }
 
@@ -2708,13 +2684,13 @@ export function ContainerListingForm({
     if (hasCscValidToMonth !== hasCscValidToYear) {
       setError("cscValidToMonth", {
         type: "validate",
-        message: "Podaj miesiac i rok waznosci CSC",
+        message: messages.form.provideCscMonthYear,
       });
       setError("cscValidToYear", {
         type: "validate",
-        message: "Podaj miesiac i rok waznosci CSC",
+        message: messages.form.provideCscMonthYear,
       });
-      toast.error("Podaj miesiac i rok waznosci CSC");
+      toast.error(messages.form.provideCscMonthYear);
       return;
     }
 
@@ -2724,9 +2700,9 @@ export function ContainerListingForm({
     ) {
       setError("logisticsTransportFreeDistanceKm", {
         type: "validate",
-        message: "Podaj dodatnia liczbe km dla darmowego transportu",
+        message: messages.form.provideTransportKm,
       });
-      toast.error("Uzupelnij dystans darmowego transportu (km)");
+      toast.error(messages.form.provideTransportKm);
       return;
     }
 
@@ -2740,14 +2716,18 @@ export function ContainerListingForm({
     ) {
       setError("containerSize", {
         type: "validate",
-        message: "Wybierz rozmiar kontenera",
+        message: messages.form.selectContainerSize,
       });
-      toast.error("Wybierz poprawny rozmiar kontenera");
+      toast.error(messages.form.invalidContainerSize);
       return;
     }
     const canUploadPhotosForSubmission = values.type !== "buy";
     if (canUploadPhotosForSubmission && totalPhotoCount > MAX_CONTAINER_PHOTOS) {
-      toast.error(`Maksymalnie ${MAX_CONTAINER_PHOTOS} zdjec lacznie`);
+      toast.error(
+        formatTemplate(messages.form.maxPhotosTotal, {
+          count: MAX_CONTAINER_PHOTOS,
+        }),
+      );
       return;
     }
 
@@ -2870,7 +2850,7 @@ export function ContainerListingForm({
           ? ` (${data?.issues.join(", ")})`
           : "";
         throw new Error(
-          (data?.error ?? "Nie udalo sie zapisac kontenera") + details,
+          (data?.error ?? messages.form.saveContainerError) + details,
         );
       }
 
@@ -2891,7 +2871,7 @@ export function ContainerListingForm({
       router.refresh();
     } catch (error) {
       toast.error(
-        error instanceof Error ? error.message : "Wystapil blad podczas zapisu",
+        error instanceof Error ? error.message : messages.form.saveUnknownError,
       );
     }
   };
@@ -2915,13 +2895,13 @@ export function ContainerListingForm({
               return;
             }
             setIsContactModalOpen(false);
-            toast.error("Popraw bledy w formularzu przed publikacja");
+            toast.error(messages.form.fixErrorsBeforePublish);
           });
           return;
         }
         event.preventDefault();
         void handleSubmit(onSubmit, () => {
-          toast.error("Popraw bledy w formularzu przed zapisem");
+          toast.error(messages.form.fixErrorsBeforeSave);
         })();
       }}
       className="grid gap-4 rounded-xl border border-neutral-800 bg-neutral-900/60 p-5 pb-6"
@@ -2930,32 +2910,32 @@ export function ContainerListingForm({
         <>
           <input
             type="hidden"
-            {...register("type", { required: "Wybierz typ ogloszenia" })}
+            {...register("type", { required: messages.shared.selectListingType })}
           />
           {showListingIntentSelector ? (
             resolvedListingIntent === null ? (
               <section className="grid gap-3 rounded-lg border border-neutral-700 bg-neutral-950/35 p-4">
                 <div className="text-center">
                   <h2 className="text-base font-semibold text-neutral-100">
-                    Co chcesz dodac?
+                    {messages.form.intentSectionTitle}
                   </h2>
                 </div>
                 <div className="grid gap-2 sm:grid-cols-3">
-                  {LISTING_INTENT_OPTIONS.map((option) => {
-                    const isActive = resolvedListingIntent === option.value;
-                    const theme = LISTING_INTENT_BUTTON_THEME[option.value];
+                  {(["sell", "rent", "buy"] as const).map((option) => {
+                    const isActive = resolvedListingIntent === option;
+                    const theme = LISTING_INTENT_BUTTON_THEME[option];
                     return (
                       <button
-                        key={option.value}
+                        key={option}
                         type="button"
                         onClick={() => {
-                          handleListingIntentChange(option.value);
+                          handleListingIntentChange(option);
                         }}
                         className={`h-12 rounded-md border px-3 text-center text-sm font-semibold transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#7ba7d7]/70 focus-visible:ring-offset-2 focus-visible:ring-offset-neutral-900 ${
                           isActive ? theme.active : theme.inactive
                         }`}
                       >
-                        {option.label}
+                        {getListingKindLabel(resolvedListingMessages, option)}
                       </button>
                     );
                   })}
@@ -2969,7 +2949,12 @@ export function ContainerListingForm({
             ) : (
               <div className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-neutral-700 bg-neutral-950/35 px-3 py-2">
                 <p className="text-sm font-medium text-neutral-100">
-                  Dodaj kontener ({LISTING_TYPE_LABEL[resolvedListingIntent]})
+                  {formatTemplate(messages.form.addContainerTitle, {
+                    type: getListingKindLabel(
+                      resolvedListingMessages,
+                      resolvedListingIntent,
+                    ),
+                  })}
                 </p>
                 <button
                   type="button"
@@ -2978,7 +2963,7 @@ export function ContainerListingForm({
                   }}
                   className="rounded-md border border-neutral-500 bg-neutral-900 px-2 py-1 text-xs font-medium text-neutral-200 transition hover:border-neutral-400 hover:bg-neutral-800 hover:text-white"
                 >
-                  Zmien
+                  {messages.form.change}
                 </button>
               </div>
             )
@@ -2988,7 +2973,7 @@ export function ContainerListingForm({
         <>
           <input
             type="hidden"
-            {...register("type", { required: "Wybierz typ ogloszenia" })}
+            {...register("type", { required: messages.shared.selectListingType })}
           />
           <input
             type="checkbox"
@@ -3000,7 +2985,10 @@ export function ContainerListingForm({
 
       {canProceedFromIntentStep ? (
         <>
-          <FormSection title="Kontener" contentClassName="grid gap-4">
+          <FormSection
+            title={messages.form.containerSectionTitle}
+            contentClassName="grid gap-4"
+          >
             <div
               className={
                 canManageListingPhotos
@@ -3016,19 +3004,19 @@ export function ContainerListingForm({
                     onClick={() => {
                       coverPhotoInputRef.current?.click();
                     }}
-                    aria-label="Wybierz logo ogloszenia"
+                    aria-label={messages.form.chooseCoverAria}
                     disabled={isSubmitting || isProcessingImages}
                   >
                     {mainPhotoPreviewUrl ? (
                       <img
                         src={mainPhotoPreviewUrl}
-                        alt="Podglad logo ogloszenia"
+                        alt={messages.form.coverPreviewAlt}
                         className="h-full w-full object-cover"
                       />
                     ) : (
                       <img
                         src={containerLogoPlaceholderSrc}
-                        alt="Placeholder kontenera"
+                        alt={messages.form.coverPlaceholderAlt}
                         className="h-full w-full object-contain p-1"
                       />
                     )}
@@ -3044,7 +3032,7 @@ export function ContainerListingForm({
                         disabled={isSubmitting || isProcessingImages}
                         className="inline-flex h-9 items-center justify-center rounded-md border border-[#2f639a] bg-[linear-gradient(180deg,#082650_0%,#0c3466_100%)] px-3 text-sm font-medium text-[#e2efff] transition hover:bg-[#0f3f75] hover:text-white disabled:cursor-not-allowed disabled:opacity-60"
                       >
-                        Zmien
+                        {messages.form.change}
                       </button>
                       <button
                         type="button"
@@ -3065,7 +3053,7 @@ export function ContainerListingForm({
                         disabled={isSubmitting || isProcessingImages}
                         className="inline-flex h-9 items-center justify-center rounded-md border border-neutral-600 px-3 text-sm font-medium text-neutral-300 transition hover:border-neutral-500 hover:bg-neutral-800 hover:text-white"
                       >
-                        Usun
+                        {messages.shared.remove}
                       </button>
                     </div>
                   ) : (
@@ -3077,7 +3065,9 @@ export function ContainerListingForm({
                       disabled={isSubmitting || isProcessingImages}
                       className="inline-flex h-9 w-full items-center justify-center rounded-md border border-[#2f639a] bg-[linear-gradient(180deg,#082650_0%,#0c3466_100%)] px-3 text-sm font-medium text-[#e2efff] transition hover:bg-[#0f3f75] hover:text-white disabled:cursor-not-allowed disabled:opacity-60"
                     >
-                      {mainPhotoPreviewUrl ? "Zmien" : "Dodaj miniaturke"}
+                      {mainPhotoPreviewUrl
+                        ? messages.form.change
+                        : messages.form.addThumbnail}
                     </button>
                   )}
                   <input
@@ -3101,15 +3091,18 @@ export function ContainerListingForm({
               <div className="flex flex-col gap-4">
                 <div className="flex flex-wrap items-start gap-3">
                   <label className="flex min-w-[180px] flex-[1_1_220px] flex-col gap-1 text-sm">
-                    <span className="text-neutral-700">Rozmiar</span>
+                    <span className="text-neutral-700">
+                      {messages.form.sizeLabel}
+                    </span>
                     <SelectWithChevron
+                      tone="dark"
                       {...register("containerSize", {
-                        required: "Wybierz rozmiar",
+                        required: messages.form.selectSize,
                         valueAsNumber: true,
                         validate: (value) =>
                           value === CONTAINER_SIZE.CUSTOM ||
                           isStandardContainerSize(value) ||
-                          "Wybierz rozmiar kontenera",
+                          messages.form.selectContainerSize,
                       })}
                     >
                       {CONTAINER_SIZES.map((size) => (
@@ -3118,7 +3111,7 @@ export function ContainerListingForm({
                         </option>
                       ))}
                       <option value={CONTAINER_SIZE.CUSTOM}>
-                        Inne / custom
+                        {resolvedListingMessages.shared.customContainerSize}
                       </option>
                     </SelectWithChevron>
                     {errors.containerSize?.message ? (
@@ -3129,45 +3122,52 @@ export function ContainerListingForm({
                   </label>
 
                   <label className="flex min-w-[180px] flex-[1_1_220px] flex-col gap-1 text-sm">
-                    <span className="text-neutral-700">Wysokosc</span>
+                    <span className="text-neutral-700">
+                      {messages.form.heightLabel}
+                    </span>
                     <SelectWithChevron
+                      tone="dark"
                       {...register("containerHeight", {
-                        required: "Wybierz wysokosc",
+                        required: messages.form.selectHeight,
                       })}
                     >
-                      {CONTAINER_HEIGHTS.map((height) => (
-                        <option key={height} value={height}>
-                          {CONTAINER_HEIGHT_LABEL[height]}
+                      {getContainerHeightOptions(resolvedListingMessages).map((height) => (
+                        <option key={height.value} value={height.value}>
+                          {height.label}
                         </option>
                       ))}
                     </SelectWithChevron>
                   </label>
 
                   <label className="flex min-w-[180px] flex-[1_1_220px] flex-col gap-1 text-sm">
-                    <span className="text-neutral-700">Typ</span>
+                    <span className="text-neutral-700">{messages.form.typeLabel}</span>
                     <SelectWithChevron
+                      tone="dark"
                       {...register("containerType", {
-                        required: "Wybierz typ kontenera",
+                        required: messages.form.selectType,
                       })}
                     >
-                      {CONTAINER_TYPES.map((type) => (
-                        <option key={type} value={type}>
-                          {CONTAINER_TYPE_LABEL[type]}
+                      {getContainerTypeOptions(resolvedListingMessages).map((type) => (
+                        <option key={type.value} value={type.value}>
+                          {type.label}
                         </option>
                       ))}
                     </SelectWithChevron>
                   </label>
 
                   <label className="flex min-w-[180px] flex-[1_1_220px] flex-col gap-1 text-sm">
-                    <span className="text-neutral-700">Stan</span>
+                    <span className="text-neutral-700">
+                      {messages.form.conditionLabel}
+                    </span>
                     <SelectWithChevron
+                      tone="dark"
                       {...register("containerCondition", {
-                        required: "Wybierz stan kontenera",
+                        required: messages.form.selectCondition,
                       })}
                     >
-                      {CONTAINER_CONDITIONS.map((condition) => (
-                        <option key={condition} value={condition}>
-                          {CONTAINER_CONDITION_LABEL[condition]}
+                      {getContainerConditionOptions(resolvedListingMessages).map((condition) => (
+                        <option key={condition.value} value={condition.value}>
+                          {condition.label}
                         </option>
                       ))}
                     </SelectWithChevron>
@@ -3181,7 +3181,9 @@ export function ContainerListingForm({
 
                 <div className="flex flex-col gap-3 sm:flex-row sm:flex-nowrap sm:items-start">
                   <div className="grid w-full gap-1 text-sm sm:min-w-0 sm:flex-1 sm:basis-0">
-                    <span className="text-neutral-700">Cechy dodatkowe</span>
+                    <span className="text-neutral-700">
+                      {messages.form.featuresLabel}
+                    </span>
                     <Controller
                       control={control}
                       name="containerFeatures"
@@ -3189,6 +3191,8 @@ export function ContainerListingForm({
                         <ContainerFeaturesMultiSelect
                           values={field.value ?? []}
                           onBlur={field.onBlur}
+                          messages={messages.shared}
+                          listingMessages={resolvedListingMessages}
                           onChange={(nextValues) => {
                             field.onChange(
                               normalizeContainerFeatures(nextValues),
@@ -3200,7 +3204,9 @@ export function ContainerListingForm({
                   </div>
 
                   <label className="grid w-full gap-1 text-sm sm:min-w-0 sm:flex-1 sm:basis-0">
-                    <span className="text-neutral-700">Rok produkcji</span>
+                    <span className="text-neutral-700">
+                      {messages.form.productionYearLabel}
+                    </span>
                     <input
                       type="number"
                       min={1900}
@@ -3208,7 +3214,7 @@ export function ContainerListingForm({
                       step={1}
                       {...register("productionYear")}
                       className="rounded-md border border-neutral-700 bg-neutral-950 px-3 py-2 text-neutral-100"
-                      placeholder="np. 2018"
+                      placeholder={messages.form.productionYearPlaceholder}
                     />
                   </label>
                 </div>
@@ -3217,19 +3223,21 @@ export function ContainerListingForm({
           </FormSection>
 
           <FormSection
-            title="Dostepnosc"
+            title={messages.form.availabilitySectionTitle}
             contentClassName="flex flex-col gap-3"
           >
             <div className="flex flex-wrap items-end gap-3">
               <label className="flex min-w-[120px] flex-[0_0_120px] flex-col gap-1 text-sm">
-                <span className="text-neutral-700">Ilosc *</span>
+                <span className="text-neutral-700">
+                  {messages.form.quantityLabel} *
+                </span>
                 <input
                   type="number"
                   min={1}
                   {...register("quantity", {
-                    required: "Podaj ilosc",
+                    required: messages.form.quantityRequired,
                     valueAsNumber: true,
-                    min: { value: 1, message: "Ilosc musi byc wieksza od 0" },
+                    min: { value: 1, message: messages.form.quantityPositive },
                   })}
                   className="rounded-md border border-neutral-700 bg-neutral-950 px-3 py-2 text-neutral-100"
                 />
@@ -3242,7 +3250,7 @@ export function ContainerListingForm({
 
               <label className="flex min-w-[220px] flex-[1_1_220px] flex-col gap-1 text-sm">
                 <span className="text-neutral-700">
-                  Dostepny od {availableNowValue ? "" : "*"}
+                  {messages.form.availableFromLabel} {availableNowValue ? "" : "*"}
                 </span>
                 <input
                   type="date"
@@ -3264,7 +3272,7 @@ export function ContainerListingForm({
                     validate: (value) =>
                       availableNowValue ||
                       value.trim().length > 0 ||
-                      "Podaj date albo zaznacz Dostepny teraz",
+                      messages.form.provideDateOrNow,
                   })}
                   className="rounded-md border border-neutral-700 bg-neutral-950 px-3 py-2 text-neutral-100"
                 />
@@ -3297,7 +3305,7 @@ export function ContainerListingForm({
                   })}
                   className="h-4 w-4 rounded border-neutral-600 bg-neutral-950 text-[#2f639a] focus:ring-[#4e86c3]"
                 />
-                <span>Dostepny juz teraz</span>
+                <span>{messages.form.availableNowLabel}</span>
               </label>
 
               <label className="inline-flex min-w-[250px] flex-[1_1_250px] items-center gap-2 rounded-md border border-neutral-700 bg-neutral-900/70 px-3 py-2 text-sm text-neutral-200">
@@ -3307,13 +3315,13 @@ export function ContainerListingForm({
                   {...register("availableFromApproximate")}
                   className="h-4 w-4 rounded border-neutral-600 bg-neutral-950 text-[#2f639a] focus:ring-[#4e86c3] disabled:cursor-not-allowed disabled:opacity-60"
                 />
-                <span>Data przyblizona</span>
+                <span>{messages.form.approximateDateLabel}</span>
               </label>
             </div>
           </FormSection>
 
           <FormSection
-            title="Lokalizacja"
+            title={messages.form.locationSectionTitle}
           >
             <div className="flex flex-wrap items-center gap-2">
               {hasCompanyLocationPrefill ? (
@@ -3322,6 +3330,7 @@ export function ContainerListingForm({
                   onApply={handleApplyCompanyLocation}
                   onClear={handleClearLocations}
                   variant="light"
+                  messages={messages.shared}
                 />
               ) : null}
               <button
@@ -3331,13 +3340,13 @@ export function ContainerListingForm({
                 }}
                 className="ml-auto inline-flex h-9 items-center rounded-md border border-[#2f639a] bg-[linear-gradient(180deg,#082650_0%,#0c3466_100%)] px-3 text-sm font-medium text-[#e2efff] transition hover:bg-[#0f3f75] hover:text-white"
               >
-                Wybierz lokalizacje
+                {messages.form.chooseLocationButton}
               </button>
             </div>
 
             <div className="rounded-md border border-neutral-300 bg-white p-2 text-xs text-neutral-600">
               <p className="font-medium text-neutral-700">
-                Ustawiono lokalizacje: {configuredLocationsCount}/
+                {messages.form.configuredLocationsLabel}: {configuredLocationsCount}/
                 {MAX_LISTING_LOCATIONS}
               </p>
               {visibleConfiguredLocationDisplays.length > 0 ? (
@@ -3366,7 +3375,7 @@ export function ContainerListingForm({
                 </div>
               ) : (
                 <p className="mt-1 text-neutral-500">
-                  Brak ustawionej lokalizacji glownej.
+                  {messages.form.noPrimaryLocation}
                 </p>
               )}
             </div>
@@ -3376,7 +3385,7 @@ export function ContainerListingForm({
               {...register("locationLat", {
                 validate: (value) =>
                   parseCoordinate(value) !== null ||
-                  "Wybierz lokalizacje na mapie lub wyszukaj adres",
+                  messages.form.chooseLocationOnMap,
               })}
             />
             <input
@@ -3384,7 +3393,7 @@ export function ContainerListingForm({
               {...register("locationLng", {
                 validate: (value) =>
                   parseCoordinate(value) !== null ||
-                  "Wybierz lokalizacje na mapie lub wyszukaj adres",
+                  messages.form.chooseLocationOnMap,
               })}
             />
             <input type="hidden" {...register("locationAddressLabel")} />
@@ -3402,12 +3411,14 @@ export function ContainerListingForm({
           </FormSection>
 
           <FormSection
-            title="Cena"
+            title={messages.form.priceSectionTitle}
           >
             <div className="flex flex-wrap items-end gap-3">
               <label className="flex min-w-[220px] flex-[1.6_1_320px] flex-col gap-1 text-sm">
                 <span className="text-neutral-700">
-                  {quantityValue > 1 ? "Kwota (per kontener)" : "Kwota"}
+                  {quantityValue > 1
+                    ? messages.form.amountPerContainerLabel
+                    : messages.form.amountLabel}
                 </span>
                 <input
                   type="number"
@@ -3420,12 +3431,12 @@ export function ContainerListingForm({
                       }
                       return (
                         normalizeOptionalInteger(value) !== undefined ||
-                        "Podaj kwote ceny jako pelna liczbe"
+                        messages.form.fullNumberPrice
                       );
                     },
                   })}
                   className="rounded-md border border-neutral-700 bg-neutral-950 px-3 py-2 text-neutral-100"
-                  placeholder="np. 2500"
+                  placeholder={messages.form.amountPlaceholder}
                 />
                 {errors.priceValueAmount?.message ? (
                   <span className="text-xs text-red-700">
@@ -3434,7 +3445,9 @@ export function ContainerListingForm({
                 ) : null}
               </label>
               <label className="flex min-w-[150px] flex-[1_1_180px] flex-col gap-1 text-sm">
-                <span className="text-neutral-700">Stawka VAT (%)</span>
+                <span className="text-neutral-700">
+                  {messages.form.vatRateLabel}
+                </span>
                 <input
                   type="number"
                   min={0}
@@ -3442,31 +3455,37 @@ export function ContainerListingForm({
                   step="0.01"
                   {...register("priceVatRate")}
                   className="rounded-md border border-neutral-700 bg-neutral-950 px-3 py-2 text-neutral-100"
-                  placeholder="np. 23"
+                  placeholder={messages.form.vatRatePlaceholder}
                 />
               </label>
               <label className="flex min-w-[130px] flex-[0.7_1_150px] flex-col gap-1 text-sm">
-                <span className="text-neutral-700">Waluta</span>
+                <span className="text-neutral-700">
+                  {messages.form.currencyLabel}
+                </span>
                 <SelectWithChevron
-                  {...register("priceCurrency", { required: "Wybierz walute" })}
+                  tone="dark"
+                  {...register("priceCurrency", { required: messages.form.selectCurrency })}
                 >
                   {PRICE_CURRENCIES.map((currency) => (
                     <option key={currency} value={currency}>
-                      {PRICE_CURRENCY_LABEL[currency]}
+                      {currency}
                     </option>
                   ))}
                 </SelectWithChevron>
               </label>
               <label className="flex min-w-[150px] flex-[0.9_1_180px] flex-col gap-1 text-sm">
-                <span className="text-neutral-700">Netto/Brutto</span>
+                <span className="text-neutral-700">
+                  {messages.form.taxModeLabel}
+                </span>
                 <SelectWithChevron
+                  tone="dark"
                   {...register("priceTaxMode", {
-                    required: "Wybierz netto/brutto",
+                    required: messages.form.selectTaxMode,
                   })}
                 >
                   {PRICE_TAX_MODES.map((mode) => (
                     <option key={mode} value={mode}>
-                      {PRICE_TAX_MODE_LABEL[mode]}
+                      {mode}
                     </option>
                   ))}
                 </SelectWithChevron>
@@ -3474,7 +3493,7 @@ export function ContainerListingForm({
             </div>
 
             <p className="text-xs text-neutral-400">
-              Puste pole kwoty oznacza cene na zapytanie.
+              {messages.form.emptyAmountHint}
             </p>
 
             <label className="inline-flex w-fit items-center gap-2 self-start rounded-md border border-neutral-700 bg-neutral-900/70 px-3 py-2 text-sm text-neutral-200">
@@ -3483,30 +3502,32 @@ export function ContainerListingForm({
                 {...register("priceNegotiable")}
                 className="h-4 w-4 rounded border-neutral-600 bg-neutral-950 text-[#2f639a] focus:ring-[#4e86c3]"
               />
-              <span>Cena do negocjacji</span>
+              <span>{messages.form.negotiablePriceLabel}</span>
             </label>
           </FormSection>
 
           {showDescriptionSection ? (
             <FormSection
-              title="Opis ogloszenia"
+              title={messages.form.descriptionSectionTitle}
             >
             <div className="grid gap-1 text-sm">
-              <span className="text-neutral-700">Opis (opcjonalnie)</span>
+              <span className="text-neutral-700">
+                {messages.form.descriptionLabel} ({messages.shared.optional})
+              </span>
               <Controller
                 name="description"
                 control={control}
                 rules={{
                   validate: (value) =>
                     getRichTextLength(value) <= 1000 ||
-                    "Opis moze miec maksymalnie 1000 znakow",
+                    messages.form.descriptionMaxLength,
                 }}
                 render={({ field }) => (
                   <SimpleRichTextEditor
                     value={field.value}
                     onChange={field.onChange}
                     maxCharacters={1000}
-                    placeholder="Dodatkowe informacje o kontenerze, warunkach i terminie"
+                    placeholder={messages.form.descriptionPlaceholder}
                     disabled={isSubmitting}
                   />
                 )}
@@ -3521,7 +3542,7 @@ export function ContainerListingForm({
             <div className="grid gap-3 sm:grid-cols-2 sm:items-center">
               <div className="grid gap-2 text-sm">
                 <label htmlFor="containerColorsRal" className="text-neutral-700">
-                  Kolory RAL Classic
+                  {messages.form.ralColorsLabel}
                 </label>
                 <input
                   id="containerColorsRal"
@@ -3529,15 +3550,14 @@ export function ContainerListingForm({
                     validate: validateContainerRalColorsInput,
                     maxLength: {
                       value: 320,
-                      message: "Lista kolorow moze miec maksymalnie 320 znakow",
+                      message: messages.form.ralListMaxLength,
                     },
                   })}
                   className="rounded-md border border-neutral-700 bg-neutral-950 px-3 py-2 text-neutral-100"
-                  placeholder="np. RAL 5010, 9010"
+                  placeholder={messages.form.ralPlaceholder}
                 />
                 <span className="text-xs text-neutral-400">
-                  Podaj jeden lub maks 10 kolorow RAL, oddzielajac je
-                  przecinkiem.
+                  {messages.form.ralHint}
                 </span>
                 {errors.containerColorsRal?.message ? (
                   <span className="text-xs text-red-700">
@@ -3550,7 +3570,7 @@ export function ContainerListingForm({
                     {...register("hasBranding")}
                     className="h-4 w-4 rounded border-neutral-600 bg-neutral-950 text-[#2f639a] focus:ring-[#4e86c3]"
                   />
-                  <span>Branded (kontener ma branding)</span>
+                  <span>{messages.form.brandingLabel}</span>
                 </label>
               </div>
               <div className="flex w-full flex-wrap items-start justify-end gap-2">
@@ -3588,7 +3608,7 @@ export function ContainerListingForm({
 
           {showTransportSection ? (
             <FormSection
-              title="Logistyka"
+              title={messages.form.logisticsSectionTitle}
             >
             <div className="grid gap-2 sm:grid-cols-2">
               <label className="flex w-full min-w-0 items-center gap-2 rounded-md border border-neutral-700 bg-neutral-900/70 px-3 py-2 text-sm text-neutral-200">
@@ -3610,7 +3630,9 @@ export function ContainerListingForm({
                   })}
                   className="h-4 w-4 rounded border-neutral-600 bg-neutral-950 text-[#2f639a] focus:ring-[#4e86c3]"
                 />
-                <span className="min-w-0 leading-snug">Mozliwy transport</span>
+                <span className="min-w-0 leading-snug">
+                  {messages.form.transportAvailableLabel}
+                </span>
               </label>
               <label className="flex w-full min-w-0 items-center gap-2 rounded-md border border-neutral-700 bg-neutral-900/70 px-3 py-2 text-sm text-neutral-200">
                 <input
@@ -3633,7 +3655,9 @@ export function ContainerListingForm({
                   })}
                   className="h-4 w-4 rounded border-neutral-600 bg-neutral-950 text-[#2f639a] focus:ring-[#4e86c3]"
                 />
-                <span className="min-w-0 leading-snug">Transport w cenie</span>
+                <span className="min-w-0 leading-snug">
+                  {messages.form.transportIncludedLabel}
+                </span>
               </label>
               <label className="flex w-full min-w-0 items-center gap-2 rounded-md border border-neutral-700 bg-neutral-900/70 px-3 py-2 text-sm text-neutral-200">
                 <input
@@ -3651,7 +3675,7 @@ export function ContainerListingForm({
                   className="h-4 w-4 rounded border-neutral-600 bg-neutral-950 text-[#2f639a] focus:ring-[#4e86c3]"
                 />
                 <span className="min-w-0 leading-snug">
-                  Mozliwy rozladunek / HDS
+                  {messages.form.unloadingAvailableLabel}
                 </span>
               </label>
               <label className="flex w-full min-w-0 items-center gap-2 rounded-md border border-neutral-700 bg-neutral-900/70 px-3 py-2 text-sm text-neutral-200">
@@ -3670,14 +3694,14 @@ export function ContainerListingForm({
                   className="h-4 w-4 rounded border-neutral-600 bg-neutral-950 text-[#2f639a] focus:ring-[#4e86c3]"
                 />
                 <span className="min-w-0 leading-snug">
-                  Rozladunek / HDS w cenie
+                  {messages.form.unloadingIncludedLabel}
                 </span>
               </label>
             </div>
 
             <label className="grid gap-1 text-sm sm:max-w-xs">
               <span className="text-neutral-700">
-                Darmowy transport do (km)
+                {messages.form.freeTransportDistanceLabel}
               </span>
               <input
                 type="number"
@@ -3695,12 +3719,12 @@ export function ContainerListingForm({
                       (typeof parsed === "number" &&
                         parsed > 0 &&
                         parsed <= 10_000) ||
-                      "Podaj liczbe km od 1 do 10000"
+                      messages.form.transportDistanceRange
                     );
                   },
                 })}
                 className="rounded-md border border-neutral-700 bg-neutral-950 px-3 py-2 text-neutral-100 disabled:cursor-not-allowed disabled:opacity-60"
-                placeholder="np. 150"
+                placeholder={messages.form.transportDistancePlaceholder}
               />
               {errors.logisticsTransportFreeDistanceKm?.message ? (
                 <span className="text-xs text-red-700">
@@ -3710,17 +3734,19 @@ export function ContainerListingForm({
             </label>
 
             <label className="grid gap-1 text-sm">
-              <span className="text-neutral-700">Komentarz logistyczny</span>
+              <span className="text-neutral-700">
+                {messages.form.logisticsCommentLabel}
+              </span>
               <textarea
                 rows={3}
                 {...register("logisticsComment", {
                   maxLength: {
                     value: 600,
-                    message: "Komentarz moze miec maksymalnie 600 znakow",
+                    message: messages.form.logisticsCommentMaxLength,
                   },
                 })}
                 className="rounded-md border border-neutral-700 bg-neutral-950 px-3 py-2 text-neutral-100"
-                placeholder="np. transport po uzgodnieniu, terminy rozladunku, warunki HDS"
+                placeholder={messages.form.logisticsCommentPlaceholder}
               />
               {errors.logisticsComment?.message ? (
                 <span className="text-xs text-red-700">
@@ -3733,13 +3759,15 @@ export function ContainerListingForm({
 
           {!isCreateMode ? (
             <FormSection
-              title="Kontakt"
+              title={messages.form.contactSectionTitle}
             >
               <div className="grid gap-4 sm:grid-cols-2">
                 <label className="grid gap-1 text-sm">
-                  <span className="text-neutral-700">Nazwa firmy *</span>
+                  <span className="text-neutral-700">
+                    {messages.form.companyNameLabel} *
+                  </span>
                   <input
-                    {...register("companyName", COMPANY_NAME_VALIDATION)}
+                    {...register("companyName", companyNameValidation)}
                     disabled={publishedAsCompanyValue}
                     className="rounded-md border border-neutral-700 bg-neutral-950 px-3 py-2 font-medium text-neutral-950 placeholder:text-neutral-400 disabled:cursor-not-allowed disabled:border-neutral-300 disabled:bg-neutral-100 disabled:text-neutral-700"
                   />
@@ -3750,10 +3778,12 @@ export function ContainerListingForm({
                   ) : null}
                 </label>
                 <label className="grid gap-1 text-sm">
-                  <span className="text-neutral-700">Email kontaktowy *</span>
+                  <span className="text-neutral-700">
+                    {messages.form.contactEmailLabel} *
+                  </span>
                   <input
                     type="email"
-                    {...register("contactEmail", CONTACT_EMAIL_VALIDATION)}
+                    {...register("contactEmail", contactEmailValidation)}
                     className="rounded-md border border-neutral-700 bg-neutral-950 px-3 py-2 font-medium text-neutral-950 placeholder:text-neutral-400"
                   />
                   {errors.contactEmail?.message ? (
@@ -3765,11 +3795,13 @@ export function ContainerListingForm({
               </div>
 
               <label className="grid gap-1 text-sm">
-                <span className="text-neutral-700">Telefon kontaktowy</span>
+                <span className="text-neutral-700">
+                  {messages.form.contactPhoneLabel}
+                </span>
                 <input
                   {...register("contactPhone")}
                   className="rounded-md border border-neutral-700 bg-neutral-950 px-3 py-2 font-medium text-neutral-950 placeholder:text-neutral-400"
-                  placeholder="np. +48 600 000 000"
+                  placeholder={messages.form.contactPhonePlaceholder}
                 />
               </label>
             </FormSection>
@@ -3777,12 +3809,12 @@ export function ContainerListingForm({
 
           {showCertificationSection ? (
             <FormSection
-              title="Certyfikacja i Gwarancja"
+              title={messages.form.certificationSectionTitle}
             >
             <div className="flex flex-wrap items-start gap-3">
               <div className="flex w-fit flex-col gap-1 text-sm">
                 <span className="invisible text-neutral-700" aria-hidden="true">
-                  Miesiac
+                  {messages.form.monthLabel}
                 </span>
                 <label className="inline-flex h-9 w-fit items-center gap-2 rounded-md border border-neutral-700 bg-neutral-900/70 px-3 text-sm text-neutral-200">
                   <input
@@ -3790,7 +3822,7 @@ export function ContainerListingForm({
                     {...register("hasCscPlate")}
                     className="h-4 w-4 rounded border-neutral-600 bg-neutral-950 text-[#2f639a] focus:ring-[#4e86c3]"
                   />
-                  <span>Tabliczka CSC</span>
+                  <span>{messages.form.cscPlateLabel}</span>
                 </label>
                 <span className="min-h-4 text-xs text-transparent" aria-hidden="true">
                   {"\u00A0"}
@@ -3798,7 +3830,7 @@ export function ContainerListingForm({
               </div>
               <div className="flex w-fit flex-col gap-1 text-sm">
                 <span className="invisible text-neutral-700" aria-hidden="true">
-                  Miesiac
+                  {messages.form.monthLabel}
                 </span>
                 <label className="inline-flex h-9 w-fit items-center gap-2 rounded-md border border-neutral-700 bg-neutral-900/70 px-3 text-sm text-neutral-200">
                   <input
@@ -3806,14 +3838,14 @@ export function ContainerListingForm({
                     {...register("hasCscCertification")}
                     className="h-4 w-4 rounded border-neutral-600 bg-neutral-950 text-[#2f639a] focus:ring-[#4e86c3]"
                   />
-                  <span>Certyfikacja CSC</span>
+                  <span>{messages.form.cscCertificationLabel}</span>
                 </label>
                 <span className="min-h-4 text-xs text-transparent" aria-hidden="true">
                   {"\u00A0"}
                 </span>
               </div>
               <label className="flex w-fit flex-col gap-1 text-sm">
-                <span className="text-neutral-700">Miesiac</span>
+                <span className="text-neutral-700">{messages.form.monthLabel}</span>
                 <input
                   type="text"
                   inputMode="numeric"
@@ -3823,7 +3855,7 @@ export function ContainerListingForm({
                     validate: (value) => {
                       const monthDigits = value.replace(/\D+/g, "");
                       if (monthDigits.length > 2) {
-                        return "Podaj miesiac w formacie MM";
+                        return messages.form.monthFormat;
                       }
                       const month = normalizeOptionalInteger(value);
                       const year = normalizeOptionalInteger(
@@ -3836,7 +3868,7 @@ export function ContainerListingForm({
                         (typeof month === "number" &&
                           month >= 1 &&
                           month <= 12) ||
-                        "Podaj miesiac od 1 do 12"
+                        messages.form.monthRange
                       );
                     },
                   })}
@@ -3863,7 +3895,7 @@ export function ContainerListingForm({
                 </span>
               </label>
               <label className="flex w-fit flex-col gap-1 text-sm">
-                <span className="text-neutral-700">Rok</span>
+                <span className="text-neutral-700">{messages.form.yearLabel}</span>
                 <input
                   type="text"
                   inputMode="numeric"
@@ -3873,7 +3905,7 @@ export function ContainerListingForm({
                     validate: (value) => {
                       const yearDigits = value.replace(/\D+/g, "");
                       if (yearDigits.length > 4) {
-                        return "Podaj rok w formacie RRRR";
+                        return messages.form.yearFormat;
                       }
                       const year = normalizeOptionalInteger(value);
                       const month = normalizeOptionalInteger(
@@ -3886,7 +3918,7 @@ export function ContainerListingForm({
                         (typeof year === "number" &&
                           year >= 1900 &&
                           year <= 2100) ||
-                        "Podaj poprawny rok"
+                        messages.form.yearValid
                       );
                     },
                   })}
@@ -3919,7 +3951,7 @@ export function ContainerListingForm({
                 {...register("hasWarranty")}
                 className="h-4 w-4 rounded border-neutral-600 bg-neutral-950 text-[#2f639a] focus:ring-[#4e86c3]"
               />
-              <span>Gwarancja</span>
+              <span>{messages.form.warrantyLabel}</span>
             </label>
             </FormSection>
           ) : null}
@@ -3928,8 +3960,12 @@ export function ContainerListingForm({
             <section className="grid gap-4 rounded-lg border border-neutral-300 bg-neutral-50/95 p-3">
             <div className="grid gap-2">
               <ImageDropzone
-                title={`Dodatkowe zdjecia (max ${MAX_CONTAINER_PHOTOS})`}
-                hintText={`JPG/PNG/WebP, maksymalnie ${MAX_CONTAINER_PHOTO_MB} MB na plik`}
+                title={formatTemplate(messages.form.additionalPhotosTitle, {
+                  count: MAX_CONTAINER_PHOTOS,
+                })}
+                hintText={formatTemplate(messages.form.photoHint, {
+                  count: MAX_CONTAINER_PHOTO_MB,
+                })}
                 variant="light"
                 onFilesAdded={(files) => {
                   void handleAdditionalPhotoFilesAdded(files);
@@ -3937,7 +3973,7 @@ export function ContainerListingForm({
               />
               {isProcessingImages ? (
                 <p className="text-xs text-neutral-600">
-                  Przetwarzanie zdjec...
+                  {messages.form.processingPhotos}
                 </p>
               ) : null}
             </div>
@@ -3963,11 +3999,11 @@ export function ContainerListingForm({
                             prev.filter((value) => value !== index),
                           );
                         }}
-                        title="Usun zdjecie"
+                        title={messages.form.removePhoto}
                       >
                         <img
                           src={url}
-                          alt="Podglad zdjecia kontenera"
+                          alt={messages.form.photoPreviewAlt}
                           className="max-h-24 w-auto max-w-full object-contain transition-transform duration-300 ease-out group-hover:scale-105"
                         />
                       </button>
@@ -3979,8 +4015,8 @@ export function ContainerListingForm({
                             prev.filter((value) => value !== index),
                           );
                         }}
-                        title="Usun zdjecie"
-                        aria-label="Usun zdjecie"
+                        title={messages.form.removePhoto}
+                        aria-label={messages.form.removePhoto}
                       >
                         x
                       </button>
@@ -3996,8 +4032,8 @@ export function ContainerListingForm({
                 onRemove={(id) => {
                   setPhotoItems((prev) => removeImageItem(prev, id));
                 }}
-                removeLabel="Usun zdjecie"
-                previewAlt="Podglad zdjecia kontenera"
+                removeLabel={messages.form.removePhoto}
+                previewAlt={messages.form.photoPreviewAlt}
               />
             ) : null}
             </section>
@@ -4019,7 +4055,7 @@ export function ContainerListingForm({
                   <span className="inline-flex h-5 w-5 items-center justify-center rounded-full bg-white text-xs font-bold text-sky-700">
                     +
                   </span>
-                  <span>Dodaj opis i kolorystyke</span>
+                  <span>{messages.form.addDescriptionSection}</span>
                 </button>
               ) : null}
               {!showTransportSection ? (
@@ -4033,7 +4069,7 @@ export function ContainerListingForm({
                   <span className="inline-flex h-5 w-5 items-center justify-center rounded-full bg-white text-xs font-bold text-sky-700">
                     +
                   </span>
-                  <span>Dodaj informacje o transporcie</span>
+                  <span>{messages.form.addTransportSection}</span>
                 </button>
               ) : null}
               {!showCertificationSection ? (
@@ -4047,7 +4083,7 @@ export function ContainerListingForm({
                   <span className="inline-flex h-5 w-5 items-center justify-center rounded-full bg-white text-xs font-bold text-sky-700">
                     +
                   </span>
-                  <span>Dodaj certyfikacje i gwarancje</span>
+                  <span>{messages.form.addCertificationSection}</span>
                 </button>
               ) : null}
               {canManageListingPhotos && !showAdditionalPhotosSection ? (
@@ -4061,7 +4097,7 @@ export function ContainerListingForm({
                   <span className="inline-flex h-5 w-5 items-center justify-center rounded-full bg-white text-xs font-bold text-sky-700">
                     +
                   </span>
-                  <span>Dodaj dodatkowe zdjecia</span>
+                  <span>{messages.form.addPhotosSection}</span>
                 </button>
               ) : null}
             </section>
@@ -4069,17 +4105,17 @@ export function ContainerListingForm({
 
           {canManageListingPhotos && coverPhotoCrop ? (
             <ImageCropModal
-              title="Dopasuj zdjecie glowne"
-              previewAlt="Podglad kadrowania zdjecia glownego"
+              title={messages.form.cropTitle}
+              previewAlt={messages.form.cropPreviewAlt}
               previewFrameClassName="mx-auto aspect-square w-full max-w-sm p-0"
               previewClassName="h-full w-full object-cover"
               labels={{
-                hint: "Ustaw kadr zdjecia glownego ogloszenia.",
-                zoom: "Powiekszenie",
-                offsetX: "Przesuniecie poziome",
-                offsetY: "Przesuniecie pionowe",
-                apply: "Zastosuj",
-                cancel: "Anuluj",
+                hint: messages.form.cropHint,
+                zoom: messages.form.cropZoom,
+                offsetX: messages.form.cropOffsetX,
+                offsetY: messages.form.cropOffsetY,
+                apply: messages.shared.apply,
+                cancel: messages.shared.cancel,
               }}
               state={coverPhotoCrop}
               setState={setCoverPhotoCrop}
@@ -4093,7 +4129,7 @@ export function ContainerListingForm({
               className="fixed inset-0 z-[60] flex items-center justify-center overflow-y-auto bg-[rgba(2,6,23,0.55)] p-4 backdrop-blur-[2px]"
               role="dialog"
               aria-modal="true"
-              aria-label="Edycja lokalizacji"
+              aria-label={messages.form.locationModalAria}
               onMouseDown={(event) => {
                 if (event.target === event.currentTarget) {
                   setIsLocationModalOpen(false);
@@ -4103,7 +4139,7 @@ export function ContainerListingForm({
               <div className="w-full max-w-5xl rounded-xl border border-neutral-700 bg-neutral-900 p-4 shadow-2xl">
                 <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
                   <h3 className="text-base font-semibold text-neutral-100">
-                    Wybierz lokalizacje
+                    {messages.form.locationModalTitle}
                   </h3>
                   <button
                     type="button"
@@ -4112,7 +4148,7 @@ export function ContainerListingForm({
                       setIsLocationModalOpen(false);
                     }}
                   >
-                    Zamknij
+                    {messages.shared.close}
                   </button>
                 </div>
 
@@ -4120,12 +4156,12 @@ export function ContainerListingForm({
                   <div className="flex flex-wrap items-center justify-between gap-2">
                     <div className="text-xs text-neutral-400">
                       <p>
-                        Lokalizacje prosimy wpisywac bez przedrostkow typu
-                        &quot;ulica&quot;, &quot;ul.&quot;.
+                        {messages.form.locationModalHint}
                       </p>
                       <p className="mt-1 text-neutral-500">
-                        Mozesz dodac maksymalnie {MAX_LISTING_LOCATIONS}{" "}
-                        lokalizacji.
+                        {formatTemplate(messages.form.maxLocations, {
+                          count: MAX_LISTING_LOCATIONS,
+                        })}
                       </p>
                     </div>
                     <div className="flex flex-wrap items-center gap-2">
@@ -4135,6 +4171,7 @@ export function ContainerListingForm({
                           onApply={handleApplyCompanyLocation}
                           onClear={handleClearLocations}
                           variant="light"
+                          messages={messages.shared}
                         />
                       ) : null}
                     </div>
@@ -4145,11 +4182,11 @@ export function ContainerListingForm({
                       <div className="mb-2 flex items-center justify-between gap-2">
                         <div className="flex items-center gap-2">
                           <p className="text-xs font-medium text-neutral-300">
-                            Lokalizacja 1
+                            {formatTemplate(messages.shared.locationLabelTemplate, { index: 1 })}
                           </p>
                           {activeMapLocationId === PRIMARY_LOCATION_MAP_ID ? (
                             <span className="inline-flex items-center rounded border border-neutral-300 bg-white px-2 py-0.5 text-xs text-neutral-700">
-                              (edytujesz teraz)
+                              {messages.form.currentlyEditing}
                             </span>
                           ) : null}
                         </div>
@@ -4161,14 +4198,14 @@ export function ContainerListingForm({
                             }}
                             className="rounded border border-neutral-600 px-2 py-0.5 text-xs text-neutral-300 transition hover:border-neutral-500 hover:bg-neutral-800 hover:text-white"
                           >
-                            Edytuj na mapie
+                            {messages.form.editOnMap}
                           </button>
                           <button
                             type="button"
                             onClick={handleRemovePrimaryLocation}
                             className="rounded border border-neutral-600 px-2 py-0.5 text-xs text-neutral-300 transition hover:border-neutral-500 hover:bg-neutral-800 hover:text-white"
                           >
-                            Usun
+                            {messages.shared.remove}
                           </button>
                         </div>
                       </div>
@@ -4190,7 +4227,7 @@ export function ContainerListingForm({
                               }
                             }}
                             className="w-full border-0 bg-transparent px-3 py-2 pr-9 text-sm text-neutral-100"
-                            placeholder="Wpisz adres, terminal, miasto..."
+                            placeholder={messages.form.locationSearchPlaceholder}
                           />
                           {isLocationBusy ? (
                             <span
@@ -4209,7 +4246,7 @@ export function ContainerListingForm({
                           disabled={isLocationBusy || isSubmitting}
                           className="border-l border-[#2f639a] bg-[linear-gradient(180deg,#082650_0%,#0c3466_100%)] px-4 py-2 text-sm font-medium text-[#e2efff] transition hover:bg-[#0f3f75] hover:text-white disabled:cursor-not-allowed disabled:opacity-60"
                         >
-                          Szukaj
+                          {messages.form.searchLocation}
                         </button>
                       </div>
                       {primaryLocationDisplay.postalCode ||
@@ -4243,11 +4280,13 @@ export function ContainerListingForm({
                         <div className="mb-2 flex items-center justify-between gap-2">
                           <div className="flex items-center gap-2">
                             <p className="text-xs font-medium text-neutral-300">
-                              Lokalizacja {index + 2}
+                              {formatTemplate(messages.shared.locationLabelTemplate, {
+                                index: index + 2,
+                              })}
                             </p>
                             {activeMapLocationId === location.id ? (
                               <span className="inline-flex items-center rounded border border-neutral-300 bg-white px-2 py-0.5 text-xs text-neutral-700">
-                                (edytujesz teraz)
+                                {messages.form.currentlyEditing}
                               </span>
                             ) : null}
                           </div>
@@ -4259,7 +4298,7 @@ export function ContainerListingForm({
                               }}
                               className="rounded border border-neutral-600 px-2 py-0.5 text-xs text-neutral-300 transition hover:border-neutral-500 hover:bg-neutral-800 hover:text-white"
                             >
-                              Edytuj na mapie
+                              {messages.form.editOnMap}
                             </button>
                             <button
                               type="button"
@@ -4268,7 +4307,7 @@ export function ContainerListingForm({
                               }}
                               className="rounded border border-neutral-600 px-2 py-0.5 text-xs text-neutral-300 transition hover:border-neutral-500 hover:bg-neutral-800 hover:text-white"
                             >
-                              Usun
+                              {messages.shared.remove}
                             </button>
                           </div>
                         </div>
@@ -4295,7 +4334,7 @@ export function ContainerListingForm({
                                 }
                               }}
                               className="w-full border-0 bg-transparent px-3 py-2 pr-9 text-sm text-neutral-100"
-                              placeholder="Wpisz adres, terminal, miasto..."
+                              placeholder={messages.form.locationSearchPlaceholder}
                             />
                             {location.isSearching ? (
                               <span
@@ -4314,7 +4353,7 @@ export function ContainerListingForm({
                             disabled={location.isSearching || isSubmitting}
                             className="border-l border-[#2f639a] bg-[linear-gradient(180deg,#082650_0%,#0c3466_100%)] px-4 py-2 text-sm font-medium text-[#e2efff] transition hover:bg-[#0f3f75] hover:text-white disabled:cursor-not-allowed disabled:opacity-60"
                           >
-                            Szukaj
+                            {messages.form.searchLocation}
                           </button>
                         </div>
                         {(() => {
@@ -4363,7 +4402,7 @@ export function ContainerListingForm({
                         }
                         className="inline-flex h-9 items-center gap-2 rounded-md border border-neutral-300 bg-white px-3 text-sm font-semibold text-neutral-800 transition hover:bg-neutral-100 disabled:cursor-not-allowed disabled:opacity-60"
                       >
-                        <span>Dodaj nastepna lokalizacje</span>
+                        <span>{messages.form.addNextLocation}</span>
                         <span aria-hidden="true" className="text-sm leading-none">
                           +
                         </span>
@@ -4375,7 +4414,9 @@ export function ContainerListingForm({
                     points={locationMapPoints}
                     activePointId={activeMapLocationId}
                     labels={{
-                      hint: `Kliknij na mapie lub przeciagnij znacznik. Aktywnie edytujesz: ${activeMapLocationLabel}.`,
+                      hint: formatTemplate(messages.form.mapHint, {
+                        label: activeMapLocationLabel,
+                      }),
                     }}
                     mapClassName="h-72"
                     onActivePointChange={(id) => {
@@ -4395,7 +4436,7 @@ export function ContainerListingForm({
                       setIsLocationModalOpen(false);
                     }}
                   >
-                    Zapisz i zamknij
+                    {messages.form.saveAndClose}
                   </button>
                 </div>
               </div>
@@ -4423,190 +4464,110 @@ export function ContainerListingForm({
               aria-disabled={!isSubmitReady ? true : undefined}
             >
               {isSubmitting || isProcessingImages
-                ? "Zapisywanie..."
+                ? messages.shared.saving
                 : submitLabel}
             </button>
           </div>
 
-          {isCreateMode && isContactModalOpen ? (
-            <div
-              className="fixed inset-0 z-[70] flex items-center justify-center overflow-y-auto bg-[rgba(2,6,23,0.5)] p-4 backdrop-blur-[2px]"
-              role="dialog"
-              aria-modal="true"
-              aria-label="Dane kontaktowe do publikacji"
-              onMouseDown={(event) => {
-                if (event.target === event.currentTarget) {
+          <ContactPublishModal
+            isOpen={isCreateMode && isContactModalOpen}
+            hasOwnedCompanyProfile={hasOwnedCompanyProfile}
+            onClose={() => {
+              setIsContactModalOpen(false);
+            }}
+            submitLabel={submitLabel}
+            isSubmitting={isSubmitting}
+            isProcessingImages={isProcessingImages}
+            isCreatePublishReady={isCreatePublishReady}
+            createSubmitButtonClass={createSubmitButtonClass}
+            createSubmitInactiveButtonClass={createSubmitInactiveButtonClass}
+            onConfirm={() => {
+              void handleSubmit(onSubmit, (invalidFields) => {
+                const hasContactErrors = Boolean(
+                  invalidFields.companyName ||
+                    invalidFields.contactEmail ||
+                    invalidFields.contactPhone,
+                );
+                if (!hasContactErrors) {
                   setIsContactModalOpen(false);
                 }
-              }}
-            >
-              <div className="w-full max-w-xl rounded-xl border border-neutral-700 bg-neutral-900 p-4 shadow-2xl">
-                <div className="mb-4 flex items-center justify-between gap-3">
-                  <h3 className="text-base font-semibold text-neutral-100">
-                    Dane kontaktowe do publikacji
-                  </h3>
-                  <button
-                    type="button"
-                    className="rounded-md border border-neutral-700 px-2 py-1 text-xs text-neutral-300 hover:border-neutral-500"
-                    onClick={() => {
-                      setIsContactModalOpen(false);
-                    }}
-                  >
-                    Zamknij
-                  </button>
-                </div>
+              })();
+            }}
+            publishAsCompanyToggle={
+              <label className="inline-flex h-9 w-fit items-center gap-2 rounded-md border border-neutral-700 bg-neutral-900/70 px-3 text-sm text-neutral-200">
+                <input
+                  type="checkbox"
+                  {...register("publishedAsCompany")}
+                  className="h-4 w-4 rounded border-neutral-600 bg-neutral-950 text-[#2f639a] focus:ring-[#4e86c3]"
+                />
+                <span>{messages.form.publishAsCompany}</span>
+              </label>
+            }
+            companyNameField={
+              <label className="grid gap-1 text-sm">
+                <span className="text-neutral-300">
+                  {messages.form.companyNameLabel} *
+                </span>
+                <input
+                  autoComplete="organization"
+                  {...register("companyName", companyNameValidation)}
+                  disabled={publishedAsCompanyValue}
+                  className="rounded-md border border-neutral-700 bg-neutral-950 px-3 py-2 font-medium text-neutral-950 placeholder:text-neutral-400 disabled:cursor-not-allowed disabled:border-neutral-300 disabled:bg-neutral-100 disabled:text-neutral-700"
+                />
+                {errors.companyName?.message ? (
+                  <span className="text-xs text-red-700">
+                    {errors.companyName.message}
+                  </span>
+                ) : null}
+              </label>
+            }
+            contactEmailField={
+              <label className="grid gap-1 text-sm">
+                <span className="text-neutral-300">
+                  {messages.form.contactEmailLabel} *
+                </span>
+                <input
+                  type="email"
+                  autoComplete="email"
+                  {...register("contactEmail", contactEmailValidation)}
+                  className="rounded-md border border-neutral-700 bg-neutral-950 px-3 py-2 font-medium text-neutral-950 placeholder:text-neutral-400"
+                />
+                {errors.contactEmail?.message ? (
+                  <span className="text-xs text-red-700">
+                    {errors.contactEmail.message}
+                  </span>
+                ) : null}
+              </label>
+            }
+            contactPhoneField={
+              <label className="grid gap-1 text-sm">
+                <span className="text-neutral-300">
+                  {messages.form.contactPhoneLabel}
+                </span>
+                <input
+                  type="tel"
+                  autoComplete="tel"
+                  {...register("contactPhone")}
+                  className="rounded-md border border-neutral-700 bg-neutral-950 px-3 py-2 font-medium text-neutral-950 placeholder:text-neutral-400"
+                  placeholder={messages.form.contactPhonePlaceholder}
+                />
+              </label>
+            }
+            messages={messages.dialogs}
+          />
 
-                <p className="mb-4 text-xs text-neutral-400">
-                  Dane uzupelnione automatycznie na podstawie profilu firmy i
-                  konta uzytkownika.
-                </p>
-
-                <div className="grid gap-4">
-                  {hasOwnedCompanyProfile ? (
-                    <label className="inline-flex h-9 w-fit items-center gap-2 rounded-md border border-neutral-700 bg-neutral-900/70 px-3 text-sm text-neutral-200">
-                      <input
-                        type="checkbox"
-                        {...register("publishedAsCompany")}
-                        className="h-4 w-4 rounded border-neutral-600 bg-neutral-950 text-[#2f639a] focus:ring-[#4e86c3]"
-                      />
-                      <span>Publikuj jako firma</span>
-                    </label>
-                  ) : null}
-                  <label className="grid gap-1 text-sm">
-                    <span className="text-neutral-300">Nazwa firmy *</span>
-                    <input
-                      autoComplete="organization"
-                      {...register("companyName", COMPANY_NAME_VALIDATION)}
-                      disabled={publishedAsCompanyValue}
-                      className="rounded-md border border-neutral-700 bg-neutral-950 px-3 py-2 font-medium text-neutral-950 placeholder:text-neutral-400 disabled:cursor-not-allowed disabled:border-neutral-300 disabled:bg-neutral-100 disabled:text-neutral-700"
-                    />
-                    {errors.companyName?.message ? (
-                      <span className="text-xs text-red-700">
-                        {errors.companyName.message}
-                      </span>
-                    ) : null}
-                  </label>
-
-                  <label className="grid gap-1 text-sm">
-                    <span className="text-neutral-300">Email kontaktowy *</span>
-                    <input
-                      type="email"
-                      autoComplete="email"
-                      {...register("contactEmail", CONTACT_EMAIL_VALIDATION)}
-                      className="rounded-md border border-neutral-700 bg-neutral-950 px-3 py-2 font-medium text-neutral-950 placeholder:text-neutral-400"
-                    />
-                    {errors.contactEmail?.message ? (
-                      <span className="text-xs text-red-700">
-                        {errors.contactEmail.message}
-                      </span>
-                    ) : null}
-                  </label>
-
-                  <label className="grid gap-1 text-sm">
-                    <span className="text-neutral-300">Telefon kontaktowy</span>
-                    <input
-                      type="tel"
-                      autoComplete="tel"
-                      {...register("contactPhone")}
-                      className="rounded-md border border-neutral-700 bg-neutral-950 px-3 py-2 font-medium text-neutral-950 placeholder:text-neutral-400"
-                      placeholder="np. +48 600 000 000"
-                    />
-                  </label>
-                </div>
-
-                <div className="mt-5 flex items-center justify-end gap-2">
-                  <button
-                    type="button"
-                    className="rounded-md border border-neutral-700 px-3 py-2 text-sm text-neutral-200 hover:border-neutral-500"
-                    onClick={() => {
-                      setIsContactModalOpen(false);
-                    }}
-                  >
-                    Wroc do formularza
-                  </button>
-                  <button
-                    type="button"
-                    disabled={isSubmitting || isProcessingImages}
-                    className={
-                      isCreatePublishReady
-                        ? createSubmitButtonClass
-                        : createSubmitInactiveButtonClass
-                    }
-                    aria-disabled={!isCreatePublishReady}
-                    onClick={() => {
-                      void handleSubmit(onSubmit, (invalidFields) => {
-                        const hasContactErrors = Boolean(
-                          invalidFields.companyName ||
-                            invalidFields.contactEmail ||
-                            invalidFields.contactPhone,
-                        );
-                        if (!hasContactErrors) {
-                          setIsContactModalOpen(false);
-                        }
-                      })();
-                    }}
-                  >
-                    {isSubmitting || isProcessingImages
-                      ? "Zapisywanie..."
-                      : submitLabel}
-                  </button>
-                </div>
-              </div>
-            </div>
-          ) : null}
-
-          {isCreateMode && isPublishSuccessModalOpen ? (
-            <div
-              className="fixed inset-0 z-[75] flex items-center justify-center overflow-y-auto bg-[rgba(2,6,23,0.58)] p-4 backdrop-blur-[2px]"
-              role="dialog"
-              aria-modal="true"
-              aria-label="Kontener opublikowano pomyslnie"
-              onMouseDown={(event) => {
-                if (event.target !== event.currentTarget) {
-                  return;
-                }
-                setIsPublishSuccessModalOpen(false);
-              }}
-            >
-              <div className="relative w-full max-w-md overflow-hidden rounded-xl border border-neutral-700 bg-neutral-900 p-5 shadow-2xl">
-                <div aria-hidden="true" className="cb-success-burst">
-                  <span />
-                  <span />
-                  <span />
-                  <span />
-                  <span />
-                  <span />
-                </div>
-                <h3 className="relative z-10 text-base font-semibold text-emerald-700">
-                  Kontener opublikowano pomyslnie!
-                </h3>
-                <p className="relative z-10 mt-2 text-sm text-neutral-300">Co chcesz zrobic?</p>
-
-                <div className="relative z-10 mt-5 grid gap-2">
-                  <button
-                    type="button"
-                    className="inline-flex h-10 items-center justify-center rounded-md border border-neutral-400 bg-white px-4 text-sm font-medium text-neutral-700 transition hover:border-neutral-500"
-                    onClick={() => {
-                      setIsPublishSuccessModalOpen(false);
-                      router.push("/containers/mine");
-                      router.refresh();
-                    }}
-                  >
-                    Przejdz do moich kontenerow
-                  </button>
-                  <button
-                    type="button"
-                    className="inline-flex h-10 items-center justify-center rounded-md border border-neutral-300 bg-neutral-100 px-4 text-sm font-medium text-neutral-800 transition hover:bg-neutral-200"
-                    onClick={() => {
-                      setIsPublishSuccessModalOpen(false);
-                    }}
-                  >
-                    Dodaj podobny
-                  </button>
-                </div>
-              </div>
-            </div>
-          ) : null}
+          <PublishSuccessModal
+            isOpen={isCreateMode && isPublishSuccessModalOpen}
+            onClose={() => {
+              setIsPublishSuccessModalOpen(false);
+            }}
+            onGoToMine={() => {
+              setIsPublishSuccessModalOpen(false);
+              router.push("/containers/mine");
+              router.refresh();
+            }}
+            messages={messages.dialogs}
+          />
 
           {shouldShowStickySubmit ? (
             <div className="fixed inset-x-0 bottom-0 z-40 border-t border-neutral-800 bg-neutral-950/92 backdrop-blur">
@@ -4622,7 +4583,7 @@ export function ContainerListingForm({
                   aria-disabled={!isSubmitReady ? true : undefined}
                 >
                   {isSubmitting || isProcessingImages
-                    ? "Zapisywanie..."
+                    ? messages.shared.saving
                     : submitLabel}
                 </button>
               </div>

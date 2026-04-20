@@ -56,6 +56,7 @@ export type FiltersFormValues = {
   productionYearInput: string;
   city: string;
   country: string;
+  countryCode: string;
   sortPreset: SortPreset;
 };
 
@@ -83,6 +84,7 @@ export type AppliedFilters = {
   productionYearInput: string;
   city: string;
   country: string;
+  countryCode: string;
   sortPreset: SortPreset;
 };
 
@@ -153,6 +155,7 @@ export const FILTER_FORM_DEFAULTS: FiltersFormValues = {
   productionYearInput: "",
   city: "",
   country: "",
+  countryCode: "",
   sortPreset: "newest",
 };
 
@@ -232,6 +235,7 @@ export type NonLocationFilters = Pick<
   | "productionYearInput"
   | "city"
   | "country"
+  | "countryCode"
   | "sortPreset"
 >;
 
@@ -284,6 +288,7 @@ export function areNonLocationFiltersEqual(
     left.productionYearInput === right.productionYearInput &&
     left.city === right.city &&
     left.country === right.country &&
+    left.countryCode === right.countryCode &&
     left.sortPreset === right.sortPreset
   );
 }
@@ -314,6 +319,7 @@ export function pickNonLocationFilters(filters: AppliedFilters): NonLocationFilt
     productionYearInput: filters.productionYearInput.trim(),
     city: filters.city,
     country: filters.country,
+    countryCode: filters.countryCode.trim().toUpperCase(),
     sortPreset: filters.sortPreset,
   };
 }

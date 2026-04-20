@@ -63,6 +63,7 @@ export async function POST(request: NextRequest) {
       scope: "containers:bulk-concierge:ip",
       limit: 30,
       windowMs: 60_000,
+      onError: "block",
     });
     if (ipRateLimitResponse) {
       return ipRateLimitResponse;
@@ -82,6 +83,7 @@ export async function POST(request: NextRequest) {
       limit: 8,
       windowMs: 60_000,
       identity: user._id.toHexString(),
+      onError: "block",
     });
     if (userRateLimitResponse) {
       return userRateLimitResponse;
@@ -266,4 +268,3 @@ export async function POST(request: NextRequest) {
     );
   }
 }
-

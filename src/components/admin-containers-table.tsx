@@ -2,9 +2,14 @@
 
 import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
+import {
+  getContainerShortLabelLocalized,
+  getListingKindLabel,
+  type ContainerListingsMessages,
+} from "@/components/container-listings-i18n";
 import { useToast } from "@/components/toast-provider";
 import type { ContainerListingItem } from "@/lib/container-listings";
-import { getContainerShortLabel } from "@/lib/container-listing-types";
+import { formatTemplate, type AppLocale, type AppMessages, withLang } from "@/lib/i18n";
 
 type AdminContainersResponse = {
   items?: ContainerListingItem[];
@@ -18,7 +23,9 @@ type AdminContainersResponse = {
 };
 
 type AdminContainersTableProps = {
-  locale: string;
+  locale: AppLocale;
+  messages: AppMessages["adminContainers"];
+  listingMessages: ContainerListingsMessages;
 };
 
 const ADMIN_NEUTRAL_BUTTON_CLASS =
@@ -30,7 +37,11 @@ const ADMIN_WARNING_BUTTON_CLASS =
 const ADMIN_DANGER_BUTTON_CLASS =
   "rounded-md border border-rose-500/85 bg-rose-700/45 px-2 py-1 text-xs text-rose-50 hover:border-rose-400 hover:bg-rose-700/60";
 
-export function AdminContainersTable({ locale }: AdminContainersTableProps) {
+export function AdminContainersTable({
+  locale,
+  messages,
+  listingMessages,
+}: AdminContainersTableProps) {
   const toast = useToast();
   const [items, setItems] = useState<ContainerListingItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -72,14 +83,18 @@ export function AdminContainersTable({ locale }: AdminContainersTableProps) {
       const data = (await response.json()) as AdminContainersResponse;
 
       if (!response.ok) {
-        throw new Error(data.error ?? `Blad API (${response.status})`);
+        throw new Error(
+          data.error ?? formatTemplate(messages.failedLoad, { status: response.status }),
+        );
       }
 
       setItems(data.items ?? []);
       setTotalPages(data.meta?.totalPages ?? 1);
       setTotal(data.meta?.total ?? 0);
     } catch (loadError) {
-      setError(loadError instanceof Error ? loadError.message : "Nie udalo sie pobrac kontenerow");
+      setError(
+        loadError instanceof Error ? loadError.message : messages.loadFallbackError,
+      );
     } finally {
       setIsLoading(false);
     }
@@ -99,13 +114,13 @@ export function AdminContainersTable({ locale }: AdminContainersTableProps) {
 
       const data = (await response.json().catch(() => null)) as { error?: string } | null;
       if (!response.ok) {
-        throw new Error(data?.error ?? "Nie udalo sie zmienic statusu");
+        throw new Error(data?.error ?? messages.statusUpdateError);
       }
 
-      toast.success("Status zaktualizowany");
+      toast.success(messages.statusUpdatedSuccess);
       await loadItems();
     } catch (actionError) {
-      toast.error(actionError instanceof Error ? actionError.message : "Wystapil blad");
+      toast.error(actionError instanceof Error ? actionError.message : messages.unknownError);
     }
   }
 
@@ -117,28 +132,30 @@ export function AdminContainersTable({ locale }: AdminContainersTableProps) {
 
       const data = (await response.json().catch(() => null)) as { error?: string } | null;
       if (!response.ok) {
-        throw new Error(data?.error ?? "Nie udalo sie usunac kontenera");
+        throw new Error(data?.error ?? messages.deleteError);
       }
 
-      toast.success("Kontener usuniety");
+      toast.success(messages.deletedSuccess);
       await loadItems();
     } catch (actionError) {
-      toast.error(actionError instanceof Error ? actionError.message : "Wystapil blad");
+      toast.error(actionError instanceof Error ? actionError.message : messages.unknownError);
     }
   }
 
   return (
     <section className="rounded-xl border border-neutral-800 bg-neutral-900/60 p-4">
       <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
-        <h2 className="text-lg font-semibold text-neutral-100">Kontenery</h2>
-        <p className="text-xs text-neutral-400">Lacznie: {total}</p>
+        <h2 className="text-lg font-semibold text-neutral-100">{messages.title}</h2>
+        <p className="text-xs text-neutral-400">
+          {formatTemplate(messages.totalLabel, { total })}
+        </p>
       </div>
 
       <div className="mb-3 grid gap-2 md:grid-cols-[minmax(0,1fr)_220px]">
         <input
           value={q}
           onChange={(event) => setQ(event.target.value)}
-          placeholder="Szukaj po firmie, lokalizacji, emailu"
+          placeholder={messages.searchPlaceholder}
           className="rounded-md border border-neutral-700 bg-neutral-950 px-3 py-2 text-sm text-neutral-100"
         />
         <select
@@ -149,46 +166,52 @@ export function AdminContainersTable({ locale }: AdminContainersTableProps) {
           }}
           className="rounded-md border border-neutral-700 bg-neutral-950 px-3 py-2 text-sm text-neutral-100"
         >
-          <option value="all">Status: wszystkie</option>
-          <option value="active">Aktywne</option>
-          <option value="expired">Wygasle</option>
-          <option value="closed">Zamkniete</option>
+          <option value="all">{messages.statusOptions.all}</option>
+          <option value="active">{messages.statusOptions.active}</option>
+          <option value="expired">{messages.statusOptions.expired}</option>
+          <option value="closed">{messages.statusOptions.closed}</option>
         </select>
       </div>
 
       {error ? <p className="mb-2 text-sm text-red-300">{error}</p> : null}
-      {isLoading ? <p className="mb-2 text-sm text-neutral-300">Ladowanie...</p> : null}
+      {isLoading ? <p className="mb-2 text-sm text-neutral-300">{messages.loading}</p> : null}
+      {!isLoading && !error && items.length === 0 ? (
+        <p className="mb-2 text-sm text-neutral-400">{messages.empty}</p>
+      ) : null}
 
       <div className="overflow-auto">
         <table className="w-full min-w-[1080px] text-left text-sm">
           <thead>
             <tr className="text-neutral-400">
-              <th className="pb-2">Firma</th>
-              <th className="pb-2">Kontener</th>
-              <th className="pb-2">Lokalizacja</th>
-              <th className="pb-2">Ilosc</th>
-              <th className="pb-2">Status</th>
-              <th className="pb-2">Wygasa</th>
-              <th className="pb-2">Akcje</th>
+              <th className="pb-2">{messages.columns.company}</th>
+              <th className="pb-2">{messages.columns.container}</th>
+              <th className="pb-2">{messages.columns.location}</th>
+              <th className="pb-2">{messages.columns.quantity}</th>
+              <th className="pb-2">{messages.columns.status}</th>
+              <th className="pb-2">{messages.columns.expires}</th>
+              <th className="pb-2">{messages.columns.actions}</th>
             </tr>
           </thead>
           <tbody>
             {items.map((item) => (
               <tr key={item.id} className="border-t border-neutral-800 align-top">
                 <td className="py-2 pr-3 text-neutral-200">{item.companyName}</td>
-                <td className="py-2 pr-3 text-neutral-300">{getContainerShortLabel(item.container)} ({item.type})</td>
+                <td className="py-2 pr-3 text-neutral-300">
+                  {getContainerShortLabelLocalized(listingMessages, item.container)} (
+                  {getListingKindLabel(listingMessages, item.type)})
+                </td>
                 <td className="py-2 pr-3 text-neutral-300">{item.locationCity}, {item.locationCountry}</td>
                 <td className="py-2 pr-3 text-neutral-300">{item.quantity}</td>
-                <td className="py-2 pr-3 text-neutral-300">{item.status}</td>
+                <td className="py-2 pr-3 text-neutral-300">{messages.statusValues[item.status]}</td>
                 <td className="py-2 pr-3 text-neutral-300">{new Date(item.expiresAt).toLocaleDateString(locale)}</td>
                 <td className="py-2">
                   <div className="flex flex-wrap items-center gap-2">
                     <Link
-                      href={`/containers/${item.id}`}
+                      href={withLang(`/containers/${item.id}`, locale)}
                       target="_blank"
                       className={ADMIN_NEUTRAL_BUTTON_CLASS}
                     >
-                      Podglad
+                      {messages.actions.preview}
                     </Link>
                     <button
                       type="button"
@@ -197,7 +220,7 @@ export function AdminContainersTable({ locale }: AdminContainersTableProps) {
                       }}
                       className={ADMIN_SUCCESS_BUTTON_CLASS}
                     >
-                      Aktywuj
+                      {messages.actions.activate}
                     </button>
                     <button
                       type="button"
@@ -206,7 +229,7 @@ export function AdminContainersTable({ locale }: AdminContainersTableProps) {
                       }}
                       className={ADMIN_WARNING_BUTTON_CLASS}
                     >
-                      Wygas
+                      {messages.actions.expire}
                     </button>
                     <button
                       type="button"
@@ -215,18 +238,18 @@ export function AdminContainersTable({ locale }: AdminContainersTableProps) {
                       }}
                       className={ADMIN_NEUTRAL_BUTTON_CLASS}
                     >
-                      Zamknij
+                      {messages.actions.close}
                     </button>
                     <button
                       type="button"
                       onClick={() => {
-                        if (window.confirm("Czy na pewno usunac kontener?")) {
+                        if (window.confirm(messages.confirmDelete)) {
                           void deleteListing(item.id);
                         }
                       }}
                       className={ADMIN_DANGER_BUTTON_CLASS}
                     >
-                      Usun
+                      {messages.actions.delete}
                     </button>
                   </div>
                 </td>
@@ -243,7 +266,7 @@ export function AdminContainersTable({ locale }: AdminContainersTableProps) {
           onClick={() => setPage((current) => Math.max(1, current - 1))}
           className={`${ADMIN_NEUTRAL_BUTTON_CLASS} disabled:opacity-50`}
         >
-          Poprzednia
+          {messages.previous}
         </button>
         <span className="text-xs text-neutral-400">{page}/{totalPages}</span>
         <button
@@ -252,7 +275,7 @@ export function AdminContainersTable({ locale }: AdminContainersTableProps) {
           onClick={() => setPage((current) => Math.min(totalPages, current + 1))}
           className={`${ADMIN_NEUTRAL_BUTTON_CLASS} disabled:opacity-50`}
         >
-          Nastepna
+          {messages.next}
         </button>
       </div>
     </section>

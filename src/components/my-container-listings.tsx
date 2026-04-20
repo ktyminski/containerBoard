@@ -1,18 +1,28 @@
 ﻿"use client";
 
 import Link from "next/link";
-import { memo, useCallback, useEffect, useState, type ReactNode } from "react";
+import { memo, useCallback, useEffect, useState } from "react";
+import {
+  getContainerConditionLabel,
+  getContainerShortLabelLocalized,
+  getSortOptions,
+  getListingKindLabel,
+  type ContainerListingsMessages,
+} from "@/components/container-listings-i18n";
+import {
+  type ContainerModuleMessages,
+  toIntlLocale,
+} from "@/components/container-modules-i18n";
 import { ContainerPhotoWithPlaceholder } from "@/components/container-photo-with-placeholder";
 import { CopyLinkIcon } from "@/components/icons/copy-link-icon";
 import { useToast } from "@/components/toast-provider";
+import { SelectWithChevron } from "@/components/ui/select-with-chevron";
 import { getSortParams } from "@/components/container-listings-utils";
-import { SORT_OPTIONS, type SortPreset } from "@/components/container-listings-shared";
+import { type SortPreset } from "@/components/container-listings-shared";
+import { formatTemplate, type AppLocale } from "@/lib/i18n";
 import { type ContainerListingItem } from "@/lib/container-listings";
 import {
-  CONTAINER_CONDITION_LABEL,
-  getContainerShortLabel,
   LISTING_STATUS,
-  type ListingType,
 } from "@/lib/container-listing-types";
 
 type MineResponse = {
@@ -68,12 +78,6 @@ type DeleteConfirmationModalState = {
 
 type BulkImportMode = "choose" | "self" | "concierge";
 
-const LISTING_TYPE_LABEL: Record<ListingType, string> = {
-  sell: "Sprzedaz",
-  rent: "Wynajem",
-  buy: "Chce zakupic",
-};
-
 const DARK_BLUE_CTA_CLASS =
   "border border-[#2f639a] bg-[linear-gradient(180deg,#082650_0%,#0c3466_100%)] text-[#e2efff] transition hover:border-[#67c7ff] hover:text-white";
 const SEARCH_GRADIENT_CTA_CLASS =
@@ -101,7 +105,11 @@ function getContainerPreviewSrc(item: ContainerListingItem): string {
   return firstPhotoUrl ?? getContainerPlaceholderSrc(item);
 }
 
-function getListingPriceLabel(item: ContainerListingItem): string {
+function getListingPriceLabel(
+  item: ContainerListingItem,
+  locale: AppLocale,
+  messages: ContainerModuleMessages["myListings"],
+): string {
   const originalAmount = item.pricing?.original.amount;
   const originalCurrency = item.pricing?.original.currency;
   if (
@@ -109,17 +117,20 @@ function getListingPriceLabel(item: ContainerListingItem): string {
     Number.isFinite(originalAmount) &&
     originalCurrency
   ) {
-    return `${Math.round(originalAmount).toLocaleString("pl-PL")} ${originalCurrency}`;
+    return `${Math.round(originalAmount).toLocaleString(toIntlLocale(locale))} ${originalCurrency}`;
   }
 
   if (typeof item.priceAmount === "number" && Number.isFinite(item.priceAmount)) {
-    return `${Math.round(item.priceAmount).toLocaleString("pl-PL")} PLN`;
+    return `${Math.round(item.priceAmount).toLocaleString(toIntlLocale(locale))} PLN`;
   }
 
-  return "Cena na zapytanie";
+  return messages.priceOnRequest;
 }
 
-function getListingLocationLabel(item: ContainerListingItem): string {
+function getListingLocationLabel(
+  item: ContainerListingItem,
+  messages: ContainerModuleMessages["myListings"],
+): string {
   const primaryLocation = item.locations?.find((location) => location.isPrimary) ?? item.locations?.[0];
   const postalCode =
     primaryLocation?.locationAddressParts?.postalCode?.trim() ||
@@ -138,14 +149,14 @@ function getListingLocationLabel(item: ContainerListingItem): string {
   const baseLabel = [postalCode, [city, country].filter(Boolean).join(", ")]
     .filter(Boolean)
     .join(" ");
-  const locationLabel = baseLabel || "Nie podano lokalizacji";
+  const locationLabel = baseLabel || messages.locationUnavailable;
   const extraCount = Math.max(0, (item.locations?.length ?? 0) - 1);
 
   if (extraCount <= 0) {
     return locationLabel;
   }
 
-  return `${locationLabel} + ${extraCount} inne`;
+  return formatTemplate(messages.extraLocations, { label: locationLabel, count: extraCount });
 }
 
 const STATUS_BADGE_CLASS: Record<"active" | "expired" | "closed", string> = {
@@ -154,13 +165,7 @@ const STATUS_BADGE_CLASS: Record<"active" | "expired" | "closed", string> = {
   closed: "rounded-md border border-neutral-300 bg-neutral-100 px-2 py-1 text-xs font-medium text-neutral-700",
 };
 
-const STATUS_LABEL: Record<"active" | "expired" | "closed", string> = {
-  active: "Aktywny",
-  expired: "Zdezaktywowany",
-  closed: "Zdezaktywowany",
-};
-
-const LISTING_TYPE_BADGE_CLASS: Record<ListingType, string> = {
+const LISTING_TYPE_BADGE_CLASS = {
   sell: "rounded-md border border-sky-300 bg-sky-100 px-2 py-1 text-xs font-medium text-sky-800",
   rent: "rounded-md border border-violet-300 bg-violet-100 px-2 py-1 text-xs font-medium text-violet-800",
   buy: "rounded-md border border-neutral-300 bg-neutral-100 px-2 py-1 text-xs font-medium text-neutral-700",
@@ -170,6 +175,9 @@ type ListingAction = "close" | "refresh" | "delete";
 
 type MyContainerListingRowProps = {
   item: ContainerListingItem;
+  locale: AppLocale;
+  messages: ContainerModuleMessages["myListings"];
+  listingMessages: ContainerListingsMessages;
   darkBlueCtaClass: string;
   onCopyListingUrl: (listingId: string) => Promise<void>;
   onRunAction: (id: string, action: ListingAction) => Promise<boolean>;
@@ -179,6 +187,9 @@ type MyContainerListingRowProps = {
 
 const MyContainerListingRow = memo(function MyContainerListingRow({
   item,
+  locale,
+  messages,
+  listingMessages,
   darkBlueCtaClass,
   onCopyListingUrl,
   onRunAction,
@@ -209,32 +220,35 @@ const MyContainerListingRow = memo(function MyContainerListingRow({
         <div className="min-w-0">
           <div className="flex flex-wrap items-center justify-between gap-2">
             <h2 className="text-lg font-semibold text-neutral-900">
-              {getContainerShortLabel(item.container)}{" "}
+              {getContainerShortLabelLocalized(listingMessages, item.container)}{" "}
               <span className="text-base font-medium text-neutral-500">
-                | {CONTAINER_CONDITION_LABEL[item.container.condition]}
+                | {getContainerConditionLabel(listingMessages, item.container.condition)}
               </span>
             </h2>
             <div className="grid justify-items-end gap-1">
               <div className="flex flex-wrap items-center justify-end gap-2">
                 <span className={STATUS_BADGE_CLASS[item.status]}>
-                  {STATUS_LABEL[item.status]}
+                  {messages.statusLabels[item.status]}
                 </span>
                 <span className={LISTING_TYPE_BADGE_CLASS[item.type]}>
-                  {LISTING_TYPE_LABEL[item.type]}
+                  {getListingKindLabel(listingMessages, item.type)}
                 </span>
               </div>
               <p className="text-xs text-neutral-500">
-                Wygasa: {new Date(item.expiresAt).toLocaleDateString("pl-PL")}
+                {messages.expiresLabel}:{" "}
+                {new Date(item.expiresAt).toLocaleDateString(toIntlLocale(locale))}
               </p>
             </div>
           </div>
 
           <div className="mt-2 text-sm text-neutral-700">
             <p className="font-semibold text-amber-600">
-              {getListingPriceLabel(item)}
+              {getListingPriceLabel(item, locale, messages)}
             </p>
-            <p>{getListingLocationLabel(item)}</p>
-            <p>Ilosc: {item.quantity}</p>
+            <p>{getListingLocationLabel(item, messages)}</p>
+            <p>
+              {messages.quantityLabel}: {item.quantity}
+            </p>
           </div>
 
           <div className="mt-3 flex flex-wrap items-center justify-between gap-2">
@@ -245,8 +259,8 @@ const MyContainerListingRow = memo(function MyContainerListingRow({
                   void onCopyListingUrl(item.id);
                 }}
                 className="inline-flex h-8 w-8 items-center justify-center rounded-md border border-neutral-300 bg-white text-neutral-700 transition-colors hover:border-neutral-400 hover:bg-neutral-100"
-                aria-label="Kopiuj URL ogloszenia"
-                title="Kopiuj URL"
+                aria-label={messages.copyUrlAria}
+                title={messages.copyUrl}
               >
                 <CopyLinkIcon className="h-4 w-4" />
               </button>
@@ -254,13 +268,13 @@ const MyContainerListingRow = memo(function MyContainerListingRow({
                 href={`/containers/${item.id}`}
                 className="rounded-md border border-neutral-300 bg-white px-3 py-1.5 text-sm text-neutral-700 transition-colors hover:border-neutral-400 hover:bg-neutral-100"
               >
-                Szczegoly
+                {messages.details}
               </Link>
               <Link
                 href={`/containers/${item.id}/edit`}
                 className={`rounded-md px-3 py-1.5 text-sm font-medium ${darkBlueCtaClass}`}
-              >
-                Edytuj
+                >
+                {messages.edit}
               </Link>
             </div>
             <div className="flex flex-wrap items-center justify-end gap-2">
@@ -272,7 +286,7 @@ const MyContainerListingRow = memo(function MyContainerListingRow({
                   }}
                   className="rounded-md border border-amber-300 bg-white px-3 py-1.5 text-sm text-amber-800 transition-colors hover:bg-amber-50"
                 >
-                  Dezaktywuj
+                  {messages.deactivate}
                 </button>
               ) : null}
               <button
@@ -282,7 +296,7 @@ const MyContainerListingRow = memo(function MyContainerListingRow({
                 }}
                 className="rounded-md border border-emerald-300 bg-white px-3 py-1.5 text-sm text-emerald-800 transition-colors hover:bg-emerald-50"
               >
-                Przedluz 30 dni
+                {messages.refreshThirtyDays}
               </button>
               <button
                 type="button"
@@ -290,8 +304,8 @@ const MyContainerListingRow = memo(function MyContainerListingRow({
                   onOpenDeleteConfirmationModal(item);
                 }}
                 className="inline-flex h-8 w-8 items-center justify-center rounded-md border border-neutral-300 bg-neutral-100 text-neutral-500 transition-colors hover:border-neutral-400 hover:bg-neutral-200 hover:text-neutral-600"
-                aria-label="Usun ogloszenie"
-                title="Usun"
+                aria-label={messages.deleteAria}
+                title={messages.delete}
               >
                 <svg
                   viewBox="0 0 20 20"
@@ -316,42 +330,20 @@ const MyContainerListingRow = memo(function MyContainerListingRow({
   );
 });
 
-function SelectWithChevron(props: {
-  value: string;
-  onChange: (value: string) => void;
-  className?: string;
-  children: ReactNode;
+export function MyContainerListings(input?: {
+  canUseBulkImport?: boolean;
+  locale?: AppLocale;
+  messages?: ContainerModuleMessages;
+  listingMessages?: ContainerListingsMessages;
 }) {
-  const { value, onChange, className, children } = props;
-  return (
-    <div className={`relative min-w-0 ${className ?? ""}`}>
-      <select
-        value={value}
-        onChange={(event) => onChange(event.target.value)}
-        className="h-10 w-full min-w-0 appearance-none rounded-md border border-neutral-300 bg-white px-3 pr-10 text-sm text-neutral-900 transition"
-      >
-        {children}
-      </select>
-      <svg
-        viewBox="0 0 20 20"
-        aria-hidden="true"
-        className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-neutral-500"
-        fill="none"
-      >
-        <path
-          d="M5 7.5L10 12.5L15 7.5"
-          stroke="currentColor"
-          strokeWidth="1.75"
-          strokeLinecap="round"
-          strokeLinejoin="round"
-        />
-      </svg>
-    </div>
-  );
-}
-
-export function MyContainerListings(input?: { canUseBulkImport?: boolean }) {
   const canUseBulkImport = input?.canUseBulkImport ?? true;
+  const locale = input?.locale ?? "pl";
+  const moduleMessages = input?.messages;
+  const listingMessages = input?.listingMessages;
+  if (!moduleMessages || !listingMessages) {
+    throw new Error("Missing localization messages for MyContainerListings");
+  }
+  const messages = moduleMessages.myListings;
   const toast = useToast();
   const [items, setItems] = useState<ContainerListingItem[]>([]);
   const [status, setStatus] = useState<"all" | "active" | "expired" | "closed">("all");
@@ -408,7 +400,9 @@ export function MyContainerListings(input?: { canUseBulkImport?: boolean }) {
       const data = (await response.json()) as MineResponse;
 
       if (!response.ok) {
-        throw new Error(data.error ?? `Blad API (${response.status})`);
+        throw new Error(
+          data.error ?? `${listingMessages.board.apiErrorPrefix} (${response.status})`,
+        );
       }
 
       setItems(data.items ?? []);
@@ -416,11 +410,13 @@ export function MyContainerListings(input?: { canUseBulkImport?: boolean }) {
       const resolvedPage = data.meta?.page ?? page;
       setPage((current) => (current === resolvedPage ? current : resolvedPage));
     } catch (loadError) {
-      setError(loadError instanceof Error ? loadError.message : "Nie udalo sie pobrac listy");
+      setError(
+        loadError instanceof Error ? loadError.message : messages.loadError,
+      );
     } finally {
       setIsLoading(false);
     }
-  }, [page, pageSize, sortPreset, status]);
+  }, [messages.loadError, page, pageSize, sortPreset, status]);
 
   useEffect(() => {
     void loadMine();
@@ -448,17 +444,17 @@ export function MyContainerListings(input?: { canUseBulkImport?: boolean }) {
 
   async function handleBulkImport() {
     if (!canUseBulkImport) {
-      toast.error("Zaloz profil firmy, zeby skorzystac z Multi Importu");
+      toast.error(messages.bulkNeedsCompany);
       return;
     }
     if (!bulkFile) {
-      toast.error("Najpierw wybierz plik Excel");
+      toast.error(messages.selectExcelFirst);
       return;
     }
 
     const filename = bulkFile.name.trim().toLowerCase();
     if (!filename.endsWith(".xlsx") && !filename.endsWith(".xls")) {
-      toast.error("Dozwolone sa tylko pliki Excel (.xlsx, .xls)");
+      toast.error(messages.excelOnly);
       return;
     }
 
@@ -481,18 +477,18 @@ export function MyContainerListings(input?: { canUseBulkImport?: boolean }) {
       const createdCount = data?.createdCount ?? 0;
       const failedCount = data?.failedCount ?? 0;
       if (createdCount > 0) {
-        toast.success(`Dodano ${createdCount} ogloszen`);
+        toast.success(formatTemplate(messages.bulkCreated, { count: createdCount }));
         await loadMine();
       }
       if (failedCount > 0) {
-        toast.warning(`${failedCount} wierszy nie zostalo zaimportowanych`);
+        toast.warning(formatTemplate(messages.bulkFailedRows, { count: failedCount }));
       }
       if (createdCount === 0 && failedCount === 0) {
-        toast.warning("Brak rekordow do importu");
+        toast.warning(messages.bulkNoRows);
       }
     } catch (importError) {
       toast.error(
-        importError instanceof Error ? importError.message : "Nie udalo sie zaimportowac Excela",
+        importError instanceof Error ? importError.message : messages.bulkImportError,
       );
     } finally {
       setIsBulkImporting(false);
@@ -501,15 +497,19 @@ export function MyContainerListings(input?: { canUseBulkImport?: boolean }) {
 
   async function handleConciergeUpload() {
     if (!canUseBulkImport) {
-      toast.error("Najpierw zaloz profil firmy, aby wyslac stock do Concierge");
+      toast.error(messages.conciergeNeedsCompany);
       return;
     }
     if (!conciergeFile) {
-      toast.error("Najpierw wybierz plik stock");
+      toast.error(messages.selectStockFirst);
       return;
     }
     if (conciergeFile.size > MAX_CONCIERGE_FILE_MB * 1024 * 1024) {
-      toast.error(`Plik stock moze miec maksymalnie ${MAX_CONCIERGE_FILE_MB} MB`);
+      toast.error(
+        formatTemplate(messages.conciergeMaxFileSize, {
+          count: MAX_CONCIERGE_FILE_MB,
+        }),
+      );
       return;
     }
 
@@ -536,7 +536,7 @@ export function MyContainerListings(input?: { canUseBulkImport?: boolean }) {
       setConciergeReport(nextReport);
       setConciergeFile(null);
       setConciergeNote("");
-      toast.success("Stock wyslany do Concierge");
+      toast.success(messages.conciergeSent);
       if (nextReport?.warning) {
         toast.warning(nextReport.warning);
       }
@@ -544,7 +544,7 @@ export function MyContainerListings(input?: { canUseBulkImport?: boolean }) {
       toast.error(
         conciergeError instanceof Error
           ? conciergeError.message
-          : "Nie udalo sie wyslac stock do Concierge",
+          : messages.conciergeSendError,
       );
     } finally {
       setIsConciergeSubmitting(false);
@@ -561,45 +561,45 @@ export function MyContainerListings(input?: { canUseBulkImport?: boolean }) {
 
       const data = (await response.json().catch(() => null)) as { error?: string } | null;
       if (!response.ok) {
-        throw new Error(data?.error ?? "Nie udalo sie wykonac akcji");
+        throw new Error(data?.error ?? messages.actionError);
       }
 
       toast.success(
         action === "close"
-          ? "Kontener zamkniety"
+          ? messages.actionClosed
           : action === "refresh"
-            ? "Kontener odswiezony"
-            : "Kontener usuniety",
+            ? messages.actionRefreshed
+            : messages.actionDeleted,
       );
       await loadMine();
       return true;
     } catch (actionError) {
-      toast.error(actionError instanceof Error ? actionError.message : "Wystapil blad");
+      toast.error(actionError instanceof Error ? actionError.message : messages.genericError);
       return false;
     }
-  }, [loadMine, toast]);
+  }, [loadMine, messages.actionClosed, messages.actionDeleted, messages.actionError, messages.actionRefreshed, messages.genericError, toast]);
 
   const copyListingUrl = useCallback(async (listingId: string) => {
     const listingUrl = `${window.location.origin}/containers/${listingId}`;
     try {
       await navigator.clipboard.writeText(listingUrl);
-      toast.success("Skopiowano link do ogloszenia");
+      toast.success(messages.copySuccess);
     } catch {
-      toast.error("Nie udalo sie skopiowac linku");
+      toast.error(messages.copyError);
     }
-  }, [toast]);
+  }, [messages.copyError, messages.copySuccess, toast]);
 
   const openRefreshConfirmationModal = useCallback((item: ContainerListingItem) => {
     setRefreshModalState({
       listingId: item.id,
       editHref: `/containers/${item.id}/edit`,
-      listingLabel: getContainerShortLabel(item.container),
+      listingLabel: getContainerShortLabelLocalized(listingMessages, item.container),
       quantity: item.quantity,
-      priceLabel: getListingPriceLabel(item),
+      priceLabel: getListingPriceLabel(item, locale, messages),
     });
     setQuantityConfirmed("yes");
     setPriceConfirmed("yes");
-  }, []);
+  }, [listingMessages, locale, messages]);
 
   const closeRefreshConfirmationModal = useCallback(() => {
     setRefreshModalState(null);
@@ -610,11 +610,11 @@ export function MyContainerListings(input?: { canUseBulkImport?: boolean }) {
   const openDeleteConfirmationModal = useCallback((item: ContainerListingItem) => {
     setDeleteModalState({
       listingId: item.id,
-      listingLabel: getContainerShortLabel(item.container),
-      locationLabel: getListingLocationLabel(item),
+      listingLabel: getContainerShortLabelLocalized(listingMessages, item.container),
+      locationLabel: getListingLocationLabel(item, messages),
       listingStatus: item.status,
     });
-  }, []);
+  }, [listingMessages, messages]);
 
   const closeDeleteConfirmationModal = useCallback(() => {
     if (isDeletingListing || isDeactivatingInsteadOfDelete) {
@@ -660,7 +660,7 @@ export function MyContainerListings(input?: { canUseBulkImport?: boolean }) {
           onClick={goToPreviousPage}
           className="rounded-md border border-neutral-300 px-3 py-1.5 text-sm text-neutral-700 disabled:cursor-not-allowed disabled:opacity-50"
         >
-          Poprzednia
+          {messages.previous}
         </button>
         <span className="text-xs text-neutral-500">
           {page} / {totalPages}
@@ -671,7 +671,7 @@ export function MyContainerListings(input?: { canUseBulkImport?: boolean }) {
           onClick={goToNextPage}
           className="rounded-md border border-neutral-300 px-3 py-1.5 text-sm text-neutral-700 disabled:cursor-not-allowed disabled:opacity-50"
         >
-          Nastepna
+          {messages.next}
         </button>
       </div>
     );
@@ -686,31 +686,31 @@ export function MyContainerListings(input?: { canUseBulkImport?: boolean }) {
     <section className="grid gap-3">
       <div className="flex flex-wrap items-center justify-between gap-2 rounded-md border border-neutral-300 bg-neutral-50/95 p-3 shadow-sm backdrop-blur supports-[backdrop-filter]:bg-neutral-50/90">
         <div className="flex flex-wrap items-center gap-2">
-          <h1 className="text-2xl font-semibold text-neutral-900">Moje kontenery</h1>
+          <h1 className="text-2xl font-semibold text-neutral-900">{messages.title}</h1>
         </div>
         <div className="flex flex-wrap items-center justify-end gap-2">
           <SelectWithChevron
             value={status}
-            onChange={(value) => {
-              setStatus(value as "all" | "active" | "expired" | "closed");
+            onChange={(event) => {
+              setStatus(event.target.value as "all" | "active" | "expired" | "closed");
               setPage(1);
             }}
-            className="w-[170px]"
+            wrapperClassName="w-[170px]"
           >
-            <option value="all">Status: wszystkie</option>
-            <option value="active">Aktywne</option>
-            <option value="expired">Wygasle</option>
-            <option value="closed">Zamkniete</option>
+            <option value="all">{messages.statusAll}</option>
+            <option value="active">{messages.statusFilters.active}</option>
+            <option value="expired">{messages.statusFilters.expired}</option>
+            <option value="closed">{messages.statusFilters.closed}</option>
           </SelectWithChevron>
           <SelectWithChevron
             value={sortPreset}
-            onChange={(value) => {
-              setSortPreset(value as SortPreset);
+            onChange={(event) => {
+              setSortPreset(event.target.value as SortPreset);
               setPage(1);
             }}
-            className="w-[205px]"
+            wrapperClassName="w-[205px]"
           >
-            {SORT_OPTIONS.map((option) => (
+            {getSortOptions(listingMessages).map((option) => (
               <option key={option.value} value={option.value}>
                 {option.label}
               </option>
@@ -720,7 +720,7 @@ export function MyContainerListings(input?: { canUseBulkImport?: boolean }) {
             href="/containers/new"
             className={`inline-flex h-10 items-center gap-2 rounded-md px-3 text-sm font-medium ${DARK_BLUE_CTA_CLASS}`}
           >
-            <span>Dodaj ogloszenie</span>
+            <span>{messages.addListing}</span>
             <svg
               viewBox="0 0 20 20"
               fill="none"
@@ -743,7 +743,7 @@ export function MyContainerListings(input?: { canUseBulkImport?: boolean }) {
             }}
             className={`inline-flex h-10 items-center gap-2 rounded-md px-3 text-sm font-medium ${DARK_BLUE_CTA_CLASS}`}
           >
-            <span>Multi Import</span>
+            <span>{messages.bulkImport}</span>
             <svg
               viewBox="0 0 20 20"
               fill="none"
@@ -771,9 +771,9 @@ export function MyContainerListings(input?: { canUseBulkImport?: boolean }) {
             <div className="flex items-center justify-center gap-3 text-neutral-700">
               <span
                 className="h-7 w-7 animate-spin rounded-full border-2 border-neutral-300 border-t-neutral-500"
-                aria-label="Ladowanie kontenerow"
+                aria-label={messages.loadingAria}
               />
-              <span className="text-sm font-medium">Ladowanie kontenerow...</span>
+              <span className="text-sm font-medium">{messages.loading}</span>
             </div>
           </div>
         ) : null}
@@ -781,7 +781,7 @@ export function MyContainerListings(input?: { canUseBulkImport?: boolean }) {
         {!isLoading && items.length === 0 ? (
           <div className="flex min-h-[220px] items-center justify-center px-4 text-center">
             <p className="text-xl font-medium text-neutral-400 sm:text-2xl">
-              Brak kontenerow dla wybranego statusu.
+              {messages.empty}
             </p>
           </div>
         ) : null}
@@ -791,6 +791,9 @@ export function MyContainerListings(input?: { canUseBulkImport?: boolean }) {
             <MyContainerListingRow
               key={item.id}
               item={item}
+              locale={locale}
+              messages={messages}
+              listingMessages={listingMessages}
               darkBlueCtaClass={DARK_BLUE_CTA_CLASS}
               onCopyListingUrl={copyListingUrl}
               onRunAction={runAction}
@@ -806,7 +809,7 @@ export function MyContainerListings(input?: { canUseBulkImport?: boolean }) {
           href="/containers/new?intent=buy"
           className="inline-flex h-9 items-center rounded-md border border-neutral-300 bg-white px-3 text-sm text-neutral-500 transition-colors hover:border-neutral-400 hover:bg-neutral-50 hover:text-neutral-700"
         >
-          Szukasz kontenera?
+          {messages.wantToBuy}
         </Link>
       </div>
 
@@ -815,7 +818,7 @@ export function MyContainerListings(input?: { canUseBulkImport?: boolean }) {
           className="fixed inset-0 z-[75] flex items-center justify-center bg-[rgba(2,6,23,0.4)] p-4"
           role="dialog"
           aria-modal="true"
-          aria-label="Potwierdzenie przedluzenia ogloszenia"
+          aria-label={messages.refreshDialogAria}
           onMouseDown={(event) => {
             if (event.target === event.currentTarget) {
               closeRefreshConfirmationModal();
@@ -826,10 +829,10 @@ export function MyContainerListings(input?: { canUseBulkImport?: boolean }) {
             <div className="mb-4 flex items-start justify-between gap-3">
               <div className="grid gap-1">
                 <h3 className="text-base font-semibold text-neutral-900">
-                  Przedluzyc ogloszenie o 30 dni?
+                  {messages.refreshDialogTitle}
                 </h3>
                 <p className="text-sm text-neutral-600">
-                  Sprawdz przed przedluzeniem: ilosc i cena.
+                  {messages.refreshDialogText}
                 </p>
               </div>
               <button
@@ -837,28 +840,28 @@ export function MyContainerListings(input?: { canUseBulkImport?: boolean }) {
                 onClick={closeRefreshConfirmationModal}
                 className="rounded-md border border-neutral-300 bg-white px-3 py-1.5 text-xs text-neutral-700 transition hover:bg-neutral-100"
               >
-                Zamknij
+                {moduleMessages.shared.close}
               </button>
             </div>
 
             <div className="grid gap-3 rounded-md border border-neutral-200 bg-neutral-50 p-3">
               <p className="text-sm text-neutral-800">
-                <span className="font-medium">Kontener:</span>{" "}
+                <span className="font-medium">{messages.containerLabel}:</span>{" "}
                 {refreshModalState.listingLabel}
               </p>
               <p className="text-sm text-neutral-800">
-                <span className="font-medium">Ilosc:</span>{" "}
+                <span className="font-medium">{messages.quantityLabel}:</span>{" "}
                 {refreshModalState.quantity}
               </p>
               <p className="text-sm text-neutral-800">
-                <span className="font-medium">Cena:</span>{" "}
+                <span className="font-medium">{messages.priceLabel}:</span>{" "}
                 {refreshModalState.priceLabel}
               </p>
             </div>
 
             <div className="mt-4 grid gap-3">
               <div className="flex flex-wrap items-center justify-between gap-2 rounded-md border border-neutral-200 bg-white px-3 py-2">
-                <p className="text-sm text-neutral-800">Czy ilosc sie zgadza?</p>
+                <p className="text-sm text-neutral-800">{messages.confirmQuantity}</p>
                 <div className="flex items-center gap-2">
                   <button
                     type="button"
@@ -869,7 +872,7 @@ export function MyContainerListings(input?: { canUseBulkImport?: boolean }) {
                         : "border-neutral-300 bg-white text-neutral-700 hover:bg-neutral-100"
                     }`}
                   >
-                    Tak
+                    {messages.yes}
                   </button>
                   <button
                     type="button"
@@ -880,13 +883,13 @@ export function MyContainerListings(input?: { canUseBulkImport?: boolean }) {
                         : "border-neutral-300 bg-white text-neutral-700 hover:bg-neutral-100"
                     }`}
                   >
-                    Nie
+                    {messages.no}
                   </button>
                 </div>
               </div>
 
               <div className="flex flex-wrap items-center justify-between gap-2 rounded-md border border-neutral-200 bg-white px-3 py-2">
-                <p className="text-sm text-neutral-800">Czy cena sie zgadza?</p>
+                <p className="text-sm text-neutral-800">{messages.confirmPrice}</p>
                 <div className="flex items-center gap-2">
                   <button
                     type="button"
@@ -897,7 +900,7 @@ export function MyContainerListings(input?: { canUseBulkImport?: boolean }) {
                         : "border-neutral-300 bg-white text-neutral-700 hover:bg-neutral-100"
                     }`}
                   >
-                    Tak
+                    {messages.yes}
                   </button>
                   <button
                     type="button"
@@ -908,7 +911,7 @@ export function MyContainerListings(input?: { canUseBulkImport?: boolean }) {
                         : "border-neutral-300 bg-white text-neutral-700 hover:bg-neutral-100"
                     }`}
                   >
-                    Nie
+                    {messages.no}
                   </button>
                 </div>
               </div>
@@ -920,7 +923,7 @@ export function MyContainerListings(input?: { canUseBulkImport?: boolean }) {
                 onClick={closeRefreshConfirmationModal}
                 className="rounded-md border border-neutral-300 bg-white px-3 py-2 text-sm text-neutral-700 transition hover:bg-neutral-100"
               >
-                Anuluj
+                {moduleMessages.shared.cancel}
               </button>
 
               {canConfirmRefresh ? (
@@ -939,7 +942,7 @@ export function MyContainerListings(input?: { canUseBulkImport?: boolean }) {
                   }}
                   className="rounded-md border border-emerald-300 bg-emerald-50 px-3 py-2 text-sm font-medium text-emerald-800 transition hover:bg-emerald-100"
                 >
-                  Przedluz
+                  {messages.refresh}
                 </button>
               ) : null}
 
@@ -951,7 +954,7 @@ export function MyContainerListings(input?: { canUseBulkImport?: boolean }) {
                     closeRefreshConfirmationModal();
                   }}
                 >
-                  Przejdz do edycji ogloszenia
+                  {messages.goToEdit}
                 </Link>
               ) : null}
             </div>
@@ -964,7 +967,7 @@ export function MyContainerListings(input?: { canUseBulkImport?: boolean }) {
           className="fixed inset-0 z-[76] flex items-center justify-center bg-[rgba(2,6,23,0.4)] p-4"
           role="dialog"
           aria-modal="true"
-          aria-label="Potwierdzenie usuniecia ogloszenia"
+          aria-label={messages.deleteDialogAria}
           onMouseDown={(event) => {
             if (event.target === event.currentTarget) {
               closeDeleteConfirmationModal();
@@ -974,20 +977,20 @@ export function MyContainerListings(input?: { canUseBulkImport?: boolean }) {
           <div className="w-full max-w-lg rounded-xl border border-neutral-300 bg-white p-4 shadow-2xl">
             <div className="mb-4 grid gap-1">
               <h3 className="text-base font-semibold text-neutral-900">
-                Czy na pewno usunac ogloszenie?
+                {messages.deleteDialogTitle}
               </h3>
               <p className="text-sm text-neutral-600">
-                Tej operacji nie mozna cofnac.
+                {messages.deleteDialogText}
               </p>
             </div>
 
             <div className="grid gap-2 rounded-md border border-neutral-200 bg-neutral-50 p-3 text-sm text-neutral-800">
               <p>
-                <span className="font-medium">Kontener:</span>{" "}
+                <span className="font-medium">{messages.containerLabel}:</span>{" "}
                 {deleteModalState.listingLabel}
               </p>
               <p>
-                <span className="font-medium">Lokalizacja:</span>{" "}
+                <span className="font-medium">{messages.locationLabel}:</span>{" "}
                 {deleteModalState.locationLabel}
               </p>
             </div>

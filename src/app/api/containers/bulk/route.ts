@@ -6,7 +6,6 @@ import { getCompaniesCollection } from "@/lib/companies";
 import {
   ensureContainerListingsIndexes,
   getContainerListingsCollection,
-  getDefaultListingExpiration,
   type ContainerListingDocument,
 } from "@/lib/container-listings";
 import {
@@ -42,6 +41,10 @@ import {
   LISTING_DESCRIPTION_MAX_TEXT_LENGTH,
   normalizeOptionalListingDescriptionHtml,
 } from "@/lib/listing-description-html";
+import {
+  buildContainerListingDocument,
+  normalizeOptionalString,
+} from "@/lib/container-listing-write";
 import { enforceRateLimitOrResponse } from "@/lib/request-rate-limit";
 import { logError } from "@/lib/server-logger";
 
@@ -215,11 +218,6 @@ function normalizeCsvHeader(value: string): string {
     .replace(/\s+/g, "_")
     .replace(/[^\p{L}\p{N}_]+/gu, "_")
     .replace(/^_+|_+$/g, "");
-}
-
-function normalizeOptionalString(value: string | undefined): string | undefined {
-  const trimmed = value?.trim();
-  return trimmed ? trimmed : undefined;
 }
 
 function normalizeAddressQueryKey(value: string): string {
@@ -726,6 +724,7 @@ export async function POST(request: NextRequest) {
       scope: "containers:bulk-create:ip",
       limit: 20,
       windowMs: 60_000,
+      onError: "block",
     });
     if (ipRateLimitResponse) {
       return ipRateLimitResponse;
@@ -748,6 +747,7 @@ export async function POST(request: NextRequest) {
       limit: 5,
       windowMs: 60_000,
       identity: user._id.toHexString(),
+      onError: "block",
     });
     if (userRateLimitResponse) {
       return userRateLimitResponse;
@@ -947,9 +947,11 @@ export async function POST(request: NextRequest) {
       const listingNow = new Date();
       const effectiveCompanyName = ownerCompany.name.trim();
       const effectiveCompanySlug = normalizeOptionalString(ownerCompany.slug);
-
-      const document: ContainerListingDocument = {
-        _id: listingId,
+      const document: ContainerListingDocument = buildContainerListingDocument({
+        listingId,
+        now: listingNow,
+        createdByUserId: user._id,
+        status: LISTING_STATUS.ACTIVE,
         type: rowValue.type,
         container: {
           size: rowValue.containerSize,
@@ -958,50 +960,38 @@ export async function POST(request: NextRequest) {
           features: rowValue.containerFeatures,
           condition: rowValue.containerCondition,
         },
-        ...(parsedContainerColors.colors.length > 0 ? { containerColors: parsedContainerColors.colors } : {}),
+        parsedContainerColors: parsedContainerColors.colors,
         quantity: rowValue.quantity,
-        locationCity: primaryLocation.locationCity,
-        locationCountry: primaryLocation.locationCountry,
-        locationLat: primaryLocation.locationLat,
-        locationLng: primaryLocation.locationLng,
-        ...(primaryLocation.locationAddressLabel ? { locationAddressLabel: primaryLocation.locationAddressLabel } : {}),
-        ...(primaryLocation.locationAddressParts ? { locationAddressParts: primaryLocation.locationAddressParts } : {}),
-        locations: normalizedLocations,
+        normalizedLocations,
         availableNow: rowValue.availableNow,
-        availableFromApproximate: rowValue.availableNow ? false : rowValue.availableFromApproximate,
-        availableFrom: rowValue.availableNow ? listingNow : rowValue.availableFrom,
-        ...(normalizedPricing ? { pricing: normalizedPricing } : {}),
-        ...(typeof rowValue.priceAmount === "number" ? { priceAmount: rowValue.priceAmount } : {}),
-        priceNegotiable: normalizedPricing?.original.negotiable === true || rowValue.priceNegotiable,
+        availableFromApproximate:
+          rowValue.availableNow ? false : rowValue.availableFromApproximate,
+        resolvedAvailableFrom:
+          rowValue.availableNow ? listingNow : rowValue.availableFrom,
+        normalizedPricing,
+        normalizedPriceAmount: rowValue.priceAmount,
+        priceNegotiable: rowValue.priceNegotiable,
         logisticsTransportAvailable: rowValue.logisticsTransportAvailable,
-        logisticsTransportIncluded: rowValue.logisticsTransportAvailable && rowValue.logisticsTransportIncluded,
-        ...(typeof rowValue.logisticsTransportFreeDistanceKm === "number"
-          ? { logisticsTransportFreeDistanceKm: rowValue.logisticsTransportFreeDistanceKm }
-          : {}),
+        logisticsTransportIncluded: rowValue.logisticsTransportIncluded,
+        normalizedLogisticsTransportFreeDistanceKm:
+          rowValue.logisticsTransportFreeDistanceKm,
         logisticsUnloadingAvailable: rowValue.logisticsUnloadingAvailable,
-        logisticsUnloadingIncluded: rowValue.logisticsUnloadingAvailable && rowValue.logisticsUnloadingIncluded,
-        ...(rowValue.logisticsComment ? { logisticsComment: rowValue.logisticsComment } : {}),
+        logisticsUnloadingIncluded: rowValue.logisticsUnloadingIncluded,
+        normalizedLogisticsComment: rowValue.logisticsComment,
         hasCscPlate: rowValue.hasCscPlate,
         hasCscCertification: rowValue.hasCscCertification,
         hasBranding: rowValue.hasBranding,
         hasWarranty: rowValue.hasWarranty,
-        ...(typeof rowValue.cscValidToMonth === "number" && typeof rowValue.cscValidToYear === "number"
-          ? { cscValidToMonth: rowValue.cscValidToMonth, cscValidToYear: rowValue.cscValidToYear }
-          : {}),
-        ...(typeof rowValue.productionYear === "number" ? { productionYear: rowValue.productionYear } : {}),
-        ...(typeof rowValue.priceAmount === "number" ? { price: String(rowValue.priceAmount) } : {}),
-        ...(rowValue.description ? { description: rowValue.description } : {}),
+        normalizedCscValidToMonth: rowValue.cscValidToMonth,
+        normalizedCscValidToYear: rowValue.cscValidToYear,
+        productionYear: rowValue.productionYear,
+        normalizedDescription: rowValue.description,
         companyName: effectiveCompanyName,
-        ...(effectiveCompanySlug ? { companySlug: effectiveCompanySlug } : {}),
+        companySlug: effectiveCompanySlug,
         publishedAsCompany: true,
         contactEmail: rowValue.contactEmail,
-        ...(rowValue.contactPhone ? { contactPhone: rowValue.contactPhone } : {}),
-        status: LISTING_STATUS.ACTIVE,
-        createdByUserId: user._id,
-        createdAt: listingNow,
-        updatedAt: listingNow,
-        expiresAt: getDefaultListingExpiration(listingNow),
-      };
+        contactPhone: rowValue.contactPhone,
+      });
 
       try {
         await listings.insertOne(document);

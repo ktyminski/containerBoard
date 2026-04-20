@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { ObjectId } from "mongodb";
+import { enforceAuthenticatedRateLimitOrResponse } from "@/lib/app-rate-limit";
 import { getCurrentUserFromRequest } from "@/lib/auth-user";
 import {
   ensureContainerListingsIndexes,
@@ -24,6 +25,16 @@ export async function POST(request: NextRequest, context: RouteContext) {
     const user = await getCurrentUserFromRequest(request);
     if (!user?._id) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+    const rateLimitResponse = await enforceAuthenticatedRateLimitOrResponse({
+      request,
+      scope: "containers:favorite",
+      userId: user._id.toHexString(),
+      ipLimit: 180,
+      userLimit: 90,
+    });
+    if (rateLimitResponse) {
+      return rateLimitResponse;
     }
 
     const { id } = await context.params;
@@ -87,6 +98,16 @@ export async function DELETE(request: NextRequest, context: RouteContext) {
     const user = await getCurrentUserFromRequest(request);
     if (!user?._id) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+    const rateLimitResponse = await enforceAuthenticatedRateLimitOrResponse({
+      request,
+      scope: "containers:favorite",
+      userId: user._id.toHexString(),
+      ipLimit: 180,
+      userLimit: 90,
+    });
+    if (rateLimitResponse) {
+      return rateLimitResponse;
     }
 
     const { id } = await context.params;

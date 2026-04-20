@@ -1,6 +1,7 @@
 import { ObjectId, type Filter } from "mongodb";
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
+import { enforceAuthenticatedRateLimitOrResponse } from "@/lib/app-rate-limit";
 import { getCurrentUserFromRequest } from "@/lib/auth-user";
 import { ensureCompaniesIndexes, getCompaniesCollection } from "@/lib/companies";
 import { USER_ROLE } from "@/lib/user-roles";
@@ -59,8 +60,18 @@ function escapeRegexPattern(value: string): string {
 export async function GET(request: NextRequest) {
   try {
     const admin = await requireAdmin(request);
-    if (!admin) {
+    if (!admin?._id) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    }
+    const rateLimitResponse = await enforceAuthenticatedRateLimitOrResponse({
+      request,
+      scope: "admin:users:read",
+      userId: admin._id.toHexString(),
+      ipLimit: 240,
+      userLimit: 120,
+    });
+    if (rateLimitResponse) {
+      return rateLimitResponse;
     }
 
     const users = await getUsersCollection();
@@ -208,6 +219,16 @@ export async function PATCH(request: NextRequest) {
     if (!admin || !admin._id) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
+    const rateLimitResponse = await enforceAuthenticatedRateLimitOrResponse({
+      request,
+      scope: "admin:users:write",
+      userId: admin._id.toHexString(),
+      ipLimit: 60,
+      userLimit: 30,
+    });
+    if (rateLimitResponse) {
+      return rateLimitResponse;
+    }
 
     const body = await request.json();
     const parsed = updateRoleSchema.safeParse(body);
@@ -272,6 +293,16 @@ export async function PUT(request: NextRequest) {
     if (!admin || !admin._id) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
+    const rateLimitResponse = await enforceAuthenticatedRateLimitOrResponse({
+      request,
+      scope: "admin:users:write",
+      userId: admin._id.toHexString(),
+      ipLimit: 60,
+      userLimit: 30,
+    });
+    if (rateLimitResponse) {
+      return rateLimitResponse;
+    }
 
     const body = await request.json();
     const parsed = updateUserBlockSchema.safeParse(body);
@@ -332,6 +363,16 @@ export async function POST(request: NextRequest) {
     const admin = await requireAdmin(request);
     if (!admin || !admin._id) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    }
+    const rateLimitResponse = await enforceAuthenticatedRateLimitOrResponse({
+      request,
+      scope: "admin:users:write",
+      userId: admin._id.toHexString(),
+      ipLimit: 60,
+      userLimit: 30,
+    });
+    if (rateLimitResponse) {
+      return rateLimitResponse;
     }
 
     const body = await request.json();
@@ -431,6 +472,16 @@ export async function DELETE(request: NextRequest) {
     const admin = await requireAdmin(request);
     if (!admin || !admin._id) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    }
+    const rateLimitResponse = await enforceAuthenticatedRateLimitOrResponse({
+      request,
+      scope: "admin:users:write",
+      userId: admin._id.toHexString(),
+      ipLimit: 60,
+      userLimit: 30,
+    });
+    if (rateLimitResponse) {
+      return rateLimitResponse;
     }
 
     const body = await request.json();

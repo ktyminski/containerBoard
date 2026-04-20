@@ -1,6 +1,7 @@
 import { ObjectId } from "mongodb";
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
+import { enforceAuthenticatedRateLimitOrResponse } from "@/lib/app-rate-limit";
 import { getCurrentUserFromRequest } from "@/lib/auth-user";
 import { ensureCompaniesIndexes, getCompaniesCollection } from "@/lib/companies";
 import {
@@ -38,8 +39,18 @@ function logMailFailure(context: string, metadata: Record<string, unknown>) {
 export async function GET(request: NextRequest) {
   try {
     const admin = await requireAdmin(request);
-    if (!admin) {
+    if (!admin?._id) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    }
+    const rateLimitResponse = await enforceAuthenticatedRateLimitOrResponse({
+      request,
+      scope: "admin:company-claims:read",
+      userId: admin._id.toHexString(),
+      ipLimit: 240,
+      userLimit: 120,
+    });
+    if (rateLimitResponse) {
+      return rateLimitResponse;
     }
 
     const claims = await getCompanyOwnershipClaimsCollection();
@@ -137,6 +148,16 @@ export async function PATCH(request: NextRequest) {
     const admin = await requireAdmin(request);
     if (!admin || !admin._id) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    }
+    const rateLimitResponse = await enforceAuthenticatedRateLimitOrResponse({
+      request,
+      scope: "admin:company-claims:write",
+      userId: admin._id.toHexString(),
+      ipLimit: 60,
+      userLimit: 30,
+    });
+    if (rateLimitResponse) {
+      return rateLimitResponse;
     }
 
     const body = await request.json();

@@ -23,6 +23,7 @@ export function useListDetailsOverlayClose(): (() => void) | null {
 
 type ListDetailsOverlayFrameProps = {
   listHref: string;
+  closeLabel: string;
   preferHistoryBack?: boolean;
   animateOnMount?: boolean;
   children: ReactNode;
@@ -30,6 +31,7 @@ type ListDetailsOverlayFrameProps = {
 
 export function ListDetailsOverlayFrame({
   listHref,
+  closeLabel,
   preferHistoryBack = true,
   animateOnMount = true,
   children,
@@ -81,7 +83,7 @@ export function ListDetailsOverlayFrame({
           onWheel={(event) => {
             event.preventDefault();
           }}
-          aria-label="Zamknij podglad ogloszenia"
+          aria-label={closeLabel}
           className="h-full flex-1"
         />
         <ListDetailsOverlayCloseContext.Provider value={requestClose}>

@@ -13,6 +13,8 @@ type RateLimitDocument = {
 
 let indexesReadyPromise: Promise<void> | null = null;
 
+export type RateLimitStorageErrorMode = "allow" | "block";
+
 async function getRateLimitCollection(): Promise<Collection<RateLimitDocument>> {
   const db = await getDb();
   return db.collection<RateLimitDocument>("rate_limits");
@@ -54,6 +56,15 @@ function buildRateLimitResponse(limit: number, retryAfterSeconds: number): NextR
   );
 }
 
+function buildRateLimitUnavailableResponse(): NextResponse {
+  return NextResponse.json(
+    {
+      error: "Rate limiting temporarily unavailable",
+    },
+    { status: 503 },
+  );
+}
+
 export function getRateLimitIdentity(request: Request | NextRequest): string {
   return getRequestIp(request.headers) ?? "unknown";
 }
@@ -64,6 +75,7 @@ export async function enforceRateLimitOrResponse(input: {
   limit: number;
   windowMs: number;
   identity?: string;
+  onError?: RateLimitStorageErrorMode;
 }): Promise<NextResponse | null> {
   const identity = input.identity?.trim() || getRateLimitIdentity(input.request);
   const now = new Date();
@@ -118,7 +130,6 @@ export async function enforceRateLimitOrResponse(input: {
 
     return buildRateLimitResponse(input.limit, retryAfterSeconds);
   } catch {
-    // Fail-open to avoid taking down auth/API when limiter storage is unavailable.
-    return null;
+    return input.onError === "block" ? buildRateLimitUnavailableResponse() : null;
   }
 }

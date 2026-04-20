@@ -42,7 +42,7 @@ export default async function AboutPage({ searchParams }: AboutPageProps) {
     <StaticPageFrame
       locale={locale}
       backLabel={messages.companyDetails.back}
-      mapLabel={locale === "pl" ? "PrzejdÅº do ogÅ‚oszeÅ„" : messages.home.whatBrowseAnnouncementsCta}
+      mapLabel={messages.staticPages.viewListings}
       mapHref="/list"
       title={page.title}
       intro={page.intro}
@@ -55,4 +55,3 @@ export default async function AboutPage({ searchParams }: AboutPageProps) {
     </StaticPageFrame>
   );
 }
-

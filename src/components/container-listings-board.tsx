@@ -5,6 +5,12 @@ import { FormProvider, useForm } from "react-hook-form";
 import maplibregl, { type GeoJSONSource } from "maplibre-gl";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { MAP_STYLE_URL } from "@/components/map-shared";
+import {
+  getContainerConditionLabel,
+  getContainerFeatureLabel,
+  getContainerShortLabelLocalized,
+  type ContainerListingsMessages,
+} from "@/components/container-listings-i18n";
 import { ContainerListingsFilters } from "@/components/container-listings-filters";
 import { ContainerListingsResults } from "@/components/container-listings-results";
 import { useToast } from "@/components/toast-provider";
@@ -28,13 +34,11 @@ import type {
   ContainerListingMapPoint,
 } from "@/lib/container-listings";
 import {
-  CONTAINER_CONDITION_LABEL,
-  CONTAINER_FEATURE_LABEL,
   PRICE_CURRENCY_LABEL,
-  getContainerShortLabel,
   type ContainerCondition,
   type ListingType,
 } from "@/lib/container-listing-types";
+import { LOCALE_HEADER_NAME, type AppLocale } from "@/lib/i18n";
 
 type ContainersListApiResponse = {
   items?: ContainerListingItem[];
@@ -74,12 +78,23 @@ type GeocodeSearchApiResponse = {
   error?: string;
 };
 
+type FavoritesSummaryApiResponse = {
+  total?: number;
+  hasAny?: boolean;
+  error?: string;
+};
+
 type ContainerListingsBoardProps = {
+  locale: AppLocale;
+  messages: ContainerListingsMessages;
   isLoggedIn: boolean;
   initialKind?: ListingKind;
   initialTab?: "all" | "favorites";
   initialMine?: boolean;
   hiddenCompanySlug?: string;
+  initialCity?: string;
+  initialCountry?: string;
+  initialCountryCode?: string;
 };
 
 type MapFeature = {
@@ -237,7 +252,56 @@ function fitMapToPoints(
   }
 }
 
+function createLocationFilterMarkerElement(): HTMLDivElement {
+  const marker = document.createElement("div");
+  marker.setAttribute("aria-hidden", "true");
+  marker.style.position = "relative";
+  marker.style.width = "26px";
+  marker.style.height = "34px";
+
+  const shadow = document.createElement("span");
+  shadow.style.position = "absolute";
+  shadow.style.left = "50%";
+  shadow.style.bottom = "0";
+  shadow.style.width = "14px";
+  shadow.style.height = "5px";
+  shadow.style.transform = "translateX(-50%)";
+  shadow.style.borderRadius = "9999px";
+  shadow.style.background = "rgba(15, 23, 42, 0.22)";
+  shadow.style.filter = "blur(1px)";
+
+  const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+  svg.setAttribute("viewBox", "0 0 24 24");
+  svg.setAttribute("width", "26");
+  svg.setAttribute("height", "34");
+  svg.style.position = "relative";
+  svg.style.display = "block";
+  svg.style.overflow = "visible";
+  svg.style.filter = "drop-shadow(0 10px 14px rgba(154, 52, 18, 0.25))";
+
+  const path = document.createElementNS("http://www.w3.org/2000/svg", "path");
+  path.setAttribute(
+    "d",
+    "M12 2.25c-4.97 0-9 4.03-9 9 0 6.364 7.5 10.5 8.096 10.819a1.875 1.875 0 0 0 1.808 0C13.5 21.75 21 17.614 21 11.25c0-4.97-4.03-9-9-9Z",
+  );
+  path.setAttribute("fill", "#f97316");
+  path.setAttribute("stroke", "#ffffff");
+  path.setAttribute("stroke-width", "1.5");
+
+  const center = document.createElementNS("http://www.w3.org/2000/svg", "circle");
+  center.setAttribute("cx", "12");
+  center.setAttribute("cy", "11.25");
+  center.setAttribute("r", "3.25");
+  center.setAttribute("fill", "#fff7ed");
+
+  svg.append(path, center);
+  marker.append(shadow, svg);
+  return marker;
+}
+
 function buildMapPopupListNode(
+  locale: AppLocale,
+  messages: ContainerListingsMessages,
   listings: ContainerListingItem[],
   totalItemsCount = listings.length,
   detailsHrefPrefix = "/containers",
@@ -277,16 +341,16 @@ function buildMapPopupListNode(
     titleLink.style.textOverflow = "ellipsis";
     titleLink.style.whiteSpace = "nowrap";
     const titleBase = document.createElement("span");
-    titleBase.textContent = getContainerShortLabel(item.container);
+    titleBase.textContent = getContainerShortLabelLocalized(messages, item.container);
     const titleSeparator = document.createElement("span");
     titleSeparator.textContent = " | ";
     titleSeparator.style.color = "#94a3b8";
     const titleCondition = document.createElement("span");
-    titleCondition.textContent = CONTAINER_CONDITION_LABEL[item.container.condition];
+    titleCondition.textContent = getContainerConditionLabel(messages, item.container.condition);
     titleCondition.style.color = getPopupConditionColor(item.container.condition);
     titleLink.append(titleBase, titleSeparator, titleCondition);
 
-    const priceDisplay = getPopupPriceDisplay(item);
+    const priceDisplay = getPopupPriceDisplay(locale, messages, item);
     if (priceDisplay) {
       const price = document.createElement("div");
       price.className = "company-map-popup-card__summary";
@@ -324,6 +388,7 @@ function buildMapPopupListNode(
     const location = document.createElement("p");
     location.className = "company-map-popup-card__summary";
     location.textContent = getPopupLocationLabel(
+      messages,
       item,
       locationHintsByListingId?.get(item.id),
     );
@@ -331,9 +396,9 @@ function buildMapPopupListNode(
     const meta = document.createElement("p");
     meta.className = "company-map-popup-card__summary";
     const featureLabels = item.container.features
-      .map((feature) => CONTAINER_FEATURE_LABEL[feature])
+      .map((feature) => getContainerFeatureLabel(messages, feature))
       .filter((label) => label.trim().length > 0);
-    const metaParts = [`Ilosc: ${item.quantity}`];
+    const metaParts = [`${messages.map.quantityLabel}: ${item.quantity}`];
     if (featureLabels.length > 0) {
       metaParts.push(featureLabels.join(", "));
     }
@@ -347,8 +412,7 @@ function buildMapPopupListNode(
   if (totalItemsCount > MAX_POPUP_VISIBLE_ITEMS) {
     const hint = document.createElement("p");
     hint.className = "company-map-popup-more-hint";
-    hint.textContent =
-      "Aby zobaczyc wiecej wynikow, zawez filtry lub przybliz mape.";
+    hint.textContent = messages.map.moreResultsHint;
     list.append(hint);
   }
 
@@ -356,7 +420,11 @@ function buildMapPopupListNode(
   return scroll;
 }
 
-function getPopupPriceDisplay(item: ContainerListingItem):
+function getPopupPriceDisplay(
+  locale: AppLocale,
+  messages: ContainerListingsMessages,
+  item: ContainerListingItem,
+):
   | { amountLabel: string; unitLabel: string }
   | undefined {
   const pricingAmount = item.pricing?.original.amount;
@@ -371,11 +439,11 @@ function getPopupPriceDisplay(item: ContainerListingItem):
       ? PRICE_CURRENCY_LABEL[pricingCurrency]
       : "PLN";
     return {
-      amountLabel: `${Math.round(pricingAmount).toLocaleString("pl-PL")}`,
+      amountLabel: `${Math.round(pricingAmount).toLocaleString(locale)}`,
       unitLabel:
         pricingTaxMode === "gross"
           ? currencyLabel
-          : `${currencyLabel} + VAT`,
+          : `${currencyLabel} ${messages.map.plusVatSuffix}`,
     };
   }
 
@@ -385,8 +453,8 @@ function getPopupPriceDisplay(item: ContainerListingItem):
     item.priceAmount >= 0
   ) {
     return {
-      amountLabel: `${Math.round(item.priceAmount).toLocaleString("pl-PL")}`,
-      unitLabel: "PLN + VAT",
+      amountLabel: `${Math.round(item.priceAmount).toLocaleString(locale)}`,
+      unitLabel: `PLN ${messages.map.plusVatSuffix}`,
     };
   }
 
@@ -410,6 +478,7 @@ function getPopupConditionColor(condition: ContainerCondition): string {
 }
 
 function getPopupLocationLabel(
+  messages: ContainerListingsMessages,
   item: ContainerListingItem,
   hint?: { lat: number; lng: number },
 ): string {
@@ -437,7 +506,7 @@ function getPopupLocationLabel(
   const parts = [postalCode, city, country].filter((value): value is string => {
     return Boolean(value && value.trim().length > 0);
   });
-  return parts.length > 0 ? parts.join(" ") : "Brak lokalizacji";
+  return parts.length > 0 ? parts.join(" ") : messages.map.noLocation;
 }
 
 function resolveBestLocationByHint(
@@ -561,19 +630,32 @@ function setSourceData(map: maplibregl.Map, data: MapFeatureCollection): void {
 }
 
 const ListingsMap = memo(function ListingsMap({
+  locale,
+  messages,
   items,
   isVisible,
   detailsHrefPrefix,
   detailsQueryString,
+  activeLocation,
+  activeLocationLabel,
 }: {
+  locale: AppLocale;
+  messages: ContainerListingsMessages;
   items: ContainerListingMapPoint[];
   isVisible: boolean;
   detailsHrefPrefix: string;
   detailsQueryString: string;
+  activeLocation: { lat: number; lng: number } | null;
+  activeLocationLabel?: string;
 }) {
   const mapContainerRef = useRef<HTMLDivElement | null>(null);
   const mapRef = useRef<maplibregl.Map | null>(null);
   const popupRef = useRef<maplibregl.Popup | null>(null);
+  const activeLocationMarkerRef = useRef<maplibregl.Marker | null>(null);
+  const lastCenteredActiveLocationKeyRef = useRef<string | null>(null);
+  const previousActiveLocationKeyRef = useRef<string | null>(null);
+  const suppressNextAutoFitRef = useRef(false);
+  const wasVisibleRef = useRef(false);
   const popupRequestSeqRef = useRef(0);
   const hasAutoFittedViewRef = useRef(false);
   const itemsByCoordinateRef = useRef<Map<string, ContainerListingMapPoint[]>>(
@@ -595,6 +677,13 @@ const ListingsMap = memo(function ListingsMap({
           item.locationLng !== null,
       ),
     [items],
+  );
+  const requestHeaders = useMemo(
+    () => ({
+      [LOCALE_HEADER_NAME]: locale,
+      "Accept-Language": locale,
+    }),
+    [locale],
   );
 
   const featureCollection = useMemo<MapFeatureCollection>(
@@ -632,6 +721,7 @@ const ListingsMap = memo(function ListingsMap({
         });
         const response = await fetch(`/api/containers?${params.toString()}`, {
           cache: "no-store",
+          headers: requestHeaders,
         });
         const data = (await response.json()) as ContainerPopupDetailsApiResponse;
         if (response.ok) {
@@ -647,7 +737,7 @@ const ListingsMap = memo(function ListingsMap({
     return uniqueIds
       .map((id) => cached.get(id))
       .filter((item): item is ContainerListingItem => Boolean(item));
-  }, []);
+  }, [requestHeaders]);
 
   useEffect(() => {
     const nextByCoordinate = new Map<string, ContainerListingMapPoint[]>();
@@ -863,6 +953,8 @@ const ListingsMap = memo(function ListingsMap({
               .setLngLat([lng, lat])
               .setDOMContent(
                 buildMapPopupListNode(
+                  locale,
+                  messages,
                   grouped,
                   Number.isFinite(clusterTotalCount)
                     ? Math.max(clusterTotalCount, grouped.length)
@@ -978,6 +1070,8 @@ const ListingsMap = memo(function ListingsMap({
             .setLngLat([clickedLng, clickedLat])
             .setDOMContent(
               buildMapPopupListNode(
+                locale,
+                messages,
                 details,
                 groupedIds.length,
                 detailsHrefPrefix,
@@ -1003,10 +1097,12 @@ const ListingsMap = memo(function ListingsMap({
     return () => {
       popupRef.current?.remove();
       popupRef.current = null;
+      activeLocationMarkerRef.current?.remove();
+      activeLocationMarkerRef.current = null;
       map.remove();
       mapRef.current = null;
     };
-  }, [detailsHrefPrefix, detailsQueryString, loadPopupDetailsByIds]);
+  }, [detailsHrefPrefix, detailsQueryString, loadPopupDetailsByIds, locale, messages]);
 
   useEffect(() => {
     const map = mapRef.current;
@@ -1021,12 +1117,119 @@ const ListingsMap = memo(function ListingsMap({
 
   useEffect(() => {
     const map = mapRef.current;
+    if (!map || !map.isStyleLoaded()) {
+      return;
+    }
+
+    if (
+      !activeLocation ||
+      !Number.isFinite(activeLocation.lat) ||
+      !Number.isFinite(activeLocation.lng)
+    ) {
+      activeLocationMarkerRef.current?.remove();
+      activeLocationMarkerRef.current = null;
+      return;
+    }
+
+    const popup = new maplibregl.Popup({
+      closeButton: false,
+      offset: 18,
+      className: "company-map-popup",
+    }).setText(activeLocationLabel?.trim() || messages.map.selectedLocation);
+
+    if (activeLocationMarkerRef.current) {
+      activeLocationMarkerRef.current
+        .setLngLat([activeLocation.lng, activeLocation.lat])
+        .setPopup(popup);
+      return;
+    }
+
+    activeLocationMarkerRef.current = new maplibregl.Marker({
+      element: createLocationFilterMarkerElement(),
+      anchor: "bottom",
+    })
+      .setLngLat([activeLocation.lng, activeLocation.lat])
+      .setPopup(popup)
+      .addTo(map);
+  }, [activeLocation, activeLocationLabel, messages.map.selectedLocation]);
+
+  useEffect(() => {
+    hasAutoFittedViewRef.current = false;
+  }, [points]);
+
+  useEffect(() => {
+    const becameVisible = isVisible && !wasVisibleRef.current;
+    wasVisibleRef.current = isVisible;
+
+    if (
+      !activeLocation ||
+      !Number.isFinite(activeLocation.lat) ||
+      !Number.isFinite(activeLocation.lng)
+    ) {
+      lastCenteredActiveLocationKeyRef.current = null;
+      return;
+    }
+
+    const nextLocationKey = `${activeLocation.lat.toFixed(6)}:${activeLocation.lng.toFixed(6)}`;
+    previousActiveLocationKeyRef.current = nextLocationKey;
+    const locationChanged = lastCenteredActiveLocationKeyRef.current !== nextLocationKey;
+    lastCenteredActiveLocationKeyRef.current = nextLocationKey;
+
+    const map = mapRef.current;
+    if (!map || !isVisible || (!becameVisible && !locationChanged)) {
+      return;
+    }
+
+    const frame = window.requestAnimationFrame(() => {
+      map.resize();
+      map.easeTo({
+        center: [activeLocation.lng, activeLocation.lat],
+        zoom: map.getZoom(),
+        duration: 500,
+      });
+    });
+
+    return () => window.cancelAnimationFrame(frame);
+  }, [activeLocation, isVisible]);
+
+  useEffect(() => {
+    if (
+      activeLocation &&
+      Number.isFinite(activeLocation.lat) &&
+      Number.isFinite(activeLocation.lng)
+    ) {
+      return;
+    }
+
+    if (previousActiveLocationKeyRef.current) {
+      suppressNextAutoFitRef.current = true;
+    }
+
+    previousActiveLocationKeyRef.current = null;
+  }, [activeLocation]);
+
+  useEffect(() => {
+    const map = mapRef.current;
     if (!map || !isVisible) {
       return;
     }
 
     const frame = window.requestAnimationFrame(() => {
       map.resize();
+      if (
+        activeLocation &&
+        Number.isFinite(activeLocation.lat) &&
+        Number.isFinite(activeLocation.lng)
+      ) {
+        return;
+      }
+
+      if (suppressNextAutoFitRef.current) {
+        suppressNextAutoFitRef.current = false;
+        hasAutoFittedViewRef.current = true;
+        return;
+      }
+
       if (!hasAutoFittedViewRef.current && points.length > 0) {
         fitMapToPoints(map, points);
         hasAutoFittedViewRef.current = true;
@@ -1034,7 +1237,7 @@ const ListingsMap = memo(function ListingsMap({
     });
 
     return () => window.cancelAnimationFrame(frame);
-  }, [isVisible, points]);
+  }, [activeLocation, isVisible, points]);
 
   useEffect(() => {
     function handlePointerDown(event: PointerEvent): void {
@@ -1074,11 +1277,16 @@ const ListingsMap = memo(function ListingsMap({
 ListingsMap.displayName = "ListingsMap";
 
 export function ContainerListingsBoard({
+  locale,
+  messages,
   isLoggedIn,
   initialKind = "sell",
   initialTab = "all",
   initialMine = false,
   hiddenCompanySlug,
+  initialCity,
+  initialCountry,
+  initialCountryCode,
 }: ContainerListingsBoardProps) {
   const toast = useToast();
   const router = useRouter();
@@ -1126,6 +1334,9 @@ export function ContainerListingsBoard({
     defaultValues: {
       ...FILTER_FORM_DEFAULTS,
       listingKind: initialKind,
+      city: initialCity ?? FILTER_FORM_DEFAULTS.city,
+      country: initialCountry ?? FILTER_FORM_DEFAULTS.country,
+      countryCode: initialCountryCode ?? FILTER_FORM_DEFAULTS.countryCode,
     },
   });
   const { handleSubmit, reset, getValues, setValue } = formMethods;
@@ -1152,8 +1363,9 @@ export function ContainerListingsBoard({
     priceMinInput: FILTER_FORM_DEFAULTS.priceMinInput,
     priceMaxInput: FILTER_FORM_DEFAULTS.priceMaxInput,
     productionYearInput: FILTER_FORM_DEFAULTS.productionYearInput,
-    city: FILTER_FORM_DEFAULTS.city,
-    country: FILTER_FORM_DEFAULTS.country,
+    city: initialCity ?? FILTER_FORM_DEFAULTS.city,
+    country: initialCountry ?? FILTER_FORM_DEFAULTS.country,
+    countryCode: initialCountryCode ?? FILTER_FORM_DEFAULTS.countryCode,
     sortPreset: FILTER_FORM_DEFAULTS.sortPreset,
   });
   const isFavoritesTab = activeTab === "favorites";
@@ -1174,6 +1386,13 @@ export function ContainerListingsBoard({
     const params = searchParams.toString();
     return params ? `${pathname}?${params}` : pathname;
   }, [pathname, searchParams]);
+  const requestHeaders = useMemo(
+    () => ({
+      [LOCALE_HEADER_NAME]: locale,
+      "Accept-Language": locale,
+    }),
+    [locale],
+  );
 
   const redirectToLogin = useCallback(() => {
     const query = searchParams.toString();
@@ -1266,28 +1485,23 @@ export function ContainerListingsBoard({
     }
 
     const controller = new AbortController();
-    const params = new URLSearchParams({
-      favorites: "1",
-      page: "1",
-      pageSize: "1",
-      sortBy: "createdAt",
-      sortDir: "desc",
-    });
+    const params = new URLSearchParams();
     if (initialMine) {
       params.set("mine", "1");
     }
 
     async function resolveFavoritesVisibility() {
       try {
-        const response = await fetch(`/api/containers?${params.toString()}`, {
+        const response = await fetch(`/api/containers/favorites/summary?${params.toString()}`, {
           cache: "no-store",
+          headers: requestHeaders,
           signal: controller.signal,
         });
-        const data = (await response.json().catch(() => null)) as ContainersListApiResponse | null;
+        const data = (await response.json().catch(() => null)) as FavoritesSummaryApiResponse | null;
         if (!response.ok || controller.signal.aborted) {
           return;
         }
-        setHasAnyFavorites((data?.meta?.total ?? 0) > 0);
+        setHasAnyFavorites(data?.hasAny === true || (data?.total ?? 0) > 0);
       } catch {
         if (!controller.signal.aborted) {
           setHasAnyFavorites(false);
@@ -1303,7 +1517,7 @@ export function ContainerListingsBoard({
     return () => {
       controller.abort();
     };
-  }, [favoritesPresenceRefreshVersion, initialMine, isLoggedIn]);
+  }, [favoritesPresenceRefreshVersion, initialMine, isLoggedIn, requestHeaders]);
 
   useEffect(() => {
     if (activeTab !== "favorites" || !hasResolvedFavoritesVisibility || hasAnyFavorites) {
@@ -1349,6 +1563,20 @@ export function ContainerListingsBoard({
     ],
   );
 
+  const clearLocationFilter = useCallback(() => {
+    setValue("locationInput", "", {
+      shouldDirty: true,
+      shouldTouch: true,
+    });
+    setLocationFilterError(null);
+    setPage(1);
+    setAppliedFilters((current) => ({
+      ...current,
+      locationQuery: "",
+      locationCenter: null,
+    }));
+  }, [setValue]);
+
   const applyNonLocationFilters = useCallback((nextFilters: NonLocationFilters) => {
     setPage(1);
     setAppliedFilters((current) => {
@@ -1381,7 +1609,7 @@ export function ContainerListingsBoard({
     }
 
     if (trimmedLocationQuery.length < 3) {
-      setLocationFilterError("Podaj minimum 3 znaki lokalizacji.");
+      setLocationFilterError(messages.filters.locationMinChars);
       setAppliedFilters({
         ...nextBase,
         locationQuery: "",
@@ -1394,8 +1622,11 @@ export function ContainerListingsBoard({
 
     try {
       const response = await fetch(
-        `/api/geocode?q=${encodeURIComponent(trimmedLocationQuery)}&lang=pl&limit=1`,
-        { cache: "no-store" },
+        `/api/geocode?q=${encodeURIComponent(trimmedLocationQuery)}&lang=${encodeURIComponent(locale)}&limit=1`,
+        {
+          cache: "no-store",
+          headers: requestHeaders,
+        },
       );
       const data = (await response.json()) as GeocodeSearchApiResponse;
 
@@ -1404,7 +1635,7 @@ export function ContainerListingsBoard({
       }
 
       if (!data.item) {
-        setLocationFilterError("Nie udalo sie ustalic lokalizacji.");
+        setLocationFilterError(messages.filters.locationResolveError);
         setAppliedFilters({
           ...nextBase,
           locationQuery: trimmedLocationQuery,
@@ -1419,7 +1650,7 @@ export function ContainerListingsBoard({
         locationCenter: { lat: data.item.lat, lng: data.item.lng },
       });
     } catch {
-      setLocationFilterError("Nie udalo sie ustalic lokalizacji.");
+      setLocationFilterError(messages.filters.locationResolveError);
       setAppliedFilters({
         ...nextBase,
         locationQuery: trimmedLocationQuery,
@@ -1501,11 +1732,12 @@ export function ContainerListingsBoard({
       try {
         const response = await fetch(requestUrl, {
           cache: "no-store",
+          headers: requestHeaders,
           signal: controller.signal,
         });
         const data = (await response.json()) as ContainersListApiResponse;
         if (!response.ok) {
-          throw new Error(data.error ?? `Blad API (${response.status})`);
+          throw new Error(data.error ?? `${messages.board.apiErrorPrefix} (${response.status})`);
         }
 
         if (controller.signal.aborted) {
@@ -1529,7 +1761,7 @@ export function ContainerListingsBoard({
           return;
         }
         setError(
-          loadError instanceof Error ? loadError.message : "Nie udalo sie zaladowac kontenerow",
+          loadError instanceof Error ? loadError.message : messages.board.loadError,
         );
       } finally {
         if (!controller.signal.aborted) {
@@ -1547,6 +1779,9 @@ export function ContainerListingsBoard({
     guestFavoriteListingIdSet,
     hasHydratedGuestFavorites,
     isLoggedIn,
+    messages.board.apiErrorPrefix,
+    messages.board.loadError,
+    requestHeaders,
     requestUrl,
   ]);
 
@@ -1561,11 +1796,12 @@ export function ContainerListingsBoard({
       try {
         const response = await fetch(mapRequestUrl, {
           cache: "no-store",
+          headers: requestHeaders,
           signal: controller.signal,
         });
         const data = (await response.json()) as ContainersMapApiResponse;
         if (!response.ok) {
-          throw new Error(data.error ?? `Blad API mapy (${response.status})`);
+          throw new Error(data.error ?? `${messages.board.mapApiErrorPrefix} (${response.status})`);
         }
 
         if (controller.signal.aborted) {
@@ -1587,7 +1823,7 @@ export function ContainerListingsBoard({
     return () => {
       controller.abort();
     };
-  }, [hasHydratedGuestFavorites, isLoggedIn, mapRequestUrl]);
+  }, [hasHydratedGuestFavorites, isLoggedIn, mapRequestUrl, messages.board.mapApiErrorPrefix, requestHeaders]);
 
   const clearAllFilters = useCallback(() => {
     reset(FILTER_FORM_DEFAULTS);
@@ -1615,6 +1851,7 @@ export function ContainerListingsBoard({
       productionYearInput: FILTER_FORM_DEFAULTS.productionYearInput,
       city: FILTER_FORM_DEFAULTS.city,
       country: FILTER_FORM_DEFAULTS.country,
+      countryCode: FILTER_FORM_DEFAULTS.countryCode,
       sortPreset: FILTER_FORM_DEFAULTS.sortPreset,
     });
     setPage(1);
@@ -1680,7 +1917,7 @@ export function ContainerListingsBoard({
           );
         }
         if (!isFavorite) {
-          toast.success("Dodano oferte do ulubionych.");
+          toast.success(messages.map.favoriteAdded);
         }
         return;
       }
@@ -1694,6 +1931,7 @@ export function ContainerListingsBoard({
 
       try {
         const response = await fetch(`/api/containers/${listingId}/favorite`, {
+          headers: requestHeaders,
           method: isFavorite ? "DELETE" : "POST",
         });
 
@@ -1704,7 +1942,7 @@ export function ContainerListingsBoard({
 
         if (!response.ok) {
           const payload = (await response.json().catch(() => null)) as { error?: string } | null;
-          throw new Error(payload?.error ?? "Nie udalo sie zaktualizowac ulubionych.");
+          throw new Error(payload?.error ?? messages.map.favoriteUpdateError);
         }
 
         const payload = (await response.json().catch(() => null)) as {
@@ -1715,7 +1953,7 @@ export function ContainerListingsBoard({
 
         if (nextIsFavorite === true) {
           setHasAnyFavorites(true);
-          toast.success("Dodano oferte do ulubionych.");
+          toast.success(messages.map.favoriteAdded);
           return;
         }
 
@@ -1738,7 +1976,7 @@ export function ContainerListingsBoard({
         setError(
           favoriteError instanceof Error
             ? favoriteError.message
-            : "Nie udalo sie zaktualizowac ulubionych.",
+            : messages.map.favoriteUpdateError,
         );
       } finally {
         setPendingFavoriteId(null);
@@ -1751,6 +1989,9 @@ export function ContainerListingsBoard({
       pendingFavoriteId,
       removeListingFromFavoritesView,
       redirectToLogin,
+      requestHeaders,
+      messages.map.favoriteAdded,
+      messages.map.favoriteUpdateError,
       toast,
     ],
   );
@@ -1761,13 +2002,13 @@ export function ContainerListingsBoard({
       const copied = await copyTextToClipboard(listingUrl);
 
       if (copied) {
-        toast.info("Link do ogloszenia zostal skopiowany.");
+        toast.info(messages.map.linkCopied);
         return;
       }
 
-      toast.error("Nie udalo sie skopiowac linku.");
+      toast.error(messages.map.copyError);
     },
-    [toast],
+    [messages.map.copyError, messages.map.linkCopied, toast],
   );
 
   const handleOpenDetails = useCallback((targetHref: string) => {
@@ -1827,10 +2068,14 @@ export function ContainerListingsBoard({
               }`}
             >
               <ListingsMap
+                locale={locale}
+                messages={messages}
                 items={hasLoadedMapDataOnce ? mapItems : items}
                 isVisible={isMapOpen}
                 detailsHrefPrefix={detailsHrefPrefix}
                 detailsQueryString={detailsQueryString}
+                activeLocation={appliedFilters.locationCenter}
+                activeLocationLabel={appliedFilters.locationQuery}
               />
             </div>
           </div>
@@ -1846,23 +2091,27 @@ export function ContainerListingsBoard({
               aria-controls="containers-listings-map-panel"
               className={`pointer-events-auto inline-flex min-h-10 items-center rounded-md px-5 text-sm font-semibold shadow-[0_10px_24px_-12px_rgba(5,36,79,0.8)] ${DARK_BLUE_CTA_BASE_CLASS}`}
             >
-              {isMapOpen ? "Zwin mape" : "Rozwin mape"}
+              {isMapOpen ? messages.map.collapseMap : messages.map.expandMap}
             </button>
           </div>
         </section>
 
         <div className="mx-auto grid w-full max-w-[1400px] gap-4 px-4 sm:px-6">
           <ContainerListingsFilters
+            messages={messages}
             locationControlsRef={locationControlsRef}
             appliedFilters={appliedFilters}
             restoreAppliedLocationOnBlur={restoreAppliedLocationOnBlur}
             isResolvingLocation={isResolvingLocation}
             locationFilterError={locationFilterError}
             onApplyNonLocationFilters={applyNonLocationFilters}
+            clearLocationFilter={clearLocationFilter}
             clearAllFilters={clearAllFilters}
           >
             <div ref={resultsTopRef} className="scroll-mt-36">
               <ContainerListingsResults
+                locale={locale}
+                messages={messages}
                 items={items}
                 total={total}
                 page={page}
@@ -1898,7 +2147,7 @@ export function ContainerListingsBoard({
                 onWheel={(event) => {
                   event.preventDefault();
                 }}
-                aria-label="Zamknij podglad ogloszenia"
+                aria-label={messages.map.closePreview}
                 className="h-full flex-1"
               />
               <div
@@ -1926,7 +2175,7 @@ export function ContainerListingsBoard({
                         >
                           <path d="M15 18 9 12l6-6" />
                         </svg>
-                        <span>Powrot do listy</span>
+                        <span>{messages.map.backToList}</span>
                       </span>
                     </button>
                   </div>
@@ -1934,9 +2183,9 @@ export function ContainerListingsBoard({
                   <div className="flex min-h-[260px] flex-col items-center justify-center gap-3 text-neutral-600">
                     <span
                       className="h-8 w-8 animate-spin rounded-full border-2 border-neutral-300 border-t-neutral-500"
-                      aria-label="Ladowanie szczegolow ogloszenia"
+                      aria-label={messages.map.loadingDetailsAria}
                     />
-                    <p className="text-sm">Ladowanie szczegolow ogloszenia...</p>
+                    <p className="text-sm">{messages.map.loadingDetails}</p>
                   </div>
                 </div>
               </div>

@@ -66,7 +66,7 @@ export default async function NewCompanyPage({ searchParams }: NewCompanyPagePro
     <section className="bg-neutral-200/90">
       <main className="relative mx-auto flex w-full max-w-5xl flex-col gap-6 px-4 py-6 sm:px-6">
         <SmartBackButton
-          label="Wroc"
+          label={messages.containerModules.shared.back}
           fallbackHref={withLang("/containers/mine", locale)}
           className="inline-flex w-fit items-center gap-2 rounded-md border border-neutral-400 bg-white px-3 py-2 text-sm text-neutral-700 transition-colors hover:border-neutral-500"
         />

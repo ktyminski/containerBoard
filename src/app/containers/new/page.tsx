@@ -6,6 +6,11 @@ import { SESSION_COOKIE_NAME } from "@/lib/auth-session";
 import { getCurrentUserFromToken } from "@/lib/auth-user";
 import { getCompaniesCollection } from "@/lib/companies";
 import { buildShortAddressLabelFromParts } from "@/lib/geocode-address";
+import {
+  getLocaleFromRequest,
+  getMessages,
+  LOCALE_COOKIE_NAME,
+} from "@/lib/i18n";
 
 export const metadata: Metadata = {
   title: "Dodaj kontener | ContainerBoard",
@@ -32,6 +37,11 @@ export default async function NewContainerPage({
     : "/containers/new";
 
   const cookieStore = await cookies();
+  const locale = getLocaleFromRequest({
+    params,
+    cookieLocale: cookieStore.get(LOCALE_COOKIE_NAME)?.value,
+  });
+  const messages = getMessages(locale);
   const token = cookieStore.get(SESSION_COOKIE_NAME)?.value;
   if (!token) {
     redirect(`/login?next=${encodeURIComponent(nextPath)}`);
@@ -109,6 +119,9 @@ export default async function NewContainerPage({
 
   return (
     <NewContainerPageClient
+      locale={locale}
+      messages={messages.containerModules}
+      listingMessages={messages.containerListings}
       contactPrefill={contactPrefill}
       initialListingIntent={initialListingIntent}
       ownedCompanyProfile={

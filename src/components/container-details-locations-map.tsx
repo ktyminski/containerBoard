@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import maplibregl, { type GeoJSONSource } from "maplibre-gl";
 import { MAP_STYLE_URL } from "@/components/map-shared";
+import type { ContainerModuleMessages } from "@/components/container-modules-i18n";
 
 export type ContainerDetailsLocationPoint = {
   id: string;
@@ -14,6 +15,7 @@ export type ContainerDetailsLocationPoint = {
 type ContainerDetailsLocationsMapProps = {
   points: ContainerDetailsLocationPoint[];
   freeTransportDistanceKm?: number | null;
+  messages: ContainerModuleMessages["shared"];
 };
 
 const TRANSPORT_RADIUS_SOURCE_ID = "container-details-transport-radius";
@@ -169,6 +171,7 @@ function fitMapToPoints(
 export function ContainerDetailsLocationsMap({
   points,
   freeTransportDistanceKm = null,
+  messages,
 }: ContainerDetailsLocationsMapProps) {
   const mapContainerRef = useRef<HTMLDivElement | null>(null);
   const mapRef = useRef<maplibregl.Map | null>(null);
@@ -304,7 +307,7 @@ export function ContainerDetailsLocationsMap({
   if (validPoints.length === 0) {
     return (
       <div className="flex h-full w-full items-center justify-center bg-neutral-100 text-sm text-neutral-600">
-        Brak wspolrzednych do wyswietlenia mapy.
+        {messages.mapEmpty}
       </div>
     );
   }
@@ -319,7 +322,7 @@ export function ContainerDetailsLocationsMap({
               aria-hidden="true"
               className="h-4 w-4 animate-spin rounded-full border-2 border-neutral-300 border-t-neutral-600"
             />
-            Ladowanie mapy...
+            {messages.mapLoading}
           </div>
         </div>
       ) : null}

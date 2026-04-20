@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
+import { formatTemplate, type AppLocale, type AppMessages, withLang } from "@/lib/i18n";
 
 type ConciergeAdminItem = {
   id: string;
@@ -35,7 +36,8 @@ type ConciergeAdminResponse = {
 };
 
 type AdminConciergeRequestsTableProps = {
-  locale: string;
+  locale: AppLocale;
+  messages: AppMessages["adminConcierge"];
 };
 
 const ADMIN_NEUTRAL_BUTTON_CLASS =
@@ -60,6 +62,7 @@ function formatBytes(value: number): string {
 
 export function AdminConciergeRequestsTable({
   locale,
+  messages,
 }: AdminConciergeRequestsTableProps) {
   const [items, setItems] = useState<ConciergeAdminItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -103,7 +106,9 @@ export function AdminConciergeRequestsTable({
       );
       const data = (await response.json()) as ConciergeAdminResponse;
       if (!response.ok) {
-        throw new Error(data.error ?? `Blad API (${response.status})`);
+        throw new Error(
+          data.error ?? formatTemplate(messages.failedLoad, { status: response.status }),
+        );
       }
       setItems(data.items ?? []);
       setTotalPages(data.meta?.totalPages ?? 1);
@@ -112,7 +117,7 @@ export function AdminConciergeRequestsTable({
       setError(
         loadError instanceof Error
           ? loadError.message
-          : "Nie udalo sie pobrac zgloszen concierge",
+          : messages.loadFallbackError,
       );
     } finally {
       setIsLoading(false);
@@ -126,8 +131,10 @@ export function AdminConciergeRequestsTable({
   return (
     <section className="rounded-xl border border-neutral-800 bg-neutral-900/60 p-4">
       <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
-        <h2 className="text-lg font-semibold text-neutral-100">Zlecenia Concierge</h2>
-        <p className="text-xs text-neutral-400">Lacznie: {total}</p>
+        <h2 className="text-lg font-semibold text-neutral-100">{messages.title}</h2>
+        <p className="text-xs text-neutral-400">
+          {formatTemplate(messages.totalLabel, { total })}
+        </p>
       </div>
 
       <div className="mb-3 grid gap-2 md:grid-cols-[minmax(0,1fr)_220px_auto]">
@@ -136,7 +143,7 @@ export function AdminConciergeRequestsTable({
           onChange={(event) => {
             setQueryDraft(event.target.value);
           }}
-          placeholder="Szukaj po firmie, userze, emailu, pliku"
+          placeholder={messages.searchPlaceholder}
           className="rounded-md border border-neutral-700 bg-neutral-950 px-3 py-2 text-sm text-neutral-100"
         />
         <select
@@ -147,9 +154,9 @@ export function AdminConciergeRequestsTable({
           }}
           className="rounded-md border border-neutral-700 bg-neutral-950 px-3 py-2 text-sm text-neutral-100"
         >
-          <option value="all">Status: wszystkie</option>
-          <option value="new">Nowe</option>
-          <option value="completed">Zamkniete</option>
+          <option value="all">{messages.statusOptions.all}</option>
+          <option value="new">{messages.statusOptions.new}</option>
+          <option value="completed">{messages.statusOptions.completed}</option>
         </select>
         <button
           type="button"
@@ -158,29 +165,29 @@ export function AdminConciergeRequestsTable({
           }}
           className={ADMIN_NEUTRAL_BUTTON_CLASS}
         >
-          Odswiez
+          {messages.refresh}
         </button>
       </div>
 
       {error ? <p className="mb-2 text-sm text-red-300">{error}</p> : null}
-      {isLoading ? <p className="mb-2 text-sm text-neutral-300">Ladowanie...</p> : null}
+      {isLoading ? <p className="mb-2 text-sm text-neutral-300">{messages.loading}</p> : null}
 
       {items.length === 0 && !isLoading ? (
-        <p className="mb-2 text-sm text-neutral-400">Brak zgloszen concierge.</p>
+        <p className="mb-2 text-sm text-neutral-400">{messages.empty}</p>
       ) : null}
 
       <div className="overflow-auto">
         <table className="w-full min-w-[1240px] text-left text-sm">
           <thead>
             <tr className="text-neutral-400">
-              <th className="pb-2">Firma</th>
-              <th className="pb-2">Zglaszajacy</th>
-              <th className="pb-2">Kontakt</th>
-              <th className="pb-2">Plik stock</th>
-              <th className="pb-2">Notatka</th>
-              <th className="pb-2">Mail</th>
-              <th className="pb-2">Data</th>
-              <th className="pb-2">Akcje</th>
+              <th className="pb-2">{messages.columns.company}</th>
+              <th className="pb-2">{messages.columns.requester}</th>
+              <th className="pb-2">{messages.columns.contact}</th>
+              <th className="pb-2">{messages.columns.stockFile}</th>
+              <th className="pb-2">{messages.columns.note}</th>
+              <th className="pb-2">{messages.columns.mail}</th>
+              <th className="pb-2">{messages.columns.date}</th>
+              <th className="pb-2">{messages.columns.actions}</th>
             </tr>
           </thead>
           <tbody>
@@ -190,7 +197,7 @@ export function AdminConciergeRequestsTable({
                   <div className="grid gap-1">
                     {item.companySlug ? (
                       <Link
-                        href={`/companies/${item.companySlug}`}
+                        href={withLang(`/companies/${item.companySlug}`, locale)}
                         target="_blank"
                         rel="noreferrer"
                         className="inline-flex w-fit text-sky-200 hover:text-sky-100 hover:underline"
@@ -201,7 +208,7 @@ export function AdminConciergeRequestsTable({
                       <span>{item.companyName}</span>
                     )}
                     <span className="text-xs text-neutral-500">
-                      Status: {item.status === "completed" ? "zamkniete" : "nowe"}
+                      {messages.statusLabel}: {messages.statusValues[item.status]}
                     </span>
                   </div>
                 </td>
@@ -211,10 +218,10 @@ export function AdminConciergeRequestsTable({
                 </td>
                 <td className="py-2 pr-3 text-neutral-300">
                   <p className="text-xs text-neutral-500">
-                    {item.contactEmail ?? "-"}
+                    {item.contactEmail ?? messages.notProvided}
                   </p>
                   <p className="text-xs text-neutral-500">
-                    {item.contactPhone ?? "-"}
+                    {item.contactPhone ?? messages.notProvided}
                   </p>
                 </td>
                 <td className="py-2 pr-3 text-neutral-300">
@@ -234,14 +241,14 @@ export function AdminConciergeRequestsTable({
                       {item.note}
                     </p>
                   ) : (
-                    <span className="text-xs text-neutral-500">-</span>
+                    <span className="text-xs text-neutral-500">{messages.notProvided}</span>
                   )}
                 </td>
                 <td className="py-2 pr-3 text-neutral-300">
                   {item.notificationSentAt ? (
                     <div className="grid gap-1">
                       <span className="inline-flex w-fit rounded-md border border-emerald-500/80 bg-emerald-700/45 px-2 py-0.5 text-xs text-emerald-50">
-                        Wyslano
+                        {messages.notification.sent}
                       </span>
                       <span className="text-xs text-neutral-500">
                         {new Date(item.notificationSentAt).toLocaleString(locale)}
@@ -250,14 +257,14 @@ export function AdminConciergeRequestsTable({
                   ) : item.notificationError ? (
                     <div className="grid gap-1">
                       <span className="inline-flex w-fit rounded-md border border-rose-500/80 bg-rose-700/45 px-2 py-0.5 text-xs text-rose-50">
-                        Blad
+                        {messages.notification.error}
                       </span>
                       <span className="max-w-[260px] text-xs text-rose-300">
                         {item.notificationError}
                       </span>
                     </div>
                   ) : (
-                    <span className="text-xs text-neutral-500">Oczekuje</span>
+                    <span className="text-xs text-neutral-500">{messages.notification.pending}</span>
                   )}
                 </td>
                 <td className="py-2 pr-3 text-neutral-400">
@@ -270,7 +277,7 @@ export function AdminConciergeRequestsTable({
                     rel="noreferrer"
                     className={ADMIN_INFO_BUTTON_CLASS}
                   >
-                    Pobierz plik
+                    {messages.downloadFile}
                   </a>
                 </td>
               </tr>
@@ -288,7 +295,7 @@ export function AdminConciergeRequestsTable({
           }}
           className={`${ADMIN_NEUTRAL_BUTTON_CLASS} disabled:opacity-50`}
         >
-          Poprzednia
+          {messages.previous}
         </button>
         <span className="text-xs text-neutral-400">
           {page}/{totalPages}
@@ -301,10 +308,9 @@ export function AdminConciergeRequestsTable({
           }}
           className={`${ADMIN_NEUTRAL_BUTTON_CLASS} disabled:opacity-50`}
         >
-          Nastepna
+          {messages.next}
         </button>
       </div>
     </section>
   );
 }
-

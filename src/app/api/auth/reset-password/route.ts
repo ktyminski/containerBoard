@@ -31,6 +31,7 @@ export async function POST(request: Request) {
       scope: "auth:reset-password:ip",
       limit: 10,
       windowMs: 10 * 60_000,
+      onError: "block",
     });
     if (ipRateLimitResponse) {
       return ipRateLimitResponse;
@@ -55,6 +56,7 @@ export async function POST(request: Request) {
       limit: 8,
       windowMs: 60 * 60_000,
       identity: hashPasswordResetToken(parsed.data.token),
+      onError: "block",
     });
     if (tokenRateLimitResponse) {
       return tokenRateLimitResponse;

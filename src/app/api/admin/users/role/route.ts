@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { getEnv } from "@/lib/env";
+import { enforceRateLimitOrResponse } from "@/lib/request-rate-limit";
 import {
   USER_ROLES,
   ensureUsersIndexes,
@@ -19,6 +20,17 @@ const updateRoleSchema = z.object({
 
 export async function PATCH(request: NextRequest) {
   try {
+    const rateLimitResponse = await enforceRateLimitOrResponse({
+      request,
+      scope: "admin:users-role:ip",
+      limit: 20,
+      windowMs: 10 * 60_000,
+      onError: "block",
+    });
+    if (rateLimitResponse) {
+      return rateLimitResponse;
+    }
+
     const adminToken = getEnv().ADMIN_TOKEN;
     const providedToken = request.headers.get("x-admin-token");
 
@@ -65,4 +77,3 @@ export async function PATCH(request: NextRequest) {
     );
   }
 }
-

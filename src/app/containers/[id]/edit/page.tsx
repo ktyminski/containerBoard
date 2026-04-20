@@ -8,19 +8,17 @@ import { SESSION_COOKIE_NAME } from "@/lib/auth-session";
 import { getCurrentUserFromToken } from "@/lib/auth-user";
 import { getCompaniesCollection } from "@/lib/companies";
 import {
+  getMessages,
+  LOCALE_COOKIE_NAME,
+  resolveLocale,
+} from "@/lib/i18n";
+import {
   ensureContainerListingsIndexes,
   getContainerListingsCollection,
   mapContainerListingToItem,
 } from "@/lib/container-listings";
-import type { ListingType } from "@/lib/container-listing-types";
 import { buildShortAddressLabelFromParts } from "@/lib/geocode-address";
 import { USER_ROLE } from "@/lib/user-roles";
-
-const LISTING_TYPE_LABEL: Record<ListingType, string> = {
-  sell: "Sprzedaz",
-  rent: "Wynajem",
-  buy: "Chce zakupic",
-};
 
 type EditContainerPageProps = {
   params: Promise<{ id: string }>;
@@ -42,6 +40,8 @@ export default async function EditContainerPage({ params }: EditContainerPagePro
   }
 
   const cookieStore = await cookies();
+  const locale = resolveLocale(cookieStore.get(LOCALE_COOKIE_NAME)?.value);
+  const messages = getMessages(locale);
   const token = cookieStore.get(SESSION_COOKIE_NAME)?.value;
   if (!token) {
     redirect(`/login?next=/containers/${id}/edit`);
@@ -112,30 +112,38 @@ export default async function EditContainerPage({ params }: EditContainerPagePro
       };
     })
     .filter((location) => location !== null);
+  const moduleMessages = messages.containerModules;
+  const listingTypeLabel = messages.containerListings.shared.listingKinds[
+    listingItem.type
+  ];
 
   return (
     <main className="mx-auto w-full max-w-5xl px-4 py-6 sm:px-6">
       <SmartBackButton
-        label="Wroc"
+        label={moduleMessages.shared.back}
         fallbackHref={`/containers/${listing._id.toHexString()}`}
         className="mb-4 inline-flex w-fit items-center gap-2 rounded-md border border-neutral-400 bg-white px-3 py-2 text-sm text-neutral-700 transition-colors hover:border-neutral-500"
       />
 
       <header className="mb-4 flex flex-wrap items-center gap-2">
-        <h1 className="text-2xl font-semibold text-neutral-100">Edytuj kontener</h1>
+        <h1 className="text-2xl font-semibold text-neutral-100">
+          {moduleMessages.editPage.title}
+        </h1>
         <span className="inline-flex h-8 items-center rounded-md border border-neutral-700 bg-neutral-950 px-3 text-sm text-neutral-100">
-          {LISTING_TYPE_LABEL[listingItem.type]}
+          {listingTypeLabel}
         </span>
       </header>
 
       <ContainerListingForm
+        locale={locale}
+        messages={moduleMessages}
         mode="edit"
         submitEndpoint={`/api/containers/${listing._id.toHexString()}`}
         submitMethod="PATCH"
-        submitLabel="Zapisz zmiany"
-        successMessage="Kontener zaktualizowany"
+        submitLabel={moduleMessages.editPage.submitLabel}
+        successMessage={moduleMessages.editPage.successMessage}
         backHref={`/containers/${listing._id.toHexString()}`}
-        backLabel="Powrot do szczegolow"
+        backLabel={moduleMessages.editPage.backToDetails}
         ownedCompanyProfile={
           ownedCompany
             ? {

@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { TurnstileWidget } from "@/components/turnstile-widget";
 import { useToast } from "@/components/toast-provider";
+import { getMessages, resolveLocale } from "@/lib/i18n";
 
 type InquiryFormValues = {
   buyerName: string;
@@ -36,16 +37,20 @@ type ContainerInquiryFormProps = {
 
 export function ContainerInquiryForm({
   listingId,
-  heading = "Wyslij zapytanie",
+  heading,
   hideHeading = false,
   theme = "dark",
   onSuccess,
-  submitLabel = "Wyslij",
+  submitLabel,
   initialValues,
   showOfferedPrice = true,
   isLoggedIn = false,
   turnstileSiteKey = null,
 }: ContainerInquiryFormProps) {
+  const locale = resolveLocale(
+    typeof document === "undefined" ? "pl" : document.documentElement.lang || "pl",
+  );
+  const messages = getMessages(locale).inquiryForm;
   const toast = useToast();
   const [turnstileToken, setTurnstileToken] = useState("");
   const [turnstileRefreshKey, setTurnstileRefreshKey] = useState(0);
@@ -68,7 +73,7 @@ export function ContainerInquiryForm({
   const onSubmit = async (values: InquiryFormValues) => {
     try {
       if (!isLoggedIn && turnstileSiteKey && !turnstileToken) {
-        throw new Error("Potwierdz, ze nie jestes robotem.");
+        throw new Error(messages.robotCheck);
       }
 
       const payload: InquiryFormValues = {
@@ -91,17 +96,17 @@ export function ContainerInquiryForm({
 
       if (!response.ok) {
         if (data?.error === "TURNSTILE_REQUIRED" || data?.error === "TURNSTILE_FAILED") {
-          throw new Error("Potwierdz, ze nie jestes robotem.");
+          throw new Error(messages.robotCheck);
         }
         const details = Array.isArray(data?.issues) ? ` (${data.issues.join(", ")})` : "";
-        throw new Error((data?.error ?? "Nie udalo sie wyslac zapytania") + details);
+        throw new Error((data?.error ?? messages.sendError) + details);
       }
 
-      toast.success("Zapytanie wyslane");
+      toast.success(messages.sentSuccess);
       reset();
       onSuccess?.();
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Wystapil blad");
+      toast.error(error instanceof Error ? error.message : messages.unknownError);
     } finally {
       if (!isLoggedIn && turnstileSiteKey) {
         setTurnstileToken("");
@@ -131,14 +136,19 @@ export function ContainerInquiryForm({
 
   return (
     <form onSubmit={handleSubmit(onSubmit)} className={formClassName}>
-      {!hideHeading ? <h2 className={headingClassName}>{heading}</h2> : null}
+      {!hideHeading ? (
+        <h2 className={headingClassName}>{heading ?? messages.headingOffer}</h2>
+      ) : null}
 
       <div className="grid gap-3">
-        <p className={sectionLabelClassName}>Moje dane</p>
+        <p className={sectionLabelClassName}>{messages.sectionBuyer}</p>
         <label className="grid gap-1 text-sm">
-          <span className={labelClassName}>Imie i nazwisko *</span>
+          <span className={labelClassName}>{messages.buyerNameLabel}</span>
           <input
-            {...register("buyerName", { required: "Podaj imie i nazwisko", minLength: { value: 2, message: "Min. 2 znaki" } })}
+            {...register("buyerName", {
+              required: messages.buyerNameRequired,
+              minLength: { value: 2, message: messages.buyerNameMinLength },
+            })}
             className={inputClassName}
           />
           {errors.buyerName?.message ? <span className="text-xs text-red-300">{errors.buyerName.message}</span> : null}
@@ -146,23 +156,23 @@ export function ContainerInquiryForm({
 
         <div className="grid gap-3 sm:grid-cols-2">
           <label className="grid gap-1 text-sm">
-            <span className={labelClassName}>Email *</span>
+            <span className={labelClassName}>{messages.buyerEmailLabel}</span>
             <input
               type="email"
-              {...register("buyerEmail", { required: "Podaj email" })}
+              {...register("buyerEmail", { required: messages.buyerEmailRequired })}
               className={inputClassName}
             />
             {errors.buyerEmail?.message ? <span className="text-xs text-red-300">{errors.buyerEmail.message}</span> : null}
           </label>
           <label className="grid gap-1 text-sm">
-            <span className={labelClassName}>Telefon</span>
+            <span className={labelClassName}>{messages.buyerPhoneLabel}</span>
             <input
               type="tel"
               {...register("buyerPhone", {
                 setValueAs: (value) => (typeof value === "string" && value.trim() ? value.trim() : undefined),
               })}
               className={inputClassName}
-              placeholder="np. +48 600 700 800"
+              placeholder={messages.buyerPhonePlaceholder}
             />
           </label>
         </div>
@@ -171,24 +181,24 @@ export function ContainerInquiryForm({
       <div className={dividerClassName} />
 
       <div className="grid gap-3">
-        <p className={sectionLabelClassName}>Tresc zapytania</p>
+        <p className={sectionLabelClassName}>{messages.sectionMessage}</p>
 
         <label className="grid gap-1 text-sm">
-          <span className={labelClassName}>Wiadomosc</span>
+          <span className={labelClassName}>{messages.messageLabel}</span>
           <textarea
             rows={5}
             {...register("message", {
               setValueAs: (value) => (typeof value === "string" && value.trim() ? value.trim() : undefined),
             })}
             className={inputClassName}
-            placeholder="Opcjonalnie dopisz szczegoly zapytania"
+            placeholder={messages.messagePlaceholder}
           />
           {errors.message?.message ? <span className="text-xs text-red-300">{errors.message.message}</span> : null}
         </label>
 
         <div className="grid gap-3 sm:grid-cols-2">
           <label className="grid gap-1 text-sm">
-            <span className={labelClassName}>Oczekiwana ilosc</span>
+            <span className={labelClassName}>{messages.requestedQuantityLabel}</span>
             <input
               type="number"
               min={1}
@@ -201,14 +211,14 @@ export function ContainerInquiryForm({
 
           {showOfferedPrice ? (
             <label className="grid gap-1 text-sm">
-              <span className={labelClassName}>Proponowana cena</span>
+              <span className={labelClassName}>{messages.offeredPriceLabel}</span>
               <input
                 {...register("offeredPrice", {
                   setValueAs: (value) =>
                     typeof value === "string" && value.trim() ? value.trim() : undefined,
                 })}
                 className={inputClassName}
-                placeholder="np. 2100 EUR"
+                placeholder={messages.offeredPricePlaceholder}
               />
             </label>
           ) : null}
@@ -231,7 +241,7 @@ export function ContainerInquiryForm({
           disabled={isSubmitting}
           className={submitButtonClassName}
         >
-          {isSubmitting ? "Wysylanie..." : submitLabel}
+          {isSubmitting ? messages.submitPending : submitLabel ?? messages.submitDefault}
         </button>
       </div>
     </form>

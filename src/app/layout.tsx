@@ -29,8 +29,6 @@ export const metadata: Metadata = {
     default: "ContainerBoard",
     template: "%s | ContainerBoard",
   },
-  description:
-    "Tablica kontenerow: dostepne i poszukiwane kontenery oraz szybkie zapytania email.",
   icons: {
     icon: [
       { url: "/favicon.ico", sizes: "any" },

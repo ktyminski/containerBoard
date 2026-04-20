@@ -106,6 +106,7 @@ export type ContainerListingDocument = {
   quantity: number;
   locationCity: string;
   locationCountry: string;
+  locationCountryCode?: string;
   locationLat?: number;
   locationLng?: number;
   locationAddressLabel?: string;
@@ -186,6 +187,7 @@ export type ContainerListingItem = {
   quantity: number;
   locationCity: string;
   locationCountry: string;
+  locationCountryCode?: string;
   locationLat: number | null;
   locationLng: number | null;
   locationAddressLabel?: string;
@@ -388,6 +390,7 @@ export async function ensureContainerListingsIndexes(): Promise<void> {
       const favorites = await getContainerListingFavoritesCollection();
 
       await listings.createIndex({ status: 1, expiresAt: 1, createdAt: -1 });
+      await listings.createIndex({ status: 1, expiresAt: 1, companySlug: 1, createdAt: -1 });
       await listings.createIndex({
         status: 1,
         expiresAt: 1,
@@ -410,8 +413,10 @@ export async function ensureContainerListingsIndexes(): Promise<void> {
       await listings.createIndex({ "pricing.normalized.net.amountUsd": 1 });
       await listings.createIndex({ hasCscPlate: 1, hasCscCertification: 1, productionYear: 1 });
       await listings.createIndex({ locationCity: 1, locationCountry: 1 });
+      await listings.createIndex({ locationCountryCode: 1, type: 1, status: 1, expiresAt: 1, createdAt: -1 });
       await listings.createIndex({ locationLat: 1, locationLng: 1 });
       await listings.createIndex({ "locations.locationCity": 1, "locations.locationCountry": 1 });
+      await listings.createIndex({ "locations.locationCountryCode": 1, type: 1, status: 1, expiresAt: 1, createdAt: -1 });
       await listings.createIndex({ "locations.locationLat": 1, "locations.locationLng": 1 });
       await listings.createIndex({ expiresAt: 1 });
 
@@ -474,6 +479,7 @@ export function mapContainerListingToItem(doc: ContainerListingDocument): Contai
       locationLng: doc.locationLng,
       locationCity: doc.locationCity,
       locationCountry: doc.locationCountry,
+      locationCountryCode: doc.locationCountryCode,
       locationAddressLabel: doc.locationAddressLabel,
       locationAddressParts: doc.locationAddressParts,
       isPrimary: true,
@@ -506,6 +512,7 @@ export function mapContainerListingToItem(doc: ContainerListingDocument): Contai
     quantity: doc.quantity,
     locationCity: primaryLocation?.locationCity ?? doc.locationCity,
     locationCountry: primaryLocation?.locationCountry ?? doc.locationCountry,
+    locationCountryCode: primaryLocation?.locationCountryCode ?? doc.locationCountryCode,
     locationLat:
       primaryLocation?.locationLat ??
       (typeof doc.locationLat === "number" && Number.isFinite(doc.locationLat)
@@ -665,6 +672,7 @@ export function buildContainerListingsFilter(input: {
   radiusKm?: number;
   city?: string;
   country?: string;
+  countryCode?: string;
   status?: ListingStatus;
   ownerUserId?: ObjectId;
   includeOnlyPublic?: boolean;
@@ -955,6 +963,7 @@ export function buildContainerListingsFilter(input: {
 
   const normalizedCity = input.city?.trim();
   const normalizedCountry = input.country?.trim();
+  const normalizedCountryCode = input.countryCode?.trim().toUpperCase();
   const cityPattern = normalizedCity
     ? new RegExp(`^${escapeRegexPattern(normalizedCity)}$`, "i")
     : null;
@@ -967,13 +976,17 @@ export function buildContainerListingsFilter(input: {
       $or: [
         {
           locationCity: cityPattern,
-          locationCountry: countryPattern,
+          ...(normalizedCountryCode
+            ? { locationCountryCode: normalizedCountryCode }
+            : { locationCountry: countryPattern }),
         } as Filter<ContainerListingDocument>,
         {
           locations: {
             $elemMatch: {
               locationCity: cityPattern,
-              locationCountry: countryPattern,
+              ...(normalizedCountryCode
+                ? { locationCountryCode: normalizedCountryCode }
+                : { locationCountry: countryPattern }),
             },
           },
         } as Filter<ContainerListingDocument>,
@@ -989,11 +1002,21 @@ export function buildContainerListingsFilter(input: {
       } as Filter<ContainerListingDocument>);
     }
 
-    if (countryPattern) {
+    if (normalizedCountryCode || countryPattern) {
       andConditions.push({
         $or: [
-          { locationCountry: countryPattern } as Filter<ContainerListingDocument>,
-          { "locations.locationCountry": countryPattern } as Filter<ContainerListingDocument>,
+          ...(normalizedCountryCode
+            ? [
+                { locationCountryCode: normalizedCountryCode } as Filter<ContainerListingDocument>,
+                { "locations.locationCountryCode": normalizedCountryCode } as Filter<ContainerListingDocument>,
+              ]
+            : []),
+          ...(countryPattern
+            ? [
+                { locationCountry: countryPattern } as Filter<ContainerListingDocument>,
+                { "locations.locationCountry": countryPattern } as Filter<ContainerListingDocument>,
+              ]
+            : []),
         ],
       } as Filter<ContainerListingDocument>);
     }

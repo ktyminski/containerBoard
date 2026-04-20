@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { cookies } from "next/headers";
-import { StaticPageFrame } from "@/components/static-page-frame";
 import { FacebookIcon, InstagramIcon, LinkedInIcon } from "@/components/social-icons";
+import { StaticPageFrame } from "@/components/static-page-frame";
 import { getLocaleFromRequest, getMessages, LOCALE_COOKIE_NAME } from "@/lib/i18n";
 import { buildPageMetadata } from "@/lib/seo";
 
@@ -44,7 +44,7 @@ export default async function ContactPage({ searchParams }: ContactPageProps) {
     <StaticPageFrame
       locale={locale}
       backLabel={messages.companyDetails.back}
-      mapLabel={locale === "pl" ? "PrzejdÅº do ogÅ‚oszeÅ„" : messages.home.whatBrowseAnnouncementsCta}
+      mapLabel={messages.staticPages.viewListings}
       mapHref="/list"
       title={page.title}
       intro={page.intro}
@@ -98,5 +98,3 @@ export default async function ContactPage({ searchParams }: ContactPageProps) {
     </StaticPageFrame>
   );
 }
-
-

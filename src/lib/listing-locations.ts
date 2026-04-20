@@ -2,6 +2,10 @@ import {
   normalizeGeocodeAddressParts,
   type GeocodeAddressParts,
 } from "@/lib/geocode-address";
+import {
+  resolveCountryCodeFromInput,
+  resolveCountryCodeFromInputApprox,
+} from "@/lib/country-flags";
 
 export const MAX_LISTING_LOCATIONS = 10;
 
@@ -10,6 +14,7 @@ export type ListingLocationInput = {
   locationLng?: number | null;
   locationCity?: string;
   locationCountry?: string;
+  locationCountryCode?: string;
   locationAddressLabel?: string;
   locationAddressParts?: GeocodeAddressParts | null;
   isPrimary?: boolean;
@@ -20,6 +25,7 @@ export type ListingLocation = {
   locationLng: number;
   locationCity: string;
   locationCountry: string;
+  locationCountryCode?: string;
   locationAddressLabel?: string;
   locationAddressParts?: GeocodeAddressParts;
   isPrimary: boolean;
@@ -65,12 +71,18 @@ export function normalizeListingLocation(
     normalizeOptionalString(input.locationCity) ?? locationAddressParts?.city ?? "";
   const locationCountry =
     normalizeOptionalString(input.locationCountry) ?? locationAddressParts?.country ?? "";
+  const locationCountryCode =
+    normalizeOptionalString(input.locationCountryCode)?.toUpperCase() ??
+    resolveCountryCodeFromInput(locationCountry) ??
+    resolveCountryCodeFromInputApprox(locationCountry) ??
+    undefined;
 
   return {
     locationLat,
     locationLng,
     locationCity,
     locationCountry,
+    ...(locationCountryCode ? { locationCountryCode } : {}),
     ...(locationAddressLabel ? { locationAddressLabel } : {}),
     ...(locationAddressParts ? { locationAddressParts } : {}),
     isPrimary: input.isPrimary === true,

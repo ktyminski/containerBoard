@@ -5,6 +5,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { ContainerListingsResults } from "@/components/container-listings-results";
 import { useToast } from "@/components/toast-provider";
 import type { ContainerListingItem } from "@/lib/container-listings";
+import { formatTemplate, getMessages, resolveLocale } from "@/lib/i18n";
 
 type ContainersListApiResponse = {
   items?: ContainerListingItem[];
@@ -68,6 +69,18 @@ export function CompanyProfileListings({
   limit = 6,
   allListingsHref,
 }: CompanyProfileListingsProps) {
+  const locale = useMemo(
+    () =>
+      resolveLocale(
+        typeof document === "undefined" ? "pl" : document.documentElement.lang,
+      ),
+    [],
+  );
+  const listingMessages = useMemo(
+    () => getMessages(locale).containerListings,
+    [locale],
+  );
+  const relatedMessages = listingMessages.related;
   const toast = useToast();
   const normalizedSlug = companySlug.trim();
   const [items, setItems] = useState<ContainerListingItem[]>([]);
@@ -109,7 +122,9 @@ export function CompanyProfileListings({
         });
         const data = (await response.json()) as ContainersListApiResponse;
         if (!response.ok) {
-          throw new Error(data.error ?? `Blad API (${response.status})`);
+          throw new Error(
+            data.error ?? `${listingMessages.board.apiErrorPrefix} (${response.status})`,
+          );
         }
 
         if (controller.signal.aborted) {
@@ -128,7 +143,7 @@ export function CompanyProfileListings({
         setError(
           loadError instanceof Error
             ? loadError.message
-            : "Nie udalo sie zaladowac ogloszen firmy",
+            : relatedMessages.loadCompanyError,
         );
       } finally {
         if (!controller.signal.aborted) {
@@ -147,7 +162,7 @@ export function CompanyProfileListings({
         return;
       }
       if (!isLoggedIn) {
-        toast.error("Zaloguj sie, aby dodawac ogloszenia do ulubionych.");
+        toast.error(relatedMessages.loginRequiredForFavorites);
         return;
       }
 
@@ -166,7 +181,7 @@ export function CompanyProfileListings({
         });
         const payload = (await response.json().catch(() => null)) as { error?: string } | null;
         if (!response.ok) {
-          throw new Error(payload?.error ?? "Nie udalo sie zaktualizowac ulubionych.");
+          throw new Error(payload?.error ?? listingMessages.map.favoriteUpdateError);
         }
       } catch (favoriteError) {
         setItems((current) =>
@@ -177,7 +192,7 @@ export function CompanyProfileListings({
         toast.error(
           favoriteError instanceof Error
             ? favoriteError.message
-            : "Nie udalo sie zaktualizowac ulubionych.",
+            : listingMessages.map.favoriteUpdateError,
         );
       } finally {
         setPendingFavoriteId(null);
@@ -192,12 +207,12 @@ export function CompanyProfileListings({
       const url = `${origin}/containers/${listingId}`;
       const copied = await copyTextToClipboard(url);
       if (copied) {
-        toast.success("Skopiowano link do ogloszenia.");
+        toast.success(listingMessages.map.linkCopied);
       } else {
-        toast.error("Nie udalo sie skopiowac linku.");
+        toast.error(listingMessages.map.copyError);
       }
     },
-    [toast],
+    [listingMessages.map.copyError, listingMessages.map.linkCopied, toast],
   );
 
   const hiddenCount = Math.max(total - items.length, 0);
@@ -211,8 +226,10 @@ export function CompanyProfileListings({
         <Link
           href={listingsHref}
           className="inline-flex min-h-20 w-full max-w-[220px] items-center justify-center rounded-xl border border-neutral-300 bg-neutral-100 px-6 text-center text-4xl font-semibold text-neutral-400 transition-colors hover:bg-neutral-200 hover:text-neutral-500"
-          aria-label={`Pokaz pozostale ogloszenia: ${hiddenCount}`}
-          title="Zobacz wszystkie ogloszenia firmy"
+          aria-label={formatTemplate(relatedMessages.hiddenAriaTemplate, {
+            count: hiddenCount,
+          })}
+          title={relatedMessages.showAllCompanyTitle}
         >
           + {hiddenCount}
         </Link>
@@ -222,6 +239,8 @@ export function CompanyProfileListings({
   return (
     <div className="grid gap-1">
       <ContainerListingsResults
+        locale={locale}
+        messages={listingMessages}
         items={items}
         total={total}
         page={1}

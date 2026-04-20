@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { enforcePublicReadRateLimitOrResponse } from "@/lib/app-rate-limit";
 import { clearSessionCookie } from "@/lib/auth-session";
 import { getCurrentUserFromRequest } from "@/lib/auth-user";
 import { toPublicUser } from "@/lib/users";
@@ -8,6 +9,15 @@ export const runtime = "nodejs";
 
 export async function GET(request: NextRequest) {
   try {
+    const rateLimitResponse = await enforcePublicReadRateLimitOrResponse({
+      request,
+      scope: "auth:me",
+      limit: 225,
+    });
+    if (rateLimitResponse) {
+      return rateLimitResponse;
+    }
+
     const user = await getCurrentUserFromRequest(request);
 
     if (!user) {

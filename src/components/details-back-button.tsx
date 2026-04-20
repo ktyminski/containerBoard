@@ -7,12 +7,14 @@ type DetailsBackButtonProps = {
   href: string;
   className?: string;
   preferHistoryBack?: boolean;
+  label: string;
 };
 
 export function DetailsBackButton({
   href,
   className,
   preferHistoryBack = false,
+  label,
 }: DetailsBackButtonProps) {
   const router = useRouter();
   const overlayClose = useListDetailsOverlayClose();
@@ -44,7 +46,7 @@ export function DetailsBackButton({
         >
           <path d="M15 18 9 12l6-6" />
         </svg>
-        <span>Powrot do listy</span>
+        <span>{label}</span>
       </span>
     </button>
   );

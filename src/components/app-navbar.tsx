@@ -27,13 +27,13 @@ export async function AppNavbar({ locale, messages }: AppNavbarProps) {
             href={withLang("/list", locale)}
             className="hidden shrink-0 rounded-md border border-[#2f639a] bg-[#082650]/80 px-3 py-1.5 text-xs text-[#dbeafe] whitespace-nowrap transition hover:border-[#4e86c3] hover:bg-[#0c3466] md:inline-flex"
           >
-            Wyszukiwarka
+            {messages.footer.browseListings}
           </Link>
         </div>
-        <div className="flex min-w-0 items-center gap-2 whitespace-nowrap">
+        <div className="ml-auto flex min-w-0 items-center gap-2 whitespace-nowrap">
+          <AddActionsMenu locale={locale} label={messages.footer.addContainer} />
+          <AuthNav locale={locale} messages={messages.authNav} roleMessages={messages.roles} />
           <LanguageSwitcher locale={locale} messages={messages.languageSwitcher} />
-          <AddActionsMenu locale={locale} />
-          <AuthNav locale={locale} roleMessages={messages.roles} />
         </div>
       </div>
     </header>

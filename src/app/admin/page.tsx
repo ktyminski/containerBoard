@@ -8,6 +8,7 @@ import {
   getLocaleFromRequest,
   getMessages,
   LOCALE_COOKIE_NAME,
+  withLang,
 } from "@/lib/i18n";
 
 type AdminPageProps = {
@@ -27,29 +28,31 @@ export default async function AdminPage({ searchParams }: AdminPageProps) {
   const token = cookieStore.get(SESSION_COOKIE_NAME)?.value;
 
   if (!token) {
-    redirect("/login?next=/admin");
+    redirect(withLang("/login?next=/admin", locale));
   }
 
   const currentUser = await getCurrentUserFromToken(token);
   if (!currentUser) {
-    redirect("/login?next=/admin");
+    redirect(withLang("/login?next=/admin", locale));
   }
 
   if (currentUser.role !== USER_ROLE.ADMIN) {
-    redirect("/");
+    redirect(withLang("/", locale));
   }
 
   return (
     <main className="mx-auto flex w-full max-w-6xl flex-col gap-6 px-4 py-6 sm:px-6">
       <header className="rounded-xl border border-neutral-800 bg-neutral-900/60 p-5">
-        <h1 className="text-2xl font-semibold sm:text-3xl">Panel administratora</h1>
-        <p className="mt-2 text-sm text-neutral-300">
-          Zarzadzaj kontenerami, uzytkownikami, firmami i zleceniami concierge.
-        </p>
+        <h1 className="text-2xl font-semibold sm:text-3xl">{messages.adminPage.title}</h1>
+        <p className="mt-2 text-sm text-neutral-300">{messages.adminPage.subtitle}</p>
       </header>
       <AdminPanelTabs
         locale={locale}
         initialTab={tabParam}
+        messages={messages.adminPage}
+        containersMessages={messages.adminContainers}
+        conciergeMessages={messages.adminConcierge}
+        listingMessages={messages.containerListings}
         usersMessages={messages.adminUsers}
         companiesMessages={messages.adminCompanies}
         companyStatusMessages={messages.companyStatus}

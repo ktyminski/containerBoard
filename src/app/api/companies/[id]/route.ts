@@ -12,6 +12,7 @@ import {
   processGalleryUpload,
   processLogoUpload,
 } from "@/lib/company-media";
+import { enforceAuthenticatedRateLimitOrResponse } from "@/lib/app-rate-limit";
 import {
   buildBlobPath,
   safeDeleteBlobUrls,
@@ -229,6 +230,16 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
     const user = await getCurrentUserFromRequest(request);
     if (!user?._id) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+    const rateLimitResponse = await enforceAuthenticatedRateLimitOrResponse({
+      request,
+      scope: "companies:update",
+      userId: user._id.toHexString(),
+      ipLimit: 30,
+      userLimit: 15,
+    });
+    if (rateLimitResponse) {
+      return rateLimitResponse;
     }
 
     await ensureCompaniesIndexes();

@@ -10,10 +10,11 @@ import { USER_ROLE } from "@/lib/user-roles";
 
 type AuthNavProps = {
   locale: AppLocale;
+  messages: AppMessages["authNav"];
   roleMessages: AppMessages["roles"];
 };
 
-export async function AuthNav({ locale, roleMessages }: AuthNavProps) {
+export async function AuthNav({ locale, messages, roleMessages }: AuthNavProps) {
   const cookieStore = await cookies();
   const token = cookieStore.get(SESSION_COOKIE_NAME)?.value;
   const user = token ? await getCurrentUserFromToken(token) : null;
@@ -25,13 +26,13 @@ export async function AuthNav({ locale, roleMessages }: AuthNavProps) {
           href={withLang("/login", locale)}
           className="inline-flex h-9 shrink-0 items-center rounded-md border border-[#2f639a] bg-[#082650]/80 px-3 text-sm text-[#e2efff] whitespace-nowrap transition hover:border-[#4e86c3] hover:bg-[#0c3466]"
         >
-          Zaloguj
+          {messages.login}
         </Link>
         <Link
           href={withLang("/register", locale)}
           className="hidden h-9 shrink-0 items-center rounded-md border border-[#2f639a] bg-[#082650]/80 px-3 text-sm font-medium text-[#e2efff] whitespace-nowrap transition hover:border-[#4e86c3] hover:bg-[#0c3466] md:inline-flex"
         >
-          Rejestracja
+          {messages.register}
         </Link>
       </div>
     );
@@ -54,27 +55,29 @@ export async function AuthNav({ locale, roleMessages }: AuthNavProps) {
         href={myListingsHref}
         className="hidden h-9 shrink-0 items-center rounded-md border border-[#2f639a] bg-[#082650]/80 px-3 text-sm text-[#dbeafe] whitespace-nowrap transition hover:border-[#4e86c3] hover:bg-[#0c3466] md:inline-flex"
       >
-        Moje ogloszenia
+        {messages.myListings}
       </Link>
       <UserAccountMenu
         userName={user.name}
-        accountTypeLabel="Rola"
+        accountTypeLabel={messages.accountType}
         roleLabel={roleMessages[user.role]}
         isEmailVerified={user.authProvider !== "local" || user.isEmailVerified !== false}
-        unverifiedAccountLabel="Konto niezweryfikowane"
+        unverifiedAccountLabel={messages.unverifiedAccount}
         isUserBlocked={user.isBlocked === true}
         hasBlockedCompany={ownedCompany?.isBlocked === true}
-        blockedUserLabel="Konto zablokowane"
-        blockedCompanyLabel="Firma zablokowana"
-        adminPanelLabel={user.role === USER_ROLE.ADMIN ? "Admin" : undefined}
+        blockedUserLabel={messages.blockedUser}
+        blockedCompanyLabel={messages.blockedCompany}
+        adminPanelLabel={user.role === USER_ROLE.ADMIN ? messages.admin : undefined}
         adminPanelHref={user.role === USER_ROLE.ADMIN ? withLang("/admin", locale) : undefined}
-        companyPanelLabel={hasOwnedCompany && companyPanelHref ? "Moja firma" : undefined}
+        companyPanelLabel={
+          hasOwnedCompany && companyPanelHref ? messages.companyPanel : undefined
+        }
         companyPanelHref={companyPanelHref}
-        myListingsLabel="Moje ogloszenia"
+        myListingsLabel={messages.myListings}
         myListingsHref={myListingsHref}
-        settingsLabel="Ustawienia"
+        settingsLabel={messages.settings}
         settingsHref={withLang("/settings", locale)}
-        logoutLabel="Wyloguj"
+        logoutLabel={messages.logout}
       />
     </div>
   );

@@ -18,8 +18,6 @@ const MAIL_COLORS = {
   text: "#263645",
   muted: "#6a7b8c",
   link: "#0b67b2",
-  panelBackground: "#f4f8fc",
-  panelBorder: "#d7e3f0",
   buttonBackground: "#0b67b2",
 };
 
@@ -33,7 +31,7 @@ function escapeHtml(value: string): string {
 }
 
 function greeting(name?: string): string {
-  return name?.trim() ? `Cześć ${name.trim()},` : "Cześć,";
+  return name?.trim() ? `Hello ${name.trim()},` : "Hello,";
 }
 
 function htmlParagraph(text: string): string {
@@ -60,8 +58,8 @@ function renderTextLayout(input: {
   }
   chunks.push(...input.sections.filter((section) => section.trim().length > 0));
   chunks.push(
-    "Pozdrawiamy,\nZespół ContainerBoard",
-    "---\nWiadomość wygenerowana automatycznie. W razie pytań możesz odpisać na ten email.",
+    `Best regards,\n${BRAND_NAME} team`,
+    "---\nThis is an automated message. You can reply to this email if you need help.",
   );
   return chunks.join("\n\n");
 }
@@ -77,7 +75,7 @@ function renderHtmlLayout(input: {
   const introHtml = input.intro ? htmlParagraph(input.intro) : "";
 
   return `<!doctype html>
-<html lang="pl">
+<html lang="en">
   <head>
     <meta charset="utf-8" />
     <meta http-equiv="x-ua-compatible" content="ie=edge" />
@@ -100,7 +98,7 @@ function renderHtmlLayout(input: {
             <tr>
               <td bgcolor="${MAIL_COLORS.headerBackground}" style="background-color:${MAIL_COLORS.headerBackground};border-top:5px solid ${MAIL_COLORS.headerAccent};padding:16px 22px;font-family:Arial,Helvetica,sans-serif;">
                 <div style="font-size:21px;line-height:24px;color:#ffffff;font-weight:700;">${BRAND_NAME}</div>
-                <div style="Margin-top:6px;font-size:13px;line-height:18px;color:#d6e7f5;">Platforma transportu i logistyki</div>
+                <div style="Margin-top:6px;font-size:13px;line-height:18px;color:#d6e7f5;">Container marketplace</div>
               </td>
             </tr>
             <tr>
@@ -112,7 +110,7 @@ function renderHtmlLayout(input: {
             </tr>
             <tr>
               <td bgcolor="#f7fafd" style="background-color:#f7fafd;border-top:1px solid ${MAIL_COLORS.cardBorder};padding:14px 22px;font-family:Arial,Helvetica,sans-serif;font-size:12px;line-height:18px;color:${MAIL_COLORS.muted};">
-                <div>Wiadomość wygenerowana automatycznie przez ${BRAND_NAME}.</div>
+                <div>This message was generated automatically by ${BRAND_NAME}.</div>
                 <div style="Margin-top:4px;">
                   <a href="${BRAND_WEBSITE_URL}" style="color:${MAIL_COLORS.link};text-decoration:underline;">${BRAND_WEBSITE_URL}</a>
                   &nbsp;|&nbsp;
@@ -135,24 +133,24 @@ function renderHtmlLayout(input: {
 
 export function buildWelcomeMail(name?: string): MailTemplateContent {
   const intro = greeting(name);
-  const subject = "Witamy w ContainerBoard";
+  const subject = "Welcome to ContainerBoard";
 
   return {
     subject,
     text: renderTextLayout({
       intro,
       sections: [
-        "Dziękujemy za rejestrację konta w ContainerBoard.",
-        "Możesz już korzystac z aplikacji.",
+        "Thanks for creating your ContainerBoard account.",
+        "You can now start using the platform.",
       ],
     }),
     html: renderHtmlLayout({
-      preheader: "Konto zostało aktywowane. Możesz już korzystac z ContainerBoard.",
+      preheader: "Your account is ready to use.",
       title: subject,
       intro,
       contentHtml:
-        htmlParagraph("Dziękujemy za rejestrację konta w ContainerBoard.") +
-        htmlParagraph("Możesz już korzystac z aplikacji."),
+        htmlParagraph("Thanks for creating your ContainerBoard account.") +
+        htmlParagraph("You can now start using the platform."),
     }),
   };
 }
@@ -163,29 +161,29 @@ export function buildEmailVerificationMail(input: {
 }): MailTemplateContent {
   const intro = greeting(input.name);
   const safeVerificationUrl = escapeHtml(input.verificationUrl);
-  const subject = "Potwierdź adres email w ContainerBoard";
+  const subject = "Verify your email address";
 
   return {
     subject,
     text: renderTextLayout({
       intro,
       sections: [
-        "Aby aktywować konto, potwierdź swój adres email klikając link:",
+        "To activate your account, please verify your email address using the link below:",
         input.verificationUrl,
-        "Link jest ważny przez 24 godziny.",
+        "This link is valid for 24 hours.",
       ],
     }),
     html: renderHtmlLayout({
-      preheader: "Potwierdz email i aktywuj konto ContainerBoard.",
+      preheader: "Verify your email to activate your account.",
       title: subject,
       intro,
       contentHtml:
-        htmlParagraph("Aby aktywować konto, potwierdź swój adres email klikając przycisk:") +
-        htmlButton(input.verificationUrl, "Potwierdź adres email") +
+        htmlParagraph("To activate your account, please use the button below:") +
+        htmlButton(input.verificationUrl, "Verify email") +
         htmlParagraphRaw(
-          `Lub skopiuj link do przeglądarki:<br/><a href="${safeVerificationUrl}" style="color:${MAIL_COLORS.link};text-decoration:underline;word-break:break-all;">${safeVerificationUrl}</a>`,
+          `Or copy this link into your browser:<br/><a href="${safeVerificationUrl}" style="color:${MAIL_COLORS.link};text-decoration:underline;word-break:break-all;">${safeVerificationUrl}</a>`,
         ) +
-        htmlParagraph("Link jest ważny przez 24 godziny."),
+        htmlParagraph("This link is valid for 24 hours."),
     }),
   };
 }
@@ -196,33 +194,31 @@ export function buildPasswordResetMail(input: {
 }): MailTemplateContent {
   const intro = greeting(input.name);
   const safeResetUrl = escapeHtml(input.resetUrl);
-  const subject = "Reset hasła w ContainerBoard";
+  const subject = "Reset your password";
 
   return {
     subject,
     text: renderTextLayout({
       intro,
       sections: [
-        "Otrzymaliśmy prośbę o ustawienie nowego hasła do Twojego konta ContainerBoard.",
-        "Aby ustawić nowe hasło, kliknij link:",
+        "We received a request to reset the password for your ContainerBoard account.",
+        "Use the link below to set a new password:",
         input.resetUrl,
-        "Link jest ważny przez 1 godzinę. Jeżeli to nie Ty, zignoruj tę wiadomość.",
+        "This link is valid for 1 hour. If this was not you, you can ignore this message.",
       ],
     }),
     html: renderHtmlLayout({
-      preheader: "Reset hasła do konta ContainerBoard.",
+      preheader: "Password reset request for your account.",
       title: subject,
       intro,
       contentHtml:
-        htmlParagraph(
-          "Otrzymaliśmy prośbę o ustawienie nowego hasła do Twojego konta ContainerBoard.",
-        ) +
-        htmlButton(input.resetUrl, "Ustaw nowe hasło") +
+        htmlParagraph("We received a request to reset the password for your ContainerBoard account.") +
+        htmlButton(input.resetUrl, "Set a new password") +
         htmlParagraphRaw(
-          `Lub skopiuj link do przeglądarki:<br/><a href="${safeResetUrl}" style="color:${MAIL_COLORS.link};text-decoration:underline;word-break:break-all;">${safeResetUrl}</a>`,
+          `Or copy this link into your browser:<br/><a href="${safeResetUrl}" style="color:${MAIL_COLORS.link};text-decoration:underline;word-break:break-all;">${safeResetUrl}</a>`,
         ) +
         htmlParagraph(
-          "Link jest ważny przez 1 godzinę. Jeżeli to nie Ty, zignoruj tę wiadomość.",
+          "This link is valid for 1 hour. If this was not you, you can ignore this message.",
         ),
     }),
   };
@@ -233,25 +229,25 @@ export function buildClaimSubmittedMail(
   name?: string,
 ): MailTemplateContent {
   const intro = greeting(name);
-  const subject = "Zgłoszenie przejęcia zostało przyjęte";
+  const subject = "Your company claim has been received";
 
   return {
     subject,
     text: renderTextLayout({
       intro,
       sections: [
-        `Twoje zgłoszenie przejęcia firmy "${companyName}" zostało zapisane i czeka na decyzję administratora.`,
-        "Powiadomimy Cię mailowo, gdy decyzja zostanie podjęta.",
+        `Your claim for "${companyName}" has been recorded and is waiting for review.`,
+        "We will notify you by email once a decision has been made.",
       ],
     }),
     html: renderHtmlLayout({
-      preheader: "Twoje zgłoszenie przejęcia firmy zostało przyjete.",
+      preheader: "Your company claim is now waiting for review.",
       title: subject,
       intro,
       contentHtml:
         htmlParagraphRaw(
-          `Twoje zgłoszenie przejęcia firmy "<strong>${escapeHtml(companyName)}</strong>" zostało zapisane i czeka na decyzję administratora.`,
-        ) + htmlParagraph("Powiadomimy Cię mailowo, gdy decyzja zostanie podjęta."),
+          `Your claim for "<strong>${escapeHtml(companyName)}</strong>" has been recorded and is waiting for review.`,
+        ) + htmlParagraph("We will notify you by email once a decision has been made."),
     }),
   };
 }
@@ -262,33 +258,33 @@ export function buildClaimDecisionMail(input: {
   name?: string;
 }): MailTemplateContent {
   const intro = greeting(input.name);
-  const decision = input.approved ? "zaakceptowane" : "odrzucone";
+  const decisionLabel = input.approved ? "approved" : "rejected";
   const subject = input.approved
-    ? "Decyzja: zgłoszenie przejęcia zaakceptowane"
-    : "Decyzja: zgłoszenie przejęcia odrzucone";
-  const outcomeText = input.approved
-    ? "Możesz teraz zarządzać profilem tej firmy jako właściciel."
-    : "W razie potrzeby możesz skontaktować się z administratorem.";
+    ? "Your company claim has been approved"
+    : "Your company claim has been rejected";
+  const followUp = input.approved
+    ? "You can now manage this company profile as its owner."
+    : "If you need help, please contact support.";
 
   return {
     subject,
     text: renderTextLayout({
       intro,
       sections: [
-        `Twoje zgłoszenie przejęcia firmy "${input.companyName}" zostało ${decision}.`,
-        outcomeText,
+        `Your claim for "${input.companyName}" has been ${decisionLabel}.`,
+        followUp,
       ],
     }),
     html: renderHtmlLayout({
       preheader: input.approved
-        ? "Zgłoszenie przejęcia firmy zostało zaakceptowane."
-        : "Zgłoszenie przejęcia firmy zostało odrzucone.",
+        ? "Your company claim has been approved."
+        : "Your company claim has been rejected.",
       title: subject,
       intro,
       contentHtml:
         htmlParagraphRaw(
-          `Twoje zgłoszenie przejęcia firmy "<strong>${escapeHtml(input.companyName)}</strong>" zostało <strong>${escapeHtml(decision)}</strong>.`,
-        ) + htmlParagraph(outcomeText),
+          `Your claim for "<strong>${escapeHtml(input.companyName)}</strong>" has been <strong>${decisionLabel}</strong>.`,
+        ) + htmlParagraph(followUp),
     }),
   };
 }
@@ -300,25 +296,25 @@ export function buildOfferPublishedMail(input: {
   offerUrl?: string;
 }): MailTemplateContent {
   const intro = greeting(input.name);
-  const subject = `Potwierdzenie publikacji oferty: ${input.offerTitle}`;
+  const subject = `Offer published: ${input.offerTitle}`;
 
   return {
     subject,
     text: renderTextLayout({
       intro,
       sections: [
-        `Twoja oferta "${input.offerTitle}" dla firmy "${input.companyName}" została opublikowana.`,
-        ...(input.offerUrl ? [`Link do oferty: ${input.offerUrl}`] : []),
+        `Your offer "${input.offerTitle}" for "${input.companyName}" has been published.`,
+        ...(input.offerUrl ? [`Offer link: ${input.offerUrl}`] : []),
       ],
     }),
     html: renderHtmlLayout({
-      preheader: "Twoja oferta została opublikowana.",
+      preheader: "Your offer is now live.",
       title: subject,
       intro,
       contentHtml:
         htmlParagraphRaw(
-          `Twoja oferta "<strong>${escapeHtml(input.offerTitle)}</strong>" dla firmy "<strong>${escapeHtml(input.companyName)}</strong>" została opublikowana.`,
-        ) + (input.offerUrl ? htmlButton(input.offerUrl, "Przejdź do oferty") : ""),
+          `Your offer "<strong>${escapeHtml(input.offerTitle)}</strong>" for "<strong>${escapeHtml(input.companyName)}</strong>" has been published.`,
+        ) + (input.offerUrl ? htmlButton(input.offerUrl, "Open offer") : ""),
     }),
   };
 }
@@ -335,36 +331,36 @@ export function buildContainerInquiryMail(input: {
   requestedQuantity?: number;
   offeredPrice?: string;
 }): MailTemplateContent {
-  const subject = `Nowe zapytanie o kontener - ${input.containerLabel}`;
+  const subject = `New container inquiry - ${input.containerLabel}`;
   const sections = [
-    `Kontener: ${input.summaryLine}`,
-    `Firma/ogloszenie: ${input.companyName}`,
-    `Ilosc w ogloszeniu: ${input.listingQuantity}`,
-    "Dane osoby pytajacej:",
-    `Imie i nazwisko: ${input.buyerName}`,
+    `Container: ${input.summaryLine}`,
+    `Company/listing: ${input.companyName}`,
+    `Quantity in listing: ${input.listingQuantity}`,
+    "Buyer details:",
+    `Full name: ${input.buyerName}`,
     `Email: ${input.buyerEmail}`,
-    input.buyerPhone ? `Telefon: ${input.buyerPhone}` : "",
-    input.inquiryMessage ? `Wiadomosc: ${input.inquiryMessage}` : "",
-    input.requestedQuantity ? `Oczekiwana ilosc: ${input.requestedQuantity}` : "",
-    input.offeredPrice ? `Proponowana cena: ${input.offeredPrice}` : "",
+    input.buyerPhone ? `Phone: ${input.buyerPhone}` : "",
+    input.inquiryMessage ? `Message: ${input.inquiryMessage}` : "",
+    input.requestedQuantity ? `Requested quantity: ${input.requestedQuantity}` : "",
+    input.offeredPrice ? `Offered price: ${input.offeredPrice}` : "",
   ].filter((line) => line.trim().length > 0);
 
   const htmlLines = [
-    `<strong>Kontener:</strong> ${escapeHtml(input.summaryLine)}<br/>`,
-    `<strong>Firma/ogloszenie:</strong> ${escapeHtml(input.companyName)}<br/>`,
-    `<strong>Ilosc w ogloszeniu:</strong> ${input.listingQuantity}`,
-    "<br/><br/><strong>Dane osoby pytajacej:</strong><br/>",
-    `<strong>Imie i nazwisko:</strong> ${escapeHtml(input.buyerName)}<br/>`,
+    `<strong>Container:</strong> ${escapeHtml(input.summaryLine)}<br/>`,
+    `<strong>Company/listing:</strong> ${escapeHtml(input.companyName)}<br/>`,
+    `<strong>Quantity in listing:</strong> ${input.listingQuantity}`,
+    "<br/><br/><strong>Buyer details:</strong><br/>",
+    `<strong>Full name:</strong> ${escapeHtml(input.buyerName)}<br/>`,
     `<strong>Email:</strong> ${escapeHtml(input.buyerEmail)}<br/>`,
-    input.buyerPhone ? `<strong>Telefon:</strong> ${escapeHtml(input.buyerPhone)}<br/>` : "",
+    input.buyerPhone ? `<strong>Phone:</strong> ${escapeHtml(input.buyerPhone)}<br/>` : "",
     input.inquiryMessage
-      ? `<strong>Wiadomosc:</strong><br/>${escapeHtml(input.inquiryMessage).replaceAll("\n", "<br/>")}<br/>`
+      ? `<strong>Message:</strong><br/>${escapeHtml(input.inquiryMessage).replaceAll("\n", "<br/>")}<br/>`
       : "",
     input.requestedQuantity
-      ? `<strong>Oczekiwana ilosc:</strong> ${input.requestedQuantity}<br/>`
+      ? `<strong>Requested quantity:</strong> ${input.requestedQuantity}<br/>`
       : "",
     input.offeredPrice
-      ? `<strong>Proponowana cena:</strong> ${escapeHtml(input.offeredPrice)}`
+      ? `<strong>Offered price:</strong> ${escapeHtml(input.offeredPrice)}`
       : "",
   ]
     .filter((line) => line.trim().length > 0)
@@ -372,11 +368,9 @@ export function buildContainerInquiryMail(input: {
 
   return {
     subject,
-    text: renderTextLayout({
-      sections,
-    }),
+    text: renderTextLayout({ sections }),
     html: renderHtmlLayout({
-      preheader: "Nowe zapytanie o kontener",
+      preheader: "A new container inquiry has been submitted.",
       title: subject,
       contentHtml: htmlParagraphRaw(htmlLines),
     }),
@@ -397,43 +391,37 @@ export function buildConciergeStockUploadMail(input: {
   note?: string;
   requestedAtIso: string;
 }): MailTemplateContent {
-  const subject = `Nowe zgloszenie Concierge - ${input.companyName}`;
+  const subject = `New concierge stock upload - ${input.companyName}`;
 
   const textSections = [
-    "Nowe zgloszenie concierge bulk import.",
-    `Firma: ${input.companyName}`,
-    input.companySlug ? `Slug firmy: ${input.companySlug}` : "",
-    `Uzytkownik: ${input.userName} (${input.userEmail})`,
-    input.contactEmail ? `Email kontaktowy: ${input.contactEmail}` : "",
-    input.contactPhone ? `Telefon kontaktowy: ${input.contactPhone}` : "",
-    `Plik: ${input.fileName}`,
-    `Typ pliku: ${input.fileContentType}`,
-    `Rozmiar: ${input.fileSizeBytes} B`,
-    `URL pliku: ${input.fileUrl}`,
-    `Data zgloszenia: ${input.requestedAtIso}`,
-    input.note ? `Notatka: ${input.note}` : "",
+    "A new concierge bulk upload request has been submitted.",
+    `Company: ${input.companyName}`,
+    input.companySlug ? `Company slug: ${input.companySlug}` : "",
+    `User: ${input.userName} (${input.userEmail})`,
+    input.contactEmail ? `Contact email: ${input.contactEmail}` : "",
+    input.contactPhone ? `Contact phone: ${input.contactPhone}` : "",
+    `File: ${input.fileName}`,
+    `File type: ${input.fileContentType}`,
+    `File size: ${input.fileSizeBytes} B`,
+    `File URL: ${input.fileUrl}`,
+    `Submitted at: ${input.requestedAtIso}`,
+    input.note ? `Note: ${input.note}` : "",
   ].filter((line) => line.trim().length > 0);
 
   const htmlLines = [
-    "<strong>Nowe zgloszenie concierge bulk import</strong><br/>",
-    `<strong>Firma:</strong> ${escapeHtml(input.companyName)}<br/>`,
-    input.companySlug
-      ? `<strong>Slug firmy:</strong> ${escapeHtml(input.companySlug)}<br/>`
-      : "",
-    `<strong>Uzytkownik:</strong> ${escapeHtml(input.userName)} (${escapeHtml(input.userEmail)})<br/>`,
-    input.contactEmail
-      ? `<strong>Email kontaktowy:</strong> ${escapeHtml(input.contactEmail)}<br/>`
-      : "",
-    input.contactPhone
-      ? `<strong>Telefon kontaktowy:</strong> ${escapeHtml(input.contactPhone)}<br/>`
-      : "",
-    `<strong>Plik:</strong> ${escapeHtml(input.fileName)}<br/>`,
-    `<strong>Typ pliku:</strong> ${escapeHtml(input.fileContentType)}<br/>`,
-    `<strong>Rozmiar:</strong> ${input.fileSizeBytes} B<br/>`,
-    `<strong>Data zgloszenia:</strong> ${escapeHtml(input.requestedAtIso)}<br/>`,
-    `<strong>URL pliku:</strong> <a href="${escapeHtml(input.fileUrl)}" style="color:${MAIL_COLORS.link};text-decoration:underline;word-break:break-all;">${escapeHtml(input.fileUrl)}</a><br/>`,
+    "<strong>A new concierge bulk upload request has been submitted</strong><br/>",
+    `<strong>Company:</strong> ${escapeHtml(input.companyName)}<br/>`,
+    input.companySlug ? `<strong>Company slug:</strong> ${escapeHtml(input.companySlug)}<br/>` : "",
+    `<strong>User:</strong> ${escapeHtml(input.userName)} (${escapeHtml(input.userEmail)})<br/>`,
+    input.contactEmail ? `<strong>Contact email:</strong> ${escapeHtml(input.contactEmail)}<br/>` : "",
+    input.contactPhone ? `<strong>Contact phone:</strong> ${escapeHtml(input.contactPhone)}<br/>` : "",
+    `<strong>File:</strong> ${escapeHtml(input.fileName)}<br/>`,
+    `<strong>File type:</strong> ${escapeHtml(input.fileContentType)}<br/>`,
+    `<strong>File size:</strong> ${input.fileSizeBytes} B<br/>`,
+    `<strong>Submitted at:</strong> ${escapeHtml(input.requestedAtIso)}<br/>`,
+    `<strong>File URL:</strong> <a href="${escapeHtml(input.fileUrl)}" style="color:${MAIL_COLORS.link};text-decoration:underline;word-break:break-all;">${escapeHtml(input.fileUrl)}</a><br/>`,
     input.note
-      ? `<br/><strong>Notatka:</strong><br/>${escapeHtml(input.note).replaceAll("\n", "<br/>")}`
+      ? `<br/><strong>Note:</strong><br/>${escapeHtml(input.note).replaceAll("\n", "<br/>")}`
       : "",
   ]
     .filter((line) => line.trim().length > 0)
@@ -443,7 +431,7 @@ export function buildConciergeStockUploadMail(input: {
     subject,
     text: renderTextLayout({ sections: textSections }),
     html: renderHtmlLayout({
-      preheader: "Nowe zgloszenie concierge upload",
+      preheader: "A new concierge upload request is ready for review.",
       title: subject,
       contentHtml: htmlParagraphRaw(htmlLines),
     }),
@@ -462,34 +450,32 @@ export function buildListingExpiryReminderMail(input: {
   const intro = greeting(input.name);
   const expiresAt = new Date(input.expiresAtIso);
   const expiresAtLabel = Number.isFinite(expiresAt.getTime())
-    ? expiresAt.toLocaleDateString("pl-PL")
+    ? expiresAt.toLocaleDateString("en-US")
     : input.expiresAtIso;
   const subject =
     input.reminderDays <= 2
-      ? "Ostatnie przypomnienie: ogloszenie wygasa za 2 dni"
-      : "Przypomnienie: ogloszenie wygasa za 7 dni";
+      ? "Final reminder: your listing expires in 2 days"
+      : "Reminder: your listing expires in 7 days";
 
   const textSections = [
-    `Twoje ogloszenie (${input.companyName}) wygasa: ${expiresAtLabel}.`,
-    `Aktualna ilosc kontenerow: ${input.quantity}.`,
-    "Przed przedluzeniem sprawdz, czy ilosc i cena sa nadal aktualne.",
-    `Przejdz do moich kontenerow: ${input.manageUrl}`,
-    `Jesli cos sie zmienilo, edytuj ogloszenie: ${input.editUrl}`,
+    `Your listing for ${input.companyName} expires on ${expiresAtLabel}.`,
+    `Current quantity: ${input.quantity}.`,
+    "Before renewing, please confirm that the quantity and price are still up to date.",
+    `Manage listings: ${input.manageUrl}`,
+    `Edit listing: ${input.editUrl}`,
   ];
 
   const htmlSections =
     htmlParagraphRaw(
-      `Twoje ogloszenie (<strong>${escapeHtml(input.companyName)}</strong>) wygasa: <strong>${escapeHtml(expiresAtLabel)}</strong>.`,
+      `Your listing for <strong>${escapeHtml(input.companyName)}</strong> expires on <strong>${escapeHtml(expiresAtLabel)}</strong>.`,
     ) +
     htmlParagraphRaw(
-      `Aktualna ilosc kontenerow: <strong>${Math.max(1, Math.trunc(input.quantity))}</strong>.`,
+      `Current quantity: <strong>${Math.max(1, Math.trunc(input.quantity))}</strong>.`,
     ) +
-    htmlParagraph(
-      "Przed przedluzeniem sprawdz, czy ilosc i cena sa nadal aktualne.",
-    ) +
-    htmlButton(input.manageUrl, "Przejdz do moich kontenerow") +
+    htmlParagraph("Before renewing, please confirm that the quantity and price are still up to date.") +
+    htmlButton(input.manageUrl, "Manage listings") +
     htmlParagraphRaw(
-      `Jesli cos sie zmienilo, przejdz do edycji ogloszenia:<br/><a href="${escapeHtml(input.editUrl)}" style="color:${MAIL_COLORS.link};text-decoration:underline;word-break:break-all;">${escapeHtml(input.editUrl)}</a>`,
+      `If anything has changed, edit the listing here:<br/><a href="${escapeHtml(input.editUrl)}" style="color:${MAIL_COLORS.link};text-decoration:underline;word-break:break-all;">${escapeHtml(input.editUrl)}</a>`,
     );
 
   return {
@@ -501,12 +487,11 @@ export function buildListingExpiryReminderMail(input: {
     html: renderHtmlLayout({
       preheader:
         input.reminderDays <= 2
-          ? "Ostatnie przypomnienie o wygasaniu ogloszenia."
-          : "Przypomnienie o wygasaniu ogloszenia.",
+          ? "Final reminder about your listing expiry."
+          : "Reminder about your listing expiry.",
       title: subject,
       intro,
       contentHtml: htmlSections,
     }),
   };
 }
-

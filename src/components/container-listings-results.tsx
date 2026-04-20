@@ -3,13 +3,16 @@
 import Link from "next/link";
 import type { MouseEvent, ReactNode } from "react";
 import { memo } from "react";
+import {
+  getContainerConditionLabel,
+  getContainerFeatureLabel,
+  getContainerShortLabelLocalized,
+  type ContainerListingsMessages,
+} from "@/components/container-listings-i18n";
 import type { ContainerListingItem } from "@/lib/container-listings";
 import { ContainerPhotoWithPlaceholder } from "@/components/container-photo-with-placeholder";
 import { CopyLinkIcon } from "@/components/icons/copy-link-icon";
 import {
-  CONTAINER_CONDITION_LABEL,
-  CONTAINER_FEATURE_LABEL,
-  getContainerShortLabel,
   PRICE_CURRENCY_LABEL,
 } from "@/lib/container-listing-types";
 import {
@@ -17,8 +20,11 @@ import {
   type PriceDisplayCurrency,
 } from "@/components/container-listings-shared";
 import { getContainerListingLocationLabel } from "@/components/container-listings-utils";
+import type { AppLocale } from "@/lib/i18n";
 
 type ContainerListingsResultsProps = {
+  locale: AppLocale;
+  messages: ContainerListingsMessages;
   items: ContainerListingItem[];
   total: number;
   page: number;
@@ -48,43 +54,83 @@ type ListingPriceDisplay = {
   isRequestPrice: boolean;
 };
 
+type ContainerListingResultCardProps = {
+  locale: AppLocale;
+  messages: ContainerListingsMessages;
+  item: ContainerListingItem;
+  darkBlueCtaClass: string;
+  detailsHrefPrefix: string;
+  detailsQueryString?: string;
+  isFavoritePending: boolean;
+  onCopyListingLink: (listingId: string) => void;
+  onOpenDetails?: (href: string) => void;
+  onToggleFavorite: (listingId: string, isFavorite: boolean) => void;
+  priceDisplayCurrency: PriceDisplayCurrency;
+  shouldPrefetchDetails: boolean;
+  shouldPrioritizeImage: boolean;
+};
+
 const DAY_IN_MS = 24 * 60 * 60 * 1000;
 const MAX_LOGISTICS_TOOLTIP_LENGTH = 120;
 
-function getDaysLabel(days: number): string {
-  return days === 1 ? "dzien" : "dni";
+function getDaysLabel(
+  messages: ContainerListingsMessages,
+  locale: AppLocale,
+  days: number,
+): string {
+  const category = new Intl.PluralRules(locale).select(days);
+  const dayLabels = messages.results.dayLabels;
+  if (category === "one") {
+    return dayLabels.one;
+  }
+  if (category === "few") {
+    return dayLabels.few;
+  }
+  if (category === "many") {
+    return dayLabels.many;
+  }
+  return dayLabels.other;
 }
 
-function getExpiresInLabel(expiresAtIso: string, now = new Date()): string {
+function getExpiresInLabel(
+  messages: ContainerListingsMessages,
+  locale: AppLocale,
+  expiresAtIso: string,
+  now = new Date(),
+): string {
   const expiresAt = new Date(expiresAtIso);
   if (!Number.isFinite(expiresAt.getTime())) {
-    return "nieznane";
+    return messages.results.unknown;
   }
 
   const diffMs = expiresAt.getTime() - now.getTime();
   if (diffMs <= 0) {
-    return "Dzisiaj";
+    return messages.results.today;
   }
 
   if (diffMs < DAY_IN_MS) {
-    return "Dzisiaj";
+    return messages.results.today;
   }
 
   const fullDaysLeft = Math.floor(diffMs / DAY_IN_MS);
-  return `za ${fullDaysLeft} ${getDaysLabel(fullDaysLeft)}`;
+  return `${messages.results.inPrefix} ${fullDaysLeft} ${getDaysLabel(messages, locale, fullDaysLeft)}`;
 }
 
-function getAvailableFromLabel(item: ContainerListingItem): string {
+function getAvailableFromLabel(
+  messages: ContainerListingsMessages,
+  locale: AppLocale,
+  item: ContainerListingItem,
+): string {
   if (item.availableNow) {
-    return "Teraz";
+    return messages.results.availableNow;
   }
 
   const availableFrom = new Date(item.availableFrom);
   if (!Number.isFinite(availableFrom.getTime())) {
-    return "nieznane";
+    return messages.results.unknown;
   }
 
-  const dateLabel = availableFrom.toLocaleDateString("pl-PL");
+  const dateLabel = availableFrom.toLocaleDateString(locale);
   return item.availableFromApproximate ? `~${dateLabel}` : dateLabel;
 }
 
@@ -100,12 +146,12 @@ function truncateTooltipText(
   return `${normalizedValue.slice(0, maxLength).trimEnd()}...`;
 }
 
-function formatVatRateLabel(vatRate: number | null): string | null {
+function formatVatRateLabel(locale: AppLocale, vatRate: number | null): string | null {
   if (typeof vatRate !== "number" || !Number.isFinite(vatRate)) {
     return null;
   }
 
-  return `VAT${vatRate.toLocaleString("pl-PL")}%`;
+  return `VAT${vatRate.toLocaleString(locale)}%`;
 }
 
 function getNormalizedAmountByCurrency(
@@ -126,6 +172,8 @@ function getNormalizedAmountByCurrency(
 }
 
 function getListingPriceDisplay(
+  messages: ContainerListingsMessages,
+  locale: AppLocale,
   item: ContainerListingItem,
   priceDisplayCurrency: PriceDisplayCurrency,
 ): ListingPriceDisplay {
@@ -138,11 +186,11 @@ function getListingPriceDisplay(
   ) {
     const metaParts: string[] = [];
     if (pricing.original.negotiable === true || item.priceNegotiable === true) {
-      metaParts.push("Do negocjacji");
+      metaParts.push(messages.results.negotiable);
     }
 
     return {
-      amountLabel: "Zapytaj o cene",
+      amountLabel: messages.results.askPrice,
       metaLine: metaParts.join(" | "),
       isRequestPrice: true,
     };
@@ -177,17 +225,21 @@ function getListingPriceDisplay(
       : pricing.original.currency;
     const convertedPrefix = hasConvertedAmount ? "~" : "";
 
-    const metaParts = [pricing.original.taxMode === "net" ? "Netto" : "Brutto"];
-    const vatRateLabel = formatVatRateLabel(pricing.original.vatRate);
+    const metaParts = [
+      pricing.original.taxMode === "net"
+        ? messages.results.net
+        : messages.results.gross,
+    ];
+    const vatRateLabel = formatVatRateLabel(locale, pricing.original.vatRate);
     if (vatRateLabel) {
       metaParts.push(vatRateLabel);
     }
     if (pricing.original.negotiable === true || item.priceNegotiable === true) {
-      metaParts.push("Do negocjacji");
+      metaParts.push(messages.results.negotiable);
     }
 
     return {
-      amountLabel: `${convertedPrefix}${resolvedAmount.toLocaleString("pl-PL")} ${PRICE_CURRENCY_LABEL[resolvedCurrency]}`,
+      amountLabel: `${convertedPrefix}${resolvedAmount.toLocaleString(locale)} ${PRICE_CURRENCY_LABEL[resolvedCurrency]}`,
       metaLine: metaParts.join(" | "),
       isRequestPrice: false,
     };
@@ -197,13 +249,13 @@ function getListingPriceDisplay(
     typeof item.priceAmount === "number" &&
     Number.isFinite(item.priceAmount)
   ) {
-    const metaParts = ["Netto"];
+    const metaParts = [messages.results.net];
     if (item.priceNegotiable === true) {
-      metaParts.push("Do negocjacji");
+      metaParts.push(messages.results.negotiable);
     }
 
     return {
-      amountLabel: `${Math.round(item.priceAmount).toLocaleString("pl-PL")} PLN`,
+      amountLabel: `${Math.round(item.priceAmount).toLocaleString(locale)} PLN`,
       metaLine: metaParts.join(" | "),
       isRequestPrice: false,
     };
@@ -212,7 +264,7 @@ function getListingPriceDisplay(
   if (item.price?.trim()) {
     const metaParts: string[] = [];
     if (item.priceNegotiable === true) {
-      metaParts.push("Do negocjacji");
+      metaParts.push(messages.results.negotiable);
     }
 
     return {
@@ -223,7 +275,7 @@ function getListingPriceDisplay(
   }
 
   return {
-    amountLabel: "Zapytaj o cene",
+    amountLabel: messages.results.askPrice,
     metaLine: "",
     isRequestPrice: true,
   };
@@ -250,7 +302,10 @@ function getContainerPreviewSrc(item: ContainerListingItem): string {
   return firstPhotoUrl ?? getContainerPlaceholderSrc(item);
 }
 
-function getCscValidityLabel(item: ContainerListingItem): string {
+function getCscValidityLabel(
+  messages: ContainerListingsMessages,
+  item: ContainerListingItem,
+): string {
   if (
     typeof item.cscValidToMonth === "number" &&
     Number.isInteger(item.cscValidToMonth) &&
@@ -264,10 +319,12 @@ function getCscValidityLabel(item: ContainerListingItem): string {
     return `${String(item.cscValidToMonth).padStart(2, "0")}.${item.cscValidToYear}`;
   }
 
-  return "brak danych";
+  return messages.results.noData;
 }
 
-function getLocationLabel(input: {
+function getLocationLabel(
+  messages: ContainerListingsMessages,
+  input: {
   locationAddressParts?: {
     postalCode?: string;
     city?: string;
@@ -275,7 +332,8 @@ function getLocationLabel(input: {
   };
   locationCity?: string;
   locationCountry?: string;
-}): string {
+},
+): string {
   const postalCode = input.locationAddressParts?.postalCode?.trim() || "";
   const city =
     input.locationAddressParts?.city?.trim() ||
@@ -288,10 +346,13 @@ function getLocationLabel(input: {
   const combined = [postalCode, [city, country].filter(Boolean).join(", ")]
     .filter(Boolean)
     .join(" ");
-  return combined || "Nie podano lokalizacji";
+  return combined || messages.utils.noLocation;
 }
 
-function getAllLocationLabels(item: ContainerListingItem): string[] {
+function getAllLocationLabels(
+  messages: ContainerListingsMessages,
+  item: ContainerListingItem,
+): string[] {
   const labels: string[] = [];
   const seen = new Set<string>();
 
@@ -307,7 +368,7 @@ function getAllLocationLabels(item: ContainerListingItem): string[] {
   if (Array.isArray(item.locations) && item.locations.length > 0) {
     for (const location of item.locations) {
       appendLabel(
-        getLocationLabel({
+        getLocationLabel(messages, {
           locationAddressParts: location.locationAddressParts,
           locationCity: location.locationCity,
           locationCountry: location.locationCountry,
@@ -316,7 +377,7 @@ function getAllLocationLabels(item: ContainerListingItem): string[] {
     }
   } else {
     appendLabel(
-      getLocationLabel({
+      getLocationLabel(messages, {
         locationAddressParts: item.locationAddressParts,
         locationCity: item.locationCity,
         locationCountry: item.locationCountry,
@@ -324,7 +385,7 @@ function getAllLocationLabels(item: ContainerListingItem): string[] {
     );
   }
 
-  return labels.length > 0 ? labels : ["Nie podano lokalizacji"];
+  return labels.length > 0 ? labels : [messages.utils.noLocation];
 }
 
 function getContainerColorBadgeLabel(color: {
@@ -352,9 +413,11 @@ function getRalTileTextClass(color: {
 }
 
 function ContainerColorsInlineSummary({
+  messages,
   colors,
   itemId,
 }: {
+  messages: ContainerListingsMessages;
   colors: Array<{
     ral: string;
     rgb: { r: number; g: number; b: number };
@@ -375,9 +438,9 @@ function ContainerColorsInlineSummary({
     <div
       className="group relative inline-flex items-center gap-2"
       tabIndex={0}
-      aria-label={`Kolory RAL: ${colors.map((color) => color.ral).join(", ")}`}
+      aria-label={`${messages.results.ralColorsAria}: ${colors.map((color) => color.ral).join(", ")}`}
     >
-      <span className="text-sm text-neutral-700">Kolor:</span>
+      <span className="text-sm text-neutral-700">{messages.results.colorLabel}</span>
       <div className="inline-flex items-center gap-1">
         {previewColors.map((color, index) => (
           <span
@@ -436,8 +499,14 @@ function ContainerColorsInlineSummary({
   );
 }
 
-function CscInfoBadge({ item }: { item: ContainerListingItem }) {
-  const validityLabel = getCscValidityLabel(item);
+function CscInfoBadge({
+  item,
+  messages,
+}: {
+  item: ContainerListingItem;
+  messages: ContainerListingsMessages;
+}) {
+  const validityLabel = getCscValidityLabel(messages, item);
 
   return (
     <div className="group relative">
@@ -455,10 +524,10 @@ function CscInfoBadge({ item }: { item: ContainerListingItem }) {
         </svg>
       </span>
       <div className="pointer-events-none absolute bottom-full right-0 z-30 mb-2 w-64 translate-y-1 rounded-md border border-neutral-700 bg-neutral-900 px-2.5 py-2 text-left text-xs leading-5 text-neutral-100 opacity-0 shadow-xl transition duration-150 group-hover:delay-500 group-hover:translate-y-0 group-hover:opacity-100 group-focus-within:delay-500 group-focus-within:translate-y-0 group-focus-within:opacity-100">
-        <p>Tabliczka CSC: {item.hasCscPlate ? "Tak" : "Nie"}</p>
-        <p>Certyfikacja CSC: {item.hasCscCertification ? "Tak" : "Nie"}</p>
-        <p>Gwarancja: {item.hasWarranty ? "Tak" : "Nie"}</p>
-        <p>Waznosc CSC: {validityLabel}</p>
+        <p>{messages.results.cscPlateLabel}: {item.hasCscPlate ? messages.results.yes : messages.results.no}</p>
+        <p>{messages.results.cscCertificationLabel}: {item.hasCscCertification ? messages.results.yes : messages.results.no}</p>
+        <p>{messages.results.warrantyLabel}: {item.hasWarranty ? messages.results.yes : messages.results.no}</p>
+        <p>{messages.results.cscValidityLabel}: {validityLabel}</p>
         <span
           aria-hidden="true"
           className="absolute -bottom-1 right-3 h-2 w-2 rotate-45 border-b border-r border-neutral-700 bg-neutral-900"
@@ -468,9 +537,15 @@ function CscInfoBadge({ item }: { item: ContainerListingItem }) {
   );
 }
 
-function LocationInfoBadge({ item }: { item: ContainerListingItem }) {
-  const locationLabel = getContainerListingLocationLabel(item);
-  const allLocationLabels = getAllLocationLabels(item);
+function LocationInfoBadge({
+  item,
+  messages,
+}: {
+  item: ContainerListingItem;
+  messages: ContainerListingsMessages;
+}) {
+  const locationLabel = getContainerListingLocationLabel(item, messages.utils);
+  const allLocationLabels = getAllLocationLabels(messages, item);
   const showTooltip = allLocationLabels.length > 1;
 
   return (
@@ -481,7 +556,7 @@ function LocationInfoBadge({ item }: { item: ContainerListingItem }) {
       {...(showTooltip
         ? {
             tabIndex: 0,
-            "aria-label": "Pelna lista lokalizacji",
+            "aria-label": messages.results.allLocationsAria,
           }
         : {})}
     >
@@ -518,7 +593,10 @@ function LocationInfoBadge({ item }: { item: ContainerListingItem }) {
   );
 }
 
-function getLogisticsSummaryLabels(item: ContainerListingItem): string[] {
+function getLogisticsSummaryLabels(
+  messages: ContainerListingsMessages,
+  item: ContainerListingItem,
+): string[] {
   const labels: string[] = [];
 
   if (item.logisticsTransportAvailable) {
@@ -530,24 +608,315 @@ function getLogisticsSummaryLabels(item: ContainerListingItem): string[] {
           ? Math.trunc(item.logisticsTransportFreeDistanceKm)
           : null;
       labels.push(
-        distanceKm ? `darmowy transport ${distanceKm} km` : "darmowy transport",
+        distanceKm
+          ? `${messages.results.freeTransportLabel} ${distanceKm} km`
+          : messages.results.freeTransportLabel,
       );
     } else {
-      labels.push("mozliwy transport");
+      labels.push(messages.results.transportAvailableLabel);
     }
   }
 
   if (item.logisticsUnloadingAvailable) {
     labels.push(
       item.logisticsUnloadingIncluded
-        ? "darmowy rozladunek"
-        : "mozliwy rozladunek",
+        ? messages.results.freeUnloadingLabel
+        : messages.results.unloadingAvailableLabel,
     );
   }
 
   return labels;
 }
+
+const ContainerListingResultCard = memo(function ContainerListingResultCard({
+  locale,
+  messages,
+  item,
+  darkBlueCtaClass,
+  detailsHrefPrefix,
+  detailsQueryString,
+  isFavoritePending,
+  onCopyListingLink,
+  onOpenDetails,
+  onToggleFavorite,
+  priceDisplayCurrency,
+  shouldPrefetchDetails,
+  shouldPrioritizeImage,
+}: ContainerListingResultCardProps) {
+  const priceDisplay = getListingPriceDisplay(
+    messages,
+    locale,
+    item,
+    priceDisplayCurrency,
+  );
+  const expiresInLabel = getExpiresInLabel(
+    messages,
+    locale,
+    item.expiresAt,
+  );
+  const availableFromLabel = getAvailableFromLabel(messages, locale, item);
+  const fallbackTitle = getContainerShortLabelLocalized(messages, item.container);
+  const logisticsSummaryLabels = getLogisticsSummaryLabels(messages, item);
+  const logisticsComment = item.logisticsComment?.trim();
+  const logisticsTooltipText =
+    logisticsComment && logisticsComment.length > 0
+      ? truncateTooltipText(logisticsComment)
+      : messages.results.contactForDetails;
+  const showLogisticsTooltip = logisticsSummaryLabels.length > 0;
+  const detailsHref =
+    detailsQueryString && detailsQueryString.length > 0
+      ? `${detailsHrefPrefix}/${item.id}?${detailsQueryString}`
+      : `${detailsHrefPrefix}/${item.id}`;
+  const containerFeatureLabels = item.container.features
+    .map((feature) => getContainerFeatureLabel(messages, feature))
+    .filter((label) => typeof label === "string" && label.trim().length > 0);
+  const containerMetaParts = [
+    ...(typeof item.productionYear === "number" ? [String(item.productionYear)] : []),
+    ...containerFeatureLabels,
+  ];
+  const containerColors = item.containerColors ?? [];
+
+  return (
+    <li className="w-full rounded-md border border-neutral-200 bg-white p-4 shadow-sm transition-colors duration-150 hover:border-sky-100 hover:bg-sky-50/60">
+      <div className="flex flex-col gap-4 sm:flex-row">
+        <div className="relative aspect-square w-full shrink-0 sm:w-44">
+          <div className="absolute inset-0 overflow-hidden rounded-md border border-neutral-200 bg-neutral-100">
+            <ContainerPhotoWithPlaceholder
+              src={getContainerPreviewSrc(item)}
+              alt=""
+              fill
+              className={
+                item.photoUrls && item.photoUrls.length > 0
+                  ? "object-cover"
+                  : "object-contain p-1"
+              }
+              sizes="(max-width: 640px) 100vw, 176px"
+              priority={shouldPrioritizeImage}
+            />
+          </div>
+        </div>
+        <div className="min-w-0 flex-1">
+          <div className="flex min-w-0 items-start gap-3">
+            <div className="w-0 flex-1">
+              {item.companySlug ? (
+                <span className="inline-flex min-w-0 items-center gap-1">
+                  <Link
+                    href={`/companies/${item.companySlug}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="block min-w-0 truncate text-xs uppercase tracking-wide text-sky-700 decoration-sky-400 underline underline-offset-2 hover:text-sky-800"
+                    onClick={(event) => {
+                      event.stopPropagation();
+                    }}
+                  >
+                    {item.companyName}
+                  </Link>
+                  {item.companyIsVerified ? (
+                    <span
+                      className="inline-flex h-4 w-4 shrink-0 items-center justify-center rounded-full border border-emerald-300/80 bg-emerald-100/80 text-emerald-700"
+                      aria-label={messages.results.verifiedCompany}
+                      title={messages.results.verifiedCompany}
+                    >
+                      <svg
+                        viewBox="0 0 20 20"
+                        fill="none"
+                        className="h-3 w-3"
+                        aria-hidden="true"
+                      >
+                        <path
+                          d="M5 10.5l3.2 3.2L15 7"
+                          stroke="currentColor"
+                          strokeWidth="2"
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                        />
+                      </svg>
+                    </span>
+                  ) : null}
+                </span>
+              ) : (
+                <p className="truncate text-xs uppercase tracking-wide text-neutral-500">
+                  {item.companyName}
+                </p>
+              )}
+              <h3 className="mt-1 truncate text-xl font-semibold text-neutral-900">
+                {fallbackTitle}
+              </h3>
+              <div className="mt-1 min-w-0">
+                <LocationInfoBadge item={item} messages={messages} />
+              </div>
+              {containerMetaParts.length > 0 ? (
+                <p
+                  className="mt-1 w-full truncate text-xs text-neutral-500"
+                  title={containerMetaParts.join(", ")}
+                >
+                  {containerMetaParts.join(", ")}
+                </p>
+              ) : null}
+            </div>
+            <div className="ml-auto grid shrink-0 justify-items-end gap-2 text-right">
+              <div>
+                <p
+                  className={`max-w-full overflow-hidden text-ellipsis whitespace-nowrap text-lg font-bold sm:text-xl ${
+                    priceDisplay.isRequestPrice ? "text-neutral-700" : "text-amber-600"
+                  }`}
+                >
+                  {priceDisplay.amountLabel}
+                </p>
+                {priceDisplay.metaLine ? (
+                  <p className="max-w-full overflow-hidden text-ellipsis whitespace-nowrap text-xs text-neutral-600">
+                    {priceDisplay.metaLine}
+                  </p>
+                ) : null}
+              </div>
+              <div className="flex flex-wrap items-center justify-end gap-2">
+                {item.hasCscPlate ||
+                item.hasCscCertification ||
+                item.hasWarranty ||
+                (typeof item.cscValidToMonth === "number" &&
+                  typeof item.cscValidToYear === "number") ? (
+                  <CscInfoBadge item={item} messages={messages} />
+                ) : null}
+                <span
+                  className={`rounded-md border px-2 py-1 text-xs font-medium ${CONTAINER_CONDITION_COLOR_TOKENS[item.container.condition].badgeClassName}`}
+                >
+                  {getContainerConditionLabel(messages, item.container.condition)}
+                </span>
+              </div>
+              <p className="text-right text-xs text-neutral-400">
+                {messages.results.expiresLabel}: {expiresInLabel}
+              </p>
+            </div>
+          </div>
+
+          <div className="mt-3 flex flex-wrap items-center gap-2 text-xs text-neutral-500">
+            <div
+              className={`group relative flex flex-wrap items-center gap-x-1 gap-y-1 ${
+                showLogisticsTooltip ? "cursor-help" : ""
+              }`}
+              {...(showLogisticsTooltip
+                ? {
+                    tabIndex: 0,
+                    "aria-label": messages.results.logisticsCommentAria,
+                  }
+                : {})}
+            >
+              {logisticsSummaryLabels.map((label, index) => {
+                const isFreeLabel =
+                  label === messages.results.freeUnloadingLabel ||
+                  label === messages.results.freeTransportLabel ||
+                  label.startsWith(`${messages.results.freeTransportLabel} `);
+                return (
+                  <span
+                    key={`${item.id}-${label}`}
+                    className={isFreeLabel ? "font-medium text-neutral-700" : undefined}
+                  >
+                    {label}
+                    {index < logisticsSummaryLabels.length - 1 ? "," : ""}
+                  </span>
+                );
+              })}
+              {showLogisticsTooltip ? (
+                <div className="pointer-events-none absolute bottom-full left-0 z-30 mb-2 w-72 max-w-[85vw] translate-y-1 rounded-md border border-neutral-700 bg-neutral-900 px-2.5 py-2 text-left text-xs leading-5 text-neutral-100 opacity-0 shadow-xl transition duration-150 group-hover:delay-500 group-hover:translate-y-0 group-hover:opacity-100 group-focus-within:delay-500 group-focus-within:translate-y-0 group-focus-within:opacity-100">
+                  <p className="mb-1 font-medium text-neutral-200">
+                    {messages.results.sellerCommentLabel}
+                  </p>
+                  <p>{logisticsTooltipText}</p>
+                  <span
+                    aria-hidden="true"
+                    className="absolute -bottom-1 left-3 h-2 w-2 rotate-45 border-b border-r border-neutral-700 bg-neutral-900"
+                  />
+                </div>
+              ) : null}
+            </div>
+            <p className="ml-auto text-right text-sm text-neutral-700">
+              {messages.results.availableFromLabel}:{" "}
+              <span className="font-medium text-neutral-900">
+                {availableFromLabel}
+              </span>
+            </p>
+          </div>
+
+          <div className="mt-3 flex flex-wrap items-center justify-between gap-2">
+            {item.quantity > 1 || containerColors.length > 0 ? (
+              <div className="flex flex-wrap items-center gap-3">
+                {item.quantity > 1 ? (
+                  <p className="text-sm text-neutral-700">
+                    {messages.results.quantityLabel}: <span className="font-medium text-neutral-900">{item.quantity}</span>
+                  </p>
+                ) : null}
+                <ContainerColorsInlineSummary
+                  messages={messages}
+                  colors={containerColors}
+                  itemId={item.id}
+                />
+              </div>
+            ) : (
+              <span />
+            )}
+            <div className="ml-auto flex items-center justify-end gap-2">
+              <button
+                type="button"
+                className={`rounded-md border p-2 transition-colors ${
+                  item.isFavorite
+                    ? "border-rose-300 bg-rose-100 text-rose-700 hover:bg-rose-200"
+                    : "border-neutral-300 bg-white text-neutral-600 hover:border-neutral-400 hover:bg-neutral-100 hover:text-neutral-800"
+                } disabled:cursor-not-allowed disabled:opacity-60`}
+                onClick={() => {
+                  onToggleFavorite(item.id, item.isFavorite === true);
+                }}
+                aria-label={item.isFavorite ? messages.results.removeFavorite : messages.results.addFavorite}
+                title={item.isFavorite ? messages.results.removeFavorite : messages.results.addFavorite}
+                disabled={isFavoritePending}
+              >
+                <svg
+                  className="h-4 w-4"
+                  viewBox="0 0 24 24"
+                  fill={item.isFavorite ? "currentColor" : "none"}
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  aria-hidden="true"
+                >
+                  <path d="M12 21s-6.7-4.35-9.25-8.09C.83 10.09 1.64 6.1 4.68 4.3a5.46 5.46 0 0 1 6.24.46L12 5.66l1.08-.9a5.46 5.46 0 0 1 6.24-.46c3.04 1.8 3.85 5.8 1.93 8.61C18.7 16.65 12 21 12 21Z" />
+                </svg>
+              </button>
+              <button
+                type="button"
+                className="rounded-md border border-neutral-300 bg-white p-2 text-neutral-600 transition-colors hover:border-neutral-400 hover:bg-neutral-100 hover:text-neutral-800"
+                onClick={() => {
+                  onCopyListingLink(item.id);
+                }}
+                aria-label={messages.results.copyLink}
+                title={messages.results.copyLink}
+              >
+                <CopyLinkIcon className="h-4 w-4" />
+              </button>
+              <Link
+                href={detailsHref}
+                prefetch={shouldPrefetchDetails}
+                scroll={false}
+                onClick={(event: MouseEvent<HTMLAnchorElement>) => {
+                  if (!onOpenDetails) {
+                    return;
+                  }
+                  event.preventDefault();
+                  onOpenDetails(detailsHref);
+                }}
+                className={`rounded-md px-3 py-2 text-sm font-medium ${darkBlueCtaClass}`}
+              >
+                {messages.results.detailsCta}
+              </Link>
+            </div>
+          </div>
+        </div>
+      </div>
+    </li>
+  );
+});
+
 function ContainerListingsResultsComponent({
+  locale,
+  messages,
   items,
   total,
   page,
@@ -590,7 +959,7 @@ function ContainerListingsResultsComponent({
           onClick={onPreviousPage}
           className="rounded-md border border-neutral-300 px-3 py-1.5 text-sm text-neutral-700 disabled:cursor-not-allowed disabled:opacity-50"
         >
-          Poprzednia
+          {messages.results.previous}
         </button>
         <span className="text-xs text-neutral-500">
           {page} / {totalPages}
@@ -601,7 +970,7 @@ function ContainerListingsResultsComponent({
           onClick={onNextPage}
           className="rounded-md border border-neutral-300 px-3 py-1.5 text-sm text-neutral-700 disabled:cursor-not-allowed disabled:opacity-50"
         >
-          Nastepna
+          {messages.results.next}
         </button>
       </div>
     );
@@ -613,7 +982,7 @@ function ContainerListingsResultsComponent({
         <div className="flex flex-wrap items-center justify-between gap-2 rounded-md border border-neutral-300 bg-neutral-50/95 p-3 shadow-sm backdrop-blur supports-[backdrop-filter]:bg-neutral-50/90">
           <div className="flex flex-wrap items-center gap-2">
             <p className="text-sm text-neutral-700">
-              Wyniki wyszukiwania: <span className="font-semibold">{total}</span>
+              {messages.results.searchResultsLabel}: <span className="font-semibold">{total}</span>
             </p>
             {showFavoritesToggle ? (
               <div className="ml-0 flex items-center gap-2 sm:ml-2">
@@ -628,7 +997,7 @@ function ContainerListingsResultsComponent({
                       : "border-neutral-300 bg-white text-neutral-700 hover:bg-neutral-100"
                   }`}
                 >
-                  Wszystkie
+                  {messages.results.allTab}
                 </button>
                 <button
                   type="button"
@@ -641,7 +1010,7 @@ function ContainerListingsResultsComponent({
                       : "border-neutral-300 bg-white text-neutral-700 hover:bg-neutral-100"
                   }`}
                 >
-                  Ulubione
+                  {messages.results.favoritesTab}
                 </button>
               </div>
             ) : null}
@@ -657,9 +1026,9 @@ function ContainerListingsResultsComponent({
           <div className="flex items-center justify-center gap-3 text-neutral-700">
             <span
               className="h-7 w-7 animate-spin rounded-full border-2 border-neutral-300 border-t-neutral-500"
-              aria-label="Ladowanie kontenerow"
+              aria-label={messages.results.loadingAria}
             />
-            <span className="text-sm font-medium">Ladowanie kontenerow...</span>
+            <span className="text-sm font-medium">{messages.results.loading}</span>
           </div>
         </div>
       ) : null}
@@ -673,17 +1042,17 @@ function ContainerListingsResultsComponent({
               <div className="flex max-w-2xl flex-col items-center gap-4">
                 <p className="text-xl font-medium text-neutral-500 sm:text-2xl">
                   <span className="block">
-                    Nie znalazles kontenera ktorego szukasz?
+                    {messages.results.emptyTitle}
                   </span>
                   <span className="mt-1 block">
-                    Dodaj ogloszenie, a my zajmiemy sie reszta! 🚛📦
+                    {messages.results.emptyText}
                   </span>
                 </p>
                 <Link
                   href="/containers/new?intent=buy"
                   className={`inline-flex h-10 items-center gap-2 rounded-md px-4 text-sm font-semibold ${darkBlueCtaClass}`}
                 >
-                  Szukam kontenera +
+                  {messages.results.emptyCta}
                 </Link>
               </div>
             </div>
@@ -693,299 +1062,23 @@ function ContainerListingsResultsComponent({
             <>
               <ul className="w-full space-y-3">
                 {items.map((item, index) => {
-                  const priceDisplay = getListingPriceDisplay(
-                    item,
-                    priceDisplayCurrency,
-                  );
-                  const expiresInLabel = getExpiresInLabel(item.expiresAt);
-                  const availableFromLabel = getAvailableFromLabel(item);
-                  const fallbackTitle = getContainerShortLabel(item.container);
-                  const logisticsSummaryLabels = getLogisticsSummaryLabels(item);
-                  const logisticsComment = item.logisticsComment?.trim();
-                  const logisticsTooltipText =
-                    logisticsComment && logisticsComment.length > 0
-                      ? truncateTooltipText(logisticsComment)
-                      : "Skontaktuj sie aby poznac szczegoly";
-                  const showLogisticsTooltip = logisticsSummaryLabels.length > 0;
-                  const detailsHref =
-                    detailsQueryString && detailsQueryString.length > 0
-                      ? `${detailsHrefPrefix}/${item.id}?${detailsQueryString}`
-                      : `${detailsHrefPrefix}/${item.id}`;
-                  const containerFeatureLabels = item.container.features
-                    .map((feature) => CONTAINER_FEATURE_LABEL[feature])
-                    .filter(
-                      (label) =>
-                        typeof label === "string" && label.trim().length > 0,
-                    );
-                  const containerMetaParts = [
-                    ...(typeof item.productionYear === "number"
-                      ? [String(item.productionYear)]
-                      : []),
-                    ...containerFeatureLabels,
-                  ];
-                  const containerColors = item.containerColors ?? [];
-                  const shouldPrioritizeImage = page === 1 && index === 0;
-
                   return (
-                    <li
+                    <ContainerListingResultCard
                       key={item.id}
-                      className="w-full rounded-md border border-neutral-200 bg-white p-4 shadow-sm transition-colors duration-150 hover:border-sky-100 hover:bg-sky-50/60"
-                    >
-                      <div className="flex flex-col gap-4 sm:flex-row">
-                        <div className="relative aspect-square w-full shrink-0 sm:w-44">
-                          <div className="absolute inset-0 overflow-hidden rounded-md border border-neutral-200 bg-neutral-100">
-                            <ContainerPhotoWithPlaceholder
-                              src={getContainerPreviewSrc(item)}
-                              alt=""
-                              fill
-                              className={
-                                item.photoUrls && item.photoUrls.length > 0
-                                  ? "object-cover"
-                                  : "object-contain p-1"
-                              }
-                              sizes="(max-width: 640px) 100vw, 176px"
-                              priority={shouldPrioritizeImage}
-                            />
-                          </div>
-                        </div>
-                        <div className="min-w-0 flex-1">
-                          <div className="flex min-w-0 items-start gap-3">
-                            <div className="w-0 flex-1">
-                          {item.companySlug ? (
-                            <span className="inline-flex min-w-0 items-center gap-1">
-                              <Link
-                                href={`/companies/${item.companySlug}`}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className="block min-w-0 truncate text-xs uppercase tracking-wide text-sky-700 decoration-sky-400 underline underline-offset-2 hover:text-sky-800"
-                                onClick={(event) => {
-                                  event.stopPropagation();
-                                }}
-                              >
-                                {item.companyName}
-                              </Link>
-                              {item.companyIsVerified ? (
-                                <span
-                                  className="inline-flex h-4 w-4 shrink-0 items-center justify-center rounded-full border border-emerald-300/80 bg-emerald-100/80 text-emerald-700"
-                                  aria-label="Firma zweryfikowana"
-                                  title="Firma zweryfikowana"
-                                >
-                                  <svg
-                                    viewBox="0 0 20 20"
-                                    fill="none"
-                                    className="h-3 w-3"
-                                    aria-hidden="true"
-                                  >
-                                    <path
-                                      d="M5 10.5l3.2 3.2L15 7"
-                                      stroke="currentColor"
-                                      strokeWidth="2"
-                                      strokeLinecap="round"
-                                      strokeLinejoin="round"
-                                    />
-                                  </svg>
-                                </span>
-                              ) : null}
-                            </span>
-                          ) : (
-                            <p className="truncate text-xs uppercase tracking-wide text-neutral-500">
-                              {item.companyName}
-                            </p>
-                          )}
-                          <h3 className="mt-1 truncate text-xl font-semibold text-neutral-900">
-                            {fallbackTitle}
-                          </h3>
-                          <div className="mt-1 min-w-0">
-                            <LocationInfoBadge item={item} />
-                          </div>
-                          {containerMetaParts.length > 0 ? (
-                            <p
-                              className="mt-1 w-full truncate text-xs text-neutral-500"
-                              title={containerMetaParts.join(", ")}
-                            >
-                              {containerMetaParts.join(", ")}
-                            </p>
-                          ) : null}
-                        </div>
-                        <div className="ml-auto grid shrink-0 justify-items-end gap-2 text-right">
-                          <div>
-                            <p
-                              className={`max-w-full overflow-hidden text-ellipsis whitespace-nowrap text-lg font-bold sm:text-xl ${
-                                priceDisplay.isRequestPrice
-                                  ? "text-neutral-700"
-                                  : "text-amber-600"
-                              }`}
-                            >
-                              {priceDisplay.amountLabel}
-                            </p>
-                            {priceDisplay.metaLine ? (
-                              <p className="max-w-full overflow-hidden text-ellipsis whitespace-nowrap text-xs text-neutral-600">
-                                {priceDisplay.metaLine}
-                              </p>
-                            ) : null}
-                          </div>
-                          <div className="flex flex-wrap items-center justify-end gap-2">
-                            {item.hasCscPlate ||
-                            item.hasCscCertification ||
-                            item.hasWarranty ||
-                            (typeof item.cscValidToMonth === "number" &&
-                              typeof item.cscValidToYear === "number") ? (
-                              <CscInfoBadge item={item} />
-                            ) : null}
-                            <span
-                              className={`rounded-md border px-2 py-1 text-xs font-medium ${CONTAINER_CONDITION_COLOR_TOKENS[item.container.condition].badgeClassName}`}
-                            >
-                              {
-                                CONTAINER_CONDITION_LABEL[
-                                  item.container.condition
-                                ]
-                              }
-                            </span>
-                          </div>
-                          <p className="text-right text-xs text-neutral-400">
-                            Wygasa: {expiresInLabel}
-                          </p>
-                        </div>
-                      </div>
-
-                      <div className="mt-3 flex flex-wrap items-center gap-2 text-xs text-neutral-500">
-                        <div
-                          className={`group relative flex flex-wrap items-center gap-x-1 gap-y-1 ${
-                            showLogisticsTooltip ? "cursor-help" : ""
-                          }`}
-                          {...(showLogisticsTooltip
-                            ? {
-                                tabIndex: 0,
-                                "aria-label": "Komentarz logistyczny",
-                              }
-                            : {})}
-                        >
-                          {logisticsSummaryLabels.map((label, index) => {
-                            const isFreeLabel = label.startsWith("darmowy");
-                            return (
-                              <span
-                                key={`${item.id}-${label}`}
-                                className={
-                                  isFreeLabel
-                                    ? "font-medium text-neutral-700"
-                                    : undefined
-                                }
-                              >
-                                {label}
-                                {index < logisticsSummaryLabels.length - 1
-                                  ? ","
-                                  : ""}
-                              </span>
-                            );
-                          })}
-                          {showLogisticsTooltip ? (
-                            <div className="pointer-events-none absolute bottom-full left-0 z-30 mb-2 w-72 max-w-[85vw] translate-y-1 rounded-md border border-neutral-700 bg-neutral-900 px-2.5 py-2 text-left text-xs leading-5 text-neutral-100 opacity-0 shadow-xl transition duration-150 group-hover:delay-500 group-hover:translate-y-0 group-hover:opacity-100 group-focus-within:delay-500 group-focus-within:translate-y-0 group-focus-within:opacity-100">
-                              <p className="mb-1 font-medium text-neutral-200">
-                                Komentarz ogloszeniodawcy:
-                              </p>
-                              <p>{logisticsTooltipText}</p>
-                              <span
-                                aria-hidden="true"
-                                className="absolute -bottom-1 left-3 h-2 w-2 rotate-45 border-b border-r border-neutral-700 bg-neutral-900"
-                              />
-                            </div>
-                          ) : null}
-                        </div>
-                        <p className="ml-auto text-right text-sm text-neutral-700">
-                          Dostepny od:{" "}
-                          <span className="font-medium text-neutral-900">
-                            {availableFromLabel}
-                          </span>
-                        </p>
-                      </div>
-
-                      <div className="mt-3 flex flex-wrap items-center justify-between gap-2">
-                        {item.quantity > 1 || containerColors.length > 0 ? (
-                          <div className="flex flex-wrap items-center gap-3">
-                            {item.quantity > 1 ? (
-                              <p className="text-sm text-neutral-700">
-                                Ilosc:{" "}
-                                <span className="font-medium text-neutral-900">
-                                  {item.quantity}
-                                </span>
-                              </p>
-                            ) : null}
-                            <ContainerColorsInlineSummary
-                              colors={containerColors}
-                              itemId={item.id}
-                            />
-                          </div>
-                        ) : (
-                          <span />
-                        )}
-                        <div className="ml-auto flex items-center justify-end gap-2">
-                          <button
-                            type="button"
-                            className={`rounded-md border p-2 transition-colors ${
-                              item.isFavorite
-                                ? "border-rose-300 bg-rose-100 text-rose-700 hover:bg-rose-200"
-                                : "border-neutral-300 bg-white text-neutral-600 hover:border-neutral-400 hover:bg-neutral-100 hover:text-neutral-800"
-                            } disabled:cursor-not-allowed disabled:opacity-60`}
-                            onClick={() => {
-                              onToggleFavorite(
-                                item.id,
-                                item.isFavorite === true,
-                              );
-                            }}
-                            aria-label={
-                              item.isFavorite
-                                ? "Usun z ulubionych"
-                                : "Dodaj do ulubionych"
-                            }
-                            title={
-                              item.isFavorite
-                                ? "Usun z ulubionych"
-                                : "Dodaj do ulubionych"
-                            }
-                            disabled={pendingFavoriteId === item.id}
-                          >
-                            <svg
-                              className="h-4 w-4"
-                              viewBox="0 0 24 24"
-                              fill={item.isFavorite ? "currentColor" : "none"}
-                              stroke="currentColor"
-                              strokeWidth="2"
-                              aria-hidden="true"
-                            >
-                              <path d="M12 21s-6.7-4.35-9.25-8.09C.83 10.09 1.64 6.1 4.68 4.3a5.46 5.46 0 0 1 6.24.46L12 5.66l1.08-.9a5.46 5.46 0 0 1 6.24-.46c3.04 1.8 3.85 5.8 1.93 8.61C18.7 16.65 12 21 12 21Z" />
-                            </svg>
-                          </button>
-                          <button
-                            type="button"
-                            className="rounded-md border border-neutral-300 bg-white p-2 text-neutral-600 transition-colors hover:border-neutral-400 hover:bg-neutral-100 hover:text-neutral-800"
-                            onClick={() => {
-                              onCopyListingLink(item.id);
-                            }}
-                            aria-label="Kopiuj link do ogloszenia"
-                            title="Kopiuj link do ogloszenia"
-                          >
-                            <CopyLinkIcon className="h-4 w-4" />
-                          </button>
-                          <Link
-                            href={detailsHref}
-                            prefetch
-                            scroll={false}
-                            onClick={(event: MouseEvent<HTMLAnchorElement>) => {
-                              if (!onOpenDetails) {
-                                return;
-                              }
-                              event.preventDefault();
-                              onOpenDetails(detailsHref);
-                            }}
-                            className={`rounded-md px-3 py-2 text-sm font-medium ${darkBlueCtaClass}`}
-                          >
-                            Szczegoly i zapytanie
-                          </Link>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                    </li>
+                      locale={locale}
+                      messages={messages}
+                      item={item}
+                      darkBlueCtaClass={darkBlueCtaClass}
+                      detailsHrefPrefix={detailsHrefPrefix}
+                      detailsQueryString={detailsQueryString}
+                      isFavoritePending={pendingFavoriteId === item.id}
+                      onCopyListingLink={onCopyListingLink}
+                      onOpenDetails={onOpenDetails}
+                      onToggleFavorite={onToggleFavorite}
+                      priceDisplayCurrency={priceDisplayCurrency}
+                      shouldPrefetchDetails={page === 1 && index === 0}
+                      shouldPrioritizeImage={page === 1 && index === 0}
+                    />
                   );
                 })}
               </ul>

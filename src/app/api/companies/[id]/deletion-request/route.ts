@@ -1,5 +1,6 @@
 import { ObjectId, type Filter } from "mongodb";
 import { NextRequest, NextResponse } from "next/server";
+import { enforceAuthenticatedRateLimitOrResponse } from "@/lib/app-rate-limit";
 import { getCurrentUserFromRequest } from "@/lib/auth-user";
 import { safeDeleteBlobUrls } from "@/lib/blob-storage";
 import { getCompanyOwnershipClaimsCollection } from "@/lib/company-ownership-claims";
@@ -99,6 +100,17 @@ export async function DELETE(request: NextRequest, context: RouteContext) {
     const user = await getCurrentUserFromRequest(request);
     if (!user?._id) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+    const rateLimitResponse = await enforceAuthenticatedRateLimitOrResponse({
+      request,
+      scope: "companies:delete",
+      userId: user._id.toHexString(),
+      ipLimit: 10,
+      userLimit: 5,
+      windowMs: 10 * 60_000,
+    });
+    if (rateLimitResponse) {
+      return rateLimitResponse;
     }
 
     await ensureCompaniesIndexes();

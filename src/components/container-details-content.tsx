@@ -12,11 +12,19 @@ import {
   type ContainerDetailsLocationPoint,
 } from "@/components/container-details-locations-map";
 import { ContainerInquiryModalTrigger } from "@/components/container-inquiry-modal-trigger";
+import { toIntlLocale } from "@/components/container-modules-i18n";
 import { DetailsBackButton } from "@/components/details-back-button";
 import { SESSION_COOKIE_NAME } from "@/lib/auth-session";
 import { getCurrentUserFromToken } from "@/lib/auth-user";
 import { getCompaniesCollection } from "@/lib/companies";
 import { normalizeCompanyVerificationStatus } from "@/lib/company-verification";
+import {
+  getContainerConditionLabel,
+  getContainerFeatureLabel,
+  getContainerShortLabelLocalized,
+  getPriceTaxModeLabel,
+  type ContainerListingsMessages,
+} from "@/components/container-listings-i18n";
 import type {
   ContainerListingItem,
   ContainerListingDocument,
@@ -29,15 +37,16 @@ import {
   mapContainerListingToItem,
 } from "@/lib/container-listings";
 import {
-  CONTAINER_CONDITION_LABEL,
-  CONTAINER_FEATURE_LABEL,
   LISTING_STATUS,
-  PRICE_CURRENCY_LABEL,
-  PRICE_TAX_MODE_LABEL,
-  getContainerShortLabel,
   type Currency,
 } from "@/lib/container-listing-types";
 import { getCountryFlagSvgUrl } from "@/lib/country-flags";
+import {
+  getMessages,
+  LOCALE_COOKIE_NAME,
+  resolveLocale,
+  type AppLocale,
+} from "@/lib/i18n";
 import { normalizeOptionalListingDescriptionHtml } from "@/lib/listing-description-html";
 import { getTurnstileSiteKey } from "@/lib/turnstile";
 import { USER_ROLE } from "@/lib/user-roles";
@@ -55,11 +64,11 @@ type ListingPriceDisplay = {
   additionalAmounts: string[];
 };
 
-function formatVatRateLabel(vatRate: number | null): string | null {
+function formatVatRateLabel(vatRate: number | null, locale: AppLocale): string | null {
   if (typeof vatRate !== "number" || !Number.isFinite(vatRate)) {
     return null;
   }
-  return `VAT${vatRate.toLocaleString("pl-PL")}%`;
+  return `VAT ${vatRate.toLocaleString(toIntlLocale(locale))}%`;
 }
 
 function getNormalizedAmountByCurrency(
@@ -81,6 +90,9 @@ function getNormalizedAmountByCurrency(
 
 function getListingPriceDisplay(
   item: ContainerListingItem,
+  locale: AppLocale,
+  messages: ContainerListingsMessages,
+  moduleMessages: ReturnType<typeof getMessages>["containerModules"],
 ): ListingPriceDisplay {
   const pricing = item.pricing;
 
@@ -90,10 +102,10 @@ function getListingPriceDisplay(
   ) {
     const metaParts: string[] = [];
     if (pricing.original.negotiable === true || item.priceNegotiable === true) {
-      metaParts.push("Do negocjacji");
+      metaParts.push(moduleMessages.details.negotiable);
     }
     return {
-      amountLabel: "Zapytaj o cene",
+      amountLabel: moduleMessages.details.askPrice,
       metaLine: metaParts.join(" | "),
       isRequestPrice: true,
       additionalAmounts: [],
@@ -125,21 +137,21 @@ function getListingPriceDisplay(
         ) {
           return null;
         }
-        return `~${Math.round(normalizedAmount).toLocaleString("pl-PL")} ${PRICE_CURRENCY_LABEL[currency]}`;
+        return `~${Math.round(normalizedAmount).toLocaleString(toIntlLocale(locale))} ${currency}`;
       })
       .filter((value): value is string => Boolean(value));
 
-    const metaParts = [`${PRICE_TAX_MODE_LABEL[pricing.original.taxMode]}`];
-    const vatRateLabel = formatVatRateLabel(pricing.original.vatRate);
+    const metaParts = [getPriceTaxModeLabel(messages, pricing.original.taxMode)];
+    const vatRateLabel = formatVatRateLabel(pricing.original.vatRate, locale);
     if (vatRateLabel) {
       metaParts.push(vatRateLabel);
     }
     if (pricing.original.negotiable === true || item.priceNegotiable === true) {
-      metaParts.push("Do negocjacji");
+      metaParts.push(moduleMessages.details.negotiable);
     }
 
     return {
-      amountLabel: `${Math.round(pricing.original.amount).toLocaleString("pl-PL")} ${PRICE_CURRENCY_LABEL[pricing.original.currency]}`,
+      amountLabel: `${Math.round(pricing.original.amount).toLocaleString(toIntlLocale(locale))} ${pricing.original.currency}`,
       metaLine: metaParts.join(" | "),
       isRequestPrice: false,
       additionalAmounts,
@@ -150,12 +162,12 @@ function getListingPriceDisplay(
     typeof item.priceAmount === "number" &&
     Number.isFinite(item.priceAmount)
   ) {
-    const metaParts = ["Netto"];
+    const metaParts = [moduleMessages.details.net];
     if (item.priceNegotiable === true) {
-      metaParts.push("Do negocjacji");
+      metaParts.push(moduleMessages.details.negotiable);
     }
     return {
-      amountLabel: `${Math.round(item.priceAmount).toLocaleString("pl-PL")} PLN`,
+      amountLabel: `${Math.round(item.priceAmount).toLocaleString(toIntlLocale(locale))} PLN`,
       metaLine: metaParts.join(" | "),
       isRequestPrice: false,
       additionalAmounts: [],
@@ -165,7 +177,7 @@ function getListingPriceDisplay(
   if (item.price?.trim()) {
     const metaParts: string[] = [];
     if (item.priceNegotiable === true) {
-      metaParts.push("Do negocjacji");
+      metaParts.push(moduleMessages.details.negotiable);
     }
     return {
       amountLabel: item.price.trim(),
@@ -176,7 +188,7 @@ function getListingPriceDisplay(
   }
 
   return {
-    amountLabel: "Zapytaj o cene",
+    amountLabel: moduleMessages.details.askPrice,
     metaLine: "",
     isRequestPrice: true,
     additionalAmounts: [],
@@ -310,8 +322,8 @@ function getLocationDisplayItems(item: ContainerListingItem): LocationDisplayIte
       id: `${items.length + 1}-${key}`,
       ...(postalCode ? { postalCode } : {}),
       streetLine,
-      city: city || "Nieznane miasto",
-      country: country || "Nieznany kraj",
+      city: city || "Unknown city",
+      country: country || "Unknown country",
       flagUrl: getCountryFlagSvgUrl(country),
     });
   };
@@ -340,8 +352,8 @@ function getLocationDisplayItems(item: ContainerListingItem): LocationDisplayIte
     return [
       {
         id: "fallback-empty-location",
-        city: "Nie podano lokalizacji",
-        country: "Nieznany kraj",
+        city: "Location unavailable",
+        country: "Unknown country",
         flagUrl: null,
       },
     ];
@@ -502,6 +514,10 @@ export async function ContainerDetailsContent({
       : undefined;
 
   const cookieStore = await cookies();
+  const locale = resolveLocale(cookieStore.get(LOCALE_COOKIE_NAME)?.value);
+  const messages = getMessages(locale);
+  const moduleMessages = messages.containerModules;
+  const listingMessages = messages.containerListings;
   const token = cookieStore.get(SESSION_COOKIE_NAME)?.value;
   const currentUser = token ? await getCurrentUserFromToken(token) : null;
   const isOwner = currentUser?._id
@@ -531,15 +547,23 @@ export async function ContainerDetailsContent({
     notFound();
   }
 
-  const galleryTitle = getContainerShortLabel(listingItem.container);
+  const galleryTitle = getContainerShortLabelLocalized(
+    listingMessages,
+    listingItem.container,
+  );
   const sanitizedDescriptionHtml = normalizeOptionalListingDescriptionHtml(
     listingItem.description,
   );
   const availableFromLabel = listingItem.availableNow
-    ? "Teraz"
-    : `${listingItem.availableFromApproximate ? "~" : ""}${listing.availableFrom.toLocaleDateString("pl-PL")}`;
+    ? moduleMessages.details.availableNow
+    : `${listingItem.availableFromApproximate ? "~" : ""}${listing.availableFrom.toLocaleDateString(toIntlLocale(locale))}`;
   const cscValidityLabel = getCscValidityLabel(listingItem);
-  const priceDisplay = getListingPriceDisplay(listingItem);
+  const priceDisplay = getListingPriceDisplay(
+    listingItem,
+    locale,
+    listingMessages,
+    moduleMessages,
+  );
   const realImages = resolveListingRealImages(listing, listingItem);
   const mainImage = realImages[0] ?? getContainerPlaceholderSrc(listingItem);
   const additionalRealImages = realImages.length > 1 ? realImages.slice(1) : [];
@@ -556,7 +580,7 @@ export async function ContainerDetailsContent({
       ? Math.trunc(listingItem.logisticsTransportFreeDistanceKm)
       : null;
   const featureLabels = listingItem.container.features
-    .map((feature) => CONTAINER_FEATURE_LABEL[feature])
+    .map((feature) => getContainerFeatureLabel(listingMessages, feature))
     .filter((label) => label.trim().length > 0);
   const logisticsComment = listingItem.logisticsComment?.trim() || undefined;
   const isPriceNegotiable =
@@ -571,6 +595,7 @@ export async function ContainerDetailsContent({
         <DetailsBackButton
           href={listHref}
           preferHistoryBack={preferHistoryBack}
+          label={moduleMessages.shared.backToList}
           className="rounded-md border border-neutral-300 bg-white px-3 py-2 text-sm text-neutral-700 hover:bg-neutral-100"
         />
         <div className="ml-auto flex flex-wrap items-center justify-end gap-2">
@@ -587,7 +612,7 @@ export async function ContainerDetailsContent({
               href={`/containers/${listing._id.toHexString()}/edit`}
               className="rounded-md border border-neutral-300 bg-white px-3 py-2 text-sm text-neutral-700 hover:bg-neutral-100"
             >
-              Edytuj kontener
+              {moduleMessages.details.editContainer}
             </Link>
           ) : null}
         </div>
@@ -605,6 +630,7 @@ export async function ContainerDetailsContent({
                   mainImagePriority
                   showThumbnails={false}
                   className="mt-0"
+                  messages={moduleMessages.gallery}
                 />
               </div>
 
@@ -622,8 +648,8 @@ export async function ContainerDetailsContent({
                     {isCompanyVerified ? (
                       <span
                         className="inline-flex h-5 w-5 shrink-0 items-center justify-center rounded-full border border-emerald-300/80 bg-emerald-100/80 text-emerald-700"
-                        aria-label="Firma zweryfikowana"
-                        title="Firma zweryfikowana"
+                        aria-label={moduleMessages.details.verifiedCompany}
+                        title={moduleMessages.details.verifiedCompany}
                       >
                         <svg
                           viewBox="0 0 20 20"
@@ -646,7 +672,7 @@ export async function ContainerDetailsContent({
                   <p className="text-sm text-neutral-600">{listing.companyName}</p>
                 )}
                 <h1 className="mt-2 text-3xl font-semibold text-neutral-900">
-                  {getContainerShortLabel(listingItem.container)}
+                  {getContainerShortLabelLocalized(listingMessages, listingItem.container)}
                 </h1>
                 <div className="mt-2 grid gap-2 text-sm text-neutral-700">
                   <div className="flex items-center">
@@ -654,28 +680,29 @@ export async function ContainerDetailsContent({
                       className={`rounded-md border px-2 py-1 text-xs font-medium ${CONTAINER_CONDITION_COLOR_TOKENS[listingItem.container.condition].badgeClassName}`}
                     >
                       {
-                        CONTAINER_CONDITION_LABEL[
-                          listingItem.container.condition
-                        ]
+                        getContainerConditionLabel(
+                          listingMessages,
+                          listingItem.container.condition,
+                        )
                       }
                     </span>
                   </div>
                   {typeof listingItem.productionYear === "number" ? (
                     <p>
-                      Rok:{" "}
+                      {moduleMessages.details.productionYearLabel}:{" "}
                       <span className="text-neutral-900">
                         {listingItem.productionYear}
                       </span>
                     </p>
                   ) : null}
                   <p>
-                    Dostepny od:{" "}
+                    {moduleMessages.details.availableFromLabel}:{" "}
                     <span className="text-neutral-900">
                       {availableFromLabel}
                     </span>
                   </p>
                   <p>
-                    Ilosc:{" "}
+                    {moduleMessages.details.quantityLabel}:{" "}
                     <span className="text-neutral-900">{quantityDisplay}</span>
                   </p>
                 </div>
@@ -715,7 +742,7 @@ export async function ContainerDetailsContent({
           <div className="grid gap-4 lg:h-full lg:grid-rows-2">
             <section className="h-full rounded-md border border-neutral-300 bg-white p-4 text-right">
               <p className="text-xs font-medium uppercase tracking-wide text-neutral-500">
-                Cena
+                {moduleMessages.details.priceTitle}
               </p>
               <p
                 className={`mt-1 text-2xl font-bold ${
@@ -752,27 +779,33 @@ export async function ContainerDetailsContent({
               </p>
               <div className="mt-2 grid gap-1 text-sm text-neutral-700">
                 <p>
-                  Tabliczka CSC:{" "}
+                  {moduleMessages.details.cscPlateLabel}:{" "}
                   <span className="text-neutral-900">
-                    {listingItem.hasCscPlate ? "Tak" : "Nie"}
+                    {listingItem.hasCscPlate
+                      ? moduleMessages.details.yes
+                      : moduleMessages.details.no}
                   </span>
                 </p>
                 <p>
-                  Certyfikacja CSC:{" "}
+                  {moduleMessages.details.cscCertificationLabel}:{" "}
                   <span className="text-neutral-900">
-                    {listingItem.hasCscCertification ? "Tak" : "Nie"}
+                    {listingItem.hasCscCertification
+                      ? moduleMessages.details.yes
+                      : moduleMessages.details.no}
                   </span>
                 </p>
                 <p>
-                  Gwarancja:{" "}
+                  {moduleMessages.details.warrantyLabel}:{" "}
                   <span className="text-neutral-900">
-                    {listingItem.hasWarranty ? "Tak" : "Nie"}
+                    {listingItem.hasWarranty
+                      ? moduleMessages.details.yes
+                      : moduleMessages.details.no}
                   </span>
                 </p>
                 <p>
-                  Waznosc CSC:{" "}
+                  {moduleMessages.details.cscValidityLabel}:{" "}
                   <span className="text-neutral-900">
-                    {cscValidityLabel ?? "brak danych"}
+                    {cscValidityLabel ?? moduleMessages.details.noData}
                   </span>
                 </p>
               </div>
@@ -783,7 +816,7 @@ export async function ContainerDetailsContent({
         {featureLabels.length > 0 ? (
           <section className="mt-4 rounded-md border border-neutral-300 bg-white p-4">
             <h2 className="text-sm font-semibold text-neutral-800">
-              Cechy kontenera
+              {moduleMessages.details.featuresTitle}
             </h2>
             <div className="mt-3 flex flex-wrap gap-2">
               {featureLabels.map((label) => (
@@ -800,7 +833,9 @@ export async function ContainerDetailsContent({
 
         {sanitizedDescriptionHtml ? (
           <section className="mt-4 rounded-md border border-neutral-300 bg-white p-4">
-            <h2 className="text-sm font-semibold text-neutral-800">Opis</h2>
+            <h2 className="text-sm font-semibold text-neutral-800">
+              {moduleMessages.details.descriptionTitle}
+            </h2>
             {sanitizedDescriptionHtml ? (
               <div
                 className="mt-3 space-y-2 text-sm text-neutral-700 [&_p]:leading-6 [&_ul]:list-disc [&_ul]:pl-5"
@@ -811,14 +846,16 @@ export async function ContainerDetailsContent({
         ) : null}
 
         <section className="mt-4 rounded-md border border-neutral-300 bg-white p-4">
-          <h2 className="text-sm font-semibold text-neutral-800">Lokalizacja</h2>
+          <h2 className="text-sm font-semibold text-neutral-800">
+            {moduleMessages.details.locationTitle}
+          </h2>
           <ul className="mt-3 grid gap-2 text-sm text-neutral-700">
             {locationItems.map((location) => (
               <li key={location.id} className="flex items-start gap-2">
                 {location.flagUrl ? (
                   <Image
                     src={location.flagUrl}
-                    alt={`Flaga: ${location.country}`}
+                    alt={`${moduleMessages.details.flagLabel}: ${location.country}`}
                     width={20}
                     height={15}
                     unoptimized
@@ -851,7 +888,7 @@ export async function ContainerDetailsContent({
           logisticsComment ? (
             <div className="mt-4 border-t border-neutral-200 pt-3">
               <p className="text-xs font-semibold uppercase tracking-wide text-neutral-500">
-                Logistyka
+                {moduleMessages.details.logisticsTitle}
               </p>
               <div className="mt-2 grid gap-1 text-sm">
                 {listingItem.logisticsTransportAvailable ? (
@@ -865,15 +902,17 @@ export async function ContainerDetailsContent({
                     {listingItem.logisticsTransportIncluded ? (
                       <>
                         Darmowy transport
+                        
                         {freeTransportDistanceKmForMap ? (
                           <>
                             {" "}
-                            do <strong>{freeTransportDistanceKmForMap} km</strong>
+                            {moduleMessages.details.toDistancePrefix}{" "}
+                            <strong>{freeTransportDistanceKmForMap} km</strong>
                           </>
                         ) : null}
                       </>
                     ) : (
-                      "Mozliwy transport"
+                      moduleMessages.details.transportAvailable
                     )}
                   </p>
                 ) : null}
@@ -886,8 +925,8 @@ export async function ContainerDetailsContent({
                     }
                   >
                     {listingItem.logisticsUnloadingIncluded
-                      ? "Darmowy rozladunek / HDS"
-                      : "Mozliwy rozladunek / HDS"}
+                      ? moduleMessages.details.unloadingIncluded
+                      : moduleMessages.details.unloadingAvailable}
                   </p>
                 ) : null}
               </div>
@@ -902,13 +941,16 @@ export async function ContainerDetailsContent({
           <ContainerDetailsLocationsMap
             points={locationMapPoints}
             freeTransportDistanceKm={freeTransportDistanceKmForMap}
+            messages={moduleMessages.shared}
           />
         </section>
 
         <section className="mt-4 rounded-md border border-neutral-300 bg-white p-4 text-sm text-neutral-700">
-          <h2 className="text-sm font-semibold text-neutral-800">Kontakt</h2>
+          <h2 className="text-sm font-semibold text-neutral-800">
+            {moduleMessages.details.contactTitle}
+          </h2>
           <p className="mt-3">
-            Email:{" "}
+            {moduleMessages.details.emailLabel}:{" "}
             <a
               className="text-sky-700 hover:text-sky-600"
               href={`mailto:${listing.contactEmail}`}
@@ -918,7 +960,7 @@ export async function ContainerDetailsContent({
           </p>
           {listing.contactPhone ? (
             <p>
-              Telefon:{" "}
+              {moduleMessages.details.phoneLabel}:{" "}
               <a
                 className="text-sky-700 hover:text-sky-600"
                 href={`tel:${listing.contactPhone.replace(/\s+/g, "")}`}
@@ -931,20 +973,24 @@ export async function ContainerDetailsContent({
 
         {additionalRealImages.length > 0 ? (
           <section className="mt-4 rounded-md border border-neutral-300 bg-white p-4">
-            <h2 className="text-sm font-semibold text-neutral-800">Galeria</h2>
+            <h2 className="text-sm font-semibold text-neutral-800">
+              {moduleMessages.details.galleryTitle}
+            </h2>
             <ContainerDetailsGallery
               images={additionalRealImages}
               title={galleryTitle}
               showMainImage={false}
               showThumbnails
               className="mt-3"
+              messages={moduleMessages.gallery}
             />
           </section>
         ) : null}
 
         <div className="mt-4 flex justify-end">
           <p className="text-right text-xs text-neutral-400">
-            Wygasa: {listing.expiresAt.toLocaleDateString("pl-PL")}
+            {moduleMessages.details.expiresLabel}:{" "}
+            {listing.expiresAt.toLocaleDateString(toIntlLocale(locale))}
           </p>
         </div>
       </article>

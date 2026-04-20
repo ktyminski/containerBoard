@@ -8,6 +8,7 @@ import {
   getSessionFromRequest,
   setSessionCookie,
 } from "@/lib/auth-session";
+import { enforceAuthenticatedRateLimitOrResponse } from "@/lib/app-rate-limit";
 import { getCurrentUserFromRequest } from "@/lib/auth-user";
 import { getEmailVerificationTokensCollection } from "@/lib/email-verification";
 import {
@@ -109,6 +110,18 @@ export async function PATCH(request: NextRequest) {
       clearSessionCookie(unauthorizedResponse);
       return unauthorizedResponse;
     }
+    const rateLimitResponse = await enforceAuthenticatedRateLimitOrResponse({
+      request,
+      scope: "auth:account:patch",
+      userId: userId.toHexString(),
+      ipLimit: 40,
+      userLimit: 20,
+      windowMs: 10 * 60_000,
+    });
+    if (rateLimitResponse) {
+      return rateLimitResponse;
+    }
+
     const body = await request.json();
     const parsed = accountPatchSchema.safeParse(body);
     if (!parsed.success) {
@@ -267,6 +280,25 @@ export async function DELETE(request: NextRequest) {
       return auth.response;
     }
     const { user } = auth;
+    if (!user._id) {
+      const unauthorizedResponse = NextResponse.json(
+        { error: "Unauthorized" },
+        { status: 401 },
+      );
+      clearSessionCookie(unauthorizedResponse);
+      return unauthorizedResponse;
+    }
+    const rateLimitResponse = await enforceAuthenticatedRateLimitOrResponse({
+      request,
+      scope: "auth:account:delete",
+      userId: user._id.toHexString(),
+      ipLimit: 10,
+      userLimit: 5,
+      windowMs: 10 * 60_000,
+    });
+    if (rateLimitResponse) {
+      return rateLimitResponse;
+    }
 
     if (user.role === USER_ROLE.ADMIN) {
       return NextResponse.json(

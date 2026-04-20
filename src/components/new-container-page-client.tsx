@@ -1,6 +1,8 @@
 "use client";
 
 import { useState } from "react";
+import type { ContainerModuleMessages } from "@/components/container-modules-i18n";
+import type { ContainerListingsMessages } from "@/components/container-listings-i18n";
 import {
   ContainerListingForm,
   type CompanyLocationPrefillOption,
@@ -8,24 +10,6 @@ import {
 } from "@/components/container-listing-form";
 import { NoCompanyBenefitsBanner } from "@/components/no-company-benefits-banner";
 import { SmartBackButton } from "@/components/smart-back-button";
-
-const LISTING_INTENT_OPTIONS: Array<{ value: ListingIntent; label: string }> = [
-  { value: "sell", label: "Chce sprzedac" },
-  { value: "rent", label: "Chce wynajac" },
-  { value: "buy", label: "Szukam kontenera" },
-];
-
-const LISTING_INTENT_HEADER_LABEL: Record<ListingIntent, string> = {
-  sell: "Sprzedaj kontener",
-  rent: "Wynajmij kontener",
-  buy: "Szukam kontenera",
-};
-
-const LISTING_INTENT_SWITCH_LABEL: Record<ListingIntent, string> = {
-  sell: "Chcesz wynajac albo szukasz kontenera?",
-  rent: "Chcesz sprzedac albo szukasz kontenera?",
-  buy: "Chcesz sprzedac albo wynajac?",
-};
 
 type NewContainerPageClientProps = {
   contactPrefill: {
@@ -39,6 +23,9 @@ type NewContainerPageClientProps = {
     slug?: string;
   } | null;
   companyLocationPrefillOptions?: CompanyLocationPrefillOption[];
+  locale: "pl" | "en" | "de" | "uk";
+  messages: ContainerModuleMessages;
+  listingMessages: ContainerListingsMessages;
 };
 
 export function NewContainerPageClient({
@@ -46,16 +33,24 @@ export function NewContainerPageClient({
   initialListingIntent,
   ownedCompanyProfile,
   companyLocationPrefillOptions,
+  locale,
+  messages,
+  listingMessages,
 }: NewContainerPageClientProps) {
   const [listingIntent, setListingIntent] = useState<ListingIntent>(
     initialListingIntent ?? "sell",
   );
   const [isIntentModalOpen, setIsIntentModalOpen] = useState(false);
+  const listingIntentOptions: Array<{ value: ListingIntent; label: string }> = [
+    { value: "sell", label: messages.newPage.intentOptions.sell },
+    { value: "rent", label: messages.newPage.intentOptions.rent },
+    { value: "buy", label: messages.newPage.intentOptions.buy },
+  ];
 
   return (
     <main className="mx-auto w-full max-w-5xl px-4 py-6 sm:px-6">
       <SmartBackButton
-        label="Wroc"
+        label={messages.shared.back}
         fallbackHref="/list"
         className="mb-4 inline-flex w-fit items-center gap-2 rounded-md border border-neutral-400 bg-white px-3 py-2 text-sm text-neutral-700 transition-colors hover:border-neutral-500"
       />
@@ -64,7 +59,7 @@ export function NewContainerPageClient({
         <div>
           <div className="flex flex-wrap items-center gap-2">
             <p className="text-lg font-semibold text-neutral-900">
-              {LISTING_INTENT_HEADER_LABEL[listingIntent]}
+              {messages.newPage.titleByIntent[listingIntent]}
             </p>
             <button
               type="button"
@@ -73,27 +68,33 @@ export function NewContainerPageClient({
               }}
               className="text-sm text-neutral-900 underline underline-offset-2 decoration-neutral-500 transition hover:text-neutral-700"
             >
-              {LISTING_INTENT_SWITCH_LABEL[listingIntent]}
+              {messages.newPage.switchByIntent[listingIntent]}
             </button>
           </div>
           <p className="mt-1 text-sm text-neutral-700">
-            Pola oznaczone gwiazdka sa obowiazkowe.
+            {messages.newPage.requiredHint}
           </p>
         </div>
       </header>
 
       {!ownedCompanyProfile?.name?.trim() && listingIntent !== "buy" ? (
-        <NoCompanyBenefitsBanner className="mb-3" />
+        <NoCompanyBenefitsBanner
+          className="mb-3"
+          messages={messages.banner}
+        />
       ) : null}
 
       <ContainerListingForm
+        locale={locale}
+        messages={messages}
+        listingMessages={listingMessages}
         mode="create"
         submitEndpoint="/api/containers"
         submitMethod="POST"
-        submitLabel="Publikuj kontener"
-        successMessage="Kontener opublikowany"
+        submitLabel={messages.newPage.submitLabel}
+        successMessage={messages.newPage.successMessage}
         backHref="/list"
-        backLabel="Powrot do listy kontenerow"
+        backLabel={messages.newPage.backToList}
         initialValues={{
           companyName: contactPrefill.companyName,
           publishedAsCompany: Boolean(ownedCompanyProfile?.name?.trim()),
@@ -126,11 +127,11 @@ export function NewContainerPageClient({
           <div className="w-full max-w-sm rounded-xl border border-neutral-200/90 bg-white/95 p-4 shadow-2xl">
             <div className="mb-3 text-center">
               <p className="text-base font-semibold text-neutral-900">
-                Wybierz typ ogloszenia
+                {messages.newPage.intentModalTitle}
               </p>
             </div>
             <div className="grid gap-2">
-              {LISTING_INTENT_OPTIONS.map((option) => {
+              {listingIntentOptions.map((option) => {
                 const isActive = option.value === listingIntent;
                 return (
                   <button
@@ -159,7 +160,7 @@ export function NewContainerPageClient({
                 }}
                 className="inline-flex h-10 items-center justify-center rounded-md border border-neutral-300 bg-white px-3 text-sm font-medium text-neutral-700 transition hover:border-neutral-400 hover:bg-neutral-50 hover:text-neutral-900"
               >
-                Anuluj
+                {messages.shared.cancel}
               </button>
             </div>
           </div>

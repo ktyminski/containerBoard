@@ -1,5 +1,6 @@
 import { ObjectId } from "mongodb";
 import { NextRequest, NextResponse } from "next/server";
+import { enforceAuthenticatedRateLimitOrResponse } from "@/lib/app-rate-limit";
 import { getCurrentUserFromRequest } from "@/lib/auth-user";
 import { downloadBlobToBufferWithAccessFallback } from "@/lib/blob-storage";
 import { getBulkConciergeRequestsCollection } from "@/lib/bulk-concierge-requests";
@@ -36,8 +37,18 @@ function sanitizeDownloadFilename(value: string): string {
 export async function GET(request: NextRequest, context: RouteContext) {
   try {
     const admin = await requireAdmin(request);
-    if (!admin) {
+    if (!admin?._id) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    }
+    const rateLimitResponse = await enforceAuthenticatedRateLimitOrResponse({
+      request,
+      scope: "admin:concierge-requests:file",
+      userId: admin._id.toHexString(),
+      ipLimit: 60,
+      userLimit: 30,
+    });
+    if (rateLimitResponse) {
+      return rateLimitResponse;
     }
 
     const { id } = await context.params;
@@ -97,4 +108,3 @@ export async function GET(request: NextRequest, context: RouteContext) {
     );
   }
 }
-

@@ -1,8 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import { withLang, type AppLocale, type AppMessages } from "@/lib/i18n";
 import { FacebookIcon, InstagramIcon, LinkedInIcon } from "@/components/social-icons";
+import { withLang, type AppLocale, type AppMessages } from "@/lib/i18n";
 
 type AppFooterProps = {
   locale: AppLocale;
@@ -11,24 +11,30 @@ type AppFooterProps = {
 
 export function AppFooter({ locale, messages }: AppFooterProps) {
   return (
-    <footer className="relative mt-10 overflow-hidden border-t border-[#1f4f86] bg-[linear-gradient(180deg,#031a3c_0%,#05244f_100%)]">
+    <footer className="relative overflow-hidden border-t border-[#1f4f86] bg-[linear-gradient(180deg,#031a3c_0%,#05244f_100%)]">
       <div className="relative z-10 mx-auto w-full max-w-5xl px-4 py-8 text-xs text-[#bcd6f3]">
         <p className="text-left text-sm font-medium tracking-wide">
           <span className="text-[#e2efff]">Container</span>
           <span className="text-[#38bdf8]">Board</span>
         </p>
-        <nav aria-label={messages.infoLinksAria} className="mt-4 flex flex-wrap items-center gap-x-5 gap-y-2">
+        <nav
+          aria-label={messages.infoLinksAria}
+          className="mt-4 flex flex-wrap items-center gap-x-5 gap-y-2"
+        >
           <Link href={withLang("/list", locale)} className="transition hover:text-[#7dd3fc]">
-            Wyszukiwarka
+            {messages.browseListings}
+          </Link>
+          <Link href={withLang("/kontenery/na-sprzedaz", locale)} className="transition hover:text-[#7dd3fc]">
+            {messages.saleSeo}
           </Link>
           <Link href={withLang("/containers/new", locale)} className="transition hover:text-[#7dd3fc]">
-            Dodaj kontener
+            {messages.addContainer}
           </Link>
           <Link href={withLang("/privacy-policy", locale)} className="transition hover:text-[#7dd3fc]">
             {messages.privacyPolicy}
           </Link>
           <Link href={withLang("/cookies", locale)} className="transition hover:text-[#7dd3fc]">
-            Cookies
+            {messages.cookies}
           </Link>
           <Link href={withLang("/terms", locale)} className="transition hover:text-[#7dd3fc]">
             {messages.terms}
@@ -65,10 +71,9 @@ export function AppFooter({ locale, messages }: AppFooterProps) {
           </a>
         </div>
         <p className="mt-4 text-left text-[11px] tracking-wide text-[#8fb4dd]">
-          © 2026 ContainerBoard. Wszystkie prawa zastrzezone.
+          {messages.copyrightShort}
         </p>
       </div>
     </footer>
   );
 }
-

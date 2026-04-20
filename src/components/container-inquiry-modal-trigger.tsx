@@ -6,6 +6,7 @@ import { ContainerInquiryForm } from "@/components/container-inquiry-form";
 import { CopyLinkIcon } from "@/components/icons/copy-link-icon";
 import { useToast } from "@/components/toast-provider";
 import { usePageScrollLock } from "@/components/use-page-scroll-lock";
+import { getMessages, resolveLocale } from "@/lib/i18n";
 
 type InquiryIntent = "offer" | "negotiate";
 
@@ -124,6 +125,10 @@ export function ContainerInquiryModalTrigger({
   initialInquiryValues,
   className,
 }: ContainerInquiryModalTriggerProps) {
+  const locale = resolveLocale(
+    typeof document === "undefined" ? "pl" : document.documentElement.lang || "pl",
+  );
+  const messages = getMessages(locale).inquiryForm;
   const toast = useToast();
   const [isOpen, setIsOpen] = useState(false);
   const [intent, setIntent] = useState<InquiryIntent>("offer");
@@ -186,10 +191,10 @@ export function ContainerInquiryModalTrigger({
 
   const modalTitle = useMemo(() => {
     if (intent === "negotiate") {
-      return "Negocjuj warunki";
+      return messages.modalTitleNegotiate;
     }
-    return "Popros o oferte";
-  }, [intent]);
+    return messages.modalTitleOffer;
+  }, [intent, messages.modalTitleNegotiate, messages.modalTitleOffer]);
 
   const notifyFavoriteSync = (nextIsFavorite: boolean) => {
     window.dispatchEvent(
@@ -209,10 +214,10 @@ export function ContainerInquiryModalTrigger({
     const listingUrl = `${window.location.origin}/containers/${listingId}`;
     const copied = await copyTextToClipboard(listingUrl);
     if (copied) {
-      toast.info("Link do ogloszenia zostal skopiowany.");
+      toast.info(messages.copyLinkSuccess);
       return;
     }
-    toast.error("Nie udalo sie skopiowac linku.");
+    toast.error(messages.copyLinkError);
   };
 
   const handleToggleFavorite = async () => {
@@ -231,7 +236,7 @@ export function ContainerInquiryModalTrigger({
       setIsFavorite(nextIsFavorite);
       notifyFavoriteSync(nextIsFavorite);
       if (nextIsFavorite) {
-        toast.success("Dodano oferte do ulubionych.");
+        toast.success(messages.favoriteAdded);
       }
       return;
     }
@@ -251,7 +256,7 @@ export function ContainerInquiryModalTrigger({
         | null;
 
       if (!response.ok) {
-        throw new Error(payload?.error ?? "Nie udalo sie zaktualizowac ulubionych.");
+        throw new Error(payload?.error ?? messages.favoriteUpdateError);
       }
 
       const nextIsFavorite =
@@ -259,7 +264,7 @@ export function ContainerInquiryModalTrigger({
       setIsFavorite(nextIsFavorite);
       notifyFavoriteSync(nextIsFavorite);
       if (nextIsFavorite) {
-        toast.success("Dodano oferte do ulubionych.");
+        toast.success(messages.favoriteAdded);
       }
     } catch (error) {
       setIsFavorite(previous);
@@ -267,7 +272,7 @@ export function ContainerInquiryModalTrigger({
       toast.error(
         error instanceof Error
           ? error.message
-          : "Nie udalo sie zaktualizowac ulubionych.",
+          : messages.favoriteUpdateError,
       );
     } finally {
       setIsPendingFavorite(false);
@@ -282,7 +287,7 @@ export function ContainerInquiryModalTrigger({
           onClick={handleCopyLink}
           className="inline-flex items-center gap-2 rounded-md border border-neutral-300 bg-white px-3 py-2 text-sm text-neutral-700 hover:bg-neutral-100"
         >
-          Kopiuj link
+          {messages.copyLink}
           <CopyLinkIcon className="h-4 w-4" />
         </button>
         <button
@@ -297,7 +302,7 @@ export function ContainerInquiryModalTrigger({
             isPendingFavorite ? "opacity-60" : undefined,
           )}
         >
-          {isFavorite ? "W ulubionych" : "Ulubione"}
+          {isFavorite ? messages.favoriteActive : messages.favorite}
           <svg aria-hidden="true" viewBox="0 0 20 20" className="h-4 w-4">
             <path
               d="M10 17.2 3.9 13a4.4 4.4 0 0 1-1.8-3.6A4.4 4.4 0 0 1 6.5 5a4.6 4.6 0 0 1 3.5 1.6A4.6 4.6 0 0 1 13.5 5a4.4 4.4 0 0 1 4.4 4.4A4.4 4.4 0 0 1 16.1 13L10 17.2Z"
@@ -314,7 +319,7 @@ export function ContainerInquiryModalTrigger({
           onClick={() => openForIntent("offer")}
           className="inline-flex items-center gap-2 rounded-md border border-sky-700 bg-sky-700 px-3 py-2 text-sm font-medium text-white hover:bg-sky-600"
         >
-          Popros o oferte
+          {messages.requestOffer}
           <svg aria-hidden="true" viewBox="0 0 20 20" className="h-4 w-4">
             <path d="M3 10h10.5m0 0-3.75-3.75M13.5 10l-3.75 3.75" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
           </svg>
@@ -325,7 +330,7 @@ export function ContainerInquiryModalTrigger({
             onClick={() => openForIntent("negotiate")}
             className="inline-flex items-center gap-2 rounded-md border border-rose-500 bg-gradient-to-r from-rose-500 to-fuchsia-500 px-3 py-2 text-sm font-semibold text-white transition-colors duration-200 hover:from-rose-600 hover:to-fuchsia-600 active:translate-y-px"
           >
-            Negocjuj
+            {messages.negotiate}
             <svg aria-hidden="true" viewBox="0 0 20 20" className="h-4 w-4">
               <path d="M6 6h9m0 0-2.5-2.5M15 6l-2.5 2.5M14 14H5m0 0 2.5 2.5M5 14l2.5-2.5" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
             </svg>
@@ -355,16 +360,14 @@ export function ContainerInquiryModalTrigger({
                   <div className="mb-3 flex items-start justify-between gap-3">
                     <div>
                       <h3 className="text-lg font-semibold text-neutral-900">{modalTitle}</h3>
-                      <p className="text-sm text-neutral-600">
-                        Wypelnij formularz i wyslij zapytanie do ogloszeniodawcy.
-                      </p>
+                      <p className="text-sm text-neutral-600">{messages.modalSubtitle}</p>
                     </div>
                     <button
                       type="button"
                       onClick={() => setIsOpen(false)}
                       className="rounded-md border border-neutral-300 bg-white px-2 py-1 text-sm text-neutral-600 hover:bg-neutral-100"
                     >
-                      Zamknij
+                      {messages.close}
                     </button>
                   </div>
 
@@ -373,7 +376,7 @@ export function ContainerInquiryModalTrigger({
                     hideHeading
                     theme="light"
                     onSuccess={() => setIsOpen(false)}
-                    submitLabel="Wyslij"
+                    submitLabel={messages.submitDefault}
                     initialValues={initialInquiryValues}
                     showOfferedPrice={intent === "negotiate"}
                     isLoggedIn={isLoggedIn}

@@ -1,11 +1,21 @@
 import type { MetadataRoute } from "next";
 import { getContainerListingsCollection } from "@/lib/container-listings";
 import { LISTING_STATUS } from "@/lib/container-listing-types";
+import {
+  CONTAINER_SALE_SEO_HUB_PATH,
+  CONTAINER_SEO_CITIES,
+  CONTAINER_SEO_COUNTRIES,
+  getContainerSaleCountryPath,
+  getContainerSaleCityPath,
+  getSeoContainerCityCount,
+  getSeoContainerCountryCount,
+} from "@/lib/seo-containers";
 import { getAbsoluteUrl, getLanguageAlternates } from "@/lib/seo";
 
 const STATIC_PATHS = [
   "/",
   "/list",
+  CONTAINER_SALE_SEO_HUB_PATH,
   "/containers/new",
   "/about",
   "/contact",
@@ -58,5 +68,50 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       };
     });
 
-  return [...staticEntries, ...listingEntries];
+  const [cityCounts, countryCounts] = await Promise.all([
+    Promise.all(
+      CONTAINER_SEO_CITIES.map(async (city) => ({
+        city,
+        total: await getSeoContainerCityCount(city),
+      })),
+    ),
+    Promise.all(
+      CONTAINER_SEO_COUNTRIES.map(async (country) => ({
+        country,
+        total: await getSeoContainerCountryCount(country),
+      })),
+    ),
+  ]);
+
+  const cityEntries: MetadataRoute.Sitemap = cityCounts
+    .filter((entry) => entry.total >= 3)
+    .map(({ city }) => {
+      const path = getContainerSaleCityPath(city.slug);
+      return {
+        url: getAbsoluteUrl(path),
+        lastModified: now,
+        changeFrequency: "daily",
+        priority: 0.8,
+        alternates: {
+          languages: getLanguageAlternates(path),
+        },
+      };
+    });
+
+  const countryEntries: MetadataRoute.Sitemap = countryCounts
+    .filter((entry) => entry.total >= 3)
+    .map(({ country }) => {
+      const path = getContainerSaleCountryPath(country.slug);
+      return {
+        url: getAbsoluteUrl(path),
+        lastModified: now,
+        changeFrequency: "daily",
+        priority: 0.8,
+        alternates: {
+          languages: getLanguageAlternates(path),
+        },
+      };
+    });
+
+  return [...staticEntries, ...listingEntries, ...cityEntries, ...countryEntries];
 }

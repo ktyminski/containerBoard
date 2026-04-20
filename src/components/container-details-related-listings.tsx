@@ -1,10 +1,11 @@
 "use client";
 
 import Link from "next/link";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { ContainerListingsResults } from "@/components/container-listings-results";
 import { useToast } from "@/components/toast-provider";
 import type { ContainerListingItem } from "@/lib/container-listings";
+import { formatTemplate, getMessages, resolveLocale } from "@/lib/i18n";
 
 type ContainersListApiResponse = {
   items?: ContainerListingItem[];
@@ -91,6 +92,18 @@ export function ContainerDetailsRelatedListings({
   isLoggedIn,
   limit = 3,
 }: ContainerDetailsRelatedListingsProps) {
+  const locale = useMemo(
+    () =>
+      resolveLocale(
+        typeof document === "undefined" ? "pl" : document.documentElement.lang,
+      ),
+    [],
+  );
+  const listingMessages = useMemo(
+    () => getMessages(locale).containerListings,
+    [locale],
+  );
+  const relatedMessages = listingMessages.related;
   const toast = useToast();
   const normalizedCurrentId = currentListingId.trim();
   const normalizedCompanySlug = companySlug?.trim() || "";
@@ -111,7 +124,9 @@ export function ContainerDetailsRelatedListings({
       });
       const data = (await response.json()) as ContainersListApiResponse;
       if (!response.ok) {
-        throw new Error(data.error ?? `Blad API (${response.status})`);
+        throw new Error(
+          data.error ?? `${listingMessages.board.apiErrorPrefix} (${response.status})`,
+        );
       }
       return data;
     }
@@ -180,7 +195,7 @@ export function ContainerDetailsRelatedListings({
         setError(
           loadError instanceof Error
             ? loadError.message
-            : "Nie udalo sie zaladowac dodatkowych ogloszen",
+            : relatedMessages.loadRelatedError,
         );
       } finally {
         if (!controller.signal.aborted) {
@@ -199,7 +214,7 @@ export function ContainerDetailsRelatedListings({
         return;
       }
       if (!isLoggedIn) {
-        toast.error("Zaloguj sie, aby dodawac ogloszenia do ulubionych.");
+        toast.error(relatedMessages.loginRequiredForFavorites);
         return;
       }
 
@@ -220,7 +235,7 @@ export function ContainerDetailsRelatedListings({
           | { error?: string }
           | null;
         if (!response.ok) {
-          throw new Error(payload?.error ?? "Nie udalo sie zaktualizowac ulubionych.");
+          throw new Error(payload?.error ?? listingMessages.map.favoriteUpdateError);
         }
       } catch (favoriteError) {
         setItems((current) =>
@@ -231,7 +246,7 @@ export function ContainerDetailsRelatedListings({
         toast.error(
           favoriteError instanceof Error
             ? favoriteError.message
-            : "Nie udalo sie zaktualizowac ulubionych.",
+            : listingMessages.map.favoriteUpdateError,
         );
       } finally {
         setPendingFavoriteId(null);
@@ -246,16 +261,16 @@ export function ContainerDetailsRelatedListings({
       const url = `${origin}/containers/${listingId}`;
       const copied = await copyTextToClipboard(url);
       if (copied) {
-        toast.success("Skopiowano link do ogloszenia.");
+        toast.success(listingMessages.map.linkCopied);
       } else {
-        toast.error("Nie udalo sie skopiowac linku.");
+        toast.error(listingMessages.map.copyError);
       }
     },
-    [toast],
+    [listingMessages.map.copyError, listingMessages.map.linkCopied, toast],
   );
 
   const sectionTitle =
-    mode === "company" ? "Inne ogloszenia firmy" : "Najnowsze ogloszenia";
+    mode === "company" ? relatedMessages.companyTitle : relatedMessages.latestTitle;
   const listingsHref =
     mode === "company" && normalizedCompanySlug
       ? `/list?company=${encodeURIComponent(normalizedCompanySlug)}`
@@ -267,8 +282,10 @@ export function ContainerDetailsRelatedListings({
         <Link
           href={listingsHref}
           className="inline-flex min-h-20 w-full max-w-[220px] items-center justify-center rounded-xl border border-neutral-300 bg-neutral-100 px-6 text-center text-4xl font-semibold text-neutral-400 transition-colors hover:bg-neutral-200 hover:text-neutral-500"
-          aria-label={`Pokaz pozostale ogloszenia: ${hiddenCount}`}
-          title="Zobacz wszystkie ogloszenia"
+          aria-label={formatTemplate(relatedMessages.hiddenAriaTemplate, {
+            count: hiddenCount,
+          })}
+          title={relatedMessages.showAllTitle}
         >
           + {hiddenCount}
         </Link>
@@ -287,7 +304,7 @@ export function ContainerDetailsRelatedListings({
           href={listingsHref}
           className="inline-flex items-center gap-1 text-sm font-medium text-neutral-500 transition-colors hover:text-neutral-700"
         >
-          <span>Zobacz wszystkie</span>
+          <span>{relatedMessages.showAll}</span>
           <svg
             viewBox="0 0 20 20"
             fill="none"
@@ -305,6 +322,8 @@ export function ContainerDetailsRelatedListings({
         </Link>
       </div>
       <ContainerListingsResults
+        locale={locale}
+        messages={listingMessages}
         items={items}
         total={total}
         page={1}

@@ -27,6 +27,7 @@ import {
 import {
   normalizeCompanyVerificationStatus,
 } from "@/lib/company-verification";
+import { enforcePublicReadRateLimitOrResponse } from "@/lib/app-rate-limit";
 import { getCompanyCreationLimitState } from "@/lib/company-creation-limit";
 import { parseBbox } from "@/lib/geo";
 import { getUsersCollection } from "@/lib/users";
@@ -247,6 +248,15 @@ async function uploadCompanyImageAsset(input: {
 
 export async function GET(request: NextRequest) {
   try {
+    const rateLimitResponse = await enforcePublicReadRateLimitOrResponse({
+      request,
+      scope: "companies:list",
+      limit: 150,
+    });
+    if (rateLimitResponse) {
+      return rateLimitResponse;
+    }
+
     const query = querySchema.safeParse(
       Object.fromEntries(request.nextUrl.searchParams.entries()),
     );
@@ -337,6 +347,7 @@ export async function POST(request: NextRequest) {
       scope: "companies:create:ip",
       limit: 45,
       windowMs: 60_000,
+      onError: "block",
     });
     if (ipRateLimitResponse) {
       return ipRateLimitResponse;
@@ -353,6 +364,7 @@ export async function POST(request: NextRequest) {
       limit: 30,
       windowMs: 60_000,
       identity: user._id.toHexString(),
+      onError: "block",
     });
     if (userRateLimitResponse) {
       return userRateLimitResponse;

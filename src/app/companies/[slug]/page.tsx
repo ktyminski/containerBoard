@@ -549,13 +549,13 @@ export default async function CompanyDetailsPage({
         <section className="grid gap-3">
           <div className="flex flex-wrap items-center justify-between gap-2 px-1">
             <h2 className="text-lg font-semibold text-neutral-900">
-              Ostatnie ogloszenia firmy
+              {messages.containerListings.related.companyLatestTitle}
             </h2>
             <Link
               href={allCompanyListingsHref}
               className="inline-flex items-center gap-1 text-sm font-medium text-neutral-500 transition-colors hover:text-neutral-700"
             >
-              <span>Zobacz wszystkie</span>
+              <span>{messages.containerListings.related.showAll}</span>
               <svg
                 viewBox="0 0 20 20"
                 fill="none"

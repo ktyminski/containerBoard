@@ -57,6 +57,7 @@ export default async function MyContainersPage({
   );
   const hasOwnedCompany = Boolean(ownedCompany?._id);
   const ownedCompanyId = ownedCompany?._id?.toHexString();
+  const moduleMessages = messages.containerModules;
 
   return (
     <main className="mx-auto w-full max-w-6xl px-4 py-6 sm:px-6">
@@ -65,8 +66,8 @@ export default async function MyContainersPage({
           <div>
             <h2 className="text-lg font-semibold text-neutral-900">
               {hasOwnedCompany && ownedCompany?.name
-                ? `Moja firma - ${ownedCompany.name}`
-                : "Moja firma"}
+                ? `${moduleMessages.minePage.companyTitle} - ${ownedCompany.name}`
+                : moduleMessages.minePage.companyTitle}
             </h2>
           </div>
           <div className="ml-auto flex flex-wrap items-center justify-end gap-2">
@@ -76,13 +77,13 @@ export default async function MyContainersPage({
                   href={`/companies/${ownedCompany.slug}`}
                   className="rounded-md border border-neutral-300 bg-white px-3 py-2 text-sm font-medium text-neutral-800 transition-colors hover:bg-neutral-100"
                 >
-                  Podglad firmy
+                  {moduleMessages.minePage.companyPreview}
                 </Link>
                 <Link
                   href={`/companies/${ownedCompany.slug}/edit`}
                   className="rounded-md border border-neutral-300 bg-white px-3 py-2 text-sm font-medium text-neutral-800 transition-colors hover:bg-neutral-100"
                 >
-                  Edytuj firme
+                  {moduleMessages.minePage.companyEdit}
                 </Link>
                 {ownedCompanyId ? (
                   <CompanyDeletionRequestButton
@@ -97,10 +98,18 @@ export default async function MyContainersPage({
           </div>
         </div>
         {!hasOwnedCompany ? (
-          <NoCompanyBenefitsBanner className="mt-3" />
+          <NoCompanyBenefitsBanner
+            className="mt-3"
+            messages={moduleMessages.banner}
+          />
         ) : null}
       </section>
-      <MyContainerListings canUseBulkImport={hasOwnedCompany} />
+      <MyContainerListings
+        canUseBulkImport={hasOwnedCompany}
+        locale={locale}
+        messages={moduleMessages}
+        listingMessages={messages.containerListings}
+      />
     </main>
   );
 }

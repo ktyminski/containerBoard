@@ -30,6 +30,7 @@ export async function POST(request: Request) {
       scope: "auth:forgot-password:ip",
       limit: 8,
       windowMs: 10 * 60_000,
+      onError: "block",
     });
     if (ipRateLimitResponse) {
       return ipRateLimitResponse;
@@ -54,6 +55,7 @@ export async function POST(request: Request) {
       limit: 5,
       windowMs: 60 * 60_000,
       identity: normalizeEmail(parsed.data.email),
+      onError: "block",
     });
     if (emailRateLimitResponse) {
       return emailRateLimitResponse;

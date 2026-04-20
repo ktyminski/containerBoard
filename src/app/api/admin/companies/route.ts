@@ -1,6 +1,7 @@
 import { ObjectId, type Filter } from "mongodb";
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
+import { enforceAuthenticatedRateLimitOrResponse } from "@/lib/app-rate-limit";
 import { getCurrentUserFromRequest } from "@/lib/auth-user";
 import { safeDeleteBlobUrls } from "@/lib/blob-storage";
 import {
@@ -115,8 +116,18 @@ function collectCompanyBlobUrls(
 export async function GET(request: NextRequest) {
   try {
     const admin = await requireAdmin(request);
-    if (!admin) {
+    if (!admin?._id) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    }
+    const rateLimitResponse = await enforceAuthenticatedRateLimitOrResponse({
+      request,
+      scope: "admin:companies:read",
+      userId: admin._id.toHexString(),
+      ipLimit: 240,
+      userLimit: 120,
+    });
+    if (rateLimitResponse) {
+      return rateLimitResponse;
     }
 
     const companies = await getCompaniesCollection();
@@ -274,8 +285,18 @@ export async function GET(request: NextRequest) {
 export async function PATCH(request: NextRequest) {
   try {
     const admin = await requireAdmin(request);
-    if (!admin) {
+    if (!admin?._id) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    }
+    const rateLimitResponse = await enforceAuthenticatedRateLimitOrResponse({
+      request,
+      scope: "admin:companies:write",
+      userId: admin._id.toHexString(),
+      ipLimit: 60,
+      userLimit: 30,
+    });
+    if (rateLimitResponse) {
+      return rateLimitResponse;
     }
 
     const body = await request.json();
@@ -338,8 +359,18 @@ export async function PATCH(request: NextRequest) {
 export async function DELETE(request: NextRequest) {
   try {
     const admin = await requireAdmin(request);
-    if (!admin) {
+    if (!admin?._id) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    }
+    const rateLimitResponse = await enforceAuthenticatedRateLimitOrResponse({
+      request,
+      scope: "admin:companies:delete",
+      userId: admin._id.toHexString(),
+      ipLimit: 30,
+      userLimit: 15,
+    });
+    if (rateLimitResponse) {
+      return rateLimitResponse;
     }
 
     const body = await request.json();

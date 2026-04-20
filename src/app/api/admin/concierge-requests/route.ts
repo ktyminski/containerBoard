@@ -1,6 +1,7 @@
 import { type Filter } from "mongodb";
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
+import { enforceAuthenticatedRateLimitOrResponse } from "@/lib/app-rate-limit";
 import { getCurrentUserFromRequest } from "@/lib/auth-user";
 import {
   ensureBulkConciergeRequestIndexes,
@@ -32,8 +33,18 @@ const querySchema = z.object({
 export async function GET(request: NextRequest) {
   try {
     const admin = await requireAdmin(request);
-    if (!admin) {
+    if (!admin?._id) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    }
+    const rateLimitResponse = await enforceAuthenticatedRateLimitOrResponse({
+      request,
+      scope: "admin:concierge-requests:read",
+      userId: admin._id.toHexString(),
+      ipLimit: 180,
+      userLimit: 90,
+    });
+    if (rateLimitResponse) {
+      return rateLimitResponse;
     }
 
     await ensureBulkConciergeRequestIndexes();
@@ -148,4 +159,3 @@ export async function GET(request: NextRequest) {
     );
   }
 }
-

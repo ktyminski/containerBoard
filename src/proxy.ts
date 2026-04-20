@@ -1,12 +1,48 @@
 import { NextRequest, NextResponse } from "next/server";
+import {
+  LOCALE_COOKIE_NAME,
+  LOCALE_HEADER_NAME,
+  resolveLocale,
+} from "@/lib/i18n";
 
 const MUTATING_METHODS = new Set(["POST", "PUT", "PATCH", "DELETE"]);
 const PAGE_METHODS = new Set(["GET", "HEAD"]);
+
+function readOriginFromUrl(value: string | undefined): string | null {
+  const trimmed = value?.trim();
+  if (!trimmed) {
+    return null;
+  }
+
+  try {
+    return new URL(trimmed).origin;
+  } catch {
+    return null;
+  }
+}
+
+function buildSourceList(values: Array<string | null | undefined>): string {
+  return Array.from(
+    new Set(
+      values.filter((value): value is string => typeof value === "string" && value.length > 0),
+    ),
+  ).join(" ");
+}
+
 function buildContentSecurityPolicy(): string {
-  const scriptSrcDirectives = ["'self'", "'unsafe-inline'", "https:"];
+  const mapStyleOrigin =
+    readOriginFromUrl(process.env.NEXT_PUBLIC_MAP_STYLE_URL) ?? "https://basemaps.cartocdn.com";
+  const scriptSrcDirectives = ["'self'", "'unsafe-inline'", "https://challenges.cloudflare.com"];
   if (process.env.NODE_ENV === "development") {
     scriptSrcDirectives.push("'unsafe-eval'");
   }
+
+  const connectSrcDirectives = [
+    "'self'",
+    "https://challenges.cloudflare.com",
+    mapStyleOrigin,
+    "wss:",
+  ];
 
   return [
     "default-src 'self'",
@@ -17,9 +53,9 @@ function buildContentSecurityPolicy(): string {
     "img-src 'self' data: blob: https:",
     "font-src 'self' data: https:",
     "style-src 'self' 'unsafe-inline' https:",
-    `script-src ${scriptSrcDirectives.join(" ")}`,
+    `script-src ${buildSourceList(scriptSrcDirectives)}`,
     "frame-src 'self' https://challenges.cloudflare.com",
-    "connect-src 'self' https: wss:",
+    `connect-src ${buildSourceList(connectSrcDirectives)}`,
     "worker-src 'self' blob:",
   ].join("; ");
 }
@@ -99,11 +135,64 @@ function withSecurityHeaders(request: NextRequest, response: NextResponse): Next
   return response;
 }
 
+function upsertCookieHeader(headerValue: string | null, name: string, value: string): string {
+  const nextEntry = `${name}=${value}`;
+  if (!headerValue?.trim()) {
+    return nextEntry;
+  }
+
+  const parts = headerValue
+    .split(";")
+    .map((part) => part.trim())
+    .filter(Boolean)
+    .filter((part) => !part.toLowerCase().startsWith(`${name.toLowerCase()}=`));
+
+  return [...parts, nextEntry].join("; ");
+}
+
+function applyLocaleHeaders(request: NextRequest): {
+  locale: string;
+  response: NextResponse;
+} {
+  const locale = resolveLocale(
+    request.cookies.get(LOCALE_COOKIE_NAME)?.value ??
+      request.headers.get(LOCALE_HEADER_NAME) ??
+      request.headers.get("accept-language"),
+  );
+
+  const requestHeaders = new Headers(request.headers);
+  requestHeaders.set(LOCALE_HEADER_NAME, locale);
+  requestHeaders.set("accept-language", locale);
+  requestHeaders.set(
+    "cookie",
+    upsertCookieHeader(request.headers.get("cookie"), LOCALE_COOKIE_NAME, locale),
+  );
+
+  const response = NextResponse.next({
+    request: {
+      headers: requestHeaders,
+    },
+  });
+
+  if (request.cookies.get(LOCALE_COOKIE_NAME)?.value !== locale) {
+    response.cookies.set({
+      name: LOCALE_COOKIE_NAME,
+      value: locale,
+      path: "/",
+      sameSite: "lax",
+      maxAge: 60 * 60 * 24 * 365,
+    });
+  }
+
+  return { locale, response };
+}
+
 export function proxy(request: NextRequest) {
   const pathname = request.nextUrl.pathname;
   const method = request.method.toUpperCase();
   const isApiPath = pathname.startsWith("/api/");
   const isMutatingMethod = MUTATING_METHODS.has(method);
+  const { response } = applyLocaleHeaders(request);
 
   if (isApiPath && isMutatingMethod) {
     if (isCrossSiteBrowserRequest(request) || !isTrustedOrigin(request)) {
@@ -127,7 +216,7 @@ export function proxy(request: NextRequest) {
     }
   }
 
-  return withSecurityHeaders(request, NextResponse.next());
+  return withSecurityHeaders(request, response);
 }
 
 export const config = {

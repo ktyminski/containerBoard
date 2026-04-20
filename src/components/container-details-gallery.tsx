@@ -2,6 +2,8 @@
 
 import { useEffect, useState } from "react";
 import { ContainerPhotoWithPlaceholder } from "@/components/container-photo-with-placeholder";
+import type { ContainerModuleMessages } from "@/components/container-modules-i18n";
+import { formatTemplate } from "@/lib/i18n";
 
 type ContainerDetailsGalleryProps = {
   images: string[];
@@ -10,6 +12,7 @@ type ContainerDetailsGalleryProps = {
   mainImagePriority?: boolean;
   showThumbnails?: boolean;
   className?: string;
+  messages: ContainerModuleMessages["gallery"];
 };
 
 export function ContainerDetailsGallery({
@@ -19,14 +22,10 @@ export function ContainerDetailsGallery({
   mainImagePriority = false,
   showThumbnails = true,
   className,
+  messages,
 }: ContainerDetailsGalleryProps) {
   const [selectedIndex, setSelectedIndex] = useState(0);
   const [zoomedIndex, setZoomedIndex] = useState<number | null>(null);
-
-  useEffect(() => {
-    setSelectedIndex(0);
-    setZoomedIndex(null);
-  }, [images]);
 
   useEffect(() => {
     if (zoomedIndex === null) {
@@ -82,7 +81,7 @@ export function ContainerDetailsGallery({
           >
             <ContainerPhotoWithPlaceholder
               src={selectedImage}
-              alt={`Zdjecie glowne ogloszenia: ${title}`}
+              alt={formatTemplate(messages.mainImageAlt, { title })}
               fill
               unoptimized
               className="object-contain p-1"
@@ -110,7 +109,10 @@ export function ContainerDetailsGallery({
                 >
                   <ContainerPhotoWithPlaceholder
                     src={imageSrc}
-                    alt={`Zdjecie ${index + 1}: ${title}`}
+                    alt={formatTemplate(messages.thumbnailAlt, {
+                      index: index + 1,
+                      title,
+                    })}
                     fill
                     unoptimized
                     className="object-contain p-1"
@@ -127,7 +129,7 @@ export function ContainerDetailsGallery({
         <div className="fixed inset-0 z-[85] flex items-center justify-center bg-neutral-950/85 p-4">
           <button
             type="button"
-            aria-label="Zamknij podglad zdjecia"
+            aria-label={messages.closePreviewAria}
             className="absolute inset-0"
             onClick={() => {
               setZoomedIndex(null);
@@ -143,14 +145,14 @@ export function ContainerDetailsGallery({
                 }}
                 className="rounded-md border border-neutral-300 bg-white px-3 py-1.5 text-sm text-neutral-700 hover:bg-neutral-100"
               >
-                Zamknij
+                {messages.close}
               </button>
             </div>
 
             <div className="relative h-[70vh] w-full overflow-hidden rounded-md border border-neutral-700 bg-neutral-900">
               <ContainerPhotoWithPlaceholder
                 src={zoomedImage}
-                alt={`Podglad zdjecia: ${title}`}
+                alt={formatTemplate(messages.previewAlt, { title })}
                 fill
                 unoptimized
                 className="object-contain p-2"
@@ -169,11 +171,11 @@ export function ContainerDetailsGallery({
                       if (current === null) {
                         return current;
                       }
-                      return (current - 1 + images.length) % images.length;
-                    });
-                  }}
-                >
-                  Poprzednie
+                    return (current - 1 + images.length) % images.length;
+                  });
+                }}
+              >
+                  {messages.previous}
                 </button>
                 <p className="text-sm text-neutral-100">
                   {(zoomedIndex ?? 0) + 1} / {images.length}
@@ -186,11 +188,11 @@ export function ContainerDetailsGallery({
                       if (current === null) {
                         return current;
                       }
-                      return (current + 1) % images.length;
-                    });
-                  }}
-                >
-                  Nastepne
+                    return (current + 1) % images.length;
+                  });
+                }}
+              >
+                  {messages.next}
                 </button>
               </div>
             ) : null}

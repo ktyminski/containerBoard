@@ -1,6 +1,8 @@
+import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { ContainerDetailsContent } from "@/components/container-details-content";
 import { ListDetailsOverlayFrame } from "@/components/list-details-overlay-frame";
+import { getLocaleFromRequest, getMessages, LOCALE_COOKIE_NAME } from "@/lib/i18n";
 
 type ListContainerOverlayPageProps = {
   params: Promise<{ id: string }>;
@@ -25,6 +27,12 @@ export default async function ListContainerOverlayPage({
   searchParams,
 }: ListContainerOverlayPageProps) {
   const [{ id }, queryParams] = await Promise.all([params, searchParams]);
+  const cookieStore = await cookies();
+  const locale = getLocaleFromRequest({
+    params: queryParams,
+    cookieLocale: cookieStore.get(LOCALE_COOKIE_NAME)?.value,
+  });
+  const messages = getMessages(locale).containerListings;
   if (id === "mine") {
     redirect("/containers/mine");
   }
@@ -35,7 +43,12 @@ export default async function ListContainerOverlayPage({
   const listHref = listParams.toString() ? `/list?${listParams.toString()}` : "/list";
 
   return (
-    <ListDetailsOverlayFrame listHref={listHref} preferHistoryBack animateOnMount={false}>
+    <ListDetailsOverlayFrame
+      listHref={listHref}
+      closeLabel={messages.map.closePreview}
+      preferHistoryBack
+      animateOnMount={false}
+    >
       <ContainerDetailsContent
         listingId={id}
         listHref={listHref}

@@ -4,12 +4,18 @@ import { redirect } from "next/navigation";
 import { ContainerListingsBoard } from "@/components/container-listings-board";
 import { SESSION_COOKIE_NAME } from "@/lib/auth-session";
 import type { ListingKind } from "@/components/container-listings-shared";
+import { getMessages, LOCALE_COOKIE_NAME, resolveLocale } from "@/lib/i18n";
 
-export const metadata: Metadata = {
-  title: "Lista kontenerow | ContainerBoard",
-  description:
-    "Szybka tablica kontenerow: sprzedaz, wynajem i zapytania zakupu, filtry oraz zapytania email.",
-};
+export async function generateMetadata(): Promise<Metadata> {
+  const cookieStore = await cookies();
+  const locale = resolveLocale(cookieStore.get(LOCALE_COOKIE_NAME)?.value);
+  const messages = getMessages(locale).listPage;
+
+  return {
+    title: messages.metaTitle,
+    description: messages.metaDescription,
+  };
+}
 
 type ListPageProps = {
   searchParams: Promise<Record<string, string | string[] | undefined>>;
@@ -44,6 +50,12 @@ function resolveCompanySlug(value: string | string[] | undefined): string | unde
   return trimmed.slice(0, 160);
 }
 
+function resolveTrimmedParam(value: string | string[] | undefined): string | undefined {
+  const raw = typeof value === "string" ? value : value?.[0];
+  const trimmed = raw?.trim();
+  return trimmed ? trimmed : undefined;
+}
+
 function toSearchParams(
   params: Record<string, string | string[] | undefined>,
 ): URLSearchParams {
@@ -63,7 +75,12 @@ export default async function ListPage({ searchParams }: ListPageProps) {
   const initialTab = resolveTab(params.tab);
   const initialMine = resolveMine(params.mine);
   const hiddenCompanySlug = resolveCompanySlug(params.company);
+  const initialCity = resolveTrimmedParam(params.city);
+  const initialCountry = resolveTrimmedParam(params.country);
+  const initialCountryCode = resolveTrimmedParam(params.countryCode)?.toUpperCase();
   const cookieStore = await cookies();
+  const locale = resolveLocale(cookieStore.get(LOCALE_COOKIE_NAME)?.value);
+  const messages = getMessages(locale).containerListings;
   const isLoggedIn = Boolean(cookieStore.get(SESSION_COOKIE_NAME)?.value);
 
   if (!isLoggedIn && initialMine) {
@@ -75,11 +92,16 @@ export default async function ListPage({ searchParams }: ListPageProps) {
   return (
     <main className="w-full pb-6">
       <ContainerListingsBoard
+        locale={locale}
+        messages={messages}
         isLoggedIn={isLoggedIn}
         initialKind={initialKind}
         initialTab={initialTab}
         initialMine={initialMine}
         hiddenCompanySlug={hiddenCompanySlug}
+        initialCity={initialCity}
+        initialCountry={initialCountry}
+        initialCountryCode={initialCountryCode}
       />
     </main>
   );
