@@ -40,7 +40,7 @@ export default async function MailPreviewsPage({ searchParams }: MailPreviewsPag
     redirect(withLang("/list", locale));
   }
 
-  const cases = getMailPreviewCases();
+  const cases = getMailPreviewCases(messages.adminMailPreviews.cases);
   const requestedTemplate = Array.isArray(params.template) ? params.template[0] : params.template;
   const selectedCase = cases.find((item) => item.id === requestedTemplate) ?? cases[0];
 

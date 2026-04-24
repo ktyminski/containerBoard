@@ -501,6 +501,7 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
       const nextPhotos = prependUploadedPhotos
         ? [...storedNextUploadedPhotos, ...keptExistingPhotos]
         : [...keptExistingPhotos, ...storedNextUploadedPhotos];
+      const shouldReactivateOnSave = updateParsed.data.reactivateOnSave === true;
       const unsetPatch: Record<string, 1> = {};
       unsetPatch.containerType = 1;
       if (!primaryLocation.locationAddressLabel) {
@@ -607,9 +608,27 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
           {
             $set: {
               ...setFields,
+              ...(shouldReactivateOnSave
+                ? {
+                    status: LISTING_STATUS.ACTIVE,
+                    expiresAt: getDefaultListingExpiration(now),
+                  }
+                : {}),
               updatedAt: now,
             },
-            ...(Object.keys(unsetPatch).length > 0 ? { $unset: unsetPatch } : {}),
+            ...((Object.keys(unsetPatch).length > 0 || shouldReactivateOnSave)
+              ? {
+                  $unset: {
+                    ...(Object.keys(unsetPatch).length > 0 ? unsetPatch : {}),
+                    ...(shouldReactivateOnSave
+                      ? {
+                          expiryReminder7dSentAt: 1,
+                          expiryReminder2dSentAt: 1,
+                        }
+                      : {}),
+                  },
+                }
+              : {}),
           },
         );
       } catch (dbError) {

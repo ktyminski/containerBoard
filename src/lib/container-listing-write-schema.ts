@@ -209,5 +209,6 @@ export const createListingSchema = withListingWriteRefinements(
 export const updateListingSchema = withListingWriteRefinements(
   listingWriteBaseObjectSchema.extend({
     action: z.literal("update"),
+    reactivateOnSave: z.coerce.boolean().optional(),
   }),
 );

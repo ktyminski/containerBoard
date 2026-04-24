@@ -5,6 +5,10 @@ import { SESSION_COOKIE_NAME } from "@/lib/auth-session";
 import { getCurrentUserFromRequest } from "@/lib/auth-user";
 import { normalizeGeocodeAddressParts } from "@/lib/geocode-address";
 import {
+  resolveCountryCodeFromInput,
+  resolveCountryCodeFromInputApprox,
+} from "@/lib/country-flags";
+import {
   MAX_LISTING_LOCATIONS,
   normalizeListingLocations,
 } from "@/lib/listing-locations";
@@ -101,7 +105,7 @@ const querySchema = z.object({
   hasCscCertification: z.string().trim().max(8).optional(),
   locationLat: z.coerce.number().finite().min(-90).max(90).optional(),
   locationLng: z.coerce.number().finite().min(-180).max(180).optional(),
-  radiusKm: z.enum(["20", "50", "100", "200"]).transform((value) => {
+  radiusKm: z.enum(["20", "50", "100", "200", "400"]).transform((value) => {
     if (value === "20") {
       return 20;
     }
@@ -111,7 +115,10 @@ const querySchema = z.object({
     if (value === "100") {
       return 100;
     }
-    return 200;
+    if (value === "200") {
+      return 200;
+    }
+    return 400;
   }).optional(),
   city: z.string().trim().min(1).max(120).optional(),
   country: z.string().trim().min(1).max(120).optional(),
@@ -134,7 +141,13 @@ const querySchema = z.object({
     .optional()
     .transform((value) => value === "1" || value === "true"),
   localFavoriteIds: z.string().trim().max(80_000).optional(),
+  deliveryReach: z
+    .string()
+    .optional()
+    .transform((value) => value === "1" || value === "true"),
 });
+
+const EARTH_RADIUS_KM = 6371;
 
 function parseEnumList<T extends string>(value: string | undefined, allowed: readonly T[]): T[] {
   if (!value) {
@@ -252,6 +265,212 @@ function parseBooleanFlag(value: string | undefined): boolean | undefined {
   return undefined;
 }
 
+function getEffectiveCountryCode(input: {
+  locationCountry?: string;
+  locationCountryCode?: string;
+  locationAddressParts?: {
+    country?: string;
+  };
+}): string {
+  const countryName =
+    input.locationAddressParts?.country?.trim() ||
+    input.locationCountry?.trim() ||
+    "";
+  const resolved =
+    resolveCountryCodeFromInput(countryName) ??
+    resolveCountryCodeFromInputApprox(countryName) ??
+    input.locationCountryCode?.trim().toUpperCase() ??
+    "";
+  return resolved.toUpperCase();
+}
+
+function locationMatchesAdministrativeFilter(
+  location: {
+    locationCity?: string;
+    locationCountry?: string;
+    locationCountryCode?: string;
+    locationAddressParts?: {
+      city?: string;
+      country?: string;
+    };
+  },
+  filter: {
+    city?: string;
+    country?: string;
+    countryCode?: string;
+  },
+): boolean {
+  const normalizedFilterCity = filter.city?.trim().toLowerCase() ?? "";
+  const normalizedFilterCountry = filter.country?.trim().toLowerCase() ?? "";
+  const normalizedFilterCountryCode = filter.countryCode?.trim().toUpperCase() ?? "";
+
+  const locationCity =
+    location.locationAddressParts?.city?.trim().toLowerCase() ||
+    location.locationCity?.trim().toLowerCase() ||
+    "";
+  const locationCountry =
+    location.locationAddressParts?.country?.trim().toLowerCase() ||
+    location.locationCountry?.trim().toLowerCase() ||
+    "";
+  const locationCountryCode = getEffectiveCountryCode(location);
+
+  if (normalizedFilterCity && locationCity !== normalizedFilterCity) {
+    return false;
+  }
+
+  if (normalizedFilterCountryCode && locationCountryCode !== normalizedFilterCountryCode) {
+    return false;
+  }
+
+  if (normalizedFilterCountryCode) {
+    return true;
+  }
+
+  if (
+    normalizedFilterCountry &&
+    locationCountry &&
+    locationCountry !== normalizedFilterCountry
+  ) {
+    return false;
+  }
+
+  return true;
+}
+
+function pruneMapRowToMatchingLocations(
+  row: MapListingRow,
+  filter: {
+    city?: string;
+    country?: string;
+    countryCode?: string;
+  } | null,
+): MapListingRow {
+  if (!filter) {
+    return row;
+  }
+
+  const matchingLocations = (row.locations ?? []).filter((location) =>
+    locationMatchesAdministrativeFilter(location, filter),
+  );
+  const rootLocationMatches = locationMatchesAdministrativeFilter(
+    {
+      locationCity: row.locationCity,
+      locationCountry: row.locationCountry,
+      locationCountryCode: row.locationCountryCode,
+      locationAddressParts: row.locationAddressParts,
+    },
+    filter,
+  );
+
+  return {
+    ...row,
+    locations: matchingLocations,
+    locationLat: rootLocationMatches ? row.locationLat : undefined,
+    locationLng: rootLocationMatches ? row.locationLng : undefined,
+  };
+}
+
+function toRadians(value: number): number {
+  return (value * Math.PI) / 180;
+}
+
+function getDistanceKmBetweenPoints(input: {
+  fromLat: number;
+  fromLng: number;
+  toLat: number;
+  toLng: number;
+}): number {
+  const dLat = toRadians(input.toLat - input.fromLat);
+  const dLng = toRadians(input.toLng - input.fromLng);
+  const fromLatRad = toRadians(input.fromLat);
+  const toLatRad = toRadians(input.toLat);
+
+  const a =
+    Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+    Math.cos(fromLatRad) *
+      Math.cos(toLatRad) *
+      Math.sin(dLng / 2) *
+      Math.sin(dLng / 2);
+
+  return EARTH_RADIUS_KM * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+}
+
+function getListingDeliveryReachDistanceKm(
+  listing: Pick<
+    ContainerListingDocument,
+    | "locationLat"
+    | "locationLng"
+    | "locations"
+    | "logisticsTransportIncluded"
+    | "logisticsTransportFreeDistanceKm"
+  >,
+  target: { lat: number; lng: number },
+): number | null {
+  const freeDistanceKm =
+    listing.logisticsTransportIncluded === true &&
+    typeof listing.logisticsTransportFreeDistanceKm === "number" &&
+    Number.isFinite(listing.logisticsTransportFreeDistanceKm) &&
+    listing.logisticsTransportFreeDistanceKm > 0
+      ? Math.trunc(listing.logisticsTransportFreeDistanceKm)
+      : null;
+
+  if (freeDistanceKm === null) {
+    return null;
+  }
+
+  let bestDistanceKm: number | null = null;
+
+  const tryPoint = (lat: number | null | undefined, lng: number | null | undefined) => {
+    if (
+      typeof lat !== "number" ||
+      !Number.isFinite(lat) ||
+      typeof lng !== "number" ||
+      !Number.isFinite(lng)
+    ) {
+      return;
+    }
+
+    const distanceKm = getDistanceKmBetweenPoints({
+      fromLat: lat,
+      fromLng: lng,
+      toLat: target.lat,
+      toLng: target.lng,
+    });
+
+    if (distanceKm > freeDistanceKm) {
+      return;
+    }
+
+    if (bestDistanceKm === null || distanceKm < bestDistanceKm) {
+      bestDistanceKm = distanceKm;
+    }
+  };
+
+  for (const location of listing.locations ?? []) {
+    tryPoint(location.locationLat, location.locationLng);
+  }
+
+  tryPoint(listing.locationLat, listing.locationLng);
+
+  return bestDistanceKm;
+}
+
+function appendAndCondition(
+  filter: Filter<ContainerListingDocument>,
+  condition: Filter<ContainerListingDocument>,
+): Filter<ContainerListingDocument> {
+  const existingAnd = Array.isArray(filter.$and) ? filter.$and : [];
+  const baseFilter =
+    Array.isArray(filter.$and) && Object.keys(filter).length === 1
+      ? {}
+      : filter;
+
+  return {
+    ...(Object.keys(baseFilter).length > 0 ? baseFilter : {}),
+    $and: [...existingAnd, condition],
+  };
+}
+
 function getPriceNetFieldForCurrency(currency: Currency): string {
   if (currency === "EUR") {
     return "pricing.normalized.net.amountEur";
@@ -336,7 +555,16 @@ type CompanyProfileByOwner = {
 
 type MapListingRow = Pick<
   ContainerListingDocument,
-  "_id" | "type" | "quantity" | "locationLat" | "locationLng" | "locations"
+  | "_id"
+  | "type"
+  | "quantity"
+  | "locationLat"
+  | "locationLng"
+  | "locationCity"
+  | "locationCountry"
+  | "locationCountryCode"
+  | "locationAddressParts"
+  | "locations"
 >;
 
 function isSameCompanyName(left: string, right: string): boolean {
@@ -727,6 +955,7 @@ export async function GET(request: NextRequest) {
       ids,
       favorites,
       localFavoriteIds,
+      deliveryReach,
     } = parsed.data;
 
     const { sizes: containerSizes, includeCustomSize } = parseContainerSizeList(containerSize);
@@ -819,9 +1048,9 @@ export async function GET(request: NextRequest) {
       logisticsUnloadingAvailable: parsedLogisticsUnloading,
       hasCscPlate: parsedHasCscPlate,
       hasCscCertification: parsedHasCscCertification,
-      locationLat,
-      locationLng,
-      radiusKm,
+      locationLat: deliveryReach ? undefined : locationLat,
+      locationLng: deliveryReach ? undefined : locationLng,
+      radiusKm: deliveryReach ? undefined : radiusKm,
       city,
       country,
       countryCode,
@@ -936,6 +1165,85 @@ export async function GET(request: NextRequest) {
       });
     }
 
+    if (deliveryReach) {
+      if (
+        typeof locationLat !== "number" ||
+        !Number.isFinite(locationLat) ||
+        typeof locationLng !== "number" ||
+        !Number.isFinite(locationLng)
+      ) {
+        return NextResponse.json({
+          items: [],
+          meta: {
+            page: 1,
+            pageSize,
+            total: 0,
+            totalPages: 1,
+          },
+        });
+      }
+
+      const deliveryReachFilter = appendAndCondition(typedFilter, {
+        logisticsTransportIncluded: true,
+        logisticsTransportFreeDistanceKm: { $gt: 0 },
+      });
+      const candidateRows = await listings.find(deliveryReachFilter).toArray();
+      const matchedRows = candidateRows
+        .map((row) => ({
+          row,
+          deliveryDistanceKm: getListingDeliveryReachDistanceKm(row, {
+            lat: locationLat,
+            lng: locationLng,
+          }),
+        }))
+        .filter(
+          (
+            entry,
+          ): entry is {
+            row: ContainerListingDocument;
+            deliveryDistanceKm: number;
+          } => typeof entry.deliveryDistanceKm === "number",
+        )
+        .sort((left, right) => {
+          if (left.deliveryDistanceKm !== right.deliveryDistanceKm) {
+            return left.deliveryDistanceKm - right.deliveryDistanceKm;
+          }
+          return right.row.createdAt.getTime() - left.row.createdAt.getTime();
+        });
+
+      const deliveryTotal = matchedRows.length;
+      const deliveryTotalPages = Math.max(1, Math.ceil(deliveryTotal / pageSize));
+      const deliveryCurrentPage = Math.min(page, deliveryTotalPages);
+      const deliveryPageRows = matchedRows
+        .slice((deliveryCurrentPage - 1) * pageSize, deliveryCurrentPage * pageSize)
+        .map((entry) => entry.row);
+
+      const [companyProfilesByOwnerUserId, favoriteIdSet] = await Promise.all([
+        getCompanyProfilesByOwnerUserId(deliveryPageRows),
+        user?._id
+          ? favorites
+            ? Promise.resolve(new Set(deliveryPageRows.map((row) => row._id.toHexString())))
+            : getUserFavoriteListingIdSet(
+                user._id,
+                deliveryPageRows.map((row) => row._id),
+              )
+          : Promise.resolve<Set<string> | undefined>(undefined),
+      ]);
+
+      return NextResponse.json({
+        items: mapRowsToItems(deliveryPageRows, {
+          favoriteIdSet: favoriteIdSet ?? undefined,
+          companyProfilesByOwnerUserId,
+        }),
+        meta: {
+          page: deliveryCurrentPage,
+          pageSize,
+          total: deliveryTotal,
+          totalPages: deliveryTotalPages,
+        },
+      });
+    }
+
     if (view === "map") {
       const rows = await getMapListingRows({
         listings,
@@ -946,14 +1254,21 @@ export async function GET(request: NextRequest) {
         priceCurrency: priceCurrency ?? undefined,
         limit: all ? MAX_MAP_POINTS : pageSize,
       });
+      const administrativeLocationFilter =
+        city || country || countryCode
+          ? {
+              city,
+              country,
+              countryCode,
+            }
+          : null;
 
       const mapPoints = rows.flatMap((row) =>
         mapContainerListingToMapPoints(
-          row as Pick<
-            ContainerListingDocument,
-            "_id" | "type" | "quantity" | "locationLat" | "locationLng" | "locations"
-          >,
-          { bounds: mapLocationBounds },
+          pruneMapRowToMatchingLocations(row as MapListingRow, administrativeLocationFilter),
+          {
+            bounds: mapLocationBounds,
+          },
         ),
       );
       const clippedMapPoints = all ? mapPoints.slice(0, MAX_MAP_POINTS) : mapPoints;

@@ -41,7 +41,7 @@ export function StaticPageFrame({
           {mapLabel ? (
             <Link
               href={withLang(mapHref, locale)}
-              className="inline-flex items-center gap-2 rounded-md border border-sky-700 px-3 py-2 text-sm text-sky-200 transition-colors hover:border-sky-500"
+              className="inline-flex items-center gap-2 rounded-md bg-[#05244f] px-4 py-2 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-[#073064]"
             >
               <span>{mapLabel}</span>
               <span aria-hidden="true">&rarr;</span>

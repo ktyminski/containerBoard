@@ -13,11 +13,11 @@ import {
 } from "react";
 import { useFormContext, useWatch } from "react-hook-form";
 import {
-  getContainerConditionOptions,
-  getContainerFeatureOptions,
-  getContainerHeightOptions,
-  getContainerSizeOptions,
-  getContainerTypeOptions,
+  getContainerConditionFilterOptions,
+  getContainerFeatureFilterOptions,
+  getContainerHeightFilterOptions,
+  getContainerSizeFilterOptions,
+  getContainerTypeFilterOptions,
   getListingKindOptions,
   getPriceDisplayOptions,
   getPriceTaxModeLabel,
@@ -360,24 +360,24 @@ function ContainerListingsFiltersComponent({
     [messages],
   );
   const containerSizeOptions = useMemo(
-    () => getContainerSizeOptions(messages),
-    [messages],
+    () => getContainerSizeFilterOptions(),
+    [],
   );
   const containerHeightOptions = useMemo(
-    () => getContainerHeightOptions(messages),
-    [messages],
+    () => getContainerHeightFilterOptions(),
+    [],
   );
   const containerTypeOptions = useMemo(
-    () => getContainerTypeOptions(messages),
-    [messages],
+    () => getContainerTypeFilterOptions(),
+    [],
   );
   const containerConditionOptions = useMemo(
-    () => getContainerConditionOptions(messages),
-    [messages],
+    () => getContainerConditionFilterOptions(),
+    [],
   );
   const containerFeatureOptions = useMemo(
-    () => getContainerFeatureOptions(messages),
-    [messages],
+    () => getContainerFeatureFilterOptions(),
+    [],
   );
 
   const draftNonLocationFilters = useMemo<NonLocationFilters>(() => {

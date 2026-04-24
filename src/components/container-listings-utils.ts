@@ -8,7 +8,8 @@ import {
   type SortPreset,
   toNormalizedArray,
 } from "@/components/container-listings-shared";
-import { formatTemplate } from "@/lib/i18n";
+import { getCountryDisplayName } from "@/lib/country-flags";
+import { formatTemplate, type AppLocale } from "@/lib/i18n";
 
 type SortParams = {
   sortBy: string;
@@ -18,11 +19,13 @@ type SortParams = {
 type BuildContainersApiUrlOptions = {
   appliedFilters: AppliedFilters;
   page?: number;
+  pageSize?: number;
   mapView?: boolean;
   favoritesOnly?: boolean;
   localFavoriteIds?: string[];
   mineOnly?: boolean;
   companySlug?: string;
+  deliveryReach?: boolean;
 };
 
 export function getSortParams(preset: SortPreset): SortParams {
@@ -51,6 +54,7 @@ export function getCoordinateKey(lat: number, lng: number): string {
 export function getContainerListingLocationLabel(
   item: ContainerListingItem,
   messages?: ContainerListingsMessages["utils"],
+  locale?: AppLocale,
 ): string {
   const primaryLocation = item.locations?.find((location) => location.isPrimary) ?? item.locations?.[0];
   const postalCode =
@@ -62,11 +66,18 @@ export function getContainerListingLocationLabel(
     primaryLocation?.locationCity?.trim() ||
     item.locationAddressParts?.city?.trim() ||
     item.locationCity.trim();
-  const country =
+  const rawCountry =
     primaryLocation?.locationAddressParts?.country?.trim() ||
     primaryLocation?.locationCountry?.trim() ||
     item.locationAddressParts?.country?.trim() ||
     item.locationCountry.trim();
+  const countryCode =
+    primaryLocation?.locationCountryCode?.trim() ||
+    item.locationCountryCode?.trim() ||
+    "";
+  const country = locale
+    ? getCountryDisplayName(countryCode, locale, rawCountry)
+    : rawCountry;
   const combined = [postalCode, [city, country].filter(Boolean).join(", ")]
     .filter(Boolean)
     .join(" ");
@@ -135,20 +146,28 @@ export function buildAppliedBaseFromFormValues(
 export function buildContainersApiUrl({
   appliedFilters,
   page,
+  pageSize,
   mapView = false,
   favoritesOnly = false,
   localFavoriteIds = [],
   mineOnly = false,
   companySlug,
+  deliveryReach = false,
 }: BuildContainersApiUrlOptions): string {
   const params = mapView
     ? new URLSearchParams({
         view: "map",
         all: "1",
       })
-    : createListQueryParams(appliedFilters, page ?? 1);
+    : createListQueryParams(appliedFilters, page ?? 1, pageSize ?? 20);
 
-  applyLocationParams(params, appliedFilters);
+  if (deliveryReach) {
+    params.set("deliveryReach", "1");
+  }
+
+  applyLocationParams(params, appliedFilters, {
+    deliveryReach,
+  });
   applyListingKindParams(params, appliedFilters.listingKind);
   applyContainerParams(params, appliedFilters);
   if (favoritesOnly) {
@@ -167,7 +186,11 @@ export function buildContainersApiUrl({
   return `/api/containers?${params.toString()}`;
 }
 
-function createListQueryParams(appliedFilters: AppliedFilters, page: number): URLSearchParams {
+function createListQueryParams(
+  appliedFilters: AppliedFilters,
+  page: number,
+  pageSize: number,
+): URLSearchParams {
   const hasPriceRange =
     appliedFilters.priceMinInput.trim().length > 0 ||
     appliedFilters.priceMaxInput.trim().length > 0;
@@ -181,7 +204,7 @@ function createListQueryParams(appliedFilters: AppliedFilters, page: number): UR
 
   return new URLSearchParams({
     page: String(page),
-    pageSize: "20",
+    pageSize: String(pageSize),
     sortBy,
     sortDir,
   });
@@ -191,15 +214,32 @@ function applyListingKindParams(params: URLSearchParams, listingKind: ListingKin
   params.set("type", listingKind);
 }
 
-function applyLocationParams(params: URLSearchParams, appliedFilters: AppliedFilters): void {
+function applyLocationParams(
+  params: URLSearchParams,
+  appliedFilters: AppliedFilters,
+  options?: {
+    deliveryReach?: boolean;
+  },
+): void {
   if (appliedFilters.locationCenter) {
     params.set("locationLat", appliedFilters.locationCenter.lat.toFixed(6));
     params.set("locationLng", appliedFilters.locationCenter.lng.toFixed(6));
-    params.set("radiusKm", appliedFilters.locationRadiusKm);
+    if (options?.deliveryReach !== true) {
+      params.set("radiusKm", appliedFilters.locationRadiusKm);
+    }
     return;
   }
 
-  if (appliedFilters.locationQuery) {
+  const hasAdministrativeLocationFilter =
+    appliedFilters.countryCode.trim().length > 0 ||
+    appliedFilters.country.trim().length > 0 ||
+    appliedFilters.city.trim().length > 0;
+
+  if (
+    options?.deliveryReach !== true &&
+    appliedFilters.locationQuery &&
+    !hasAdministrativeLocationFilter
+  ) {
     params.set("q", appliedFilters.locationQuery);
   }
 }

@@ -15,6 +15,7 @@ type BranchLocation = {
   addressText: string;
   postalCode?: string;
   country?: string;
+  countryCode?: string;
   phone?: string;
   email?: string;
   photos: BranchPhoto[];
@@ -30,8 +31,8 @@ type CompanyBranchesListProps = {
 
 const INITIAL_VISIBLE_BRANCHES = 3;
 
-function LocationFlag({ country }: { country?: string }) {
-  const flagUrl = getCountryFlagSvgUrl(country);
+function LocationFlag({ country, countryCode }: { country?: string; countryCode?: string }) {
+  const flagUrl = getCountryFlagSvgUrl(countryCode ?? country);
   if (flagUrl) {
     return (
       <Image
@@ -46,7 +47,7 @@ function LocationFlag({ country }: { country?: string }) {
     );
   }
 
-  const emoji = getCountryFlagEmoji(country);
+  const emoji = getCountryFlagEmoji(countryCode ?? country);
   if (emoji === "??") {
     return null;
   }
@@ -78,7 +79,10 @@ export function CompanyBranchesList({
               <div className="min-w-0">
                 <p className="text-sm font-semibold text-neutral-100">{location.label}</p>
                 <p className="mt-1 flex min-w-0 items-start gap-2 text-sm text-neutral-300">
-                  <LocationFlag country={location.country} />
+                  <LocationFlag
+                    country={location.country}
+                    countryCode={location.countryCode}
+                  />
                   <span className="min-w-0 break-words">
                     {location.postalCode ? (
                       <span className="font-semibold text-neutral-100">{location.postalCode}</span>

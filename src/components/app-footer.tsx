@@ -30,6 +30,12 @@ export function AppFooter({ locale, messages }: AppFooterProps) {
           <Link href={withLang("/containers/new", locale)} className="transition hover:text-[#7dd3fc]">
             {messages.addContainer}
           </Link>
+          <Link href={withLang("/about", locale)} className="transition hover:text-[#7dd3fc]">
+            {messages.about}
+          </Link>
+          <Link href={withLang("/contact", locale)} className="transition hover:text-[#7dd3fc]">
+            {messages.contact}
+          </Link>
           <Link href={withLang("/privacy-policy", locale)} className="transition hover:text-[#7dd3fc]">
             {messages.privacyPolicy}
           </Link>

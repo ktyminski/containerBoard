@@ -6,7 +6,6 @@ import {
 } from "@/lib/geocode-address";
 import {
   resolveCountryCodeFromInput,
-  resolveCountryCodeFromInputApprox,
 } from "@/lib/country-flags";
 
 type NominatimResult = {
@@ -49,10 +48,7 @@ function resolveCountryGeocodeQuery(query: string): CountryGeocodeQuery | null {
     return null;
   }
 
-  const exactCountryCode = resolveCountryCodeFromInput(normalized);
-  const countryCode =
-    exactCountryCode ??
-    (tokenCount <= 2 ? resolveCountryCodeFromInputApprox(normalized) : null);
+  const countryCode = resolveCountryCodeFromInput(normalized);
   if (!countryCode) {
     return null;
   }
@@ -70,6 +66,7 @@ export type GeocodeSearchItem = {
   shortLabel: string;
   addressParts: GeocodeAddressParts | null;
   countryCode: string | null;
+  matchType: "country" | "place";
 };
 
 export async function searchGeocode(input: {
@@ -119,6 +116,7 @@ export async function searchGeocode(input: {
         }),
         addressParts: buildGeocodeAddressParts(row.address) ?? null,
         countryCode: row.address?.country_code?.toUpperCase() ?? null,
+        matchType: countryQuery ? "country" : "place",
       };
     })
     .filter((item): item is GeocodeSearchItem => Boolean(item));

@@ -14,7 +14,7 @@ import {
 
 export const metadata: Metadata = {
   title: "Dodaj kontener | ContainerBoard",
-  description: "Dodaj nowe ogloszenie kontenera w mniej niz minute.",
+  description: "Dodaj nowe ogłoszenie kontenera w mniej niż minutę.",
 };
 
 type NewContainerPageProps = {

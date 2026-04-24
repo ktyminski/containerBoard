@@ -45,6 +45,7 @@ import {
   buildContainerListingDocument,
   normalizeOptionalString,
 } from "@/lib/container-listing-write";
+import { formatTemplate, getLocaleFromApiRequest, getMessages } from "@/lib/i18n";
 import { enforceRateLimitOrResponse } from "@/lib/request-rate-limit";
 import { logError } from "@/lib/server-logger";
 
@@ -65,6 +66,8 @@ type BulkRowFailure = {
   rowNumber: number;
   error: string;
 };
+
+type BulkApiMessages = ReturnType<typeof getMessages>["containerModules"]["bulkApi"];
 
 type ParsedCsv = {
   headers: string[];
@@ -490,56 +493,58 @@ function parseBulkRow(input: {
   fallbackContactEmail: string;
   fallbackContactPhone?: string;
   fallbackLocationAddress?: string;
+  messages: BulkApiMessages;
 }): { value?: ParsedBulkRow; error?: string } {
   const get = (key: string) => getCellValue(input.row, input.headerIndex, key);
+  const messages = input.messages;
 
   const parsedType = normalizeOptionalString(get("type"))
     ? parseListingType(get("type"))
     : "sell";
   if (parsedType !== "sell") {
-    return { error: "Bulk import obsluguje tylko oferty typu sell" };
+    return { error: messages.onlySell };
   }
   const containerSize = parseContainerSize(get("container_size"));
   if (containerSize === undefined) {
-    return { error: "Nieprawidlowy rozmiar kontenera (container_size)" };
+    return { error: messages.invalidSize };
   }
   const containerHeight = parseContainerHeight(get("container_height"));
   if (!containerHeight) {
-    return { error: "Nieprawidlowa wysokosc kontenera (container_height)" };
+    return { error: messages.invalidHeight };
   }
   const containerType = parseContainerType(get("container_type"));
   if (!containerType) {
-    return { error: "Nieprawidlowy typ kontenera (container_type)" };
+    return { error: messages.invalidType };
   }
   const containerCondition = parseContainerCondition(get("container_condition"));
   if (!containerCondition) {
-    return { error: "Nieprawidlowy stan kontenera (container_condition)" };
+    return { error: messages.invalidCondition };
   }
 
   const quantity = parseInteger(get("quantity"));
   if (quantity === undefined || quantity < 1 || quantity > 100_000) {
-    return { error: "Nieprawidlowa ilosc (quantity)" };
+    return { error: messages.invalidQuantity };
   }
 
   const locationAddressQuery =
     normalizeOptionalString(get("location_address")) ??
     normalizeOptionalString(input.fallbackLocationAddress);
   if (!locationAddressQuery || locationAddressQuery.length < 3) {
-    return { error: "Nieprawidlowy adres (location_address)" };
+    return { error: messages.invalidAddress };
   }
 
   const parsedAvailableNow = parseBooleanFlag(get("available_now"));
   const availableFromDate = parseDateString(get("available_from"));
   const availableNow = parsedAvailableNow !== undefined ? parsedAvailableNow : !availableFromDate;
   if (!availableNow && !availableFromDate) {
-    return { error: "Podaj available_from albo ustaw available_now=true" };
+    return { error: messages.availableFromRequired };
   }
   const availableFromApproximate = parseBooleanFlag(get("available_from_approximate")) === true;
 
   const priceAmount = parseInteger(get("price_amount"));
   const rawPriceAmount = normalizeOptionalString(get("price_amount"));
   if (rawPriceAmount && (priceAmount === undefined || priceAmount < 0 || priceAmount > 100_000_000)) {
-    return { error: "Nieprawidlowa kwota (price_amount)" };
+    return { error: messages.invalidAmount };
   }
 
   const parsedCurrency = parseCurrency(get("price_currency"));
@@ -549,7 +554,7 @@ function parseBulkRow(input: {
     normalizeOptionalString(get("price_vat_rate")) &&
     (parsedVatRate === undefined || parsedVatRate < 0 || parsedVatRate > 100)
   ) {
-    return { error: "Nieprawidlowa stawka VAT (price_vat_rate)" };
+    return { error: messages.invalidVatRate };
   }
 
   const priceNegotiable = parseBooleanFlag(get("price_negotiable")) === true;
@@ -562,7 +567,7 @@ function parseBulkRow(input: {
     normalizeOptionalString(get("production_year")) &&
     (productionYear === undefined || productionYear < 1900 || productionYear > 2100)
   ) {
-    return { error: "Nieprawidlowy rok produkcji (production_year)" };
+    return { error: messages.invalidProductionYear };
   }
 
   const cscValidToMonth = parseInteger(get("csc_valid_to_month"));
@@ -570,13 +575,13 @@ function parseBulkRow(input: {
   const hasCscMonth = cscValidToMonth !== undefined;
   const hasCscYear = cscValidToYear !== undefined;
   if (hasCscMonth !== hasCscYear) {
-    return { error: "Podaj jednoczesnie csc_valid_to_month i csc_valid_to_year" };
+    return { error: messages.cscBothRequired };
   }
   if (hasCscMonth && (cscValidToMonth < 1 || cscValidToMonth > 12)) {
-    return { error: "Nieprawidlowy miesiac CSC (csc_valid_to_month)" };
+    return { error: messages.invalidCscMonth };
   }
   if (hasCscYear && (cscValidToYear < 1900 || cscValidToYear > 2100)) {
-    return { error: "Nieprawidlowy rok CSC (csc_valid_to_year)" };
+    return { error: messages.invalidCscYear };
   }
 
   const logisticsTransportIncluded = parseBooleanFlag(get("logistics_transport_included")) === true;
@@ -587,7 +592,7 @@ function parseBulkRow(input: {
     logisticsTransportIncluded &&
     (logisticsTransportFreeDistanceKm === undefined || logisticsTransportFreeDistanceKm < 1)
   ) {
-    return { error: "Dla transport included podaj logistics_transport_free_distance_km" };
+    return { error: messages.transportDistanceRequired };
   }
   const logisticsUnloadingIncluded = parseBooleanFlag(get("logistics_unloading_included")) === true;
   const logisticsUnloadingAvailable =
@@ -618,13 +623,15 @@ function parseBulkRow(input: {
     getRichTextLength(description) > LISTING_DESCRIPTION_MAX_TEXT_LENGTH
   ) {
     return {
-      error: `Opis przekracza ${LISTING_DESCRIPTION_MAX_TEXT_LENGTH} znakow`,
+      error: formatTemplate(messages.descriptionTooLong, {
+        count: LISTING_DESCRIPTION_MAX_TEXT_LENGTH,
+      }),
     };
   }
 
   const contactEmail = normalizeOptionalString(get("contact_email")) ?? input.fallbackContactEmail;
   if (!contactEmail || !isValidEmail(contactEmail)) {
-    return { error: "Nieprawidlowy contact_email" };
+    return { error: messages.invalidContactEmail };
   }
   const contactPhone =
     normalizeOptionalString(get("contact_phone")) ??
@@ -678,16 +685,19 @@ function parseBulkRow(input: {
   };
 }
 
-async function parseBulkRequestBody(request: NextRequest): Promise<{ csv: string }> {
+async function parseBulkRequestBody(
+  request: NextRequest,
+  messages: BulkApiMessages,
+): Promise<{ csv: string }> {
   const contentType = request.headers.get("content-type") ?? "";
   if (!contentType.includes("multipart/form-data")) {
-    throw new Error("Import obsluguje tylko plik Excel (multipart/form-data)");
+    throw new Error(messages.excelMultipartRequired);
   }
 
   const formData = await request.formData();
   const uploadFile = formData.get("file");
   if (!(uploadFile instanceof File)) {
-    throw new Error("Brak pliku Excel do importu");
+    throw new Error(messages.excelMissing);
   }
 
   const filename = uploadFile.name.trim().toLowerCase();
@@ -698,24 +708,26 @@ async function parseBulkRequestBody(request: NextRequest): Promise<{ csv: string
     uploadFile.type.includes("excel");
 
   if (!isSpreadsheet) {
-    throw new Error("Dozwolone sa tylko pliki Excel (.xlsx, .xls)");
+    throw new Error(messages.excelOnly);
   }
 
   const buffer = Buffer.from(await uploadFile.arrayBuffer());
   const workbook = read(buffer, { type: "buffer" });
   const firstSheetName = workbook.SheetNames[0];
   if (!firstSheetName) {
-    throw new Error("Plik Excel nie zawiera arkuszy");
+    throw new Error(messages.noSheets);
   }
   const firstSheet = workbook.Sheets[firstSheetName];
   const csv = utils.sheet_to_csv(firstSheet, { FS: ";", RS: "\n" }).trim();
   if (!csv) {
-    throw new Error("Pierwszy arkusz Excela jest pusty");
+    throw new Error(messages.firstSheetEmpty);
   }
   return { csv };
 }
 
 export async function POST(request: NextRequest) {
+  const locale = getLocaleFromApiRequest(request);
+  const moduleMessages = getMessages(locale).containerModules.bulkApi;
   try {
     await ensureContainerListingsIndexes();
 
@@ -732,11 +744,11 @@ export async function POST(request: NextRequest) {
 
     const user = await getCurrentUserFromRequest(request);
     if (!user?._id) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+      return NextResponse.json({ error: moduleMessages.unauthorized }, { status: 401 });
     }
     if (user.isBlocked === true) {
       return NextResponse.json(
-        { error: "Blocked user cannot create listings" },
+        { error: moduleMessages.blockedUserCannotCreate },
         { status: 403 },
       );
     }
@@ -755,39 +767,41 @@ export async function POST(request: NextRequest) {
 
     let body: { csv: string };
     try {
-      body = await parseBulkRequestBody(request);
+      body = await parseBulkRequestBody(request, moduleMessages);
     } catch (parseError) {
       return NextResponse.json(
         {
           error:
-            parseError instanceof Error
-              ? parseError.message
-              : "Nie udalo sie odczytac pliku Excel",
+            parseError instanceof Error ? parseError.message : moduleMessages.readExcelError,
         },
         { status: 400 },
       );
     }
     const csv = body.csv?.trim() ?? "";
     if (!csv) {
-      return NextResponse.json({ error: "Arkusz Excel jest pusty" }, { status: 400 });
+      return NextResponse.json({ error: moduleMessages.emptySheet }, { status: 400 });
     }
     if (csv.length > MAX_CSV_CHARS) {
       return NextResponse.json(
-        { error: `Dane z Excela sa za duze (max ${MAX_CSV_CHARS} znakow po konwersji)` },
+        {
+          error: formatTemplate(moduleMessages.excelTooLarge, { count: MAX_CSV_CHARS }),
+        },
         { status: 400 },
       );
     }
 
     const parsed = parseCsv(csv);
     if (parsed.headers.length === 0) {
-      return NextResponse.json({ error: "Brak naglowkow w pliku Excel" }, { status: 400 });
+      return NextResponse.json({ error: moduleMessages.missingHeaders }, { status: 400 });
     }
     if (parsed.rows.length === 0) {
-      return NextResponse.json({ error: "Plik Excel nie zawiera danych" }, { status: 400 });
+      return NextResponse.json({ error: moduleMessages.noRows }, { status: 400 });
     }
     if (parsed.rows.length > MAX_BULK_ROWS) {
       return NextResponse.json(
-        { error: `Plik Excel moze zawierac maksymalnie ${MAX_BULK_ROWS} wierszy` },
+        {
+          error: formatTemplate(moduleMessages.tooManyRows, { count: MAX_BULK_ROWS }),
+        },
         { status: 400 },
       );
     }
@@ -803,7 +817,7 @@ export async function POST(request: NextRequest) {
     ]) {
       if (!headerIndex.has(requiredHeader)) {
         return NextResponse.json(
-          { error: `Brak wymaganej kolumny: ${requiredHeader}` },
+          { error: formatTemplate(moduleMessages.missingRequiredColumn, { column: requiredHeader }) },
           { status: 400 },
         );
       }
@@ -822,7 +836,7 @@ export async function POST(request: NextRequest) {
     );
     if (!ownerCompany?._id || !ownerCompany.name?.trim()) {
       return NextResponse.json(
-        { error: "Bulk import jest dostepny tylko dla kont z uzupelniona firma" },
+        { error: "Bulk import jest dostępny tylko dla kont z uzupełnioną firmą" },
         { status: 403 },
       );
     }
@@ -859,11 +873,12 @@ export async function POST(request: NextRequest) {
         fallbackContactEmail,
         fallbackContactPhone,
         fallbackLocationAddress,
+        messages: moduleMessages,
       });
       if (!parsedRow.value) {
         failures.push({
           rowNumber: csvRowNumber,
-          error: parsedRow.error ?? "Nieznany blad walidacji",
+          error: parsedRow.error ?? moduleMessages.unknownValidation,
         });
         continue;
       }
@@ -874,7 +889,7 @@ export async function POST(request: NextRequest) {
       if (parsedContainerColors.tooMany) {
         failures.push({
           rowNumber: csvRowNumber,
-          error: `Maksymalnie ${MAX_CONTAINER_RAL_COLORS} kolorow RAL`,
+          error: formatTemplate(moduleMessages.tooManyRalColors, { count: MAX_CONTAINER_RAL_COLORS }),
         });
         continue;
       }
@@ -897,7 +912,7 @@ export async function POST(request: NextRequest) {
       if (!geocodeResult) {
         failures.push({
           rowNumber: csvRowNumber,
-          error: `Nie znaleziono lokalizacji dla: "${rowValue.locationAddressQuery}"`,
+          error: formatTemplate(moduleMessages.locationNotFound, { location: rowValue.locationAddressQuery }),
         });
         continue;
       }
@@ -928,7 +943,7 @@ export async function POST(request: NextRequest) {
       if (!primaryLocation) {
         failures.push({
           rowNumber: csvRowNumber,
-          error: "Nie udalo sie znormalizowac lokalizacji",
+          error: moduleMessages.normalizeLocationError,
         });
         continue;
       }
@@ -999,7 +1014,7 @@ export async function POST(request: NextRequest) {
       } catch (insertError) {
         failures.push({
           rowNumber: csvRowNumber,
-          error: insertError instanceof Error ? insertError.message : "Nie udalo sie zapisac rekordu",
+          error: insertError instanceof Error ? insertError.message : moduleMessages.saveRecordError,
         });
       }
     }
@@ -1016,7 +1031,7 @@ export async function POST(request: NextRequest) {
     logError("Unhandled API error", { route: "/api/containers/bulk", error });
     return NextResponse.json(
       {
-        error: "Internal server error",
+        error: moduleMessages.internalServerError,
         message: error instanceof Error ? error.message : "Unknown bulk upload error",
       },
       { status: 500 },

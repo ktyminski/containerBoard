@@ -7,6 +7,7 @@ import {
   buildPasswordResetMail,
   buildWelcomeMail,
 } from "@/lib/mail-templates";
+import type { AppMessages } from "@/lib/i18n";
 
 export type MailPreviewCase = {
   id: string;
@@ -16,22 +17,22 @@ export type MailPreviewCase = {
   content: MailTemplateContent;
 };
 
-export function getMailPreviewCases(): MailPreviewCase[] {
+export function getMailPreviewCases(messages: AppMessages["adminMailPreviews"]["cases"]): MailPreviewCase[] {
   const verificationUrl = "https://containerboard.pl/api/auth/verify-email?token=preview-token-123";
   const resetUrl = "https://containerboard.pl/reset-password?token=reset-preview-token-123";
 
   return [
     {
       id: "welcome",
-      label: "Welcome",
-      description: "Nowe konto zalozone przez Google SSO",
+      label: messages.welcome.label,
+      description: messages.welcome.description,
       mockedRecipient: "jan.kowalski@example.com",
       content: buildWelcomeMail("Jan Kowalski"),
     },
     {
       id: "email-verification",
-      label: "Email verification",
-      description: "Nowa rejestracja konta lokalnego",
+      label: messages.emailVerification.label,
+      description: messages.emailVerification.description,
       mockedRecipient: "anna.nowak@example.com",
       content: buildEmailVerificationMail({
         name: "Anna Nowak",
@@ -40,8 +41,8 @@ export function getMailPreviewCases(): MailPreviewCase[] {
     },
     {
       id: "password-reset",
-      label: "Password reset",
-      description: "Uzytkownik zglosil reset hasla",
+      label: messages.passwordReset.label,
+      description: messages.passwordReset.description,
       mockedRecipient: "marta.wisniewska@example.com",
       content: buildPasswordResetMail({
         name: "Marta Wisniewska",
@@ -50,15 +51,15 @@ export function getMailPreviewCases(): MailPreviewCase[] {
     },
     {
       id: "claim-submitted",
-      label: "Claim submitted",
-      description: "Uzytkownik wyslal zgloszenie przejecia firmy",
+      label: messages.claimSubmitted.label,
+      description: messages.claimSubmitted.description,
       mockedRecipient: "pawel.maj@example.com",
       content: buildClaimSubmittedMail("Mazovia Express Sp. z o.o.", "Pawel Maj"),
     },
     {
       id: "claim-approved",
-      label: "Claim approved",
-      description: "Admin zaakceptowal zgloszenie przejecia firmy",
+      label: messages.claimApproved.label,
+      description: messages.claimApproved.description,
       mockedRecipient: "pawel.maj@example.com",
       content: buildClaimDecisionMail({
         approved: true,
@@ -68,8 +69,8 @@ export function getMailPreviewCases(): MailPreviewCase[] {
     },
     {
       id: "claim-rejected",
-      label: "Claim rejected",
-      description: "Admin odrzucil zgloszenie przejecia firmy",
+      label: messages.claimRejected.label,
+      description: messages.claimRejected.description,
       mockedRecipient: "kamil.nowicki@example.com",
       content: buildClaimDecisionMail({
         approved: false,
@@ -79,18 +80,18 @@ export function getMailPreviewCases(): MailPreviewCase[] {
     },
     {
       id: "container-inquiry",
-      label: "Container inquiry",
-      description: "Zapytanie do ogloszenia kontenerowego (z opcjonalna cena)",
+      label: messages.containerInquiry.label,
+      description: messages.containerInquiry.description,
       mockedRecipient: "sprzedaz@example.com",
       content: buildContainerInquiryMail({
         containerLabel: "40' HC",
-        summaryLine: "40' HC | sell | Gdansk, Polska",
+        summaryLine: "40' HC | sell | Gdańsk, Polska",
         companyName: "Baltic Containers",
         listingQuantity: 8,
         buyerName: "Jan Kowalski",
         buyerEmail: "jan.kowalski@example.com",
         buyerPhone: "+48 600 700 800",
-        inquiryMessage: "Prosze o kontakt i warunki dostawy.",
+        inquiryMessage: "Proszę o kontakt i warunki dostawy.",
         requestedQuantity: 3,
         offeredPrice: "12000 EUR",
       }),

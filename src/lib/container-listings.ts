@@ -29,6 +29,10 @@ import {
   type ListingType,
   type TaxMode,
 } from "@/lib/container-listing-types";
+import {
+  resolveCountryCodeFromInput,
+  resolveCountryCodeFromInputApprox,
+} from "@/lib/country-flags";
 import { escapeRegexPattern } from "@/lib/escape-regex-pattern";
 
 export const LISTING_TTL_DAYS = 30;
@@ -591,6 +595,11 @@ export function mapContainerListingToMapPoints(
   >,
   options?: {
     bounds?: MapPointBounds | null;
+    locationFilter?: {
+      city?: string;
+      country?: string;
+      countryCode?: string;
+    } | null;
   },
 ): ContainerListingMapPoint[] {
   const listingId = doc._id.toHexString();
@@ -601,6 +610,71 @@ export function mapContainerListingToMapPoints(
   const points: ContainerListingMapPoint[] = [];
   const seenCoordinates = new Set<string>();
   const bounds = options?.bounds ?? null;
+  const locationFilter = options?.locationFilter ?? null;
+  const normalizedFilterCity = locationFilter?.city?.trim().toLowerCase() ?? "";
+  const normalizedFilterCountry = locationFilter?.country?.trim().toLowerCase() ?? "";
+  const normalizedFilterCountryCode = locationFilter?.countryCode?.trim().toUpperCase() ?? "";
+  const hasAdministrativeLocationFilter =
+    normalizedFilterCity.length > 0 ||
+    normalizedFilterCountry.length > 0 ||
+    normalizedFilterCountryCode.length > 0;
+  const getEffectiveCountryCode = (location: {
+    locationCountry?: string;
+    locationCountryCode?: string;
+    locationAddressParts?: {
+      country?: string;
+    };
+  }) => {
+    const countryName =
+      location.locationAddressParts?.country?.trim() ||
+      location.locationCountry?.trim() ||
+      "";
+    const resolvedFromCountry =
+      resolveCountryCodeFromInput(countryName) ??
+      resolveCountryCodeFromInputApprox(countryName) ??
+      "";
+    if (resolvedFromCountry) {
+      return resolvedFromCountry.toUpperCase();
+    }
+    return location.locationCountryCode?.trim().toUpperCase() ?? "";
+  };
+  const locationMatchesFilter = (location: {
+    locationCity?: string;
+    locationCountry?: string;
+    locationCountryCode?: string;
+    locationAddressParts?: {
+      city?: string;
+      country?: string;
+    };
+  }) => {
+    if (!hasAdministrativeLocationFilter) {
+      return true;
+    }
+
+    const locationCity =
+      location.locationAddressParts?.city?.trim().toLowerCase() ||
+      location.locationCity?.trim().toLowerCase() ||
+      "";
+    const locationCountry =
+      location.locationAddressParts?.country?.trim().toLowerCase() ||
+      location.locationCountry?.trim().toLowerCase() ||
+      "";
+    const locationCountryCode = getEffectiveCountryCode(location);
+
+    if (normalizedFilterCity && locationCity !== normalizedFilterCity) {
+      return false;
+    }
+
+    if (normalizedFilterCountryCode) {
+      return locationCountryCode === normalizedFilterCountryCode;
+    }
+
+    if (normalizedFilterCountry) {
+      return locationCountry === normalizedFilterCountry;
+    }
+
+    return true;
+  };
   const appendPoint = (lat: unknown, lng: unknown) => {
     if (
       typeof lat !== "number" ||
@@ -635,10 +709,13 @@ export function mapContainerListingToMapPoints(
   };
 
   for (const location of doc.locations ?? []) {
+    if (!locationMatchesFilter(location)) {
+      continue;
+    }
     appendPoint(location.locationLat, location.locationLng);
   }
 
-  if (points.length === 0) {
+  if (points.length === 0 && !hasAdministrativeLocationFilter) {
     appendPoint(doc.locationLat, doc.locationLng);
   }
 
@@ -971,55 +1048,49 @@ export function buildContainerListingsFilter(input: {
     ? new RegExp(`^${escapeRegexPattern(normalizedCountry)}$`, "i")
     : null;
 
-  if (cityPattern && countryPattern) {
-    andConditions.push({
-      $or: [
-        {
-          locationCity: cityPattern,
-          ...(normalizedCountryCode
-            ? { locationCountryCode: normalizedCountryCode }
-            : { locationCountry: countryPattern }),
-        } as Filter<ContainerListingDocument>,
-        {
-          locations: {
-            $elemMatch: {
-              locationCity: cityPattern,
-              ...(normalizedCountryCode
-                ? { locationCountryCode: normalizedCountryCode }
-                : { locationCountry: countryPattern }),
-            },
-          },
-        } as Filter<ContainerListingDocument>,
-      ],
-    } as Filter<ContainerListingDocument>);
-  } else {
+  const buildAdministrativeLocationCondition = (
+    nested = false,
+  ): Filter<ContainerListingDocument> | null => {
+    const condition: Record<string, unknown> = {};
+
     if (cityPattern) {
-      andConditions.push({
-        $or: [
-          { locationCity: cityPattern } as Filter<ContainerListingDocument>,
-          { "locations.locationCity": cityPattern } as Filter<ContainerListingDocument>,
-        ],
-      } as Filter<ContainerListingDocument>);
+      condition[nested ? "locationCity" : "locationCity"] = cityPattern;
     }
 
-    if (normalizedCountryCode || countryPattern) {
-      andConditions.push({
-        $or: [
-          ...(normalizedCountryCode
-            ? [
-                { locationCountryCode: normalizedCountryCode } as Filter<ContainerListingDocument>,
-                { "locations.locationCountryCode": normalizedCountryCode } as Filter<ContainerListingDocument>,
-              ]
-            : []),
-          ...(countryPattern
-            ? [
-                { locationCountry: countryPattern } as Filter<ContainerListingDocument>,
-                { "locations.locationCountry": countryPattern } as Filter<ContainerListingDocument>,
-              ]
-            : []),
-        ],
-      } as Filter<ContainerListingDocument>);
+    if (normalizedCountryCode) {
+      condition[nested ? "locationCountryCode" : "locationCountryCode"] = normalizedCountryCode;
+    } else if (countryPattern) {
+      condition[nested ? "locationCountry" : "locationCountry"] = countryPattern;
     }
+
+    if (Object.keys(condition).length === 0) {
+      return null;
+    }
+
+    if (nested) {
+      return {
+        locations: {
+          $elemMatch: condition,
+        },
+      } as Filter<ContainerListingDocument>;
+    }
+
+    return condition as Filter<ContainerListingDocument>;
+  };
+
+  const rootAdministrativeCondition = buildAdministrativeLocationCondition(false);
+  const nestedAdministrativeCondition = buildAdministrativeLocationCondition(true);
+  const administrativeLocationConditions = [
+    rootAdministrativeCondition,
+    nestedAdministrativeCondition,
+  ].filter((condition): condition is Filter<ContainerListingDocument> => Boolean(condition));
+
+  if (administrativeLocationConditions.length === 1) {
+    andConditions.push(administrativeLocationConditions[0]);
+  } else if (administrativeLocationConditions.length > 1) {
+    andConditions.push({
+      $or: administrativeLocationConditions,
+    } as Filter<ContainerListingDocument>);
   }
 
   if (input.q?.trim()) {

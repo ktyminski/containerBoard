@@ -9,6 +9,7 @@ type CompanyLocationMapItem = {
   addressText: string;
   postalCode?: string;
   country?: string;
+  countryCode?: string;
   point: [number, number];
 };
 
@@ -30,6 +31,7 @@ function toFeatures(locations: CompanyLocationMapItem[]): GeoJSON.Feature<GeoJSO
       addressText: location.addressText,
       postalCode: location.postalCode ?? "",
       country: location.country ?? "",
+      countryCode: location.countryCode ?? "",
     },
   }));
 }

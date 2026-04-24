@@ -534,6 +534,39 @@ export function getCountryNamesForCode(
   return Array.from(names);
 }
 
+export function getCountryDisplayName(
+  countryCode: string | null | undefined,
+  locale: string,
+  fallbackName?: string | null,
+): string {
+  const normalizedCode = typeof countryCode === "string" ? canonicalizeAlpha2Code(countryCode) : "";
+  if (/^[A-Z]{2}$/.test(normalizedCode) && typeof Intl.DisplayNames === "function") {
+    try {
+      const displayNames = new Intl.DisplayNames([locale], { type: "region" });
+      const localizedName = displayNames.of(normalizedCode);
+      if (localizedName && localizedName !== normalizedCode) {
+        return localizedName;
+      }
+    } catch {
+      // Ignore locale support errors and fall back below.
+    }
+  }
+
+  const trimmedFallback = fallbackName?.trim();
+  if (trimmedFallback) {
+    return trimmedFallback;
+  }
+
+  if (/^[A-Z]{2}$/.test(normalizedCode)) {
+    const canonicalName = getCountryNamesForCode(normalizedCode, ["en"])[0];
+    if (canonicalName) {
+      return canonicalName;
+    }
+  }
+
+  return trimmedFallback ?? "";
+}
+
 export function countryCodeToFlagEmoji(countryCode: string): string {
   const normalized = canonicalizeAlpha2Code(countryCode);
   if (!/^[A-Z]{2}$/.test(normalized)) {

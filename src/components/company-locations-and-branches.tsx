@@ -9,6 +9,7 @@ type CompanyLocationWithMedia = {
   addressText: string;
   postalCode?: string;
   country?: string;
+  countryCode?: string;
   phone?: string;
   email?: string;
   point: {
@@ -45,6 +46,7 @@ export function CompanyLocationsAndBranches({
         addressText: location.addressText,
         postalCode: location.postalCode,
         country: location.country,
+        countryCode: location.countryCode,
         point: location.point.coordinates,
       })),
     [locations],

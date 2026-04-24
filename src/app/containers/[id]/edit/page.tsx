@@ -22,6 +22,9 @@ import { USER_ROLE } from "@/lib/user-roles";
 
 type EditContainerPageProps = {
   params: Promise<{ id: string }>;
+  searchParams?: Promise<{
+    reactivate?: string;
+  }>;
 };
 
 export async function generateMetadata({ params }: EditContainerPageProps): Promise<Metadata> {
@@ -31,10 +34,15 @@ export async function generateMetadata({ params }: EditContainerPageProps): Prom
   };
 }
 
-export default async function EditContainerPage({ params }: EditContainerPageProps) {
+export default async function EditContainerPage({
+  params,
+  searchParams,
+}: EditContainerPageProps) {
   await ensureContainerListingsIndexes();
 
   const { id } = await params;
+  const resolvedSearchParams = searchParams ? await searchParams : undefined;
+  const shouldReactivateOnSave = resolvedSearchParams?.reactivate === "1";
   if (!ObjectId.isValid(id)) {
     notFound();
   }
@@ -138,6 +146,7 @@ export default async function EditContainerPage({ params }: EditContainerPagePro
         locale={locale}
         messages={moduleMessages}
         mode="edit"
+        reactivateOnSave={shouldReactivateOnSave}
         submitEndpoint={`/api/containers/${listing._id.toHexString()}`}
         submitMethod="PATCH"
         submitLabel={moduleMessages.editPage.submitLabel}

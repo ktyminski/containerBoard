@@ -115,6 +115,15 @@ export default async function LandingPage() {
     "inline-flex items-center justify-center rounded-md border border-[#1d5ea8] bg-[#103b74] px-5 py-3 text-sm font-semibold text-[#f6fbff] transition duration-200 hover:border-[#2f76c7] hover:bg-[#16498d] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#1d5ea8]";
   const tertiaryCtaClass =
     "inline-flex items-center justify-center rounded-md border border-[#c7d4e5] bg-white px-5 py-3 text-sm font-semibold text-[#153256] transition duration-200 hover:border-[#9fb5d4] hover:bg-[#f7fbff] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#7aa2d6]";
+  const heroCardTitleParts = landing.heroCardTitle.split("ContainerBoard");
+  const heroCardTitlePrefix = heroCardTitleParts[0] ?? "";
+  const heroCardTitleSuffix = heroCardTitleParts.slice(1).join("ContainerBoard");
+  const heroCardTitleHasBrand = heroCardTitleParts.length > 1;
+  const normalizedHeroCardTitleSuffix = heroCardTitleSuffix.trim();
+  const shouldAppendHeroCardQuestionMark =
+    heroCardTitleHasBrand &&
+    !normalizedHeroCardTitleSuffix.endsWith("?") &&
+    !normalizedHeroCardTitleSuffix.endsWith("!");
 
   return (
     <main className="w-full bg-neutral-200 text-[#10233f]">
@@ -126,16 +135,16 @@ export default async function LandingPage() {
         />
         <div className="absolute inset-0 bg-[#061933]/88" aria-hidden="true" />
 
-        <div className="relative mx-auto grid min-h-[34rem] w-full max-w-6xl gap-8 px-4 py-14 sm:px-6 lg:grid-cols-[minmax(0,1.15fr)_minmax(20rem,0.85fr)] lg:items-center lg:py-20">
-          <div className="max-w-3xl lg:ml-auto lg:text-right">
-            <h1 className="mt-4 max-w-3xl text-4xl font-semibold leading-tight text-white sm:text-5xl lg:text-6xl">
+        <div className="relative mx-auto grid min-h-[calc(100svh-4rem)] w-full max-w-6xl content-center gap-6 px-4 py-12 supports-[height:100dvh]:min-h-[calc(100dvh-4rem)] sm:min-h-[34rem] sm:px-6 lg:grid-cols-[minmax(0,1.15fr)_minmax(18rem,0.8fr)] lg:content-normal lg:items-center lg:gap-8 lg:py-20">
+          <div className="mx-auto max-w-3xl text-center lg:ml-auto lg:mr-0 lg:text-right">
+            <h1 className="mx-auto mt-4 max-w-3xl text-4xl font-semibold leading-tight text-white sm:text-5xl lg:mx-0 lg:text-6xl">
               {landing.heroTitle}
             </h1>
-            <p className="mt-5 max-w-2xl text-base leading-7 text-[#e2edf9] sm:text-lg lg:ml-auto">
+            <p className="mx-auto mt-5 max-w-2xl text-base leading-7 text-[#e2edf9] sm:text-lg lg:ml-auto lg:mr-0">
               {landing.heroSubtitle}
             </p>
 
-            <div className="mt-8 flex flex-wrap gap-3 lg:justify-end">
+            <div className="mt-8 flex flex-wrap justify-center gap-3 lg:justify-end">
               <Link href={withLang("/list", locale)} className={primaryCtaClass}>
                 {landing.browseCta}
               </Link>
@@ -152,25 +161,88 @@ export default async function LandingPage() {
             </div>
           </div>
 
-          <div className="rounded-md border border-white/12 bg-[rgba(7,24,48,0.84)] p-6 text-white shadow-[0_36px_70px_-40px_rgba(15,23,42,0.75)] backdrop-blur-sm sm:p-7">
-            <p className="text-xs font-semibold tracking-[0.22em] text-[#8bd4ff] uppercase">
-              {landing.heroCardEyebrow}
-            </p>
-            <h2 className="mt-3 text-2xl font-semibold">{landing.heroCardTitle}</h2>
-            <div className="mt-6 grid gap-3">
-              {landing.heroHighlights.map((highlight) => (
-                <article
-                  key={highlight}
-                  className="rounded-md border border-white/10 bg-white/8 p-4"
+          <div className="self-start rounded-md border border-white/12 bg-[rgba(7,24,48,0.84)] p-4 text-center text-white shadow-[0_30px_60px_-42px_rgba(15,23,42,0.75)] backdrop-blur-sm sm:p-5 lg:p-6 lg:text-left">
+            {landing.heroCardEyebrow ? (
+              <p className="text-xs font-semibold tracking-[0.22em] text-[#8bd4ff] uppercase">
+                {landing.heroCardEyebrow}
+              </p>
+            ) : null}
+            <h2 className="mt-2 text-lg font-semibold sm:text-2xl">
+              {heroCardTitleHasBrand ? (
+                <>
+                  {heroCardTitlePrefix}
+                  <span className="text-[#e2efff]">Container</span>
+                  <span className="text-[#38bdf8]">Board</span>
+                  {heroCardTitleSuffix}
+                  {shouldAppendHeroCardQuestionMark ? "?" : null}
+                </>
+              ) : (
+                landing.heroCardTitle
+              )}
+            </h2>
+            <div className="mt-4 flex flex-wrap justify-center gap-2 lg:hidden">
+              {landing.heroValuePoints.map((point) => (
+                <div
+                  key={point.title}
+                  className="inline-flex items-center gap-1.5 rounded-md border border-white/12 bg-white/10 px-2.5 py-1.5 text-xs font-medium text-[#e9f2fb] sm:gap-2 sm:px-3 sm:py-2 sm:text-sm"
                 >
-                  <p className="text-sm font-semibold text-white">{highlight}</p>
+                  <span>{point.title}</span>
+                  {point.icon === "bolt" ? (
+                    <svg
+                      aria-hidden="true"
+                      viewBox="0 0 20 20"
+                      className="h-4 w-4 shrink-0 text-[#facc15]"
+                      fill="currentColor"
+                    >
+                      <path d="M11.25 1.5a.75.75 0 0 0-.69.46L6.7 11.1a.75.75 0 0 0 .69 1.04h2.56l-1.18 5.68a.75.75 0 0 0 1.37.53l4.96-8.4a.75.75 0 0 0-.65-1.13h-2.9l1.38-6.29a.75.75 0 0 0-.73-.91Z" />
+                    </svg>
+                  ) : null}
+                </div>
+              ))}
+            </div>
+
+            <div className="mt-4 hidden gap-2.5 lg:grid">
+              {landing.heroValuePoints.map((point) => (
+                <article
+                  key={point.title}
+                  className="rounded-md border border-white/10 bg-white/8 p-3"
+                >
+                  <p className="flex items-center gap-2 text-sm font-semibold text-white">
+                    <span>{point.title}</span>
+                    {point.icon === "bolt" ? (
+                      <svg
+                        aria-hidden="true"
+                        viewBox="0 0 20 20"
+                        className="h-4 w-4 shrink-0 text-[#facc15]"
+                        fill="currentColor"
+                      >
+                        <path d="M11.25 1.5a.75.75 0 0 0-.69.46L6.7 11.1a.75.75 0 0 0 .69 1.04h2.56l-1.18 5.68a.75.75 0 0 0 1.37.53l4.96-8.4a.75.75 0 0 0-.65-1.13h-2.9l1.38-6.29a.75.75 0 0 0-.73-.91Z" />
+                      </svg>
+                    ) : null}
+                  </p>
+                  <p className="mt-1 text-sm leading-6 text-[#d9e7f7]">{point.text}</p>
                 </article>
               ))}
             </div>
-            <div className="mt-6 rounded-md border border-[#2f639a] bg-[#0d2d56] px-4 py-3">
-              <p className="text-sm font-semibold text-white">{landing.heroCardFooterTitle}</p>
-              <p className="mt-1 text-sm text-[#d9e7f7]">{landing.heroCardFooterText}</p>
-            </div>
+          </div>
+        </div>
+
+        <div className="pointer-events-none absolute inset-x-0 bottom-4 flex justify-center sm:hidden">
+          <div className="inline-flex items-center justify-center rounded-md border border-white/14 bg-white/10 px-3 py-2 text-white/90 shadow-[0_16px_36px_-28px_rgba(15,23,42,0.85)] backdrop-blur-sm">
+            <svg
+              aria-hidden="true"
+              viewBox="0 0 20 20"
+              className="h-4 w-4 animate-bounce"
+              fill="none"
+            >
+              <path
+                d="M5 7.5L10 12.5L15 7.5"
+                stroke="currentColor"
+                strokeWidth="1.75"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              />
+            </svg>
           </div>
         </div>
       </section>
@@ -206,9 +278,9 @@ export default async function LandingPage() {
                   <li key={item.id}>
                     <Link
                       href={withLang(`/containers/${item.id}`, locale)}
-                      className="group flex h-full gap-4 rounded-md border border-neutral-200 bg-white p-4 shadow-sm transition-colors duration-150 hover:border-sky-100 hover:bg-sky-50/60"
+                      className="group flex h-full items-start gap-4 rounded-md border border-neutral-200 bg-white p-4 shadow-sm transition-colors duration-150 hover:border-sky-100 hover:bg-sky-50/60"
                     >
-                      <div className="relative aspect-square h-full max-h-32 shrink-0 self-stretch overflow-hidden rounded-md border border-neutral-200 bg-neutral-100">
+                      <div className="relative aspect-square h-24 w-24 shrink-0 overflow-hidden rounded-md border border-neutral-200 bg-neutral-100 sm:h-28 sm:w-28">
                         <ContainerPhotoWithPlaceholder
                           src={getLandingCardImageSrc(item)}
                           alt=""
@@ -224,9 +296,9 @@ export default async function LandingPage() {
 
                       <div className="min-w-0 flex flex-1 flex-col justify-between">
                         <div className="min-w-0">
-                          <div className="flex min-w-0 flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+                          <div className="grid min-w-0 grid-cols-[minmax(0,1fr)_auto] items-start gap-x-3 gap-y-2">
                             <div className="min-w-0 flex-1">
-                              <h3 className="truncate text-lg font-semibold text-neutral-900">
+                              <h3 className="text-base font-semibold text-neutral-900 sm:text-lg">
                                 {getContainerShortLabel(item.container)}
                               </h3>
                               <p className="mt-1 truncate text-sm text-neutral-600">
@@ -239,8 +311,8 @@ export default async function LandingPage() {
                             </div>
 
                             {priceLabel ? (
-                              <div className="shrink-0 text-left sm:text-right">
-                                <p className="text-lg font-bold leading-tight text-neutral-900">
+                              <div className="min-w-0 max-w-[8.5rem] shrink-0 text-right sm:max-w-[11rem]">
+                                <p className="break-words text-sm font-bold leading-tight text-neutral-900 sm:text-lg">
                                   {priceLabel}
                                 </p>
                               </div>
@@ -248,7 +320,7 @@ export default async function LandingPage() {
                           </div>
                         </div>
 
-                        <div className="mt-3 flex flex-wrap items-center justify-between gap-x-4 gap-y-1 text-sm text-neutral-700">
+                        <div className="mt-3 flex flex-col gap-1 text-sm text-neutral-700 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between sm:gap-x-4">
                           <p>
                             {landing.latestQuantityLabel}:{" "}
                             <span className="font-medium text-neutral-900">{item.quantity}</span>

@@ -469,7 +469,11 @@ export function MyContainerListings(input?: {
       const data = (await response.json().catch(() => null)) as BulkUploadResponse | null;
       if (!response.ok) {
         throw new Error(
-          data?.error ?? data?.message ?? `Blad importu (${response.status})`,
+          data?.error ??
+            data?.message ??
+            formatTemplate(messages.bulkImportErrorWithStatus, {
+              status: response.status,
+            }),
         );
       }
 
@@ -528,7 +532,11 @@ export function MyContainerListings(input?: {
       const data = (await response.json().catch(() => null)) as ConciergeUploadResponse | null;
       if (!response.ok) {
         throw new Error(
-          data?.error ?? data?.message ?? `Blad Concierge (${response.status})`,
+          data?.error ??
+            data?.message ??
+            formatTemplate(messages.conciergeErrorWithStatus, {
+              status: response.status,
+            }),
         );
       }
 
@@ -592,7 +600,7 @@ export function MyContainerListings(input?: {
   const openRefreshConfirmationModal = useCallback((item: ContainerListingItem) => {
     setRefreshModalState({
       listingId: item.id,
-      editHref: `/containers/${item.id}/edit`,
+      editHref: `/containers/${item.id}/edit?reactivate=1`,
       listingLabel: getContainerShortLabelLocalized(listingMessages, item.container),
       quantity: item.quantity,
       priceLabel: getListingPriceLabel(item, locale, messages),
@@ -1002,7 +1010,7 @@ export function MyContainerListings(input?: {
                 disabled={isDeletingListing || isDeactivatingInsteadOfDelete}
                 className="rounded-md border border-neutral-300 bg-white px-3 py-2 text-sm text-neutral-700 transition hover:bg-neutral-100 disabled:cursor-not-allowed disabled:opacity-60"
               >
-                Anuluj
+                {messages.cancel}
               </button>
               {deleteModalState.listingStatus !== LISTING_STATUS.CLOSED ? (
                 <button
@@ -1013,7 +1021,7 @@ export function MyContainerListings(input?: {
                   disabled={isDeletingListing || isDeactivatingInsteadOfDelete}
                   className="rounded-md border border-amber-300 bg-white px-3 py-2 text-sm font-medium text-amber-800 transition hover:bg-amber-50 disabled:cursor-not-allowed disabled:opacity-60"
                 >
-                  {isDeactivatingInsteadOfDelete ? "Dezaktywowanie..." : "Dezaktywuj"}
+                  {isDeactivatingInsteadOfDelete ? messages.deactivating : messages.deactivate}
                 </button>
               ) : null}
               <button
@@ -1024,7 +1032,7 @@ export function MyContainerListings(input?: {
                 disabled={isDeletingListing || isDeactivatingInsteadOfDelete}
                 className="rounded-md border border-rose-300 bg-rose-50 px-3 py-2 text-sm font-medium text-rose-700 transition hover:bg-rose-100 disabled:cursor-not-allowed disabled:opacity-60"
               >
-                {isDeletingListing ? "Usuwanie..." : "Usun ogloszenie"}
+                {isDeletingListing ? messages.deleting : messages.deleteListingButton}
               </button>
             </div>
           </div>
@@ -1036,7 +1044,7 @@ export function MyContainerListings(input?: {
           className="fixed inset-0 z-[70] flex items-center justify-center bg-[rgba(2,6,23,0.45)] p-4 backdrop-blur-[2px]"
           role="dialog"
           aria-modal="true"
-          aria-label="Multi Import"
+          aria-label={messages.bulkModalAria}
           onMouseDown={(event) => {
             if (event.target === event.currentTarget) {
               closeBulkModal();
@@ -1045,7 +1053,9 @@ export function MyContainerListings(input?: {
         >
           <div className="w-full max-w-2xl rounded-xl border border-neutral-300 bg-white p-4 shadow-2xl">
             <div className="mb-4 flex items-center justify-between gap-3">
-              <h3 className="text-base font-semibold text-neutral-900">Multi Import</h3>
+              <h3 className="text-base font-semibold text-neutral-900">
+                {messages.bulkModalTitle}
+              </h3>
               <button
                 type="button"
                 onClick={() => {
@@ -1053,7 +1063,7 @@ export function MyContainerListings(input?: {
                 }}
                 className="rounded-md border border-neutral-300 bg-white px-3 py-1.5 text-xs text-neutral-700 transition hover:bg-neutral-100"
               >
-                Zamknij
+                {messages.close}
               </button>
             </div>
 
@@ -1061,10 +1071,11 @@ export function MyContainerListings(input?: {
               <>
                 {bulkImportMode === "choose" ? (
                   <div className="grid gap-3 rounded-md border border-neutral-200 bg-neutral-50 p-3">
-                    <p className="text-sm font-medium text-neutral-800">Co chcesz zrobic?</p>
+                    <p className="text-sm font-medium text-neutral-800">
+                      {messages.bulkChooseTitle}
+                    </p>
                     <p className="text-sm text-neutral-600">
-                      Wybierz sposob dodawania ogloszen: samodzielny Multi Import
-                      albo zlecenie dla Concierge.
+                      {messages.bulkChooseDescription}
                     </p>
                     <div className="grid gap-2 sm:grid-cols-2">
                       <button
@@ -1074,7 +1085,7 @@ export function MyContainerListings(input?: {
                         }}
                         className="inline-flex h-10 items-center justify-center rounded-md border border-neutral-300 bg-white px-3 text-sm font-medium text-neutral-800 transition hover:border-neutral-400 hover:bg-neutral-100"
                       >
-                        Uzupelnie samodzielnie
+                        {messages.bulkSelfButton}
                       </button>
                       <button
                         type="button"
@@ -1083,11 +1094,13 @@ export function MyContainerListings(input?: {
                         }}
                         className={`inline-flex h-10 items-center justify-center gap-1 rounded-md px-3 text-sm font-medium ${DARK_BLUE_CTA_CLASS}`}
                       >
-                        <span>Zlec to nam</span>
+                        <span>{messages.bulkConciergeButton}</span>
                         <span aria-hidden="true" className="text-[#d5e7ff]">
                           |
                         </span>
-                        <span className="font-semibold text-[#ffd89a]">ZA DARMO</span>
+                        <span className="font-semibold text-[#ffd89a]">
+                          {messages.freeBadge}
+                        </span>
                       </button>
                     </div>
                   </div>
@@ -1096,11 +1109,7 @@ export function MyContainerListings(input?: {
                 {bulkImportMode === "self" ? (
                   <div className="grid gap-3 rounded-md border border-neutral-200 bg-neutral-50 p-3">
                     <p className="text-sm text-neutral-700">
-                      Pobierz szablon Excel, uzupelnij rekordy i wgraj plik XLSX lub XLS.
-                      W arkuszu <strong>Slownik</strong> masz wszystkie dozwolone wartosci.
-                      Zolte kolumny sa wymagane, a lokalizacja to jedno pole tekstowe.
-                      Maksymalnie 250 rekordow na import.
-                      Multiimport tworzy tylko oferty <strong>sprzedazy</strong>.
+                      {messages.bulkSelfDescription}
                     </p>
                     <div className="flex flex-wrap items-center gap-2">
                       <a
@@ -1108,10 +1117,10 @@ export function MyContainerListings(input?: {
                         download
                         className="inline-flex h-10 items-center rounded-md border border-neutral-300 bg-white px-3 text-sm font-medium text-neutral-700 transition hover:bg-neutral-100"
                       >
-                        Pobierz szablon Excel
+                        {messages.downloadExcelTemplate}
                       </a>
                       <label className="inline-flex h-10 cursor-pointer items-center rounded-md border border-neutral-300 bg-white px-3 text-sm font-medium text-neutral-700 transition hover:bg-neutral-100">
-                        Wybierz plik
+                        {messages.chooseFile}
                         <input
                           type="file"
                           accept=".xlsx,.xls,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel"
@@ -1129,7 +1138,7 @@ export function MyContainerListings(input?: {
                         </span>
                       ) : (
                         <span className="text-sm text-neutral-500">
-                          Brak wybranego pliku
+                          {messages.noFileSelected}
                         </span>
                       )}
                     </div>
@@ -1137,14 +1146,19 @@ export function MyContainerListings(input?: {
                     {bulkReport ? (
                       <div className="rounded-md border border-neutral-200 bg-white p-3">
                         <p className="text-sm text-neutral-800">
-                          Zaimportowano: <strong>{bulkReport.createdCount ?? 0}</strong>{" "}
-                          / <strong>{bulkReport.totalRows ?? 0}</strong>
+                          {formatTemplate(messages.importedSummary, {
+                            created: bulkReport.createdCount ?? 0,
+                            total: bulkReport.totalRows ?? 0,
+                          })}
                         </p>
                         {(bulkReport.failedCount ?? 0) > 0 ? (
                           <div className="mt-2 grid gap-1 text-xs text-red-800">
                             {(bulkReport.failures ?? []).slice(0, 10).map((failure) => (
                               <p key={`${failure.rowNumber}-${failure.error}`}>
-                                Wiersz {failure.rowNumber}: {failure.error}
+                                {formatTemplate(messages.rowError, {
+                                  row: failure.rowNumber,
+                                  error: failure.error,
+                                })}
                               </p>
                             ))}
                           </div>
@@ -1160,7 +1174,7 @@ export function MyContainerListings(input?: {
                         }}
                         className="rounded-md border border-neutral-300 bg-white px-3 py-2 text-sm text-neutral-700 transition hover:bg-neutral-100"
                       >
-                        Wroc do wyboru
+                        {messages.backToChoice}
                       </button>
                       <button
                         type="button"
@@ -1170,7 +1184,7 @@ export function MyContainerListings(input?: {
                         }}
                         className={`rounded-md px-3 py-2 text-sm font-semibold ${SEARCH_GRADIENT_CTA_CLASS} disabled:cursor-not-allowed disabled:opacity-60`}
                       >
-                        {isBulkImporting ? "Importowanie..." : "Importuj ogloszenia"}
+                        {isBulkImporting ? messages.importing : messages.importListings}
                       </button>
                     </div>
                   </div>
@@ -1179,9 +1193,7 @@ export function MyContainerListings(input?: {
                 {bulkImportMode === "concierge" ? (
                   <div className="grid gap-3 rounded-md border border-neutral-200 bg-neutral-50 p-3">
                     <p className="text-sm text-neutral-700">
-                      Wolisz, zebysmy zrobili to za Ciebie? Nie ma problemu. Przeslij swoj{" "}
-                      <strong>stock w dowolnym formacie</strong>, a zajmiemy sie
-                      przygotowaniem i publikacja ogloszen.
+                      {messages.conciergeDescription}
                     </p>
                     <div className="flex flex-wrap items-center gap-2">
                       <label className="inline-flex h-10 cursor-pointer items-center rounded-md border border-neutral-300 bg-white px-3 text-sm font-medium text-neutral-700 transition hover:bg-neutral-100">
@@ -1208,7 +1220,7 @@ export function MyContainerListings(input?: {
                     </div>
                     <label className="grid gap-1 text-sm">
                       <span className="text-neutral-700">
-                        Notatka dla zespolu Concierge (opcjonalnie)
+                        {messages.conciergeNoteLabel}
                       </span>
                       <textarea
                         rows={3}
@@ -1217,21 +1229,22 @@ export function MyContainerListings(input?: {
                           setConciergeNote(event.target.value);
                         }}
                         className="rounded-md border border-neutral-300 bg-white px-3 py-2 text-sm text-neutral-900"
-                        placeholder="Np. format pliku, priorytet, uwagi do cen i dostepnosci"
+                        placeholder={messages.conciergeNotePlaceholder}
                         maxLength={2000}
                       />
                     </label>
                     {conciergeReport ? (
                       <div className="rounded-md border border-neutral-200 bg-white p-3">
                         <p className="text-sm text-neutral-800">
-                          Zlecenie Concierge zapisane.
+                          {messages.conciergeSaved}
                         </p>
                         <p className="text-xs text-neutral-500">
-                          Plik: {conciergeReport.filename ?? "-"}
+                          {messages.fileLabel}: {conciergeReport.filename ?? "-"}
                         </p>
                         {conciergeReport.createdAt ? (
                           <p className="text-xs text-neutral-500">
-                            Data: {new Date(conciergeReport.createdAt).toLocaleString("pl-PL")}
+                            {messages.dateLabel}:{" "}
+                            {new Date(conciergeReport.createdAt).toLocaleString(toIntlLocale(locale))}
                           </p>
                         ) : null}
                         {conciergeReport.warning ? (
@@ -1249,7 +1262,7 @@ export function MyContainerListings(input?: {
                         }}
                         className="rounded-md border border-neutral-300 bg-white px-3 py-2 text-sm text-neutral-700 transition hover:bg-neutral-100"
                       >
-                        Wroc do wyboru
+                        {messages.backToChoice}
                       </button>
                       <button
                         type="button"
@@ -1259,11 +1272,13 @@ export function MyContainerListings(input?: {
                         }}
                         className={`rounded-md px-3 py-2 text-sm font-semibold ${SEARCH_GRADIENT_CTA_CLASS} disabled:cursor-not-allowed disabled:opacity-60`}
                       >
-                        {isConciergeSubmitting ? "Wysylanie..." : "Wyslij do Concierge"}
+                        {isConciergeSubmitting ? messages.sending : messages.sendToConcierge}
                       </button>
                     </div>
                     <p className="text-xs text-neutral-500">
-                      Maksymalny rozmiar pliku: {MAX_CONCIERGE_FILE_MB} MB.
+                      {formatTemplate(messages.maxFileSize, {
+                        count: MAX_CONCIERGE_FILE_MB,
+                      })}
                     </p>
                   </div>
                 ) : null}
@@ -1272,23 +1287,23 @@ export function MyContainerListings(input?: {
               <div className="grid gap-4">
                 <div className="rounded-md border border-neutral-200 bg-neutral-50 p-3">
                   <p className="text-sm text-neutral-700">
-                    Zaloz profil firmy, zeby skorzystac z Multi Importu.
+                    {messages.bulkNoCompanyLineOne}
                   </p>
                   <p className="mt-1 text-sm text-neutral-600">
-                    Mozesz skorzystac z przygotowanego przez nas pliku Excel.
+                    {messages.bulkNoCompanyLineTwo}
                   </p>
                   <p className="mt-1 text-sm font-medium uppercase tracking-wide text-neutral-500">
-                    lub
+                    {messages.or}
                   </p>
                   <p className="mt-1 text-sm text-neutral-700">
-                    <strong>Wyslij nam plik w dowolnym formacie i zrobimy to za Ciebie.</strong>
+                    <strong>{messages.bulkNoCompanyConcierge}</strong>
                   </p>
                   <div className="mt-3 flex items-center justify-end">
                     <Link
                       href="/companies/new"
                       className={`inline-flex h-10 items-center rounded-md px-3 text-sm font-medium ${DARK_BLUE_CTA_CLASS}`}
                     >
-                      Zaloz profil firmy
+                      {messages.createCompanyProfile}
                     </Link>
                   </div>
                 </div>

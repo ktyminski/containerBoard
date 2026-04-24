@@ -6,7 +6,14 @@ import type {
   ContainerType,
   TaxMode,
 } from "@/lib/container-listing-types";
-import { CONTAINER_SIZE, CONTAINER_TYPE } from "@/lib/container-listing-types";
+import {
+  CONTAINER_CONDITION_LABEL,
+  CONTAINER_FEATURE_LABEL,
+  CONTAINER_HEIGHT_LABEL,
+  CONTAINER_SIZE,
+  CONTAINER_TYPE,
+  CONTAINER_TYPE_LABEL,
+} from "@/lib/container-listing-types";
 import { formatTemplate, type AppMessages } from "@/lib/i18n";
 import type {
   FormContainerSize,
@@ -16,6 +23,15 @@ import type {
 } from "@/components/container-listings-shared";
 
 export type ContainerListingsMessages = AppMessages["containerListings"];
+
+export const CONTAINER_FILTER_LABELS_EN = {
+  size: "Length",
+  height: "Height",
+  type: "Type",
+  condition: "Condition",
+  feature: "Features",
+  any: "Any",
+} as const;
 
 export function getListingKindLabel(
   messages: ContainerListingsMessages,
@@ -109,10 +125,31 @@ export function getContainerSizeOptions(messages: ContainerListingsMessages) {
   ] satisfies Array<{ value: FormContainerSize; label: string }>;
 }
 
+export function getContainerSizeFilterOptions() {
+  return [
+    { value: "10" as const, label: "10 ft" },
+    { value: "20" as const, label: "20 ft" },
+    { value: "40" as const, label: "40 ft" },
+    { value: "45" as const, label: "45 ft" },
+    { value: "53" as const, label: "53 ft" },
+    {
+      value: "custom" as const,
+      label: "Other / custom",
+    },
+  ] satisfies Array<{ value: FormContainerSize; label: string }>;
+}
+
 export function getContainerHeightOptions(messages: ContainerListingsMessages) {
   return (["standard", "HC"] as const).map((value) => ({
     value,
     label: getContainerHeightLabel(messages, value),
+  }));
+}
+
+export function getContainerHeightFilterOptions() {
+  return (["standard", "HC"] as const).map((value) => ({
+    value,
+    label: CONTAINER_HEIGHT_LABEL[value],
   }));
 }
 
@@ -135,12 +172,43 @@ export function getContainerTypeOptions(messages: ContainerListingsMessages) {
   }));
 }
 
+export function getContainerTypeFilterOptions() {
+  return (
+    [
+      "dry",
+      "reefer",
+      "open_top",
+      "flat_rack",
+      "tank",
+      "side_open",
+      "hard_top",
+      "platform",
+      "bulk",
+    ] as const
+  ).map((value) => ({
+    value,
+    label:
+      value === CONTAINER_TYPE.DRY
+        ? `${CONTAINER_TYPE_LABEL[value]} (DV | GP)`
+        : CONTAINER_TYPE_LABEL[value],
+  }));
+}
+
 export function getContainerConditionOptions(messages: ContainerListingsMessages) {
   return (
     ["new", "one_trip", "cargo_worthy", "wind_water_tight", "as_is"] as const
   ).map((value) => ({
     value,
     label: getContainerConditionLabel(messages, value),
+  }));
+}
+
+export function getContainerConditionFilterOptions() {
+  return (
+    ["new", "one_trip", "cargo_worthy", "wind_water_tight", "as_is"] as const
+  ).map((value) => ({
+    value,
+    label: CONTAINER_CONDITION_LABEL[value],
   }));
 }
 
@@ -163,6 +231,28 @@ export function getContainerFeatureOptions(messages: ContainerListingsMessages) 
   ).map((value) => ({
     value,
     label: getContainerFeatureLabel(messages, value),
+  }));
+}
+
+export function getContainerFeatureFilterOptions() {
+  return (
+    [
+      "double_door",
+      "pallet_wide",
+      "insulated",
+      "ventilated",
+      "dangerous_goods",
+      "food_grade",
+      "open_side_full",
+      "crane_lugs",
+      "forklift_pockets",
+      "removable_roof",
+      "high_security_lockbox",
+      "extra_vents",
+    ] as const
+  ).map((value) => ({
+    value,
+    label: CONTAINER_FEATURE_LABEL[value],
   }));
 }
 

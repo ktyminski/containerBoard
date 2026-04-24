@@ -1,6 +1,7 @@
 import { ObjectId } from "mongodb";
 import { NextRequest, NextResponse } from "next/server";
 import { getCurrentUserFromRequest } from "@/lib/auth-user";
+import { formatTemplate, getLocaleFromApiRequest, getMessages } from "@/lib/i18n";
 import {
   ensureBulkConciergeRequestIndexes,
   getBulkConciergeRequestsCollection,
@@ -23,38 +24,43 @@ function normalizeOptionalString(value: string | undefined): string | undefined 
   return trimmed ? trimmed : undefined;
 }
 
-async function parseConciergeRequestBody(request: NextRequest): Promise<{
+async function parseConciergeRequestBody(
+  request: NextRequest,
+  messages: ReturnType<typeof getMessages>["containerModules"]["conciergeApi"],
+): Promise<{
   stockFile: File;
   note?: string;
 }> {
   const contentType = request.headers.get("content-type") ?? "";
   if (!contentType.includes("multipart/form-data")) {
-    throw new Error("Wysylka concierge obsluguje multipart/form-data");
+    throw new Error(messages.multipartRequired);
   }
 
   const formData = await request.formData();
   const stockFile = formData.get("stockFile");
   if (!(stockFile instanceof File)) {
-    throw new Error("Brak pliku stock do wyslania");
+    throw new Error(messages.missingStockFile);
   }
   if (stockFile.size <= 0) {
-    throw new Error("Plik stock jest pusty");
+    throw new Error(messages.emptyStockFile);
   }
   if (stockFile.size > MAX_CONCIERGE_FILE_BYTES) {
-    throw new Error("Plik stock przekracza limit 25 MB");
+    throw new Error(messages.stockFileTooLarge);
   }
 
   const rawNote = formData.get("note");
   const note =
     typeof rawNote === "string" ? normalizeOptionalString(rawNote) : undefined;
   if (note && note.length > MAX_NOTE_LENGTH) {
-    throw new Error(`Notatka moze miec maksymalnie ${MAX_NOTE_LENGTH} znakow`);
+    throw new Error(formatTemplate(messages.noteTooLong, { count: MAX_NOTE_LENGTH }));
   }
 
   return { stockFile, note };
 }
 
 export async function POST(request: NextRequest) {
+  const locale = getLocaleFromApiRequest(request);
+  const messages = getMessages(locale).containerModules.conciergeApi;
   try {
     await ensureBulkConciergeRequestIndexes();
 
@@ -71,10 +77,10 @@ export async function POST(request: NextRequest) {
 
     const user = await getCurrentUserFromRequest(request);
     if (!user?._id) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+      return NextResponse.json({ error: messages.unauthorized }, { status: 401 });
     }
     if (user.isBlocked === true) {
-      return NextResponse.json({ error: "Blocked user" }, { status: 403 });
+      return NextResponse.json({ error: messages.blockedUser }, { status: 403 });
     }
 
     const userRateLimitResponse = await enforceRateLimitOrResponse({
@@ -91,14 +97,12 @@ export async function POST(request: NextRequest) {
 
     let body: { stockFile: File; note?: string };
     try {
-      body = await parseConciergeRequestBody(request);
+      body = await parseConciergeRequestBody(request, messages);
     } catch (parseError) {
       return NextResponse.json(
         {
           error:
-            parseError instanceof Error
-              ? parseError.message
-              : "Nie udalo sie odczytac pliku stock",
+            parseError instanceof Error ? parseError.message : messages.readStockError,
         },
         { status: 400 },
       );
@@ -119,7 +123,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json(
         {
           error:
-            "Konto musi miec uzupelniony profil firmy, aby wyslac stock do concierge",
+            "Konto musi mieć uzupełniony profil firmy, aby wysłać stock do concierge",
         },
         { status: 403 },
       );
@@ -130,7 +134,7 @@ export async function POST(request: NextRequest) {
     );
     if (!conciergeNotificationEmail) {
       return NextResponse.json(
-        { error: "CONCIERGE_NOTIFICATION_EMAIL nie jest skonfigurowany" },
+        { error: messages.notificationEmailMissing },
         { status: 500 },
       );
     }
@@ -247,8 +251,7 @@ export async function POST(request: NextRequest) {
         ...(mailResult.ok
           ? {}
           : {
-              warning:
-                "Zgloszenie zapisane, ale nie udalo sie wyslac powiadomienia email",
+              warning: messages.notificationWarning,
             }),
       },
       { status: 201 },
@@ -260,7 +263,7 @@ export async function POST(request: NextRequest) {
     });
     return NextResponse.json(
       {
-        error: "Internal server error",
+        error: messages.internalServerError,
         message:
           error instanceof Error ? error.message : "Unknown concierge bulk upload error",
       },

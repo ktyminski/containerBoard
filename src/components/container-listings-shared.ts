@@ -1,14 +1,4 @@
 import {
-  CONTAINER_CONDITIONS,
-  CONTAINER_CONDITION_LABEL,
-  CONTAINER_FEATURES,
-  CONTAINER_FEATURE_LABEL,
-  CONTAINER_HEIGHTS,
-  CONTAINER_HEIGHT_LABEL,
-  CONTAINER_SIZES,
-  CONTAINER_TYPE,
-  CONTAINER_TYPES,
-  CONTAINER_TYPE_LABEL,
   type ContainerCondition,
   type ContainerFeature,
   type ContainerHeight,
@@ -28,7 +18,7 @@ export type SortPreset =
   | "price_net_desc";
 export type FormContainerSize = "10" | "20" | "40" | "45" | "53" | "custom";
 export const CUSTOM_CONTAINER_SIZE_FILTER_VALUE = "custom";
-export type FormLocationRadiusKm = "20" | "50" | "100" | "200";
+export type FormLocationRadiusKm = "20" | "50" | "100" | "200" | "400";
 export type FilterTaxMode = TaxMode;
 export type FilterCurrency = "all" | Currency;
 export type PriceDisplayCurrency = "original" | Currency;
@@ -95,16 +85,10 @@ export type MultiFilterKey =
   | "conditions"
   | "features";
 
-export const LOCATION_RADIUS_OPTIONS = [20, 50, 100, 200] as const;
+export const LOCATION_RADIUS_OPTIONS = [50, 100, 200, 400] as const;
 export type LocationRadiusKm = (typeof LOCATION_RADIUS_OPTIONS)[number];
 export const AUTO_APPLY_FILTERS_DEBOUNCE_MS = 450;
 export const AUTO_APPLY_TYPED_FILTERS_DEBOUNCE_MS = 800;
-
-export const LISTING_TYPE_LABEL: Record<ListingType, string> = {
-  sell: "Sprzedaz",
-  rent: "Wynajem",
-  buy: "Chce zakupic",
-};
 
 export const CONTAINER_CONDITION_COLOR_TOKENS: Record<
   ContainerCondition,
@@ -135,7 +119,7 @@ export const CONTAINER_CONDITION_COLOR_TOKENS: Record<
 export const FILTER_FORM_DEFAULTS: FiltersFormValues = {
   listingKind: "sell",
   locationInput: "",
-  locationRadiusKmInput: "50",
+  locationRadiusKmInput: "200",
   containerSizes: [],
   containerHeights: [],
   containerTypes: [],
@@ -158,60 +142,6 @@ export const FILTER_FORM_DEFAULTS: FiltersFormValues = {
   countryCode: "",
   sortPreset: "newest",
 };
-
-export const LISTING_KIND_OPTIONS: Array<{ value: ListingKind; label: string }> = [
-  { value: "sell", label: "Sprzedaz" },
-  { value: "rent", label: "Wynajem" },
-  { value: "buy", label: "Chce zakupic" },
-];
-
-export const SORT_OPTIONS: Array<{ value: SortPreset; label: string }> = [
-  { value: "newest", label: "Najnowsze" },
-  { value: "quantity_desc", label: "Ilosc malejaco" },
-  { value: "quantity_asc", label: "Ilosc rosnaco" },
-  { value: "available_asc", label: "Najblizsza dostepnosc" },
-  { value: "price_net_asc", label: "Cena netto rosnaco" },
-  { value: "price_net_desc", label: "Cena netto malejaco" },
-];
-
-export const CONTAINER_SIZE_OPTIONS: Array<{ value: FormContainerSize; label: string }> =
-  [
-    ...CONTAINER_SIZES.map((value) => ({
-      value: String(value) as FormContainerSize,
-      label: `${value} ft`,
-    })),
-    {
-      value: CUSTOM_CONTAINER_SIZE_FILTER_VALUE as FormContainerSize,
-      label: "Inne / custom",
-    },
-  ];
-
-export const CONTAINER_HEIGHT_OPTIONS: Array<{ value: ContainerHeight; label: string }> =
-  CONTAINER_HEIGHTS.map((value) => ({
-    value,
-    label: CONTAINER_HEIGHT_LABEL[value],
-  }));
-
-export const CONTAINER_TYPE_OPTIONS: Array<{ value: ContainerType; label: string }> =
-  CONTAINER_TYPES.map((value) => ({
-    value,
-    label:
-      value === CONTAINER_TYPE.DRY
-        ? `${CONTAINER_TYPE_LABEL[value]} (DV | GP)`
-        : CONTAINER_TYPE_LABEL[value],
-  }));
-
-export const CONTAINER_CONDITION_OPTIONS: Array<{ value: ContainerCondition; label: string }> =
-  CONTAINER_CONDITIONS.map((value) => ({
-    value,
-    label: CONTAINER_CONDITION_LABEL[value],
-  }));
-
-export const CONTAINER_FEATURE_OPTIONS: Array<{ value: ContainerFeature; label: string }> =
-  CONTAINER_FEATURES.map((value) => ({
-    value,
-    label: CONTAINER_FEATURE_LABEL[value],
-  }));
 
 export type NonLocationFilters = Pick<
   AppliedFilters,
@@ -334,4 +264,3 @@ export function shouldUseTypedDebounce(
     draft.priceMaxInput !== applied.priceMaxInput
   );
 }
-

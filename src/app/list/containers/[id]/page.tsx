@@ -1,19 +1,32 @@
 import type { Metadata } from "next";
+import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { ContainerDetailsContent } from "@/components/container-details-content";
-
-export const metadata: Metadata = {
-  title: "Podglad ogloszenia | ContainerBoard",
-  robots: {
-    index: false,
-    follow: false,
-  },
-};
+import { getLocaleFromRequest, getMessages, LOCALE_COOKIE_NAME } from "@/lib/i18n";
 
 type ListContainerDetailsPageProps = {
   params: Promise<{ id: string }>;
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 };
+
+export async function generateMetadata({
+  searchParams,
+}: ListContainerDetailsPageProps): Promise<Metadata> {
+  const params = await searchParams;
+  const cookieStore = await cookies();
+  const locale = getLocaleFromRequest({
+    params,
+    cookieLocale: cookieStore.get(LOCALE_COOKIE_NAME)?.value,
+  });
+
+  return {
+    title: getMessages(locale).listPage.detailsMetaTitle,
+    robots: {
+      index: false,
+      follow: false,
+    },
+  };
+}
 
 function toSearchParams(
   params: Record<string, string | string[] | undefined>,

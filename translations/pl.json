@@ -78,7 +78,7 @@
     "faqThreeAnswer": "Tak. Kliknij \"Otwórz mapę\", aby przejść do route /maps.",
     "trustedEyebrow": "Partnerzy",
     "trustedTitle": "Zaufali nam",
-    "trustedSubtitle": "Firmy z rynku TSL, ktore publikują i rozwijają relacje przez ContainerBoard.",
+    "trustedSubtitle": "Firmy z rynku TSL, które publikują i rozwijają relacje przez ContainerBoard.",
     "finalTitle": "Nasza misja? Rozwijać kontakty w logistyce.",
     "finalSubtitle": "Tworzymy miejsce, które łączy firmy, specjalistów i oferty w jednym ekosystemie TSL.",
     "finalCta": "Zapoznaj się"
@@ -91,6 +91,7 @@
     "contact": "Kontakt",
     "browseListings": "Wyszukiwarka",
     "addContainer": "Dodaj kontener",
+    "addAction": "Dodaj",
     "mapLinksAria": "Linki mapy",
     "infoLinksAria": "Linki informacyjne",
     "linkedinAria": "Profil LinkedIn ContainerBoard",
@@ -101,7 +102,7 @@
     "companies": "Firmy",
     "copyright": "© 2026 ContainerBoard. - z pasją do logistyki. Wszystkie prawa zastrzeżone.",
     "copyrightShort": "© 2026 ContainerBoard. Wszystkie prawa zastrzeżone.",
-    "saleSeo": "Kontenery na sprzeda?"
+    "saleSeo": "Kontenery na sprzedaż"
   },
   "cookieNotice": {
     "message": "Używamy cookies oraz local storage, aby zapewnić poprawne działanie serwisu i zapamiętać Twoje ustawienia.",
@@ -128,7 +129,7 @@
   "legalPages": {
     "privacy": {
       "title": "Polityka prywatności",
-      "intro": "Ta strona wyjaśnia, jak ContainerBoard przetwarza dane osobowe i chroni prywatność użytkowników.",
+      "intro": "Ta stroną wyjaśnia, jak ContainerBoard przetwarza dane osobowe i chroni prywatność użytkowników.",
       "pointOne": "Przetwarzamy dane konta (imię, email, hash hasła), aby zapewnić uwierzytelnianie i dostęp do platformy.",
       "pointTwo": "Dane mogą być wykorzystywane do kontaktu z użytkownikiem w sprawach bezpieczeństwa konta, weryfikacji i komunikatów operacyjnych.",
       "pointThree": "Użytkownik może poprosić o aktualizację lub usunięcie danych osobowych przez kontakt z administracją."
@@ -151,12 +152,13 @@
   "infoPages": {
     "about": {
       "title": "O nas",
-      "intro": "ContainerBoard powstało z pasji do logistyki i chęci zrobienia czegoś prostszego, bardziej przejrzystego i po prostu wygodnego w użyciu.",
-      "body": "Chcemy, żeby znalezienie firmy, pracy czy oferty w branży TSL było szybkie i bez frustracji.\n\nTo projekt, który rozwijamy na bieżąco — słuchając użytkowników i ucząc się rynku.\n\nMasz pomysł, pytanie albo chcesz pogadać o współpracy? Śmiało — jesteśmy otwarci."
+      "intro": "ContainerBoard to miejsce dla firm i osób, które chcą szybciej znaleźć, sprzedać albo wynająć kontenery.",
+      "body": "Zbieramy oferty kontenerów w jednym, czytelnym miejscu, żeby ograniczyć przypadkowe telefony, nieaktualne ogłoszenia i ręczne przekopywanie się przez wiele źródeł.\n\nPlatforma pomaga sprzedającym publikować stock w prosty sposób, a kupującym szybciej porównać dostępne kontenery według lokalizacji, typu, stanu i ceny.\n\nRozwijamy ContainerBoard wokół realnych potrzeb rynku kontenerowego: prostego dodawania ofert, wygodnej wyszukiwarki, obsługi zapytań i wsparcia operacyjnego tam, gdzie jest potrzebne."
     },
     "contact": {
       "title": "Kontakt",
       "intro": "Masz pytanie, pomysł albo coś nie działa tak, jak powinno?",
+      "phoneLabel": "Telefon",
       "pointOne": "Napisz do nas — chętnie pomożemy i postaramy się szybko rozwiązać każdy problem związany z korzystaniem z platformy.",
       "pointTwo": "Jesteśmy też otwarci na wszelkie formy współpracy i zapytania biznesowe.",
       "pointThree": "Zazwyczaj odpowiadamy w ciągu kilku godzin."
@@ -181,7 +183,7 @@
     "myLeadRequests": "Moje zapytania ofertowe",
     "emailVerificationRequiredForAdd": "Aby dodawać wpisy, musisz najpierw potwierdzić konto przez email.",
     "companyCreationLimitForAdd": "Możesz założyć maksymalnie {limit} firmy w ciągu {windowHours} godzin. Wróć później.",
-    "myListings": "Moje og?oszenia"
+    "myListings": "Moje ogłoszenia"
   },
   "settingsPage": {
     "title": "Panel użytkownika",
@@ -199,7 +201,7 @@
     "roleChangeSubmitting": "Zapisywanie...",
     "roleConfirmTitle": "Potwierdź zmianę typu konta",
     "roleConfirmText": "Czy na pewno chcesz zmienić typ konta na: {role}?",
-    "roleDetachWarning": "Przypisania do firm zostana usunięte, ale firmy i ogłoszenia pozostana w systemie.",
+    "roleDetachWarning": "Przypisania do firm zostaną usunięte, ale firmy i ogłoszenia pozostana w systemie.",
     "confirmRoleChange": "Potwierdzam zmianę",
     "roleChangeSuccess": "Typ konta został zmieniony.",
     "roleChangeUnknownError": "Nie udało się zmienić typu konta.",
@@ -220,7 +222,7 @@
     "deleteAccountDeleting": "Usuwanie...",
     "deleteConfirmTitle": "Potwierdź usunięcie konta",
     "deleteConfirmText": "Czy na pewno chcesz usunąć swoje konto?",
-    "deleteConfirmWarning": "Przypisania do firm zostana usunięte, ale firmy i ogłoszenia pozostana w systemie.",
+    "deleteConfirmWarning": "Przypisania do firm zostaną usunięte, ale firmy i ogłoszenia pozostana w systemie.",
     "profileTitle": "Dane konta",
     "profileHint": "Zmień imię i nazwisko oraz sprawdź adres email przypisany do konta.",
     "emailUnverifiedNotice": "Twoje konto nie jest jeszcze zweryfikowane. Sprawdź skrzynkę email i potwierdź konto.",
@@ -249,7 +251,7 @@
     "easyApplySaveButton": "Zapisz CV",
     "easyApplySaveSubmitting": "Zapisywanie CV...",
     "easyApplySaveSuccess": "CV zostało zapisane.",
-    "easyApplySaveUnknownError": "Nie udalo się zapisać CV.",
+    "easyApplySaveUnknownError": "Nie udało się zapisać CV.",
     "easyApplyConsentText": "Wrzucajac CV zgadzasz się na przechowywanie przez nas swoich danych osobowych -",
     "easyApplyConsentLinkLabel": "polityka prywatności",
     "profileOpenModalButton": "Edytuj dane konta",
@@ -325,30 +327,30 @@
     "unknownError": "Nieznany błąd",
     "noAnnouncementsForCompany": "Ta firma nie ma jeszcze ogłoszeń.",
     "noOffersForCompany": "Ta firma nie ma jeszcze ofert.",
-    "deletionRequestAction": "Usun firme",
+    "deletionRequestAction": "Usuń firmę",
     "deletionRequestEditAction": "Edytuj zgłoszenie usunięcia",
     "deletionRequestActiveBadge": "Firma zgłoszona do usunięcia",
     "deletionRequestReasonPreview": "Powod",
     "deletionRequestNoReason": "Brak podanego powódu.",
     "deletionRequestModalTitle": "Potwierdz usuniecie firmy",
     "deletionRequestEditModalTitle": "Edytuj zgłoszenie usunięcia",
-    "deletionRequestModalHint": "Powiazane ogloszenia kontenerow tez zostana usuniete. Tej operacji nie mozna cofnac.",
+    "deletionRequestModalHint": "Powiązane ogłoszenia kontenerów też zostaną usunięte. Tej operacji nie można cofnąć.",
     "deletionRequestReasonLabel": "Powod zgłoszenia",
     "deletionRequestReasonPlaceholder": "Opisz powód zgłoszenia usunięcia firmy...",
     "deletionRequestReasonLimits": "Minimum {min} znakow, maksimum {max} znakow.",
     "deletionRequestCancel": "Anuluj",
-    "deletionRequestConfirm": "Usun firme",
+    "deletionRequestConfirm": "Usuń firmę",
     "deletionRequestUpdateConfirm": "Zapisz zmiany",
     "deletionRequestWithdraw": "Wycofaj zgłoszenie do usunięcia",
     "deletionRequestSubmitting": "Usuwanie...",
     "deletionRequestWithdrawSubmitting": "Wycofywanie...",
     "deletionRequestValidation": "Podaj powód (minimum 10 znakow).",
-    "deletionRequestSubmitted": "Firma i powiazane ogloszenia zostaly usuniete.",
+    "deletionRequestSubmitted": "Firma i powiązane ogłoszenia zostały usunięte.",
     "deletionRequestUpdated": "Zgłoszenie usunięcia zostało zaktualizowane.",
     "deletionRequestWithdrawn": "Zgłoszenie usunięcia zostało wycofane.",
-    "deletionRequestUnauthorized": "Musisz byc zalogowany, aby usunac firme.",
-    "deletionRequestUnknownError": "Nie udalo sie usunac firmy.",
-    "deletionRequestWithdrawUnknownError": "Nie udalo się wycofać zgłoszenia usunięcia."
+    "deletionRequestUnauthorized": "Musisz być zalogowany, aby usunąć firmę.",
+    "deletionRequestUnknownError": "Nie udało się usunąć firmy.",
+    "deletionRequestWithdrawUnknownError": "Nie udało się wycofać zgłoszenia usunięcia."
   },
   "authForm": {
     "loginTitle": "Zaloguj",
@@ -363,7 +365,7 @@
     "submitLoading": "Prosze czekac...",
     "submitLogin": "Zaloguj",
     "submitRegister": "Utworz konto",
-    "forgotPasswordLink": "Nie pamietasz hasła?",
+    "forgotPasswordLink": "Nie pamiętasz hasła?",
     "forgotPasswordTitle": "Reset hasła",
     "forgotPasswordSubtitle": "Podaj email konta lokalnego. Jeśli konto istnieje, wyślemy link do ustawienia nowego hasła.",
     "forgotPasswordSubmit": "Wyślij link resetu",
@@ -377,7 +379,7 @@
     "resetPasswordMismatch": "Hasła muszą być identyczne.",
     "continueWithGoogle": "Kontynuuj z Google",
     "noAccount": "Nie masz konta?",
-    "hasAccount": "Masz juz konto?",
+    "hasAccount": "Masz już konto?",
     "goToRegister": "Zarejestruj się",
     "goToLogin": "Zaloguj się",
     "rolesHint": "Role moderator/admin są nadawane przez administratora.",
@@ -398,12 +400,12 @@
     "invalidEmail": "Podaj poprawny adres email.",
     "passwordMinLength": "Hasło musi mieć co najmniej 8 znakow.",
     "nameMinLength": "Imię i nazwisko musi mieć co najmniej 2 znaki.",
-    "validationError": "Sprawdź formularz i uzupelnij wymagane pola.",
+    "validationError": "Sprawdź formularz i uzupełnij wymagane pola.",
     "legalConsentPrefix": "Akceptuje",
-    "legalConsentPrivacy": "polityke prywatności",
+    "legalConsentPrivacy": "politykę prywatności",
     "legalConsentAnd": "i",
     "legalConsentTerms": "regulamin",
-    "legalConsentRequired": "Musisz zaakceptowac polityke prywatności i regulamin."
+    "legalConsentRequired": "Musisz zaakceptować politykę prywatności i regulamin."
   },
   "map": {
     "sectionTitle": "Firmy",
@@ -414,7 +416,7 @@
     "mapRenderError": "Błąd renderowania mapy",
     "popupTagsFallback": "Brak tagow",
     "openCompany": "Otwórz profil firmy",
-    "openCompanyShort": "Zobacz firme",
+    "openCompanyShort": "Zobacz firmę",
     "showOnMapShort": "Zobacz na mapie",
     "mobileMapToggle": "Mapa",
     "mobileListToggle": "Lista",
@@ -521,7 +523,7 @@
       "openAnnouncement": "Zobacz ogłoszenie",
       "favoriteAdd": "Dodaj do ulubionych",
       "favoriteRemove": "Usuń z ulubionych",
-      "favoriteAddedNotice": "Dodano do ulubionych. Liste ulubionych znajdziesz w panelu użytkownika.",
+      "favoriteAddedNotice": "Dodano do ulubionych. Listę ulubionych znajdziesz w panelu użytkownika.",
       "salarySuffixHourly": "brutto / h",
       "salarySuffixMonthly": "brutto / mies.",
       "salaryRangeTemplate": "{from} - {to} {suffix}",
@@ -558,7 +560,7 @@
   },
   "adminPage": {
     "title": "Panel administratora",
-    "subtitle": "Zarz?dzaj kontenerami, u?ytkownikami, firmami i zleceniami concierge.",
+    "subtitle": "Zarządzaj kontenerami, użytkownikami, firmami i zleceniami concierge.",
     "backToMap": "Powrót do mapy",
     "tabs": {
       "companies": "Firmy",
@@ -579,7 +581,7 @@
     "blockFilter": "Filtr blokady",
     "sortBy": "Sortuj po",
     "sortDir": "Kolejnosc",
-    "pageSize": "Na strone",
+    "pageSize": "Na stronę",
     "sortCreated": "Data utworzenia",
     "sortName": "Imię",
     "sortEmail": "Email",
@@ -589,15 +591,15 @@
     "allRoles": "Wszystkie role",
     "allBlocks": "Wszystkie statusy",
     "noResults": "Brak wyników dla wybranych filtrow.",
-    "pageInfo": "Strona {page}/{totalPages}, rekordow: {total}",
+    "pageInfo": "Strona {page}/{totalPages}, rekordów: {total}",
     "prevPage": "Poprzednia",
-    "nextPage": "Nastepna",
+    "nextPage": "Następna",
     "assignCompany": "Przypisz firmę",
     "assignCompanyTitle": "Przypisz firmę do użytkownika",
     "selectUser": "Wybierz użytkownika",
     "selectCompany": "Wybierz firmę",
     "noAvailableCompanies": "Brak wolnych firm do przypisania.",
-    "refresh": "Odswiez",
+    "refresh": "Odśwież",
     "name": "Imię",
     "email": "Email",
     "emailVerification": "Weryfikacja email",
@@ -635,7 +637,7 @@
     "allBlocks": "Wszystkie statusy",
     "sortBy": "Sortuj po",
     "sortDir": "Kolejnosc",
-    "pageSize": "Na strone",
+    "pageSize": "Na stronę",
     "sortCreated": "Data dodania",
     "sortName": "Nazwa",
     "sortSlug": "Slug",
@@ -643,10 +645,10 @@
     "sortAsc": "Rosnaco",
     "sortDesc": "Malejaco",
     "noResults": "Brak wyników dla wybranych filtrow.",
-    "pageInfo": "Strona {page}/{totalPages}, rekordow: {total}",
+    "pageInfo": "Strona {page}/{totalPages}, rekordów: {total}",
     "prevPage": "Poprzednia",
-    "nextPage": "Nastepna",
-    "refresh": "Odswiez",
+    "nextPage": "Następna",
+    "refresh": "Odśwież",
     "empty": "Brak firm do wyświetlenia.",
     "company": "Firma",
     "slug": "Slug",
@@ -699,7 +701,7 @@
     "unpublished": "Zawieszona",
     "sortBy": "Sortuj po",
     "sortDir": "Kolejnosc",
-    "pageSize": "Na strone",
+    "pageSize": "Na stronę",
     "sortCreated": "Data dodania",
     "sortTitle": "Tytul",
     "sortCompany": "Firma",
@@ -707,10 +709,10 @@
     "sortAsc": "Rosnaco",
     "sortDesc": "Malejaco",
     "noResults": "Brak wyników dla wybranych filtrow.",
-    "pageInfo": "Strona {page}/{totalPages}, rekordow: {total}",
+    "pageInfo": "Strona {page}/{totalPages}, rekordów: {total}",
     "prevPage": "Poprzednia",
-    "nextPage": "Nastepna",
-    "refresh": "Odswiez",
+    "nextPage": "Następna",
+    "refresh": "Odśwież",
     "offer": "Oferta",
     "company": "Firma",
     "offerType": "Typ",
@@ -744,7 +746,7 @@
     "unpublished": "Zawieszone",
     "sortBy": "Sortuj po",
     "sortDir": "Kolejnosc",
-    "pageSize": "Na strone",
+    "pageSize": "Na stronę",
     "sortCreated": "Data dodania",
     "sortTitle": "Tytul",
     "sortCompany": "Firma",
@@ -752,10 +754,10 @@
     "sortAsc": "Rosnaco",
     "sortDesc": "Malejaco",
     "noResults": "Brak wyników dla wybranych filtrow.",
-    "pageInfo": "Strona {page}/{totalPages}, rekordow: {total}",
+    "pageInfo": "Strona {page}/{totalPages}, rekordów: {total}",
     "prevPage": "Poprzednia",
-    "nextPage": "Nastepna",
-    "refresh": "Odswiez",
+    "nextPage": "Następna",
+    "refresh": "Odśwież",
     "announcement": "Ogłoszenie",
     "company": "Firma",
     "plan": "Plan",
@@ -786,7 +788,7 @@
     "allStatuses": "Wszystkie statusy",
     "sortBy": "Sortuj po",
     "sortDir": "Kolejnosc",
-    "pageSize": "Na strone",
+    "pageSize": "Na stronę",
     "sortCreated": "Data dodania",
     "sortExpires": "Data waznosci",
     "sortType": "Typ",
@@ -794,10 +796,10 @@
     "sortAsc": "Rosnaco",
     "sortDesc": "Malejaco",
     "noResults": "Brak wyników dla wybranych filtrow.",
-    "pageInfo": "Strona {page}/{totalPages}, rekordow: {total}",
+    "pageInfo": "Strona {page}/{totalPages}, rekordów: {total}",
     "prevPage": "Poprzednia",
-    "nextPage": "Nastepna",
-    "refresh": "Odswiez",
+    "nextPage": "Następna",
+    "refresh": "Odśwież",
     "type": "Typ",
     "route": "Trasa",
     "description": "Opis",
@@ -819,7 +821,7 @@
   "adminCompanyClaims": {
     "loading": "Ładowanie zgłoszeń...",
     "title": "Zgłoszenia przejęcia firm",
-    "refresh": "Odswiez",
+    "refresh": "Odśwież",
     "empty": "Brak oczekujących zgłoszeń.",
     "company": "Firma",
     "requester": "Wnioskujacy",
@@ -831,7 +833,7 @@
     "failedLoad": "Nie udało się załadować zgłoszeń ({status})",
     "failedUpdate": "Nie udało się zapisać decyzji ({status})",
     "confirmApproveTitle": "Potwierdź akceptację",
-    "confirmApproveText": "Czy na pewno chcesz zaakceptowac przejęcie firmy \"{company}\" przez użytkownika \"{user}\"?",
+    "confirmApproveText": "Czy na pewno chcesz zaakceptować przejęcie firmy \"{company}\" przez użytkownika \"{user}\"?",
     "cancel": "Anuluj",
     "confirm": "Potwierdzam",
     "unknownError": "Nieznany błąd"
@@ -841,7 +843,7 @@
     "subtitle": "Dodanie firmy zajmuje ok. 30 sekund.\nReszte informacji możesz uzupelnic później.",
     "requiredFieldsHint": "Pola oznaczone * są wymagane.",
     "stepLabel": "Krok",
-    "stepMainInfo": "Informacje glowne",
+    "stepMainInfo": "Informacje główne",
     "stepContact": "Kontakt",
     "stepAdditional": "Dodatkowe informacje",
     "previousStep": "Wstecz",
@@ -849,7 +851,7 @@
     "creationLimitTitle": "Limit dodawania firm",
     "creationLimitText": "Możesz dodać maksymalnie {limit} firmy w ciągu {windowHours} godzin.",
     "creationLimitUsage": "Wykorzystano {count}/{limit} dodan w aktualnym oknie.",
-    "creationLimitUntil": "Nastepna firma będzie mozliwa po: {date}.",
+    "creationLimitUntil": "Następna firma będzie możliwa po: {date}.",
     "creationLimitButton": "Limit osiagniety",
     "name": "Nazwa firmy",
     "description": "Opis firmy",
@@ -1015,7 +1017,7 @@
     "logoAlt": "Podgląd logo",
     "backgroundAlt": "Podgląd tla",
     "imagePreviewAlt": "Podgląd zdjęcia",
-    "imageRemove": "Usun obraz",
+    "imageRemove": "Usuń obraz",
     "cropLogoTitle": "Kadruj logo",
     "cropLogoAlt": "Podgląd kadrowania logo",
     "cropBackgroundTitle": "Kadruj tlo",
@@ -1063,7 +1065,7 @@
     "publishing": "Publikowanie...",
     "submitSuccess": "Ogłoszenie zostało opublikowane.",
     "submitError": "Nie udało się opublikować ogłoszenia.",
-    "validationError": "Sprawdź formularz i uzupelnij wymagane pola.",
+    "validationError": "Sprawdź formularz i uzupełnij wymagane pola.",
     "requiredField": "To pole jest wymagane.",
     "titleLengthError": "Tytul musi mieć od 3 do 180 znakow.",
     "descriptionLengthError": "Opis musi mieć od 20 do 5000 znakow.",
@@ -1081,7 +1083,7 @@
       "linkModalTitle": "Dodaj link",
       "linkModalSave": "Zapisz link",
       "linkModalCancel": "Anuluj",
-      "linkModalRemove": "Usun link"
+      "linkModalRemove": "Usuń link"
     },
     "contractRequired": "Wybierz przynajmniej jeden rodzaj kontraktu.",
     "salaryRangeInvalid": "Zakres stawki jest niepoprawny: pole Od nie może być wieksze niz Do.",
@@ -1185,8 +1187,8 @@
     "tagsPlaceholder": "np. javascript, magazyn, wms",
     "tagsAdd": "Dodaj",
     "tagsEmpty": "Brak tagow.",
-    "tagRemoveAria": "Usun tag {tag}",
-    "externalLinkRemoveAria": "Usun link {link}",
+    "tagRemoveAria": "Usuń tag {tag}",
+    "externalLinkRemoveAria": "Usuń link {link}",
     "previewOpen": "Podgląd ogłoszenia",
     "previewModalEyebrow": "Podgląd",
     "previewModalTitle": "Tak będzie wyglądać ogłoszenie"
@@ -1230,7 +1232,7 @@
     "favoriteAdd": "Dodaj do ulubionych",
     "favoriteRemove": "Usuń z ulubionych",
     "favoriteActionError": "Nie udało się zaktualizować ulubionych.",
-    "favoriteAddedNotice": "Dodano do ulubionych. Liste ulubionych znajdziesz w panelu użytkownika.",
+    "favoriteAddedNotice": "Dodano do ulubionych. Listę ulubionych znajdziesz w panelu użytkownika.",
     "copyLinkCta": "Skopiuj link",
     "copyLinkSuccess": "Skopiowano link do ogłoszenia.",
     "copyLinkError": "Nie udało się skopiować linku.",
@@ -1245,7 +1247,7 @@
     "formMessage": "Wiadomosc dla pracodawcy",
     "formCv": "CV (plik)",
     "formSubmit": "Wyślij aplikację",
-    "formSubmitting": "Wysylanie...",
+    "formSubmitting": "Wysyłanie...",
     "formSuccess": "Aplikacja została wysłana.",
     "formError": "Nie udało się wysłać aplikacji.",
     "requiredField": "To pole jest wymagane.",
@@ -1327,7 +1329,7 @@
     "publishing": "Publikowanie...",
     "submitSuccess": "Oferta została opublikowana.",
     "submitError": "Nie udało się opublikować oferty.",
-    "validationError": "Sprawdź formularz i uzupelnij wymagane pola.",
+    "validationError": "Sprawdź formularz i uzupełnij wymagane pola.",
     "formSubmit": "Publikuj ofertę"
   },
   "offerEdit": {
@@ -1377,7 +1379,7 @@
     "sortNewest": "Najnowsze",
     "sortOldest": "Najstarsze",
     "prevPage": "Poprzednia",
-    "nextPage": "Nastepna",
+    "nextPage": "Następna",
     "openCreateModal": "Dodaj +",
     "modalCreateTitle": "Nowe zapytanie ofertowe",
     "modalEditTitle": "Edytuj zapytanie ofertowe",
@@ -1404,7 +1406,7 @@
     "statusLabel": "Status",
     "statusPending": "Oczekujace",
     "statusActive": "Aktywne",
-    "statusExpired": "Wygasle",
+    "statusExpired": "Wygasłe",
     "descriptionLabel": "Opis",
     "descriptionPlaceholder": "Opisz jakiej usługi potrzebujesz, trase, termin i wymagania.",
     "descriptionLengthError": "Opis musi mieć od 20 do 10000 znakow.",
@@ -1428,7 +1430,7 @@
     "deleteSuccess": "Zapytanie zostało usunięte.",
     "deleteError": "Nie udało się usunąć zapytania.",
     "loadingList": "Ładowanie zapytań...",
-    "listLoadError": "Nie udalo się załadować listy zapytań.",
+    "listLoadError": "Nie udało się załadować listy zapytań.",
     "submit": "Publikuj zapytanie",
     "submitting": "Publikowanie...",
     "save": "Zapisz zmiany",
@@ -1441,23 +1443,24 @@
     "extending": "Przedluzanie...",
     "extendSuccess": "Zapytanie zostało przedluzone o 14 dni.",
     "extendError": "Nie udało się przedłużyć zapytania.",
-    "validationError": "Sprawdź formularz i uzupelnij wymagane pola.",
+    "validationError": "Sprawdź formularz i uzupełnij wymagane pola.",
     "turnstileRequired": "Potwierdź captcha, aby dodać zapytanie.",
     "creationLimitForAdd": "Możesz złożyć maksymalnie {limit} zapytań w ciągu {windowHours} godzin. Wróć później.",
     "emailVerificationRequiredForAdd": "Aby dodać zapytanie, musisz najpierw potwierdzić konto przez email."
   },
   "listPage": {
-    "metaTitle": "Lista kontenerow",
-    "metaDescription": "Przegladaj oferty sprzedazy, wynajmu i zakupu kontenerow, filtruj wyniki i szybko przechodz do kontaktu."
+    "metaTitle": "Lista kontenerów",
+    "metaDescription": "Przeglądaj oferty sprzedaży, wynajmu i zakupu kontenerów, filtruj wyniki i szybko przechodź do kontaktu.",
+    "detailsMetaTitle": "Podgląd ogłoszenia | ContainerBoard"
   },
   "staticPages": {
-    "viewListings": "Przejdz do listy ogloszen",
+    "viewListings": "Przejdź do listy ogłoszeń",
     "privacySections": [
       {
         "title": "1. Informacje ogolne",
         "items": [
           "Niniejsza Polityka prywatnosci okresla zasady przetwarzania danych osobowych uzytkownikow platformy ContainerBoard dostepnej pod adresem containerboard.pl.",
-          "Administratorem danych osobowych jest ContainerBoard Karol Tyminski 5842785961, z siedziba w Gdansku, Andrzeja Struga 4, e-mail: hello@containerboard.pl.",
+          "Administratorem danych osobowych jest ContainerBoard Karol Tymiński 5842785961, z siedzibą w Gdańsku, Andrzeja Struga 4, e-mail: hello@containerboard.pl.",
           "Dbamy o ochrone prywatnosci uzytkownikow oraz bezpieczenstwo przetwarzanych danych."
         ]
       },
@@ -1474,14 +1477,14 @@
               "adres e-mail,",
               "numer telefonu,",
               "dane firmy (nazwa, adres, NIP),",
-              "tresci publikowane na platformie (oferty, ogloszenia, opisy)."
+              "treści publikowane na platformie (oferty, ogłoszenia, opisy)."
             ]
           },
           {
             "title": "2.2 Dane zbierane automatycznie",
             "items": [
               "adres IP,",
-              "dane przegladarki i urzadzenia,",
+              "dane przeglądarki i urzadzenia,",
               "informacje o aktywnosci na stronie."
             ]
           }
@@ -1490,12 +1493,12 @@
       {
         "title": "3. Cele przetwarzania danych",
         "paragraphs": [
-          "Dane przetwarzane sa w celu:"
+          "Dane przetwarzane są w celu:"
         ],
         "items": [
           "swiadczenia uslug dostepnych na platformie,",
-          "umozliwienia publikowania i przegladania tresci,",
-          "umozliwienia kontaktu miedzy uzytkownikami,",
+          "umożliwienia publikowania i przegladania treści,",
+          "umożliwienia kontaktu miedzy użytkownikami,",
           "zapewnienia bezpieczenstwa i przeciwdzialania naduzyciom,",
           "analizy dzialania platformy i jej ulepszania."
         ]
@@ -1503,7 +1506,7 @@
       {
         "title": "4. Podstawa prawna przetwarzania",
         "paragraphs": [
-          "Dane przetwarzane sa na podstawie:"
+          "Dane przetwarzane są na podstawie:"
         ],
         "items": [
           "art. 6 ust. 1 lit. b RODO - realizacja uslug,",
@@ -1514,26 +1517,26 @@
       {
         "title": "5. Udostepnianie danych",
         "items": [
-          "Dane moga byc udostepniane innym uzytkownikom (np. dane kontaktowe w ogloszeniach) oraz podmiotom swiadczacym uslugi techniczne, takim jak hosting czy analityka.",
-          "Dane nie sa sprzedawane podmiotom trzecim."
+          "Dane mogą być udostępniane innym użytkownikom (np. dane kontaktowe w ogłoszeniach) oraz podmiotom świadczącym usługi techniczne, takim jak hosting czy analityka.",
+          "Dane nie są sprzedawane podmiotom trzecim."
         ]
       },
       {
         "title": "6. Przechowywanie danych",
         "items": [
-          "Dane przechowywane sa przez okres korzystania z platformy, czas niezbedny do realizacji celow przetwarzania oraz okres wynikajacy z obowiazkow prawnych, jesli takie wystepuja.",
-          "Po tym czasie dane moga zostac usuniete lub zanonimizowane."
+          "Dane przechowywane są przez okres korzystania z platformy, czas niezbedny do realizacji celow przetwarzania oraz okres wynikajacy z obowiazkow prawnych, jesli takie wystepuja.",
+          "Po tym czasie dane mogą zostać usunięte lub zanonimizowane."
         ]
       },
       {
         "title": "7. Prawa uzytkownika",
         "paragraphs": [
-          "Uzytkownik ma prawo do:"
+          "Użytkownik ma prawo do:"
         ],
         "items": [
           "dostepu do swoich danych,",
           "ich sprostowania,",
-          "usuniecia,",
+          "usunięcia,",
           "ograniczenia przetwarzania,",
           "wniesienia sprzeciwu,",
           "przeniesienia danych,",
@@ -1551,13 +1554,13 @@
         "title": "9. Pliki cookies",
         "items": [
           "Platforma wykorzystuje pliki cookies.",
-          "Szczegolowe informacje znajduja sie w Polityce cookies."
+          "Szczegółowe informacje znajdują się w Polityce cookies."
         ]
       },
       {
         "title": "10. Zmiany polityki prywatnosci",
         "items": [
-          "Polityka prywatnosci moze byc aktualizowana.",
+          "Polityka prywatnosci może być aktualizowana.",
           "Nowa wersja obowiazuje od momentu publikacji na stronie."
         ]
       }
@@ -1567,8 +1570,8 @@
         "title": "1. Postanowienia ogolne",
         "items": [
           "Niniejszy regulamin okresla zasady korzystania z platformy internetowej ContainerBoard dostepnej pod adresem containerboard.pl.",
-          "Operatorem platformy jest ContainerBoard Karol Tyminski 5842785961, z siedziba w Gdansku, Andrzeja Struga 4.",
-          "Platforma ContainerBoard umozliwia uzytkownikom przegladanie profili firm z branzy kontenerowej, publikowanie oraz przegladanie ofert, a takze prowadzenie komunikacji wokol ogloszen.",
+          "Operatorem platformy jest ContainerBoard Karol Tymiński 5842785961, z siedzibą w Gdańsku, Andrzeja Struga 4.",
+          "Platforma ContainerBoard umożliwia użytkownikom przeglądanie profili firm z branży kontenerowej, publikowanie oraz przeglądanie ofert, a także prowadzenie komunikacji wokół ogłoszeń.",
           "Korzystanie z platformy oznacza akceptacje niniejszego regulaminu."
         ]
       },
@@ -1576,43 +1579,43 @@
         "title": "2. Definicje",
         "items": [
           "Platforma - serwis internetowy ContainerBoard.",
-          "Uzytkownik - kazda osoba korzystajaca z Platformy.",
-          "Tresci - wszelkie informacje publikowane przez Uzytkownika, takie jak opisy, oferty, dane firm i ogloszenia.",
+          "Użytkownik - każda osoba korzystająca z Platformy.",
+          "Treści - wszelkie informacje publikowane przez Użytkownika, takie jak opisy, oferty, dane firm i ogłoszenia.",
           "Operator - wlasciciel i administrator Platformy."
         ]
       },
       {
         "title": "3. Zasady korzystania",
         "items": [
-          "Uzytkownik zobowiazuje sie do korzystania z Platformy zgodnie z obowiazujacym prawem oraz niniejszym regulaminem.",
-          "Zabronione jest publikowanie tresci niezgodnych z prawem, naruszajacych prawa osob trzecich, wprowadzajacych w blad lub zawierajacych spam.",
-          "Uzytkownik zobowiazuje sie do podawania prawdziwych i aktualnych informacji."
+          "Użytkownik zobowiązuje się do korzystania z Platformy zgodnie z obowiązującym prawem oraz niniejszym regulaminem.",
+          "Zabronione jest publikowanie treści niezgodnych z prawem, naruszających prawa osób trzecich, wprowadzających w błąd lub zawierajacych spam.",
+          "Użytkownik zobowiązuje się do podawania prawdziwych i aktualnych informacji."
         ]
       },
       {
-        "title": "4. Publikowanie tresci",
+        "title": "4. Publikowanie treści",
         "items": [
-          "Uzytkownik ponosi pelna odpowiedzialnosc za tresci publikowane na Platformie.",
-          "Publikujac tresci, Uzytkownik oswiadcza, ze posiada do nich odpowiednie prawa, sa one zgodne z prawem i nie naruszaja praw osob trzecich.",
-          "Operator nie jest zobowiazany do uprzedniej weryfikacji tresci.",
-          "Operator zastrzega sobie prawo do usuniecia tresci naruszajacych regulamin lub prawo, ich edycji w zakresie technicznym oraz zablokowania konta Uzytkownika."
+          "Użytkownik ponosi pełną odpowiedzialność za treści publikowane na Platformie.",
+          "Publikując treści, Użytkownik oświadcza, ze posiada do nich odpowiednie prawa, są one zgodne z prawem i nie naruszaja praw osób trzecich.",
+          "Operator nie jest zobowiazany do uprzedniej weryfikacji treści.",
+          "Operator zastrzega sobie prawo do usunięcia treści naruszających regulamin lub prawo, ich edycji w zakresie technicznym oraz zablokowania konta Użytkownika."
         ]
       },
       {
         "title": "5. Charakter platformy",
         "items": [
           "ContainerBoard jest platforma informacyjna i posredniczaca.",
-          "Operator nie jest strona umow zawieranych pomiedzy Uzytkownikami.",
+          "Operator nie jest stroną umów zawieranych pomiędzy Użytkownikami.",
           "Platforma nie gwarantuje skutecznosci ofert, jakosci uslug ani rzetelnosci Uzytkownikow.",
-          "Relacje pomiedzy Uzytkownikami odbywaja sie na ich wlasna odpowiedzialnosc."
+          "Relacje pomiędzy Użytkownikami odbywają się na ich własną odpowiedzialność."
         ]
       },
       {
         "title": "6. Odpowiedzialnosc",
         "items": [
-          "Operator nie ponosi odpowiedzialnosci za tresci publikowane przez Uzytkownikow, ich dzialania lub zaniechania ani za szkody wynikajace z korzystania z Platformy.",
+          "Operator nie ponosi odpowiedzialnosci za treści publikowane przez Uzytkownikow, ich dzialania lub zaniechania ani za szkody wynikajace z korzystania z Platformy.",
           "Operator nie gwarantuje ciaglosci dzialania Platformy ani braku bledow technicznych.",
-          "Platforma moze byc czasowo niedostepna z przyczyn technicznych lub rozwojowych."
+          "Platforma może być czasowo niedostepna z przyczyn technicznych lub rozwojowych."
         ]
       },
       {
@@ -1625,8 +1628,8 @@
       {
         "title": "8. Rozwiazanie dostepu",
         "items": [
-          "Operator moze ograniczyc lub zablokowac dostep do Platformy w przypadku naruszenia regulaminu.",
-          "Uzytkownik moze zaprzestac korzystania z Platformy w dowolnym momencie."
+          "Operator może ograniczyc lub zablokowac dostep do Platformy w przypadku naruszenia regulaminu.",
+          "Użytkownik może zaprzestac korzystania z Platformy w dowolnym momencie."
         ]
       },
       {
@@ -1643,15 +1646,15 @@
         "title": "1. Informacje ogolne",
         "items": [
           "Niniejsza Polityka cookies okresla zasady wykorzystywania plikow cookies na platformie ContainerBoard dostepnej pod adresem containerboard.pl.",
-          "Administratorem danych jest ContainerBoard Karol Tyminski 5842785961, e-mail: hello@containerboard.pl.",
+          "Administratorem danych jest ContainerBoard Karol Tymiński 5842785961, e-mail: hello@containerboard.pl.",
           "Platforma wykorzystuje wylacznie niezbedne pliki cookies, wymagane do jej prawidlowego dzialania."
         ]
       },
       {
-        "title": "2. Czym sa pliki cookies",
+        "title": "2. Czym są pliki cookies",
         "items": [
           "Pliki cookies to niewielkie pliki tekstowe zapisywane na urzadzeniu uzytkownika.",
-          "Umozliwiaja one prawidlowe dzialanie strony oraz zapamietywanie podstawowych informacji o uzytkowniku."
+          "Umożliwiają one prawidlowe dzialanie strony oraz zapamietywanie podstawowych informacji o użytkowniku."
         ]
       },
       {
@@ -1663,7 +1666,7 @@
           "utrzymania sesji uzytkownika,",
           "zapewnienia poprawnego dzialania formularzy,",
           "zapewnienia bezpieczenstwa, na przyklad ochrony przed naduzyciami,",
-          "zapamietywania podstawowych ustawien technicznych."
+          "zapamietywania podstawowych ustawień technicznych."
         ],
         "outro": "Cookies te nie sluza do sledzenia uzytkownika ani do celow marketingowych."
       },
@@ -1677,120 +1680,135 @@
       {
         "title": "5. Zarzadzanie cookies",
         "items": [
-          "Uzytkownik moze zarzadzac plikami cookies za pomoca ustawien swojej przegladarki.",
-          "Ograniczenie stosowania cookies moze wplynac na niektore funkcjonalnosci platformy."
+          "Użytkownik może zarządzać plikami cookies za pomocą ustawień swojej przeglądarki.",
+          "Ograniczenie stosowania cookies może wplynac na niektore funkcjonalnosci platformy."
         ]
       },
       {
         "title": "6. Zmiany polityki cookies",
         "items": [
-          "Polityka cookies moze byc aktualizowana.",
+          "Polityka cookies może być aktualizowana.",
           "Nowa wersja obowiazuje od momentu jej opublikowania na stronie."
         ]
       }
     ]
   },
   "landingPage": {
-    "metaTitle": "Sprzedaz i kupno kontenerow w jednym miejscu",
-    "metaDescription": "Publikuj oferty sprzedazy i wynajmu kontenerow, przegladaj najnowsze ogloszenia i szybciej docieraj do kupujacych.",
-    "heroTitle": "Sprzedaz i kupno kontenerow w jednym miejscu",
-    "heroSubtitle": "Publikuj oferty sprzedazy i wynajmu, zbieraj zapotrzebowania zakupowe oraz szybciej lacz zespoly handlowe z konkretnymi ogloszeniami.",
-    "browseCta": "Przegladaj ogloszenia",
-    "createCta": "Dodaj ogloszenie",
-    "heroCardEyebrow": "ContainerBoard dla firm",
-    "heroCardTitle": "Narzedzie zaprojektowane pod codzienna prace operacyjna.",
-    "heroHighlights": [
-      "Sprzedaz, wynajem i zakup w jednym miejscu",
-      "Szybkie filtrowanie po lokalizacji, typie i cenie",
-      "Oferty pojedyncze i wieksze partie",
-      "Publikacja i kontakt bez zbednych krokow"
+    "metaTitle": "Sprzedaż i kupno kontenerów w jednym miejscu",
+    "metaDescription": "Publikuj oferty sprzedaży i wynajmu kontenerów, przeglądaj najnowsze ogłoszenia i szybciej docieraj do kupujących.",
+    "heroTitle": "Znajdź lub sprzedaj kontenery szybciej",
+    "heroSubtitle": "Przeglądaj oferty z całej Europy lub dodaj własne i odbieraj zapytania bezpośrednio.",
+    "browseCta": "Przeglądaj kontenery",
+    "createCta": "Dodaj ofertę",
+    "heroCardEyebrow": "",
+    "heroCardTitle": "Dlaczego ContainerBoard",
+    "heroValuePoints": [
+      {
+        "title": "Bez pośredników",
+        "text": "Kontaktujesz się bezpośrednio z właścicielem oferty"
+      },
+      {
+        "title": "Oferty z całej Europy",
+        "text": "Jedno miejsce zamiast grup i maili"
+      },
+      {
+        "title": "Precyzyjne filtrowanie",
+        "text": "Lokalizacja, typ, cena — w kilka sekund"
+      },
+      {
+        "title": "Oferty pojedyncze i hurtowe",
+        "text": "Od jednej sztuki po duże partie"
+      },
+      {
+        "title": "Publikacja w minutę",
+        "text": "Zero zbędnych kroków",
+        "icon": "bolt"
+      }
     ],
-    "heroCardFooterTitle": "Dla traderow, operatorow i zespolow sprzedazowych",
-    "heroCardFooterText": "Jedna platforma do budowania widocznosci ofert i szybszego rozpoczynania rozmow handlowych.",
     "latestEyebrow": "Najnowsze publikacje",
     "latestTitle": "Ostatnio dodane oferty",
-    "latestDescription": "Przejdz do pelnej listy, aby filtrowac, sortowac i kategoryzowac kontenery.",
-    "latestCta": "Zobacz wszystkie ogloszenia",
+    "latestDescription": "Przejdź do pełnej listy, aby filtrować, sortować i kategoryzować kontenery.",
+    "latestCta": "Zobacz wszystkie ogłoszenia",
     "latestConditionLabel": "Stan",
-    "latestQuantityLabel": "Ilosc",
+    "latestQuantityLabel": "Ilość",
     "latestAddedTemplate": "Dodano {date}",
-    "latestEmptyText": "Nie ma jeszcze aktywnych publikacji. Pierwsze ogloszenie pozwoli od razu uruchomic widocznosc oferty na tablicy.",
-    "latestEmptyCta": "Dodaj pierwsze ogloszenie",
-    "workflowEyebrow": "Dodawanie ogloszenia",
-    "workflowTitle": "Dodanie kontenera zajmuje tylko minute",
-    "workflowDescription": "Formularz prowadzi po gotowych polach i pozwala szybko opublikowac pojedyncza oferte albo od razu dodac wiele kontenerow.",
+    "latestEmptyText": "Nie ma jeszcze aktywnych publikacji. Pierwsze ogłoszenie pozwoli od razu uruchomić widoczność oferty na tablicy.",
+    "latestEmptyCta": "Dodaj pierwsze ogłoszenie",
+    "workflowEyebrow": "Dodawanie ogłoszenia",
+    "workflowTitle": "Dodanie kontenera zajmuje tylko minutę",
+    "workflowDescription": "Formularz prowadzi po gotowych polach i pozwala szybko opublikować pojedynczą ofertę albo od razu dodać wiele kontenerów.",
     "workflowSteps": [
       {
         "step": "1",
-        "title": "Wypelniasz formularz w minute",
-        "text": "Wiele pol jest predefiniowanych, wiec uzupelniasz tylko najwazniejsze informacje o ofercie."
+        "title": "Wypełniasz formularz w minutę",
+        "text": "Wiele pól jest predefiniowanych, więc uzupełniasz tylko najważniejsze informacje o ofercie."
       },
       {
         "step": "2",
         "title": "Dodajesz konkretne dane oferty",
-        "text": "Cena, stan, lokalizacja i zdjecia wystarcza, aby ogloszenie bylo czytelne i gotowe do porownania."
+        "text": "Cena, stan, lokalizacja i zdjęcia wystarczą, aby ogłoszenie było czytelne i gotowe do porównania."
       },
       {
         "step": "3",
-        "title": "Mozesz dodac wiele kontenerow naraz",
-        "text": "Przy wiekszym wolumenie korzystasz z importu i publikujesz wiele pozycji w jednym podejsciu."
+        "title": "Możesz dodać wiele kontenerów naraz",
+        "text": "Przy większym wolumenie korzystasz z importu i publikujesz wiele pozycji w jednym podejściu."
       }
     ],
-    "conciergeEyebrow": "Zlec to nam",
-    "conciergeTitle": "Zajmiemy sie wszystkim",
-    "conciergeDescription": "Wspieramy zespoly, ktore chca przekazac nam publikacje ogloszen, zarzadzanie stockiem, organizacje transportu oraz kompleksowa obsluge concierge.",
+    "conciergeEyebrow": "Zleć to nam",
+    "conciergeTitle": "Zajmiemy się wszystkim",
+    "conciergeDescription": "Wspieramy zespoły, które chcą przekazać nam publikację ogłoszeń, zarządzanie stockiem, organizację transportu oraz kompleksową obsługę concierge.",
     "conciergeServices": [
       {
-        "title": "Obsluga ogloszen",
-        "text": "Przejmujemy publikacje ofert i przygotowujemy wpisy na podstawie Twoich materialow."
+        "title": "Obsługa ogłoszeń",
+        "text": "Przejmujemy publikację ofert i przygotowujemy wpisy na podstawie Twoich materiałów."
       },
       {
-        "title": "Zarzadzanie stockiem",
-        "text": "Pomagamy uporzadkowac oferte, odswiezac wpisy i utrzymywac aktualny stan kontenerow."
+        "title": "Zarządzanie stockiem",
+        "text": "Pomagamy uporządkować ofertę, odświeżać wpisy i utrzymywać aktualny stan kontenerów."
       },
       {
         "title": "Organizacja transportu",
-        "text": "Mozemy wesprzec transport i skoordynowac operacyjna strone realizacji."
+        "text": "Możemy wesprzeć transport i skoordynować operacyjną stronę realizacji."
       },
       {
-        "title": "Pelny concierge",
-        "text": "Od publikacji po obsluge zapytan i dalsze kroki handlowe, mozemy przejac caly proces."
+        "title": "Pełny concierge",
+        "text": "Od publikacji po obsługę zapytań i dalsze kroki handlowe, możemy przejąć cały proces."
       }
     ],
-    "conciergeCta": "Skontaktuj sie z nami",
+    "conciergeCta": "Skontaktuj się z nami",
     "finalEyebrow": "Zacznij teraz",
-    "finalTitle": "Sprawdz aktualne oferty albo dodaj swoje ogloszenie",
-    "finalDescription": "Przejdz do tablicy, aby przegladac kontenery, albo opublikuj oferte i zacznij zbierac zapytania od razu po dodaniu.",
-    "finalBrowseCta": "Przejdz do tablicy",
-    "finalCreateCta": "Opublikuj ogloszenie"
+    "finalTitle": "Sprawdź aktualne oferty albo dodaj swoje ogłoszenie",
+    "finalDescription": "Przejdź do tablicy, aby przeglądać kontenery, albo opublikuj ofertę i zacznij zbierać zapytania od razu po dodaniu.",
+    "finalBrowseCta": "Przejdź do tablicy",
+    "finalCreateCta": "Opublikuj ogłoszenie"
   },
   "notFoundPage": {
-    "eyebrow": "Blad 404",
+    "eyebrow": "Błąd 404",
     "title": "Nie znalezlismy strony, ktorej szukasz.",
-    "description": "Ten kontener juz odjechal, ale spokojnie, mamy inne. Wroc do listy ogloszen i zobacz, co jest teraz dostepne.",
-    "cta": "Przejdz do listy ogloszen"
+    "description": "Ten kontener już odjechał, ale spokojnie, mamy inne. Wróć do listy ogłoszeń i zobacz, co jest teraz dostępne.",
+    "cta": "Przejdź do listy ogłoszeń"
   },
   "inquiryForm": {
-    "headingOffer": "Wyslij zapytanie",
-    "modalTitleOffer": "Popros o oferte",
+    "headingOffer": "Wyślij zapytanie",
+    "modalTitleOffer": "Popros o ofertę",
     "modalTitleNegotiate": "Negocjuj warunki",
-    "modalSubtitle": "Wypelnij formularz i wyslij zapytanie do ogloszeniodawcy.",
+    "modalSubtitle": "Wypełnij formularz i wyślij zapytanie do ogłoszeniodawcy.",
     "copyLink": "Kopiuj link",
-    "copyLinkSuccess": "Link do ogloszenia zostal skopiowany.",
-    "copyLinkError": "Nie udalo sie skopiowac linku.",
+    "copyLinkSuccess": "Link do ogłoszenia został skopiowany.",
+    "copyLinkError": "Nie udało się skopiować linku.",
     "favorite": "Ulubione",
     "favoriteActive": "W ulubionych",
-    "favoriteAdded": "Dodano oferte do ulubionych.",
-    "favoriteUpdateError": "Nie udalo sie zaktualizowac ulubionych.",
-    "requestOffer": "Popros o oferte",
+    "favoriteAdded": "Dodano ofertę do ulubionych.",
+    "favoriteUpdateError": "Nie udało się zaktualizować ulubionych.",
+    "requestOffer": "Popros o ofertę",
     "negotiate": "Negocjuj",
     "close": "Zamknij",
-    "submitDefault": "Wyslij",
-    "submitPending": "Wysylanie...",
+    "submitDefault": "Wyślij",
+    "submitPending": "Wysyłanie...",
     "robotCheck": "Potwierdz, ze nie jestes robotem.",
-    "sendError": "Nie udalo sie wyslac zapytania",
+    "sendError": "Nie udało się wysłać zapytania",
     "sentSuccess": "Zapytanie wyslane",
-    "unknownError": "Wystapil blad",
+    "unknownError": "Wystąpił błąd",
     "sectionBuyer": "Moje dane",
     "buyerNameLabel": "Imie i nazwisko *",
     "buyerNameRequired": "Podaj imie i nazwisko",
@@ -1801,8 +1819,8 @@
     "buyerPhonePlaceholder": "np. +48 600 700 800",
     "sectionMessage": "Tresc zapytania",
     "messageLabel": "Wiadomosc",
-    "messagePlaceholder": "Opcjonalnie dopisz szczegoly zapytania",
-    "requestedQuantityLabel": "Oczekiwana ilosc",
+    "messagePlaceholder": "Opcjonalnie dopisz szczegóły zapytania",
+    "requestedQuantityLabel": "Oczekiwana ilość",
     "offeredPriceLabel": "Proponowana cena",
     "offeredPricePlaceholder": "np. 2100 EUR"
   },
@@ -1817,7 +1835,7 @@
     "openAnnouncement": "Zobacz pełne ogłoszenie",
     "noOffersOrCooperation": "Brak opublikowanych ofert lub współprac dla tej firmy.",
     "noAnnouncements": "Brak opublikowanych ogłoszeń dla tej firmy.",
-    "editCompany": "Edytuj firme",
+    "editCompany": "Edytuj firmę",
     "updateSuccess": "Firma została zaktualizowana.",
     "companyPhotoAlt": "Zdjęcie firmy {company} ({index})",
     "branchPhotoAlt": "Zdjęcie oddziału {branch} ({index})",
@@ -1848,14 +1866,14 @@
     "loadMoreOffers": "Wczytaj więcej",
     "ownershipClaim": {
       "action": "To moja firma",
-      "statusSubmitting": "Wysylanie...",
+      "statusSubmitting": "Wysyłanie...",
       "statusSuccess": "Wniosek wysłany",
       "toastSubmitted": "Wniosek o przejęcie firmy został wysłany.",
-      "toastError": "Nie udalo się wysłać wniosku.",
+      "toastError": "Nie udało się wysłać wniosku.",
       "toastUnauthorized": "Zaloguj się, aby zgłosić przejęcie firmy.",
       "unauthorizedText": "Aby zgłosić przejęcie firmy, musisz być zalogowany.",
       "loginCta": "Zaloguj się",
-      "dialogTitle": "Przejac firme?",
+      "dialogTitle": "Przejąć firmę?",
       "dialogConfirmText": "Wyślemy prośbę o przypisanie firmy do Twojego konta.",
       "dialogLimitText": "Możesz zgłosić tylko jedną prośbę dla tej firmy na 24 godziny.",
       "cancel": "Anuluj",
@@ -1867,7 +1885,7 @@
       "metaTitle": "Firmy TSL - spedycja, transport i logistyka",
       "metaDescription": "Katalog firm TSL pod wyszukiwania lokalne: spedycja, transport i logistyka + miasto.",
       "heroTitle": "Firmy TSL: miasta i segmenty",
-      "heroDescription": "Te landingi są pod zapytania typu spedycja warszawa, transport poznań i logistyka kraków. Każda strona pokazuje firmy z obszaru miasta i okolicy.",
+      "heroDescription": "Te landingi są pod zapytania typu spedycja warszawa, transport poznań i logistyka kraków. Każda stroną pokazuje firmy z obszaru miasta i okolicy.",
       "byCityTitle": "Firmy wedlug miasta",
       "byCityLink": "Firmy {city}",
       "bySectorTitle": "Firmy wedlug segmentu",
@@ -1902,23 +1920,23 @@
       "any": "Dowolne",
       "oneSelected": "1 wybrane",
       "selectedCount": "{count} wybrane",
-      "clear": "Wyczysc",
+      "clear": "Wyczyść",
       "size": "Rozmiar",
-      "height": "Wysokosc",
+      "height": "Wysokość",
       "type": "Typ",
       "condition": "Stan",
       "anyLocation": "Dowolna lokalizacja",
-      "clearLocation": "Wyczysc lokalizacje",
+      "clearLocation": "Wyczyść lokalizację",
       "search": "Szukaj",
       "searching": "Szukam...",
       "sort": "Sortowanie",
       "convertPricesTo": "Przelicz ceny na",
-      "listingKind": "Rodzaj ogloszenia",
+      "listingKind": "Rodzaj ogłoszenia",
       "feature": "Cecha",
       "negotiablePrice": "Cena do negocjacji",
       "logistics": "Logistyka",
       "transport": "+ transport",
-      "unloading": "+ rozladunek / HDS",
+      "unloading": "+ rozładunek / HDS",
       "price": "Cena",
       "currency": "Waluta",
       "variant": "Wariant",
@@ -1933,23 +1951,23 @@
       "cscCertification": "Certyfikacja CSC",
       "ralColors": "Kolory RAL",
       "ralPlaceholder": "np. 5010, RAL 9010",
-      "clearAll": "Wyczysc wszystkie filtry",
+      "clearAll": "Wyczyść wszystkie filtry",
       "locationMinChars": "Podaj minimum 3 znaki lokalizacji.",
-      "locationResolveError": "Nie udalo sie ustalic lokalizacji."
+      "locationResolveError": "Nie udało się ustalić lokalizacji."
     },
     "shared": {
       "listingKinds": {
-        "sell": "Sprzedaz",
+        "sell": "Sprzedaż",
         "rent": "Wynajem",
-        "buy": "Chce zakupic"
+        "buy": "Chcę zakupić"
       },
       "sortPresets": {
         "newest": "Najnowsze",
-        "quantity_desc": "Ilosc malejaco",
-        "quantity_asc": "Ilosc rosnaco",
-        "available_asc": "Najblizsza dostepnosc",
-        "price_net_asc": "Cena netto rosnaco",
-        "price_net_desc": "Cena netto malejaco"
+        "quantity_desc": "Ilość malejąco",
+        "quantity_asc": "Ilość rosnąco",
+        "available_asc": "Najbliższa dostępność",
+        "price_net_asc": "Cena netto rosnąco",
+        "price_net_desc": "Cena netto malejąco"
       },
       "priceDisplayCurrencies": {
         "original": "Oryginalne"
@@ -1999,7 +2017,7 @@
     },
     "results": {
       "dayLabels": {
-        "one": "dzien",
+        "one": "dzień",
         "few": "dni",
         "many": "dni",
         "other": "dni"
@@ -2009,7 +2027,7 @@
       "inPrefix": "za",
       "availableNow": "Teraz",
       "negotiable": "Do negocjacji",
-      "askPrice": "Zapytaj o cene",
+      "askPrice": "Zapytaj o cenę",
       "net": "Netto",
       "gross": "Brutto",
       "noData": "brak danych",
@@ -2018,108 +2036,111 @@
       "cscPlateLabel": "Tabliczka CSC",
       "cscCertificationLabel": "Certyfikacja CSC",
       "warrantyLabel": "Gwarancja",
-      "cscValidityLabel": "Waznosc CSC",
+      "cscValidityLabel": "Ważność CSC",
       "yes": "Tak",
       "no": "Nie",
-      "allLocationsAria": "Pelna lista lokalizacji",
+      "allLocationsAria": "Pełna lista lokalizacji",
       "freeTransportLabel": "darmowy transport",
-      "transportAvailableLabel": "mozliwy transport",
-      "freeUnloadingLabel": "darmowy rozladunek",
-      "unloadingAvailableLabel": "mozliwy rozladunek",
-      "contactForDetails": "Skontaktuj sie aby poznac szczegoly",
+      "transportAvailableLabel": "możliwy transport",
+      "freeUnloadingLabel": "darmowy rozładunek",
+      "unloadingAvailableLabel": "możliwy rozładunek",
+      "contactForDetails": "Skontaktuj się, aby poznać szczegóły",
       "verifiedCompany": "Firma zweryfikowana",
       "expiresLabel": "Wygasa",
       "logisticsCommentAria": "Komentarz logistyczny",
-      "sellerCommentLabel": "Komentarz ogloszeniodawcy:",
-      "availableFromLabel": "Dostepny od",
-      "quantityLabel": "Ilosc",
-      "removeFavorite": "Usun z ulubionych",
+      "sellerCommentLabel": "Komentarz ogłoszeniodawcy:",
+      "availableFromLabel": "Dostępny od",
+      "quantityLabel": "Ilość",
+      "removeFavorite": "Usuń z ulubionych",
       "addFavorite": "Dodaj do ulubionych",
-      "copyLink": "Kopiuj link do ogloszenia",
-      "detailsCta": "Szczegoly i zapytanie",
+      "copyLink": "Kopiuj link do ogłoszenia",
+      "detailsCta": "Szczegóły i zapytanie",
       "previous": "Poprzednia",
-      "next": "Nastepna",
+      "next": "Następna",
       "searchResultsLabel": "Wyniki wyszukiwania",
+      "deliveryReachEyebrow": "Alternatywa",
+      "deliveryReachTitle": "Z darmową dostawą do Ciebie",
+      "deliveryReachText": "Kontenery są trochę dalej, ale mają zadeklarowany darmowy transport do Twojej lokalizacji.",
       "allTab": "Wszystkie",
       "favoritesTab": "Ulubione",
-      "loadingAria": "Ladowanie kontenerow",
-      "loading": "Ladowanie kontenerow...",
-      "emptyTitle": "Nie znalazles kontenera ktorego szukasz?",
-      "emptyText": "Dodaj ogloszenie, a my zajmiemy sie reszta!",
+      "loadingAria": "Ładowanie kontenerów",
+      "loading": "Ładowanie kontenerów...",
+      "emptyTitle": "Nie znalazłeś kontenera, którego szukasz?",
+      "emptyText": "Dodaj ogłoszenie, a my zajmiemy się resztą!",
       "emptyCta": "Szukam kontenera +"
     },
     "map": {
-      "quantityLabel": "Ilosc",
+      "quantityLabel": "Ilość",
       "moreResultsHint": "Aby zobaczyc wiecej wynikow, zawez filtry lub przybliz mape.",
       "plusVatSuffix": "+ VAT",
       "noLocation": "Brak lokalizacji",
       "selectedLocation": "Wybrana lokalizacja",
-      "favoriteUpdateError": "Nie udalo sie zaktualizowac ulubionych.",
-      "favoriteAdded": "Dodano oferte do ulubionych.",
-      "linkCopied": "Link do ogloszenia zostal skopiowany.",
-      "copyError": "Nie udalo sie skopiowac linku.",
+      "favoriteUpdateError": "Nie udało się zaktualizować ulubionych.",
+      "favoriteAdded": "Dodano ofertę do ulubionych.",
+      "linkCopied": "Link do ogłoszenia został skopiowany.",
+      "copyError": "Nie udało się skopiować linku.",
       "collapseMap": "Zwin mape",
       "expandMap": "Rozwin mape",
-      "closePreview": "Zamknij podglad ogloszenia",
-      "backToList": "Powrot do listy",
-      "loadingDetailsAria": "Ladowanie szczegolow ogloszenia",
-      "loadingDetails": "Ladowanie szczegolow ogloszenia..."
+      "closePreview": "Zamknij podgląd ogłoszenia",
+      "backToList": "Powrót do listy",
+      "loadingDetailsAria": "Ładowanie szczegółów ogłoszenia",
+      "loadingDetails": "Ładowanie szczegółów ogłoszenia..."
     },
     "utils": {
       "noLocation": "Nie podano lokalizacji",
       "otherLocationsTemplate": "+ {count} innych"
     },
     "board": {
-      "apiErrorPrefix": "Blad API",
-      "mapApiErrorPrefix": "Blad API mapy",
-      "loadError": "Nie udalo sie zaladowac kontenerow"
+      "apiErrorPrefix": "Błąd API",
+      "mapApiErrorPrefix": "Błąd API mapy",
+      "loadError": "Nie udało się załadować kontenerów"
     },
     "related": {
-      "companyTitle": "Inne og?oszenia firmy",
-      "latestTitle": "Najnowsze og?oszenia",
+      "companyTitle": "Inne ogłoszenia firmy",
+      "latestTitle": "Najnowsze ogłoszenia",
       "showAll": "Zobacz wszystkie",
-      "showAllTitle": "Zobacz wszystkie og?oszenia",
-      "showAllCompanyTitle": "Zobacz wszystkie og?oszenia firmy",
-      "hiddenAriaTemplate": "Poka? pozosta?e og?oszenia: {count}",
-      "loadRelatedError": "Nie uda?o si? za?adowa? dodatkowych og?osze?.",
-      "loadCompanyError": "Nie uda?o si? za?adowa? og?osze? firmy.",
-      "loginRequiredForFavorites": "Zaloguj si?, aby dodawa? og?oszenia do ulubionych.",
-      "companyLatestTitle": "Ostatnie og?oszenia firmy"
+      "showAllTitle": "Zobacz wszystkie ogłoszenia",
+      "showAllCompanyTitle": "Zobacz wszystkie ogłoszenia firmy",
+      "hiddenAriaTemplate": "Pokaż pozostałe ogłoszenia: {count}",
+      "loadRelatedError": "Nie udało się załadować dodatkowych ogłoszeń.",
+      "loadCompanyError": "Nie udało się załadować ogłoszeń firmy.",
+      "loginRequiredForFavorites": "Zaloguj się, aby dodawać ogłoszenia do ulubionych.",
+      "companyLatestTitle": "Ostatnie ogłoszenia firmy"
     }
   },
   "containerModules": {
     "shared": {
-      "back": "Wroc",
+      "back": "Wróć",
       "close": "Zamknij",
       "cancel": "Anuluj",
       "optional": "opcjonalnie",
       "clear": "Wyczysc",
       "apply": "Zastosuj",
       "saving": "Zapisywanie...",
-      "selectListingType": "Wybierz typ ogloszenia",
+      "selectListingType": "Wybierz typ ogłoszenia",
       "setFromCompany": "Ustaw z danych firmy",
       "any": "Dowolne",
       "oneSelected": "1 wybrane",
       "selectedCount": "{count} wybrane",
-      "removeFeature": "Usun {label}",
+      "removeFeature": "Usuń {label}",
       "locationLabelTemplate": "Lokalizacja {index}",
-      "backToList": "Powrot do listy",
+      "backToList": "Powrót do listy",
       "previous": "Poprzednie",
       "next": "Nastepne",
-      "mapLoading": "Ladowanie mapy...",
-      "mapEmpty": "Brak wspolrzednych do wyswietlenia mapy.",
-      "remove": "Usun"
+      "mapLoading": "Ładowanie mapy...",
+      "mapEmpty": "Brak współrzędnych do wyświetlenia mapy.",
+      "remove": "Usuń"
     },
     "banner": {
       "recommendation": "Nasza rekomendacja:",
-      "description": "zaloz firme i odblokuj benefity: automatyczne wstawianie lokalizacji, Multi Import, lepsza prezentacja ogloszen i szybsze publikowanie.",
+      "description": "załóż firmę i odblokuj benefity: automatyczne wstawianie lokalizacji, Multi Import, lepsza prezentacja ogłoszeń i szybsze publikowanie.",
       "highlight": "Zajmie Ci to mniej niz minute.",
-      "cta": "Zaloz firme"
+      "cta": "Załóż firmę"
     },
     "newPage": {
       "intentOptions": {
-        "sell": "Chce sprzedac",
-        "rent": "Chce wynajac",
+        "sell": "Chcę sprzedać",
+        "rent": "Chcę wynająć",
         "buy": "Szukam kontenera"
       },
       "titleByIntent": {
@@ -2128,46 +2149,46 @@
         "buy": "Szukam kontenera"
       },
       "switchByIntent": {
-        "sell": "Chcesz wynajac albo szukasz kontenera?",
-        "rent": "Chcesz sprzedac albo szukasz kontenera?",
-        "buy": "Chcesz sprzedac albo wynajac?"
+        "sell": "Chcesz wynająć albo szukasz kontenera?",
+        "rent": "Chcesz sprzedać albo szukasz kontenera?",
+        "buy": "Chcesz sprzedać albo wynająć?"
       },
-      "requiredHint": "Pola oznaczone gwiazdka sa obowiazkowe.",
+      "requiredHint": "Pola oznaczone gwiazdka są obowiazkowe.",
       "submitLabel": "Publikuj kontener",
       "successMessage": "Kontener opublikowany",
-      "backToList": "Powrot do listy kontenerow",
-      "intentModalTitle": "Wybierz typ ogloszenia"
+      "backToList": "Powrót do listy kontenerów",
+      "intentModalTitle": "Wybierz typ ogłoszenia"
     },
     "editPage": {
       "title": "Edytuj kontener",
       "submitLabel": "Zapisz zmiany",
       "successMessage": "Kontener zaktualizowany",
-      "backToDetails": "Powrot do szczegolow"
+      "backToDetails": "Powrót do szczegółów"
     },
     "minePage": {
       "companyTitle": "Moja firma",
-      "companyPreview": "Podglad firmy",
-      "companyEdit": "Edytuj firme"
+      "companyPreview": "Podgląd firmy",
+      "companyEdit": "Edytuj firmę"
     },
     "dialogs": {
       "contactDialogAria": "Dane kontaktowe do publikacji",
       "contactDialogTitle": "Dane kontaktowe do publikacji",
       "contactDialogHint": "Dane uzupelnione automatycznie na podstawie profilu firmy i konta uzytkownika.",
-      "backToForm": "Wroc do formularza",
+      "backToForm": "Wróć do formularza",
       "saving": "Zapisywanie...",
       "successDialogAria": "Kontener opublikowano pomyslnie",
       "successTitle": "Kontener opublikowano pomyslnie!",
-      "successQuestion": "Co chcesz zrobic?",
-      "successGoToMine": "Przejdz do moich kontenerow",
+      "successQuestion": "Co chcesz zrobić?",
+      "successGoToMine": "Przejdź do moich kontenerów",
       "successAddSimilar": "Dodaj podobny",
       "close": "Zamknij"
     },
     "gallery": {
-      "mainImageAlt": "Zdjecie glowne ogloszenia: {title}",
-      "thumbnailAlt": "Zdjecie {index}: {title}",
-      "closePreviewAria": "Zamknij podglad zdjecia",
+      "mainImageAlt": "Zdjęcie główne ogłoszenia: {title}",
+      "thumbnailAlt": "Zdjęcie {index}: {title}",
+      "closePreviewAria": "Zamknij podgląd zdjęcia",
       "close": "Zamknij",
-      "previewAlt": "Podglad zdjecia: {title}",
+      "previewAlt": "Podgląd zdjęcia: {title}",
       "previous": "Poprzednie",
       "next": "Nastepne"
     },
@@ -2180,7 +2201,7 @@
       "verifiedCompany": "Firma zweryfikowana",
       "productionYearLabel": "Rok",
       "availableFromLabel": "Dostepny od",
-      "quantityLabel": "Ilosc",
+      "quantityLabel": "Ilość",
       "priceTitle": "Cena",
       "cscPlateLabel": "Tabliczka CSC",
       "cscCertificationLabel": "Certyfikacja CSC",
@@ -2208,40 +2229,40 @@
       "companyNameRequired": "Podaj nazwe firmy",
       "companyNameMinLength": "Min. 2 znaki",
       "contactEmailRequired": "Podaj email kontaktowy",
-      "locationFetchError": "Nie udalo sie pobrac lokalizacji",
+      "locationFetchError": "Nie udało się pobrać lokalizacji",
       "locationNoResults": "Brak wynikow. Sprobuj doprecyzowac adres.",
       "locationMinChars": "Wpisz minimum 3 znaki adresu.",
-      "locationSearchError": "Nie udalo sie wyszukac lokalizacji",
-      "maxLocations": "Mozesz dodac maksymalnie {count} lokalizacji.",
-      "locationRemoved": "Usunieto lokalizacje {index}.",
-      "locationPromoted": "Usunieto lokalizacje 1 i przeniesiono kolejna na glowna.",
-      "locationsCleared": "Wyczyszczono ustawione lokalizacje.",
+      "locationSearchError": "Nie udało się wyszukać lokalizacji",
+      "maxLocations": "Możesz dodać maksymalnie {count} lokalizacji.",
+      "locationRemoved": "Usunieto lokalizację {index}.",
+      "locationPromoted": "Usunieto lokalizację 1 i przeniesiono kolejna na glowna.",
+      "locationsCleared": "Wyczyszczono ustawione lokalizację.",
       "addGraphicFile": "Dodaj plik graficzny.",
-      "removePhotoForCover": "Usun jedno zdjecie, aby dodac nowe glowne (limit {count}).",
+      "removePhotoForCover": "Usuń jedno zdjecie, aby dodać nowe główne (limit {count}).",
       "imagesOnly": "Dodawaj tylko pliki graficzne.",
-      "maxPhotosTotal": "Maksymalnie {count} zdjec lacznie.",
-      "remainingPhotos": "Mozesz dodac jeszcze {count} zdjec.",
-      "photoLimitPerFile": "Kazde zdjecie moze miec maksymalnie {count} MB.",
-      "selectListingTypeFirst": "Najpierw wybierz typ ogloszenia",
-      "chooseLocationOnMap": "Wybierz lokalizacje na mapie lub wyszukaj adres",
+      "maxPhotosTotal": "Maksymalnie {count} zdjęć łącznie.",
+      "remainingPhotos": "Możesz dodać jeszcze {count} zdjęć.",
+      "photoLimitPerFile": "Kazde zdjecie może miec maksymalnie {count} MB.",
+      "selectListingTypeFirst": "Najpierw wybierz typ ogłoszenia",
+      "chooseLocationOnMap": "Wybierz lokalizację na mapie lub wyszukaj adres",
       "geolocationRequired": "Dodanie kontenera wymaga geolokalizacji",
-      "additionalLocationNeedsCoordinates": "Kazda dodatkowa lokalizacja musi byc wyszukana albo usunieta.",
+      "additionalLocationNeedsCoordinates": "Kazda dodatkowa lokalizacja musi być wyszukana albo usunieta.",
       "provideDateOrNow": "Podaj date albo zaznacz Dostepny teraz",
-      "descriptionMaxLength": "Opis moze miec maksymalnie 1000 znakow",
+      "descriptionMaxLength": "Opis może miec maksymalnie 1000 znakow",
       "provideCscMonthYear": "Podaj miesiac i rok waznosci CSC",
       "provideTransportKm": "Podaj dodatnia liczbe km dla darmowego transportu",
       "selectContainerSize": "Wybierz rozmiar kontenera",
       "invalidContainerSize": "Wybierz poprawny rozmiar kontenera",
-      "saveContainerError": "Nie udalo sie zapisac kontenera",
-      "saveUnknownError": "Wystapil blad podczas zapisu",
+      "saveContainerError": "Nie udało się zapisać kontenera",
+      "saveUnknownError": "Wystąpił błąd podczas zapisu",
       "fixErrorsBeforePublish": "Popraw bledy w formularzu przed publikacja",
       "fixErrorsBeforeSave": "Popraw bledy w formularzu przed zapisem",
-      "intentSectionTitle": "Co chcesz dodac?",
+      "intentSectionTitle": "Co chcesz dodać?",
       "addContainerTitle": "Dodaj kontener ({type})",
       "change": "Zmien",
       "containerSectionTitle": "Kontener",
-      "chooseCoverAria": "Wybierz logo ogloszenia",
-      "coverPreviewAlt": "Podglad logo ogloszenia",
+      "chooseCoverAria": "Wybierz logo ogłoszenia",
+      "coverPreviewAlt": "Podgląd logo ogłoszenia",
       "coverPlaceholderAlt": "Placeholder kontenera",
       "addThumbnail": "Dodaj miniaturke",
       "sizeLabel": "Rozmiar",
@@ -2256,20 +2277,20 @@
       "productionYearLabel": "Rok produkcji",
       "productionYearPlaceholder": "np. 2018",
       "availabilitySectionTitle": "Dostepnosc",
-      "quantityLabel": "Ilosc",
-      "quantityRequired": "Podaj ilosc",
-      "quantityPositive": "Ilosc musi byc wieksza od 0",
+      "quantityLabel": "Ilość",
+      "quantityRequired": "Podaj ilość",
+      "quantityPositive": "Ilość musi być większa od 0",
       "availableFromLabel": "Dostepny od",
-      "availableNowLabel": "Dostepny juz teraz",
+      "availableNowLabel": "Dostepny już teraz",
       "approximateDateLabel": "Data przyblizona",
       "locationSectionTitle": "Lokalizacja",
-      "chooseLocationButton": "Wybierz lokalizacje",
-      "configuredLocationsLabel": "Ustawiono lokalizacje",
+      "chooseLocationButton": "Wybierz lokalizację",
+      "configuredLocationsLabel": "Ustawiono lokalizację",
       "noPrimaryLocation": "Brak ustawionej lokalizacji glownej.",
       "priceSectionTitle": "Cena",
       "amountPerContainerLabel": "Kwota (per kontener)",
       "amountLabel": "Kwota",
-      "fullNumberPrice": "Podaj kwote ceny jako pelna liczbe",
+      "fullNumberPrice": "Podaj kwote ceny jako pełną liczbe",
       "amountPlaceholder": "np. 2500",
       "vatRateLabel": "Stawka VAT (%)",
       "vatRatePlaceholder": "np. 23",
@@ -2279,11 +2300,11 @@
       "selectTaxMode": "Wybierz netto/brutto",
       "emptyAmountHint": "Puste pole kwoty oznacza cene na zapytanie.",
       "negotiablePriceLabel": "Cena do negocjacji",
-      "descriptionSectionTitle": "Opis ogloszenia",
+      "descriptionSectionTitle": "Opis ogłoszenia",
       "descriptionLabel": "Opis",
       "descriptionPlaceholder": "Dodatkowe informacje o kontenerze, warunkach i terminie",
       "ralColorsLabel": "Kolory RAL Classic",
-      "ralListMaxLength": "Lista kolorow moze miec maksymalnie 320 znakow",
+      "ralListMaxLength": "Lista kolorow może miec maksymalnie 320 znakow",
       "ralPlaceholder": "np. RAL 5010, 9010",
       "ralHint": "Podaj jeden lub maks 10 kolorow RAL, oddzielajac je przecinkiem.",
       "brandingLabel": "Branded (kontener ma branding)",
@@ -2296,7 +2317,7 @@
       "transportDistanceRange": "Podaj liczbe km od 1 do 10000",
       "transportDistancePlaceholder": "np. 150",
       "logisticsCommentLabel": "Komentarz logistyczny",
-      "logisticsCommentMaxLength": "Komentarz moze miec maksymalnie 600 znakow",
+      "logisticsCommentMaxLength": "Komentarz może miec maksymalnie 600 znakow",
       "logisticsCommentPlaceholder": "np. transport po uzgodnieniu, terminy rozladunku, warunki HDS",
       "contactSectionTitle": "Kontakt",
       "companyNameLabel": "Nazwa firmy",
@@ -2313,29 +2334,29 @@
       "yearFormat": "Podaj rok w formacie RRRR",
       "yearValid": "Podaj poprawny rok",
       "warrantyLabel": "Gwarancja",
-      "additionalPhotosTitle": "Dodatkowe zdjecia (max {count})",
+      "additionalPhotosTitle": "Dodatkowe zdjęcia (max {count})",
       "photoHint": "JPG/PNG/WebP, maksymalnie {count} MB na plik",
-      "processingPhotos": "Przetwarzanie zdjec...",
-      "removePhoto": "Usun zdjecie",
-      "photoPreviewAlt": "Podglad zdjecia kontenera",
+      "processingPhotos": "Przetwarzanie zdjęć...",
+      "removePhoto": "Usuń zdjecie",
+      "photoPreviewAlt": "Podgląd zdjęcia kontenera",
       "addDescriptionSection": "Dodaj opis i kolorystyke",
       "addTransportSection": "Dodaj informacje o transporcie",
       "addCertificationSection": "Dodaj certyfikacje i gwarancje",
-      "addPhotosSection": "Dodaj dodatkowe zdjecia",
-      "cropTitle": "Dopasuj zdjecie glowne",
-      "cropPreviewAlt": "Podglad kadrowania zdjecia glownego",
-      "cropHint": "Ustaw kadr zdjecia glownego ogloszenia.",
+      "addPhotosSection": "Dodaj dodatkowe zdjęcia",
+      "cropTitle": "Dopasuj zdjecie główne",
+      "cropPreviewAlt": "Podgląd kadrowania zdjęcia głównego",
+      "cropHint": "Ustaw kadr zdjęcia głównego ogłoszenia.",
       "cropZoom": "Powiekszenie",
       "cropOffsetX": "Przesuniecie poziome",
       "cropOffsetY": "Przesuniecie pionowe",
       "locationModalAria": "Edycja lokalizacji",
-      "locationModalTitle": "Wybierz lokalizacje",
+      "locationModalTitle": "Wybierz lokalizację",
       "locationModalHint": "Lokalizacje prosimy wpisywac bez przedrostkow typu \"ulica\", \"ul.\".",
       "currentlyEditing": "(edytujesz teraz)",
       "editOnMap": "Edytuj na mapie",
       "locationSearchPlaceholder": "Wpisz adres, terminal, miasto...",
       "searchLocation": "Szukaj",
-      "addNextLocation": "Dodaj nastepna lokalizacje",
+      "addNextLocation": "Dodaj następna lokalizację",
       "mapHint": "Kliknij na mapie lub przeciagnij znacznik. Aktywnie edytujesz: {label}.",
       "saveAndClose": "Zapisz i zamknij",
       "publishAsCompany": "Publikuj jako firma"
@@ -2351,136 +2372,273 @@
       },
       "statusFilters": {
         "active": "Aktywne",
-        "expired": "Wygasle",
-        "closed": "Zamkniete"
+        "expired": "Wygasłe",
+        "closed": "Zamknięte"
       },
       "expiresLabel": "Wygasa",
-      "quantityLabel": "Ilosc",
-      "copyUrlAria": "Kopiuj URL ogloszenia",
+      "quantityLabel": "Ilość",
+      "copyUrlAria": "Kopiuj URL ogłoszenia",
       "copyUrl": "Kopiuj URL",
-      "details": "Szczegoly",
+      "details": "Szczegóły",
       "edit": "Edytuj",
       "deactivate": "Dezaktywuj",
-      "refreshThirtyDays": "Przedluz 30 dni",
-      "deleteAria": "Usun ogloszenie",
-      "delete": "Usun",
-      "loadError": "Nie udalo sie pobrac listy",
-      "bulkNeedsCompany": "Zaloz profil firmy, zeby skorzystac z Multi Importu",
+      "refreshThirtyDays": "Przedłuż 30 dni",
+      "deleteAria": "Usuń ogłoszenie",
+      "delete": "Usuń",
+      "loadError": "Nie udało się pobrać listy",
+      "bulkNeedsCompany": "Załóż profil firmy, żeby skorzystać z Multi Importu",
       "selectExcelFirst": "Najpierw wybierz plik Excel",
-      "excelOnly": "Dozwolone sa tylko pliki Excel (.xlsx, .xls)",
-      "bulkCreated": "Dodano {count} ogloszen",
-      "bulkFailedRows": "{count} wierszy nie zostalo zaimportowanych",
-      "bulkNoRows": "Brak rekordow do importu",
-      "bulkImportError": "Nie udalo sie zaimportowac Excela",
-      "conciergeNeedsCompany": "Najpierw zaloz profil firmy, aby wyslac stock do Concierge",
+      "excelOnly": "Dozwolone są tylko pliki Excel (.xlsx, .xls)",
+      "bulkCreated": "Dodano {count} ogłoszeń",
+      "bulkFailedRows": "{count} wierszy nie zostało zaimportowanych",
+      "bulkNoRows": "Brak rekordów do importu",
+      "bulkImportError": "Nie udało się zaimportować Excela",
+      "conciergeNeedsCompany": "Najpierw załóż profil firmy, aby wysłać stock do Concierge",
       "selectStockFirst": "Najpierw wybierz plik stock",
-      "conciergeMaxFileSize": "Plik stock moze miec maksymalnie {count} MB",
-      "conciergeSent": "Stock wyslany do Concierge",
-      "conciergeSendError": "Nie udalo sie wyslac stock do Concierge",
-      "actionError": "Nie udalo sie wykonac akcji",
-      "actionClosed": "Kontener zamkniety",
-      "actionRefreshed": "Kontener odswiezony",
-      "actionDeleted": "Kontener usuniety",
-      "genericError": "Wystapil blad",
-      "copySuccess": "Skopiowano link do ogloszenia",
-      "copyError": "Nie udalo sie skopiowac linku",
+      "conciergeMaxFileSize": "Plik stock może mieć maksymalnie {count} MB",
+      "conciergeSent": "Stock wysłany do Concierge",
+      "conciergeSendError": "Nie udało się wysłać stock do Concierge",
+      "actionError": "Nie udało się wykonać akcji",
+      "actionClosed": "Kontener zamknięty",
+      "actionRefreshed": "Kontener odświeżony",
+      "actionDeleted": "Kontener usunięty",
+      "genericError": "Wystąpił błąd",
+      "copySuccess": "Skopiowano link do ogłoszenia",
+      "copyError": "Nie udało się skopiować linku",
       "title": "Moje kontenery",
       "statusAll": "Status: wszystkie",
-      "addListing": "Dodaj ogloszenie",
+      "addListing": "Dodaj ogłoszenie",
       "bulkImport": "Multi Import",
-      "loadingAria": "Ladowanie kontenerow",
-      "loading": "Ladowanie kontenerow...",
-      "empty": "Brak kontenerow dla wybranego statusu.",
+      "loadingAria": "Ładowanie kontenerów",
+      "loading": "Ładowanie kontenerów...",
+      "empty": "Brak kontenerów dla wybranego statusu.",
       "wantToBuy": "Szukasz kontenera?",
-      "refreshDialogAria": "Potwierdzenie przedluzenia ogloszenia",
-      "refreshDialogTitle": "Przedluzyc ogloszenie o 30 dni?",
-      "refreshDialogText": "Sprawdz przed przedluzeniem: ilosc i cena.",
+      "refreshDialogAria": "Potwierdzenie przedłużenia ogłoszenia",
+      "refreshDialogTitle": "Przedłużyć ogłoszenie o 30 dni?",
+      "refreshDialogText": "Sprawdź przed przedłużeniem: ilość i cena.",
       "containerLabel": "Kontener",
       "priceLabel": "Cena",
-      "confirmQuantity": "Czy ilosc sie zgadza?",
-      "confirmPrice": "Czy cena sie zgadza?",
+      "confirmQuantity": "Czy ilość się zgadza?",
+      "confirmPrice": "Czy cena się zgadza?",
       "yes": "Tak",
       "no": "Nie",
       "refresh": "Przedluz",
-      "goToEdit": "Przejdz do edycji ogloszenia",
-      "deleteDialogAria": "Potwierdzenie usuniecia ogloszenia",
-      "deleteDialogTitle": "Czy na pewno usunac ogloszenie?",
-      "deleteDialogText": "Tej operacji nie mozna cofnac.",
+      "goToEdit": "Przejdź do edycji ogłoszenia",
+      "deleteDialogAria": "Potwierdzenie usunięcia ogłoszenia",
+      "deleteDialogTitle": "Czy na pewno usunąć ogłoszenie?",
+      "deleteDialogText": "Tej operacji nie można cofnąć.",
       "locationLabel": "Lokalizacja",
       "previous": "Poprzednie",
-      "next": "Nastepne"
+      "next": "Następne",
+      "cancel": "Anuluj",
+      "deactivating": "Dezaktywowanie...",
+      "deleteListingButton": "Usuń ogłoszenie",
+      "bulkImportErrorWithStatus": "Błąd importu ({status})",
+      "conciergeErrorWithStatus": "Błąd Concierge ({status})",
+      "bulkModalAria": "Multi Import",
+      "bulkModalTitle": "Multi Import",
+      "close": "Zamknij",
+      "bulkChooseTitle": "Co chcesz zrobić?",
+      "bulkChooseDescription": "Wybierz sposób dodawania ogłoszeń: samodzielny Multi Import albo zlecenie dla Concierge.",
+      "bulkSelfButton": "Uzupełnię samodzielnie",
+      "bulkConciergeButton": "Zleć to nam",
+      "freeBadge": "ZA DARMO",
+      "bulkSelfDescription": "Pobierz szablon Excel, uzupełnij rekordy i wgraj plik XLSX lub XLS. W arkuszu Słownik masz wszystkie dozwolone wartości. Żółte kolumny są wymagane, a lokalizacja to jedno pole tekstowe. Maksymalnie 250 rekordów na import. Multiimport tworzy tylko oferty sprzedaży. W przypadku problemów skontaktuj się z nami, chętnie pomożemy.",
+      "downloadExcelTemplate": "Pobierz szablon Excel",
+      "chooseFile": "Wybierz plik",
+      "noFileSelected": "Brak wybranego pliku",
+      "importedSummary": "Zaimportowano: {created} / {total}",
+      "rowError": "Wiersz {row}: {error}",
+      "backToChoice": "Wróć do wyboru",
+      "importing": "Importowanie...",
+      "importListings": "Importuj ogłoszenia",
+      "conciergeDescription": "Wolisz, żebyśmy zrobili to za Ciebie? Nie ma problemu. Prześlij swój stock w dowolnym formacie, a zajmiemy się przygotowaniem i publikacją ogłoszeń.",
+      "conciergeNoteLabel": "Notatka dla zespołu Concierge (opcjonalnie)",
+      "conciergeNotePlaceholder": "Np. format pliku, priorytet, uwagi do cen i dostępności",
+      "conciergeSaved": "Zlecenie Concierge zapisane.",
+      "fileLabel": "Plik",
+      "dateLabel": "Data",
+      "sending": "Wysyłanie...",
+      "sendToConcierge": "Wyślij do Concierge",
+      "maxFileSize": "Maksymalny rozmiar pliku: {count} MB.",
+      "bulkNoCompanyLineOne": "Załóż profil firmy, żeby skorzystać z Multi Importu.",
+      "bulkNoCompanyLineTwo": "Możesz skorzystać z przygotowanego przez nas pliku Excel.",
+      "or": "lub",
+      "bulkNoCompanyConcierge": "Wyślij nam plik w dowolnym formacie i zrobimy to za Ciebie.",
+      "createCompanyProfile": "Załóż profil firmy",
+      "deleting": "Usuwanie..."
+    },
+    "bulkApi": {
+      "onlySell": "Bulk import obsługuje tylko oferty typu sell",
+      "invalidSize": "Nieprawidłowy rozmiar kontenera (container_size)",
+      "invalidHeight": "Nieprawidłowa wysokość kontenera (container_height)",
+      "invalidType": "Nieprawidłowy typ kontenera (container_type)",
+      "invalidCondition": "Nieprawidłowy stan kontenera (container_condition)",
+      "invalidQuantity": "Nieprawidłowa ilość (quantity)",
+      "invalidAddress": "Nieprawidłowy adres (location_address)",
+      "availableFromRequired": "Podaj available_from albo ustaw available_now=true",
+      "invalidAmount": "Nieprawidłowa kwota (price_amount)",
+      "invalidVatRate": "Nieprawidłowa stawka VAT (price_vat_rate)",
+      "invalidProductionYear": "Nieprawidłowy rok produkcji (production_year)",
+      "cscBothRequired": "Podaj jednocześnie csc_valid_to_month i csc_valid_to_year",
+      "invalidCscMonth": "Nieprawidłowy miesiąc CSC (csc_valid_to_month)",
+      "invalidCscYear": "Nieprawidłowy rok CSC (csc_valid_to_year)",
+      "transportDistanceRequired": "Dla transport included podaj logistics_transport_free_distance_km",
+      "descriptionTooLong": "Opis przekracza {count} znaków",
+      "invalidContactEmail": "Nieprawidłowy contact_email",
+      "excelMultipartRequired": "Import obsługuje tylko plik Excel (multipart/form-data)",
+      "excelMissing": "Brak pliku Excel do importu",
+      "excelOnly": "Dozwolone są tylko pliki Excel (.xlsx, .xls)",
+      "noSheets": "Plik Excel nie zawiera arkuszy",
+      "firstSheetEmpty": "Pierwszy arkusz Excela jest pusty",
+      "unauthorized": "Brak autoryzacji",
+      "blockedUserCannotCreate": "Zablokowany użytkownik nie może tworzyć ogłoszeń",
+      "readExcelError": "Nie udało się odczytać pliku Excel",
+      "emptySheet": "Arkusz Excel jest pusty",
+      "excelTooLarge": "Dane z Excela są za duże (max {count} znaków po konwersji)",
+      "missingHeaders": "Brak nagłówków w pliku Excel",
+      "noRows": "Plik Excel nie zawiera danych",
+      "tooManyRows": "Plik Excel może zawierać maksymalnie {count} wierszy",
+      "missingRequiredColumn": "Brak wymaganej kolumny: {column}",
+      "companyRequired": "Bulk import jest dostępny tylko dla kont z uzupełnioną firmą",
+      "unknownValidation": "Nieznany błąd walidacji",
+      "tooManyRalColors": "Maksymalnie {count} kolorów RAL",
+      "locationNotFound": "Nie znaleziono lokalizacji dla: \"{location}\"",
+      "normalizeLocationError": "Nie udało się znormalizować lokalizacji",
+      "saveRecordError": "Nie udało się zapisać rekordu",
+      "internalServerError": "Wewnętrzny błąd serwera"
+    },
+    "bulkTemplate": {
+      "companyRequired": "Bulk import jest dostępny tylko dla kont z uzupełnioną firmą",
+      "dictionarySheetName": "Słownik",
+      "onlySales": "Bulk import obsługuje tylko oferty sprzedaży",
+      "integer": "Liczba całkowita",
+      "fullAddress": "Pełny adres tekstowy",
+      "exampleAddress": "Np. Marszałkowska 1, Warszawa, Polska",
+      "manyValuesHint": "Pole tekstowe: wiele wartości rozdzielaj | , ; np. double_door|pallet_wide",
+      "oneFeatureOneCell": "Dropdown: 1 cecha = 1 komórka",
+      "defaultCompanyEmail": "Domyślnie email firmy, fallback: email usera",
+      "defaultCompanyPhone": "Domyślnie telefon firmy, fallback: telefon usera",
+      "maxRows": "Maks 250 rekordów na import",
+      "excessRowsRejected": "Nadmiarowe wiersze zostaną odrzucone",
+      "allowedValues": "Dozwolone wartości",
+      "chooseAllowedValue": "Wybierz wartość z listy dozwolonych opcji."
+    },
+    "conciergeApi": {
+      "multipartRequired": "Wysyłka concierge obsługuje multipart/form-data",
+      "missingStockFile": "Brak pliku stock do wysłania",
+      "emptyStockFile": "Plik stock jest pusty",
+      "stockFileTooLarge": "Plik stock przekracza limit 25 MB",
+      "noteTooLong": "Notatka może mieć maksymalnie {count} znaków",
+      "unauthorized": "Brak autoryzacji",
+      "blockedUser": "Zablokowany użytkownik",
+      "readStockError": "Nie udało się odczytać pliku stock",
+      "companyRequired": "Konto musi mieć uzupełniony profil firmy, aby wysłać stock do concierge",
+      "notificationEmailMissing": "CONCIERGE_NOTIFICATION_EMAIL nie jest skonfigurowany",
+      "notificationWarning": "Zgłoszenie zapisane, ale nie udało się wysłać powiadomienia email",
+      "internalServerError": "Wewnętrzny błąd serwera"
     }
   },
   "adminMailPreviews": {
-    "title": "Podgl?d maili",
-    "subtitle": "Wizualny podgl?d HTML i wersji tekstowej na przyk?adowych danych.",
-    "backToAdmin": "Powr?t do panelu admina",
+    "title": "Podgląd maili",
+    "subtitle": "Wizualny podgląd HTML i wersji tekstowej na przykładowych danych.",
+    "backToAdmin": "Powrót do panelu admina",
     "templates": "Szablony",
     "subject": "Temat",
     "mockedRecipient": "Mockowany odbiorca",
     "html": "HTML",
     "textVersion": "Wersja tekstowa",
-    "frameTitle": "Podgl?d maila: {label}"
+    "frameTitle": "Podgląd maila: {label}",
+    "cases": {
+      "welcome": {
+        "label": "Welcome",
+        "description": "Nowe konto założone przez Google SSO"
+      },
+      "emailVerification": {
+        "label": "Email verification",
+        "description": "Nowa rejestracja konta lokalnego"
+      },
+      "passwordReset": {
+        "label": "Password reset",
+        "description": "Użytkownik zgłosił reset hasła"
+      },
+      "claimSubmitted": {
+        "label": "Claim submitted",
+        "description": "Użytkownik wysłał zgłoszenie przejęcia firmy"
+      },
+      "claimApproved": {
+        "label": "Claim approved",
+        "description": "Admin zaakceptował zgłoszenie przejęcia firmy"
+      },
+      "claimRejected": {
+        "label": "Claim rejected",
+        "description": "Admin odrzucił zgłoszenie przejęcia firmy"
+      },
+      "containerInquiry": {
+        "label": "Container inquiry",
+        "description": "Zapytanie do ogłoszenia kontenerowego (z opcjonalną ceną)"
+      }
+    }
   },
   "adminContainers": {
     "title": "Kontenery",
-    "totalLabel": "??cznie: {total}",
+    "totalLabel": "Łącznie: {total}",
     "searchPlaceholder": "Szukaj po firmie, lokalizacji lub emailu",
     "statusOptions": {
       "all": "Status: wszystkie",
       "active": "Aktywne",
-      "expired": "Wygas?e",
-      "closed": "Zamkni?te"
+      "expired": "Wygasłe",
+      "closed": "Zamknięte"
     },
-    "loading": "?adowanie...",
-    "empty": "Brak kontener?w do wy?wietlenia.",
+    "loading": "Ładowanie...",
+    "empty": "Brak kontenerów do wyświetlenia.",
     "columns": {
       "company": "Firma",
       "container": "Kontener",
       "location": "Lokalizacja",
-      "quantity": "Ilo??",
+      "quantity": "Ilość",
       "status": "Status",
       "expires": "Wygasa",
       "actions": "Akcje"
     },
     "statusValues": {
       "active": "Aktywne",
-      "expired": "Wygas?e",
-      "closed": "Zamkni?te"
+      "expired": "Wygasłe",
+      "closed": "Zamknięte"
     },
     "actions": {
-      "preview": "Podgl?d",
+      "preview": "Podgląd",
       "activate": "Aktywuj",
       "expire": "Wygasz",
       "close": "Zamknij",
-      "delete": "Usu?"
+      "delete": "Usuń"
     },
-    "confirmDelete": "Czy na pewno usun?? kontener?",
-    "failedLoad": "Nie uda?o si? za?adowa? kontener?w ({status})",
-    "loadFallbackError": "Nie uda?o si? pobra? kontener?w.",
-    "statusUpdateError": "Nie uda?o si? zmieni? statusu.",
+    "confirmDelete": "Czy na pewno usunąć kontener?",
+    "failedLoad": "Nie udało się załadować kontenerów ({status})",
+    "loadFallbackError": "Nie udało się pobrać kontenerów.",
+    "statusUpdateError": "Nie udało się zmienić statusu.",
     "statusUpdatedSuccess": "Status zaktualizowany.",
-    "deleteError": "Nie uda?o si? usun?? kontenera.",
-    "deletedSuccess": "Kontener usuni?ty.",
+    "deleteError": "Nie udało się usunąć kontenera.",
+    "deletedSuccess": "Kontener usunięty.",
     "previous": "Poprzednia",
-    "next": "Nast?pna",
-    "unknownError": "Wyst?pi? b??d."
+    "next": "Następna",
+    "unknownError": "Wystąpił błąd."
   },
   "adminConcierge": {
     "title": "Zlecenia concierge",
-    "totalLabel": "??cznie: {total}",
-    "searchPlaceholder": "Szukaj po firmie, u?ytkowniku, emailu lub nazwie pliku",
+    "totalLabel": "Łącznie: {total}",
+    "searchPlaceholder": "Szukaj po firmie, użytkowniku, emailu lub nazwie pliku",
     "statusOptions": {
       "all": "Status: wszystkie",
       "new": "Nowe",
-      "completed": "Zamkni?te"
+      "completed": "Zamknięte"
     },
-    "refresh": "Od?wie?",
-    "loading": "?adowanie...",
-    "empty": "Brak zg?osze? concierge.",
+    "refresh": "Odśwież",
+    "loading": "Ładowanie...",
+    "empty": "Brak zgłoszeń concierge.",
     "columns": {
       "company": "Firma",
-      "requester": "Zg?aszaj?cy",
+      "requester": "Zgłaszający",
       "contact": "Kontakt",
       "stockFile": "Plik stock",
       "note": "Notatka",
@@ -2491,18 +2649,18 @@
     "statusLabel": "Status",
     "statusValues": {
       "new": "Nowe",
-      "completed": "Zamkni?te"
+      "completed": "Zamknięte"
     },
     "notification": {
-      "sent": "Wys?ano",
-      "error": "B??d",
+      "sent": "Wysłano",
+      "error": "Błąd",
       "pending": "Oczekuje"
     },
     "downloadFile": "Pobierz plik",
     "notProvided": "?",
     "previous": "Poprzednia",
-    "next": "Nast?pna",
-    "failedLoad": "Nie uda?o si? za?adowa? zg?osze? concierge ({status})",
-    "loadFallbackError": "Nie uda?o si? pobra? zg?osze? concierge."
+    "next": "Następna",
+    "failedLoad": "Nie udało się załadować zgłoszeń concierge ({status})",
+    "loadFallbackError": "Nie udało się pobrać zgłoszeń concierge."
   }
 }

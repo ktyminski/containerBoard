@@ -40,7 +40,12 @@ import {
   LISTING_STATUS,
   type Currency,
 } from "@/lib/container-listing-types";
-import { getCountryFlagSvgUrl } from "@/lib/country-flags";
+import {
+  getCountryDisplayName,
+  getCountryFlagSvgUrl,
+  resolveCountryCodeFromInput,
+  resolveCountryCodeFromInputApprox,
+} from "@/lib/country-flags";
 import {
   getMessages,
   LOCALE_COOKIE_NAME,
@@ -288,10 +293,36 @@ type LocationDisplayItem = {
   streetLine?: string;
   city: string;
   country: string;
+  countryCode?: string;
   flagUrl: string | null;
 };
 
-function getLocationDisplayItems(item: ContainerListingItem): LocationDisplayItem[] {
+function getResolvedCountryCode(input: {
+  country?: string;
+  countryCode?: string;
+}): string | undefined {
+  const directCode = input.countryCode?.trim().toUpperCase();
+  if (directCode) {
+    return directCode;
+  }
+
+  const countryName = input.country?.trim() ?? "";
+  if (!countryName) {
+    return undefined;
+  }
+
+  return (
+    resolveCountryCodeFromInput(countryName) ??
+    resolveCountryCodeFromInputApprox(countryName) ??
+    undefined
+  );
+}
+
+function getLocationDisplayItems(
+  item: ContainerListingItem,
+  locale: AppLocale,
+  moduleMessages: ReturnType<typeof getMessages>["containerModules"],
+): LocationDisplayItem[] {
   const items: LocationDisplayItem[] = [];
   const seen = new Set<string>();
 
@@ -301,12 +332,18 @@ function getLocationDisplayItems(item: ContainerListingItem): LocationDisplayIte
     houseNumber?: string;
     city?: string;
     country?: string;
+    countryCode?: string;
   }) => {
     const postalCode = input.postalCode?.trim() ?? "";
     const street = input.street?.trim() ?? "";
     const houseNumber = input.houseNumber?.trim() ?? "";
     const city = input.city?.trim() ?? "";
-    const country = input.country?.trim() ?? "";
+    const rawCountry = input.country?.trim() ?? "";
+    const countryCode = getResolvedCountryCode({
+      country: rawCountry,
+      countryCode: input.countryCode,
+    });
+    const country = getCountryDisplayName(countryCode, locale, rawCountry);
     const streetLine = street ? [street, houseNumber].filter(Boolean).join(" ") : undefined;
     const key = [postalCode, streetLine ?? "", city, country].join("|").toLowerCase();
 
@@ -322,9 +359,10 @@ function getLocationDisplayItems(item: ContainerListingItem): LocationDisplayIte
       id: `${items.length + 1}-${key}`,
       ...(postalCode ? { postalCode } : {}),
       streetLine,
-      city: city || "Unknown city",
-      country: country || "Unknown country",
-      flagUrl: getCountryFlagSvgUrl(country),
+      city: city || moduleMessages.details.noData,
+      country: country || moduleMessages.details.noData,
+      ...(countryCode ? { countryCode } : {}),
+      flagUrl: getCountryFlagSvgUrl(countryCode ?? rawCountry),
     });
   };
 
@@ -335,6 +373,7 @@ function getLocationDisplayItems(item: ContainerListingItem): LocationDisplayIte
       houseNumber: location.locationAddressParts?.houseNumber,
       city: location.locationAddressParts?.city ?? location.locationCity,
       country: location.locationAddressParts?.country ?? location.locationCountry,
+      countryCode: location.locationCountryCode,
     });
   }
 
@@ -345,6 +384,7 @@ function getLocationDisplayItems(item: ContainerListingItem): LocationDisplayIte
       houseNumber: item.locationAddressParts?.houseNumber,
       city: item.locationAddressParts?.city ?? item.locationCity,
       country: item.locationAddressParts?.country ?? item.locationCountry,
+      countryCode: item.locationCountryCode,
     });
   }
 
@@ -352,8 +392,8 @@ function getLocationDisplayItems(item: ContainerListingItem): LocationDisplayIte
     return [
       {
         id: "fallback-empty-location",
-        city: "Location unavailable",
-        country: "Unknown country",
+        city: moduleMessages.details.noData,
+        country: moduleMessages.details.noData,
         flagUrl: null,
       },
     ];
@@ -362,7 +402,11 @@ function getLocationDisplayItems(item: ContainerListingItem): LocationDisplayIte
   return items;
 }
 
-function getLocationMapPoints(item: ContainerListingItem): ContainerDetailsLocationPoint[] {
+function getLocationMapPoints(
+  item: ContainerListingItem,
+  locale: AppLocale,
+  moduleMessages: ReturnType<typeof getMessages>["containerModules"],
+): ContainerDetailsLocationPoint[] {
   const output: ContainerDetailsLocationPoint[] = [];
   const seen = new Set<string>();
 
@@ -372,6 +416,7 @@ function getLocationMapPoints(item: ContainerListingItem): ContainerDetailsLocat
     lng: unknown;
     city?: string;
     country?: string;
+    countryCode?: string;
   }) => {
     const lat = typeof input.lat === "number" && Number.isFinite(input.lat) ? input.lat : null;
     const lng = typeof input.lng === "number" && Number.isFinite(input.lng) ? input.lng : null;
@@ -385,8 +430,15 @@ function getLocationMapPoints(item: ContainerListingItem): ContainerDetailsLocat
     }
     seen.add(key);
 
-    const city = input.city?.trim() || "Nieznane miasto";
-    const country = input.country?.trim() || "Nieznany kraj";
+    const city = input.city?.trim() || moduleMessages.details.noData;
+    const rawCountry = input.country?.trim() || "";
+    const countryCode = getResolvedCountryCode({
+      country: rawCountry,
+      countryCode: input.countryCode,
+    });
+    const country =
+      getCountryDisplayName(countryCode, locale, rawCountry) ||
+      moduleMessages.details.noData;
     output.push({
       id: `${input.idHint}-${key}`,
       lat,
@@ -402,6 +454,7 @@ function getLocationMapPoints(item: ContainerListingItem): ContainerDetailsLocat
       lng: location.locationLng,
       city: location.locationAddressParts?.city ?? location.locationCity,
       country: location.locationAddressParts?.country ?? location.locationCountry,
+      countryCode: location.locationCountryCode,
     });
   }
 
@@ -412,6 +465,7 @@ function getLocationMapPoints(item: ContainerListingItem): ContainerDetailsLocat
       lng: item.locationLng,
       city: item.locationAddressParts?.city ?? item.locationCity,
       country: item.locationAddressParts?.country ?? item.locationCountry,
+      countryCode: item.locationCountryCode,
     });
   }
 
@@ -570,8 +624,8 @@ export async function ContainerDetailsContent({
   const hasAnyCertification =
     listingItem.hasCscPlate || listingItem.hasCscCertification || listingItem.hasWarranty;
   const quantityDisplay = getQuantityDisplay(listingItem.quantity);
-  const locationItems = getLocationDisplayItems(listingItem);
-  const locationMapPoints = getLocationMapPoints(listingItem);
+  const locationItems = getLocationDisplayItems(listingItem, locale, moduleMessages);
+  const locationMapPoints = getLocationMapPoints(listingItem, locale, moduleMessages);
   const freeTransportDistanceKmForMap =
     listingItem.logisticsTransportIncluded &&
     typeof listingItem.logisticsTransportFreeDistanceKm === "number" &&

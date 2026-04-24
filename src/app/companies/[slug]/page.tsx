@@ -20,6 +20,11 @@ import {
   getCompaniesCollection,
 } from "@/lib/companies";
 import {
+  getCountryDisplayName,
+  resolveCountryCodeFromInput,
+  resolveCountryCodeFromInputApprox,
+} from "@/lib/country-flags";
+import {
   formatTemplate,
   getLocaleFromRequest,
   getMessages,
@@ -97,6 +102,56 @@ function isValidPoint(value: unknown): value is [number, number] {
     lat >= -90 &&
     lat <= 90
   );
+}
+
+function getResolvedCountryData(country: string | undefined, locale: string): {
+  countryCode?: string;
+  countryLabel: string;
+} {
+  const rawCountry = country?.trim() ?? "";
+  const countryCode =
+    resolveCountryCodeFromInput(rawCountry) ??
+    resolveCountryCodeFromInputApprox(rawCountry) ??
+    undefined;
+
+  return {
+    ...(countryCode ? { countryCode } : {}),
+    countryLabel: getCountryDisplayName(countryCode, locale, rawCountry),
+  };
+}
+
+function buildLocalizedBranchAddress(input: {
+  street?: string;
+  houseNumber?: string;
+  city?: string;
+  countryLabel?: string;
+  fallbackLabel?: string;
+}): string {
+  const street = input.street?.trim();
+  const houseNumber = input.houseNumber?.trim();
+  const city = input.city?.trim();
+  const countryLabel = input.countryLabel?.trim();
+  const streetLine = street
+    ? [street, houseNumber].filter(Boolean).join(" ")
+    : undefined;
+  const seen = new Set<string>();
+  const compact = [streetLine, city, countryLabel].filter((part): part is string => {
+    if (!part) {
+      return false;
+    }
+    const key = part.toLowerCase();
+    if (seen.has(key)) {
+      return false;
+    }
+    seen.add(key);
+    return true;
+  });
+
+  if (compact.length >= 2) {
+    return compact.join(", ");
+  }
+
+  return input.fallbackLabel?.trim() ?? "";
 }
 
 export async function generateMetadata({
@@ -206,15 +261,28 @@ export default async function CompanyDetailsPage({
         return null;
       }
 
-      return {
-        label: location.label,
-        addressText: location.addressText,
-        addressDisplayText: buildShortAddressLabelFromParts({
+      const countryData = getResolvedCountryData(
+        location.addressParts?.country?.trim() ?? "",
+        locale,
+      );
+      const addressDisplayText = buildLocalizedBranchAddress({
+        street: location.addressParts?.street,
+        houseNumber: location.addressParts?.houseNumber,
+        city: location.addressParts?.city,
+        countryLabel: countryData.countryLabel,
+        fallbackLabel: buildShortAddressLabelFromParts({
           parts: location.addressParts,
           fallbackLabel: location.addressText,
         }),
+      });
+
+      return {
+        label: location.label,
+        addressText: location.addressText,
+        addressDisplayText,
         postalCode: location.addressParts?.postalCode?.trim() ?? "",
-        country: location.addressParts?.country?.trim() ?? "",
+        country: countryData.countryLabel,
+        countryCode: countryData.countryCode,
         phone: (location.phone ?? company.phone)?.trim() || undefined,
         email: (location.email ?? company.email)?.trim() || undefined,
         point: {

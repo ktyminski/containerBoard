@@ -162,6 +162,7 @@ type ImageItem = {
 
 type ContainerListingFormProps = {
   mode?: "create" | "edit";
+  reactivateOnSave?: boolean;
   submitEndpoint: string;
   submitMethod: "POST" | "PATCH";
   submitLabel: string;
@@ -1237,6 +1238,7 @@ function getDefaultValues(
 
 export function ContainerListingForm({
   mode = "create",
+  reactivateOnSave = false,
   submitEndpoint,
   submitMethod,
   submitLabel,
@@ -2748,6 +2750,7 @@ export function ContainerListingForm({
 
     const payload = {
       ...(mode === "edit" ? { action: "update" } : {}),
+      ...(mode === "edit" && reactivateOnSave ? { reactivateOnSave: true } : {}),
       type: values.type,
       container: {
         size: resolvedContainerSize,

@@ -16,6 +16,11 @@ import {
   PRICE_CURRENCY_LABEL,
 } from "@/lib/container-listing-types";
 import {
+  getCountryDisplayName,
+  resolveCountryCodeFromInput,
+  resolveCountryCodeFromInputApprox,
+} from "@/lib/country-flags";
+import {
   CONTAINER_CONDITION_COLOR_TOKENS,
   type PriceDisplayCurrency,
 } from "@/components/container-listings-shared";
@@ -46,6 +51,11 @@ type ContainerListingsResultsProps = {
   detailsQueryString?: string;
   priceDisplayCurrency: PriceDisplayCurrency;
   footerContent?: ReactNode;
+  administrativeLocationFilter?: {
+    city?: string;
+    country?: string;
+    countryCode?: string;
+  };
 };
 
 type ListingPriceDisplay = {
@@ -68,6 +78,11 @@ type ContainerListingResultCardProps = {
   priceDisplayCurrency: PriceDisplayCurrency;
   shouldPrefetchDetails: boolean;
   shouldPrioritizeImage: boolean;
+  administrativeLocationFilter?: {
+    city?: string;
+    country?: string;
+    countryCode?: string;
+  };
 };
 
 const DAY_IN_MS = 24 * 60 * 60 * 1000;
@@ -323,6 +338,7 @@ function getCscValidityLabel(
 }
 
 function getLocationLabel(
+  locale: AppLocale,
   messages: ContainerListingsMessages,
   input: {
   locationAddressParts?: {
@@ -332,6 +348,7 @@ function getLocationLabel(
   };
   locationCity?: string;
   locationCountry?: string;
+  locationCountryCode?: string;
 },
 ): string {
   const postalCode = input.locationAddressParts?.postalCode?.trim() || "";
@@ -339,22 +356,135 @@ function getLocationLabel(
     input.locationAddressParts?.city?.trim() ||
     input.locationCity?.trim() ||
     "";
-  const country =
+  const rawCountry =
     input.locationAddressParts?.country?.trim() ||
     input.locationCountry?.trim() ||
     "";
+  const country = getCountryDisplayName(
+    input.locationCountryCode?.trim(),
+    locale,
+    rawCountry,
+  );
   const combined = [postalCode, [city, country].filter(Boolean).join(", ")]
     .filter(Boolean)
     .join(" ");
   return combined || messages.utils.noLocation;
 }
 
+function getMatchingListingLocation(
+  item: ContainerListingItem,
+  administrativeLocationFilter?: {
+    city?: string;
+    country?: string;
+    countryCode?: string;
+  },
+) {
+  const normalizedCity = administrativeLocationFilter?.city?.trim().toLowerCase() ?? "";
+  const normalizedCountry = administrativeLocationFilter?.country?.trim().toLowerCase() ?? "";
+  const normalizedCountryCode =
+    administrativeLocationFilter?.countryCode?.trim().toUpperCase() ?? "";
+  const hasAdministrativeLocationFilter =
+    normalizedCity.length > 0 ||
+    normalizedCountry.length > 0 ||
+    normalizedCountryCode.length > 0;
+  const getEffectiveCountryCode = (location: {
+    locationCountry?: string;
+    locationCountryCode?: string;
+    locationAddressParts?: {
+      country?: string;
+    };
+  }) => {
+    const countryName =
+      location.locationAddressParts?.country?.trim() ||
+      location.locationCountry?.trim() ||
+      "";
+    const resolvedFromCountry =
+      resolveCountryCodeFromInput(countryName) ??
+      resolveCountryCodeFromInputApprox(countryName) ??
+      "";
+    if (resolvedFromCountry) {
+      return resolvedFromCountry.toUpperCase();
+    }
+    return location.locationCountryCode?.trim().toUpperCase() ?? "";
+  };
+
+  const locations =
+    Array.isArray(item.locations) && item.locations.length > 0
+      ? item.locations
+      : [
+          {
+            locationAddressParts: item.locationAddressParts,
+            locationCity: item.locationCity,
+            locationCountry: item.locationCountry,
+            locationCountryCode: item.locationCountryCode,
+            isPrimary: true,
+          },
+        ];
+
+  if (!hasAdministrativeLocationFilter) {
+    return locations.find((location) => location.isPrimary) ?? locations[0] ?? null;
+  }
+
+  const matches = locations.find((location) => {
+    const locationCity =
+      location.locationAddressParts?.city?.trim().toLowerCase() ||
+      location.locationCity?.trim().toLowerCase() ||
+      "";
+    const locationCountry =
+      location.locationAddressParts?.country?.trim().toLowerCase() ||
+      location.locationCountry?.trim().toLowerCase() ||
+      "";
+    const locationCountryCode = getEffectiveCountryCode(location);
+
+    if (normalizedCity && locationCity !== normalizedCity) {
+      return false;
+    }
+
+    if (normalizedCountryCode) {
+      return locationCountryCode === normalizedCountryCode;
+    }
+
+    if (normalizedCountry) {
+      return locationCountry === normalizedCountry;
+    }
+
+    return true;
+  });
+
+  return matches ?? locations.find((location) => location.isPrimary) ?? locations[0] ?? null;
+}
+
 function getAllLocationLabels(
+  locale: AppLocale,
   messages: ContainerListingsMessages,
   item: ContainerListingItem,
+  administrativeLocationFilter?: {
+    city?: string;
+    country?: string;
+    countryCode?: string;
+  },
 ): string[] {
   const labels: string[] = [];
   const seen = new Set<string>();
+  const preferredLocation = getMatchingListingLocation(item, administrativeLocationFilter);
+  const sourceLocations =
+    Array.isArray(item.locations) && item.locations.length > 0
+      ? item.locations
+      : [
+          {
+            locationAddressParts: item.locationAddressParts,
+            locationCity: item.locationCity,
+            locationCountry: item.locationCountry,
+            locationCountryCode: item.locationCountryCode,
+            isPrimary: true,
+          },
+        ];
+  const orderedLocations = preferredLocation
+    ? [
+        preferredLocation,
+        ...sourceLocations.filter((location) => location !== preferredLocation),
+      ]
+    : sourceLocations;
 
   const appendLabel = (label: string) => {
     const normalizedKey = label.toLowerCase();
@@ -365,22 +495,24 @@ function getAllLocationLabels(
     labels.push(label);
   };
 
-  if (Array.isArray(item.locations) && item.locations.length > 0) {
-    for (const location of item.locations) {
+  if (orderedLocations.length > 0) {
+    for (const location of orderedLocations) {
       appendLabel(
-        getLocationLabel(messages, {
+        getLocationLabel(locale, messages, {
           locationAddressParts: location.locationAddressParts,
           locationCity: location.locationCity,
           locationCountry: location.locationCountry,
+          locationCountryCode: location.locationCountryCode,
         }),
       );
     }
   } else {
     appendLabel(
-      getLocationLabel(messages, {
+      getLocationLabel(locale, messages, {
         locationAddressParts: item.locationAddressParts,
         locationCity: item.locationCity,
         locationCountry: item.locationCountry,
+        locationCountryCode: item.locationCountryCode,
       }),
     );
   }
@@ -538,15 +670,44 @@ function CscInfoBadge({
 }
 
 function LocationInfoBadge({
+  locale,
   item,
   messages,
+  administrativeLocationFilter,
 }: {
+  locale: AppLocale;
   item: ContainerListingItem;
   messages: ContainerListingsMessages;
+  administrativeLocationFilter?: {
+    city?: string;
+    country?: string;
+    countryCode?: string;
+  };
 }) {
-  const locationLabel = getContainerListingLocationLabel(item, messages.utils);
-  const allLocationLabels = getAllLocationLabels(messages, item);
+  const preferredLocation = getMatchingListingLocation(item, administrativeLocationFilter);
+  const locationLabel = preferredLocation
+    ? getLocationLabel(locale, messages, {
+        locationAddressParts: preferredLocation.locationAddressParts,
+        locationCity: preferredLocation.locationCity,
+        locationCountry: preferredLocation.locationCountry,
+        locationCountryCode: preferredLocation.locationCountryCode,
+      })
+    : getContainerListingLocationLabel(item, messages.utils, locale);
+  const allLocationLabels = getAllLocationLabels(
+    locale,
+    messages,
+    item,
+    administrativeLocationFilter,
+  );
+  const extraLocationsCount = Math.max(0, allLocationLabels.length - 1);
   const showTooltip = allLocationLabels.length > 1;
+  const locationSummaryLabel =
+    extraLocationsCount > 0
+      ? `${locationLabel} ${messages.utils.otherLocationsTemplate.replace(
+          "{count}",
+          String(extraLocationsCount),
+        )}`
+      : locationLabel;
 
   return (
     <div
@@ -574,7 +735,7 @@ function LocationInfoBadge({
       <span
         className={`min-w-0 flex-1 truncate ${showTooltip ? "cursor-help" : ""}`}
       >
-        {locationLabel}
+        {locationSummaryLabel}
       </span>
       {showTooltip ? (
         <div className="pointer-events-none absolute bottom-full left-0 z-30 mb-2 w-72 max-w-[85vw] translate-y-1 rounded-md border border-neutral-700 bg-neutral-900 px-2.5 py-2 text-left text-xs leading-5 text-neutral-100 opacity-0 shadow-xl transition duration-150 group-hover:delay-500 group-hover:translate-y-0 group-hover:opacity-100 group-focus-within:delay-500 group-focus-within:translate-y-0 group-focus-within:opacity-100">
@@ -642,6 +803,7 @@ const ContainerListingResultCard = memo(function ContainerListingResultCard({
   priceDisplayCurrency,
   shouldPrefetchDetails,
   shouldPrioritizeImage,
+  administrativeLocationFilter,
 }: ContainerListingResultCardProps) {
   const priceDisplay = getListingPriceDisplay(
     messages,
@@ -743,7 +905,12 @@ const ContainerListingResultCard = memo(function ContainerListingResultCard({
                 {fallbackTitle}
               </h3>
               <div className="mt-1 min-w-0">
-                <LocationInfoBadge item={item} messages={messages} />
+                <LocationInfoBadge
+                  locale={locale}
+                  item={item}
+                  messages={messages}
+                  administrativeLocationFilter={administrativeLocationFilter}
+                />
               </div>
               {containerMetaParts.length > 0 ? (
                 <p
@@ -938,6 +1105,7 @@ function ContainerListingsResultsComponent({
   detailsQueryString,
   priceDisplayCurrency,
   footerContent,
+  administrativeLocationFilter,
 }: ContainerListingsResultsProps) {
   const renderPaginationControls = (extraClassName?: string) => {
     if (totalPages <= 1) {
@@ -1078,6 +1246,7 @@ function ContainerListingsResultsComponent({
                       priceDisplayCurrency={priceDisplayCurrency}
                       shouldPrefetchDetails={page === 1 && index === 0}
                       shouldPrioritizeImage={page === 1 && index === 0}
+                      administrativeLocationFilter={administrativeLocationFilter}
                     />
                   );
                 })}

@@ -38,6 +38,7 @@ import {
   type ContainerCondition,
   type ListingType,
 } from "@/lib/container-listing-types";
+import { getCountryDisplayName } from "@/lib/country-flags";
 import { LOCALE_HEADER_NAME, type AppLocale } from "@/lib/i18n";
 
 type ContainersListApiResponse = {
@@ -74,6 +75,12 @@ type GeocodeSearchApiResponse = {
     lng: number;
     label: string;
     shortLabel?: string;
+    addressParts?: {
+      city?: string;
+      country?: string;
+    } | null;
+    countryCode?: string | null;
+    matchType?: "country" | "place";
   } | null;
   error?: string;
 };
@@ -388,6 +395,7 @@ function buildMapPopupListNode(
     const location = document.createElement("p");
     location.className = "company-map-popup-card__summary";
     location.textContent = getPopupLocationLabel(
+      locale,
       messages,
       item,
       locationHintsByListingId?.get(item.id),
@@ -478,6 +486,7 @@ function getPopupConditionColor(condition: ContainerCondition): string {
 }
 
 function getPopupLocationLabel(
+  locale: AppLocale,
   messages: ContainerListingsMessages,
   item: ContainerListingItem,
   hint?: { lat: number; lng: number },
@@ -497,11 +506,16 @@ function getPopupLocationLabel(
     locationToDisplay?.locationCity?.trim() ||
     item.locationAddressParts?.city?.trim() ||
     item.locationCity.trim();
-  const country =
+  const rawCountry =
     locationToDisplay?.locationAddressParts?.country?.trim() ||
     locationToDisplay?.locationCountry?.trim() ||
     item.locationAddressParts?.country?.trim() ||
     item.locationCountry.trim();
+  const countryCode =
+    locationToDisplay?.locationCountryCode?.trim() ||
+    item.locationCountryCode?.trim() ||
+    "";
+  const country = getCountryDisplayName(countryCode, locale, rawCountry);
 
   const parts = [postalCode, city, country].filter((value): value is string => {
     return Boolean(value && value.trim().length > 0);
@@ -638,6 +652,7 @@ const ListingsMap = memo(function ListingsMap({
   detailsQueryString,
   activeLocation,
   activeLocationLabel,
+  suppressAutoFit = false,
 }: {
   locale: AppLocale;
   messages: ContainerListingsMessages;
@@ -647,6 +662,7 @@ const ListingsMap = memo(function ListingsMap({
   detailsQueryString: string;
   activeLocation: { lat: number; lng: number } | null;
   activeLocationLabel?: string;
+  suppressAutoFit?: boolean;
 }) {
   const mapContainerRef = useRef<HTMLDivElement | null>(null);
   const mapRef = useRef<maplibregl.Map | null>(null);
@@ -1230,6 +1246,11 @@ const ListingsMap = memo(function ListingsMap({
         return;
       }
 
+      if (suppressAutoFit) {
+        hasAutoFittedViewRef.current = true;
+        return;
+      }
+
       if (!hasAutoFittedViewRef.current && points.length > 0) {
         fitMapToPoints(map, points);
         hasAutoFittedViewRef.current = true;
@@ -1237,7 +1258,7 @@ const ListingsMap = memo(function ListingsMap({
     });
 
     return () => window.cancelAnimationFrame(frame);
-  }, [activeLocation, isVisible, points]);
+  }, [activeLocation, isVisible, points, suppressAutoFit]);
 
   useEffect(() => {
     function handlePointerDown(event: PointerEvent): void {
@@ -1300,9 +1321,11 @@ export function ContainerListingsBoard({
 
   const [items, setItems] = useState<ContainerListingItem[]>([]);
   const [mapItems, setMapItems] = useState<ContainerListingMapPoint[]>([]);
-  const [hasLoadedMapDataOnce, setHasLoadedMapDataOnce] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [deliveryReachItems, setDeliveryReachItems] = useState<ContainerListingItem[]>([]);
+  const [deliveryReachTotal, setDeliveryReachTotal] = useState(0);
+  const [isLoadingDeliveryReach, setIsLoadingDeliveryReach] = useState(false);
 
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
@@ -1329,6 +1352,7 @@ export function ContainerListingsBoard({
 
   const [isResolvingLocation, setIsResolvingLocation] = useState(false);
   const [locationFilterError, setLocationFilterError] = useState<string | null>(null);
+  const [resolvedLocationMode, setResolvedLocationMode] = useState<"point" | "country" | null>(null);
 
   const formMethods = useForm<FiltersFormValues>({
     defaultValues: {
@@ -1568,14 +1592,34 @@ export function ContainerListingsBoard({
       shouldDirty: true,
       shouldTouch: true,
     });
+    setValue("city", "", {
+      shouldDirty: false,
+      shouldTouch: false,
+    });
+    setValue("country", "", {
+      shouldDirty: false,
+      shouldTouch: false,
+    });
+    setValue("countryCode", "", {
+      shouldDirty: false,
+      shouldTouch: false,
+    });
     setLocationFilterError(null);
     setPage(1);
     setAppliedFilters((current) => ({
       ...current,
       locationQuery: "",
       locationCenter: null,
+      ...(resolvedLocationMode === "country"
+        ? {
+            city: "",
+            country: "",
+            countryCode: "",
+          }
+        : {}),
     }));
-  }, [setValue]);
+    setResolvedLocationMode(null);
+  }, [resolvedLocationMode, setValue]);
 
   const applyNonLocationFilters = useCallback((nextFilters: NonLocationFilters) => {
     setPage(1);
@@ -1600,6 +1644,19 @@ export function ContainerListingsBoard({
     setLocationFilterError(null);
 
     if (!trimmedLocationQuery) {
+      setValue("city", "", {
+        shouldDirty: false,
+        shouldTouch: false,
+      });
+      setValue("country", "", {
+        shouldDirty: false,
+        shouldTouch: false,
+      });
+      setValue("countryCode", "", {
+        shouldDirty: false,
+        shouldTouch: false,
+      });
+      setResolvedLocationMode(null);
       setAppliedFilters({
         ...nextBase,
         locationQuery: "",
@@ -1609,7 +1666,20 @@ export function ContainerListingsBoard({
     }
 
     if (trimmedLocationQuery.length < 3) {
+      setValue("city", "", {
+        shouldDirty: false,
+        shouldTouch: false,
+      });
+      setValue("country", "", {
+        shouldDirty: false,
+        shouldTouch: false,
+      });
+      setValue("countryCode", "", {
+        shouldDirty: false,
+        shouldTouch: false,
+      });
       setLocationFilterError(messages.filters.locationMinChars);
+      setResolvedLocationMode(null);
       setAppliedFilters({
         ...nextBase,
         locationQuery: "",
@@ -1631,11 +1701,24 @@ export function ContainerListingsBoard({
       const data = (await response.json()) as GeocodeSearchApiResponse;
 
       if (!response.ok || data.error) {
-        throw new Error(data.error ?? `Blad geokodowania (${response.status})`);
+        throw new Error(data.error ?? `Błąd geokodowania (${response.status})`);
       }
 
       if (!data.item) {
+        setValue("city", "", {
+          shouldDirty: false,
+          shouldTouch: false,
+        });
+        setValue("country", "", {
+          shouldDirty: false,
+          shouldTouch: false,
+        });
+        setValue("countryCode", "", {
+          shouldDirty: false,
+          shouldTouch: false,
+        });
         setLocationFilterError(messages.filters.locationResolveError);
+        setResolvedLocationMode(null);
         setAppliedFilters({
           ...nextBase,
           locationQuery: trimmedLocationQuery,
@@ -1644,13 +1727,64 @@ export function ContainerListingsBoard({
         return;
       }
 
+      if (data.item.matchType === "country" && data.item.countryCode) {
+        setValue("city", "", {
+          shouldDirty: false,
+          shouldTouch: false,
+        });
+        setValue("country", data.item.addressParts?.country?.trim() || trimmedLocationQuery, {
+          shouldDirty: false,
+          shouldTouch: false,
+        });
+        setValue("countryCode", data.item.countryCode.trim().toUpperCase(), {
+          shouldDirty: false,
+          shouldTouch: false,
+        });
+        setResolvedLocationMode("country");
+        setAppliedFilters({
+          ...nextBase,
+          locationQuery: trimmedLocationQuery,
+          locationCenter: null,
+          city: "",
+          country: data.item.addressParts?.country?.trim() || trimmedLocationQuery,
+          countryCode: data.item.countryCode.trim().toUpperCase(),
+        });
+        return;
+      }
+
+      setValue("city", "", {
+        shouldDirty: false,
+        shouldTouch: false,
+      });
+      setValue("country", "", {
+        shouldDirty: false,
+        shouldTouch: false,
+      });
+      setValue("countryCode", "", {
+        shouldDirty: false,
+        shouldTouch: false,
+      });
+      setResolvedLocationMode("point");
       setAppliedFilters({
         ...nextBase,
         locationQuery: trimmedLocationQuery,
         locationCenter: { lat: data.item.lat, lng: data.item.lng },
       });
     } catch {
+      setValue("city", "", {
+        shouldDirty: false,
+        shouldTouch: false,
+      });
+      setValue("country", "", {
+        shouldDirty: false,
+        shouldTouch: false,
+      });
+      setValue("countryCode", "", {
+        shouldDirty: false,
+        shouldTouch: false,
+      });
       setLocationFilterError(messages.filters.locationResolveError);
+      setResolvedLocationMode(null);
       setAppliedFilters({
         ...nextBase,
         locationQuery: trimmedLocationQuery,
@@ -1680,6 +1814,33 @@ export function ContainerListingsBoard({
       page,
     ],
   );
+
+  const deliveryReachRequestUrl = useMemo(() => {
+    if (
+      !appliedFilters.locationCenter ||
+      isFavoritesTab ||
+      initialMine ||
+      Boolean(hiddenCompanySlug)
+    ) {
+      return null;
+    }
+
+    return buildContainersApiUrl({
+      appliedFilters,
+      page: 1,
+      pageSize: 6,
+      localFavoriteIds: localFavoriteIdsForApi,
+      mineOnly: initialMine,
+      companySlug: hiddenCompanySlug,
+      deliveryReach: true,
+    });
+  }, [
+    appliedFilters,
+    hiddenCompanySlug,
+    initialMine,
+    isFavoritesTab,
+    localFavoriteIdsForApi,
+  ]);
 
   const mapRequestUrl = useMemo(
     () =>
@@ -1786,6 +1947,80 @@ export function ContainerListingsBoard({
   ]);
 
   useEffect(() => {
+    const shouldLoadDeliveryReach =
+      Boolean(deliveryReachRequestUrl) &&
+      !isLoading &&
+      !error &&
+      items.length === 0 &&
+      total === 0;
+
+    if (!shouldLoadDeliveryReach) {
+      setDeliveryReachItems((current) => (current.length > 0 ? [] : current));
+      setDeliveryReachTotal((current) => (current !== 0 ? 0 : current));
+      setIsLoadingDeliveryReach(false);
+      return;
+    }
+
+    const controller = new AbortController();
+
+    async function loadDeliveryReachItems() {
+      setIsLoadingDeliveryReach(true);
+
+      try {
+        const response = await fetch(deliveryReachRequestUrl!, {
+          cache: "no-store",
+          headers: requestHeaders,
+          signal: controller.signal,
+        });
+        const data = (await response.json()) as ContainersListApiResponse;
+        if (!response.ok) {
+          throw new Error(data.error ?? `${messages.board.apiErrorPrefix} (${response.status})`);
+        }
+
+        if (controller.signal.aborted) {
+          return;
+        }
+
+        const baseItems = data.items ?? [];
+        const nextItems = isLoggedIn
+          ? baseItems
+          : baseItems.map((item) => ({
+              ...item,
+              isFavorite: guestFavoriteListingIdSet.has(item.id),
+            }));
+
+        setDeliveryReachItems(nextItems);
+        setDeliveryReachTotal(data.meta?.total ?? nextItems.length);
+      } catch {
+        if (!controller.signal.aborted) {
+          setDeliveryReachItems([]);
+          setDeliveryReachTotal(0);
+        }
+      } finally {
+        if (!controller.signal.aborted) {
+          setIsLoadingDeliveryReach(false);
+        }
+      }
+    }
+
+    void loadDeliveryReachItems();
+
+    return () => {
+      controller.abort();
+    };
+  }, [
+    deliveryReachRequestUrl,
+    error,
+    guestFavoriteListingIdSet,
+    isLoading,
+    isLoggedIn,
+    items,
+    messages.board.apiErrorPrefix,
+    requestHeaders,
+    total,
+  ]);
+
+  useEffect(() => {
     if (!isLoggedIn && !hasHydratedGuestFavorites) {
       return;
     }
@@ -1793,6 +2028,7 @@ export function ContainerListingsBoard({
     const controller = new AbortController();
 
     async function loadMapContainers() {
+      setMapItems([]);
       try {
         const response = await fetch(mapRequestUrl, {
           cache: "no-store",
@@ -1809,7 +2045,6 @@ export function ContainerListingsBoard({
         }
 
         setMapItems(data.items ?? []);
-        setHasLoadedMapDataOnce(true);
       } catch {
         if (controller.signal.aborted) {
           return;
@@ -1827,6 +2062,7 @@ export function ContainerListingsBoard({
 
   const clearAllFilters = useCallback(() => {
     reset(FILTER_FORM_DEFAULTS);
+    setResolvedLocationMode(null);
     setAppliedFilters({
       listingKind: "sell",
       locationQuery: "",
@@ -2070,12 +2306,15 @@ export function ContainerListingsBoard({
               <ListingsMap
                 locale={locale}
                 messages={messages}
-                items={hasLoadedMapDataOnce ? mapItems : items}
+                items={mapItems}
                 isVisible={isMapOpen}
                 detailsHrefPrefix={detailsHrefPrefix}
                 detailsQueryString={detailsQueryString}
-                activeLocation={appliedFilters.locationCenter}
+                activeLocation={
+                  resolvedLocationMode === "point" ? appliedFilters.locationCenter : null
+                }
                 activeLocationLabel={appliedFilters.locationQuery}
+                suppressAutoFit={resolvedLocationMode === "country"}
               />
             </div>
           </div>
@@ -2131,7 +2370,57 @@ export function ContainerListingsBoard({
                 detailsHrefPrefix={detailsHrefPrefix}
                 detailsQueryString={detailsQueryString}
                 priceDisplayCurrency={appliedFilters.priceDisplayCurrency}
+                administrativeLocationFilter={{
+                  city: appliedFilters.city,
+                  country: appliedFilters.country,
+                  countryCode: appliedFilters.countryCode,
+                }}
               />
+              {!isLoading && !error && items.length === 0 && deliveryReachItems.length > 0 ? (
+                <section className="mt-4 grid gap-3">
+                  <div className="rounded-md border border-neutral-300 bg-neutral-50/95 p-4 shadow-sm">
+                    <p className="text-xs font-semibold uppercase tracking-[0.12em] text-[#0c3466]">
+                      {messages.results.deliveryReachEyebrow}
+                    </p>
+                    <h2 className="mt-1 text-xl font-semibold text-neutral-900">
+                      {messages.results.deliveryReachTitle}
+                    </h2>
+                    <p className="mt-1 text-sm text-neutral-600">
+                      {messages.results.deliveryReachText}
+                    </p>
+                  </div>
+
+                  <ContainerListingsResults
+                    locale={locale}
+                    messages={messages}
+                    items={deliveryReachItems}
+                    total={deliveryReachTotal}
+                    page={1}
+                    totalPages={1}
+                    showSummaryBar={false}
+                    isLoading={isLoadingDeliveryReach}
+                    error={null}
+                    activeTab={activeTab}
+                    showFavoritesToggle={false}
+                    darkBlueCtaClass={DARK_BLUE_CTA_BASE_CLASS}
+                    pendingFavoriteId={pendingFavoriteId}
+                    onTabChange={handleTabChange}
+                    onToggleFavorite={handleToggleFavorite}
+                    onCopyListingLink={handleCopyListingLink}
+                    onPreviousPage={goToPreviousPage}
+                    onNextPage={goToNextPage}
+                    onOpenDetails={handleOpenDetails}
+                    detailsHrefPrefix={detailsHrefPrefix}
+                    detailsQueryString={detailsQueryString}
+                    priceDisplayCurrency={appliedFilters.priceDisplayCurrency}
+                    administrativeLocationFilter={{
+                      city: appliedFilters.city,
+                      country: appliedFilters.country,
+                      countryCode: appliedFilters.countryCode,
+                    }}
+                  />
+                </section>
+              ) : null}
             </div>
           </ContainerListingsFilters>
         </div>

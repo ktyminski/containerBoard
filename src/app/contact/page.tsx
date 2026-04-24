@@ -39,6 +39,8 @@ export default async function ContactPage({ searchParams }: ContactPageProps) {
   const messages = getMessages(locale);
   const page = messages.infoPages.contact;
   const contactEmail = "hello@containerboard.pl";
+  const contactPhone = process.env.CONTACT_PHONE?.trim() || "+48 514 443 548 (Polski | English)";
+  const contactPhoneHref = contactPhone.replace(/[^\d+]/g, "");
 
   return (
     <StaticPageFrame
@@ -50,7 +52,6 @@ export default async function ContactPage({ searchParams }: ContactPageProps) {
       intro={page.intro}
       links={[
         { href: "/about", label: messages.footer.about },
-        { href: "/list", label: messages.mapModules.tabs.companies },
       ]}
     >
       <div className="space-y-4">
@@ -59,12 +60,20 @@ export default async function ContactPage({ searchParams }: ContactPageProps) {
         <p>{page.pointThree}</p>
       </div>
       <div className="mt-6 space-y-4 border-t border-neutral-800/70 pt-5">
-        <a
-          href={`mailto:${contactEmail}`}
-          className="inline-flex items-center text-sm font-semibold text-sky-300 hover:text-sky-200"
-        >
-          {contactEmail}
-        </a>
+        <div className="flex flex-col gap-2 text-sm">
+          <a
+            href={`mailto:${contactEmail}`}
+            className="inline-flex w-fit font-semibold text-sky-300 hover:text-sky-200"
+          >
+            {contactEmail}
+          </a>
+          <a
+            href={`tel:${contactPhoneHref}`}
+            className="inline-flex w-fit font-semibold text-neutral-100 hover:text-sky-200"
+          >
+            {page.phoneLabel}: {contactPhone}
+          </a>
+        </div>
         <div className="flex items-center gap-2 text-neutral-300">
           <a
             href="https://www.linkedin.com/"

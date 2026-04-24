@@ -2,6 +2,7 @@ import { Buffer } from "node:buffer";
 import { NextRequest, NextResponse } from "next/server";
 import ExcelJS from "exceljs";
 import { getCurrentUserFromRequest } from "@/lib/auth-user";
+import { formatTemplate, getLocaleFromApiRequest, getMessages } from "@/lib/i18n";
 import { getCompaniesCollection } from "@/lib/companies";
 import {
   CONTAINER_CONDITIONS,
@@ -40,9 +41,11 @@ function buildAddressFallbackFromParts(parts: {
 }
 
 export async function GET(request: NextRequest) {
+  const locale = getLocaleFromApiRequest(request);
+  const messages = getMessages(locale).containerModules.bulkTemplate;
   const user = await getCurrentUserFromRequest(request);
   if (!user?._id) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    return NextResponse.json({ error: getMessages(locale).containerModules.bulkApi.unauthorized }, { status: 401 });
   }
 
   const companies = await getCompaniesCollection();
@@ -58,7 +61,7 @@ export async function GET(request: NextRequest) {
   );
   if (!ownerCompany?._id || !ownerCompany.name?.trim()) {
     return NextResponse.json(
-      { error: "Bulk import jest dostepny tylko dla kont z uzupelniona firma" },
+      { error: messages.companyRequired },
       { status: 403 },
     );
   }
@@ -169,7 +172,7 @@ export async function GET(request: NextRequest) {
   ];
 
   const requiredDictionary: Array<[string, string, string]> = [
-    ["type", "sell", "Bulk import obsluguje tylko oferty sprzedazy"],
+    ["type", "sell", "Bulk import obsługuje tylko oferty sprzedaży"],
     [
       "container_size",
       [String(CONTAINER_SIZE.CUSTOM), ...CONTAINER_SIZES.map(String)].join(", "),
@@ -178,17 +181,17 @@ export async function GET(request: NextRequest) {
     ["container_height", CONTAINER_HEIGHTS.join(", "), ""],
     ["container_type", CONTAINER_TYPES.join(", "), ""],
     ["container_condition", CONTAINER_CONDITIONS.join(", "), ""],
-    ["quantity", "1-100000", "Liczba calkowita"],
-    ["location_address", "Pelny adres tekstowy", "Np. Marszalkowska 1, Warszawa, Polska"],
+    ["quantity", "1-100000", "Liczba całkowita"],
+    ["location_address", "Pełny adres tekstowy", "Np. Marszałkowska 1, Warszawa, Polska"],
   ];
   const optionalDictionary: Array<[string, string, string]> = [
     ["available_now", "true, false, 1, 0, tak, nie, yes, no", ""],
     [
       "container_features",
       CONTAINER_FEATURES.join(", "),
-      "Pole tekstowe: wiele wartosci rozdzielaj | , ; np. double_door|pallet_wide",
+      "Pole tekstowe: wiele wartości rozdzielaj | , ; np. double_door|pallet_wide",
     ],
-    ["container_feature_1", CONTAINER_FEATURES.join(", "), "Dropdown: 1 cecha = 1 komorka"],
+    ["container_feature_1", CONTAINER_FEATURES.join(", "), "Dropdown: 1 cecha = 1 komórka"],
     ["container_feature_2", CONTAINER_FEATURES.join(", "), "Dropdown: opcjonalnie"],
     ["container_feature_3", CONTAINER_FEATURES.join(", "), "Dropdown: opcjonalnie"],
     ["container_feature_4", CONTAINER_FEATURES.join(", "), "Dropdown: opcjonalnie"],
@@ -199,13 +202,13 @@ export async function GET(request: NextRequest) {
     ["price_currency", PRICE_CURRENCIES.join(", "), ""],
     ["price_tax_mode", PRICE_TAX_MODES.join(", "), ""],
     ["price_vat_rate", "0-100", "Liczba, np. 23"],
-    ["production_year", "1900-2100", "Liczba calkowita"],
+    ["production_year", "1900-2100", "Liczba całkowita"],
     ["csc_valid_to_month", "1-12", "Podawaj razem z csc_valid_to_year"],
     ["csc_valid_to_year", "1900-2100", "Podawaj razem z csc_valid_to_month"],
     ["container_colors_ral", "RAL XXXX (max 10)", "Np. RAL 5010,RAL 7035"],
-    ["contact_email", "poprawny email", "Domyslnie email firmy, fallback: email usera"],
-    ["contact_phone", "dowolny numer telefonu", "Domyslnie telefon firmy, fallback: telefon usera"],
-    ["limit", "Maks 250 rekordow na import", "Nadmiarowe wiersze zostana odrzucone"],
+    ["contact_email", "poprawny email", "Domyślnie email firmy, fallback: email usera"],
+    ["contact_phone", "dowolny numer telefonu", "Domyślnie telefon firmy, fallback: telefon usera"],
+    ["limit", "Maks 250 rekordów na import", "Nadmiarowe wiersze zostaną odrzucone"],
   ];
 
   const dictionaryRows: string[][] = [];
@@ -218,7 +221,7 @@ export async function GET(request: NextRequest) {
 
   const workbook = new ExcelJS.Workbook();
   const importSheet = workbook.addWorksheet("Import");
-  const dictionarySheet = workbook.addWorksheet("Slownik");
+  const dictionarySheet = workbook.addWorksheet("Słownik");
   const listsSheet = workbook.addWorksheet("Listy");
   listsSheet.state = "hidden";
 
@@ -248,11 +251,11 @@ export async function GET(request: NextRequest) {
 
   dictionarySheet.addRow([
     "Wymagane pola",
-    "Dozwolone wartosci",
+    "Dozwolone wartości",
     "Uwagi",
     "",
     "Opcjonalne pola",
-    "Dozwolone wartosci",
+    "Dozwolone wartości",
     "Uwagi",
   ]);
   for (const row of dictionaryRows) {

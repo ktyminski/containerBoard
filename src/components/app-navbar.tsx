@@ -31,7 +31,11 @@ export async function AppNavbar({ locale, messages }: AppNavbarProps) {
           </Link>
         </div>
         <div className="ml-auto flex min-w-0 items-center gap-2 whitespace-nowrap">
-          <AddActionsMenu locale={locale} label={messages.footer.addContainer} />
+          <AddActionsMenu
+            locale={locale}
+            label={messages.footer.addContainer}
+            desktopLabel={messages.footer.addAction}
+          />
           <AuthNav locale={locale} messages={messages.authNav} roleMessages={messages.roles} />
           <LanguageSwitcher locale={locale} messages={messages.languageSwitcher} />
         </div>

@@ -88,10 +88,11 @@
     "terms": "Terms",
     "cookies": "Cookies",
     "about": "About us",
-    "contact": "Contact",
-    "browseListings": "Listings",
-    "addContainer": "Add container",
-    "mapLinksAria": "Map links",
+  "contact": "Contact",
+  "browseListings": "Listings",
+  "addContainer": "Add container",
+  "addAction": "Add",
+  "mapLinksAria": "Map links",
     "infoLinksAria": "Information links",
     "linkedinAria": "ContainerBoard LinkedIn profile",
     "facebookAria": "ContainerBoard Facebook profile",
@@ -151,12 +152,13 @@
   "infoPages": {
     "about": {
       "title": "About us",
-      "intro": "This page will be expanded with details about the ContainerBoard team, our experience, and the product direction.",
-      "body": "Soon we will publish information here about the team, ownership areas, and the values we use to build ContainerBoard."
+      "intro": "ContainerBoard is built for companies and buyers who want to find, sell, or rent containers faster.",
+      "body": "We bring container offers into one clear place, reducing outdated listings, unnecessary calls, and manual searching across many sources.\n\nThe platform helps sellers publish stock in a simple way, while buyers can compare available containers by location, type, condition, and price.\n\nWe develop ContainerBoard around the real needs of the container market: easy offer publishing, practical search, lead handling, and operational support when it is needed."
     },
     "contact": {
       "title": "Contact",
       "intro": "This section will include the current ways to contact the ContainerBoard team.",
+      "phoneLabel": "Phone",
       "pointOne": "We will add direct contact details for support and business cooperation.",
       "pointTwo": "You will see clear guidance on which channel to use for technical and commercial topics.",
       "pointThree": "We will also share expected response times and support scope."
@@ -1448,7 +1450,8 @@
   },
   "listPage": {
     "metaTitle": "Container listings",
-    "metaDescription": "Browse container sale, rental and buying requests, filter results and move to contact faster."
+    "metaDescription": "Browse container sale, rental and buying requests, filter results and move to contact faster.",
+    "detailsMetaTitle": "Listing preview | ContainerBoard"
   },
   "staticPages": {
     "viewListings": "Go to listings",
@@ -1693,20 +1696,35 @@
   "landingPage": {
     "metaTitle": "Selling and buying containers in one place",
     "metaDescription": "Publish container sale and rental offers, browse the latest listings and reach buyers faster.",
-    "heroTitle": "Selling and buying containers in one place",
-    "heroSubtitle": "Publish sale and rental offers, collect buying requests and connect commercial teams with relevant listings faster.",
-    "browseCta": "Browse listings",
+    "heroTitle": "Find or sell containers faster",
+    "heroSubtitle": "Browse offers from across Europe or add your own and receive inquiries directly.",
+    "browseCta": "Browse containers",
     "createCta": "Add listing",
-    "heroCardEyebrow": "ContainerBoard for companies",
-    "heroCardTitle": "A tool designed for day-to-day operational work.",
-    "heroHighlights": [
-      "Sales, rentals and buying requests in one place",
-      "Fast filtering by location, type and price",
-      "Single units and larger stock volumes",
-      "Publishing and contact without extra steps"
+    "heroCardEyebrow": "",
+    "heroCardTitle": "Why ContainerBoard",
+    "heroValuePoints": [
+      {
+        "title": "No middlemen",
+        "text": "You contact the listing owner directly"
+      },
+      {
+        "title": "Offers from across Europe",
+        "text": "One place instead of groups and emails"
+      },
+      {
+        "title": "Precise filtering",
+        "text": "Location, type, price — in seconds"
+      },
+      {
+        "title": "Single units and bulk",
+        "text": "From one unit to larger volumes"
+      },
+      {
+        "title": "Publish in a minute",
+        "text": "No unnecessary steps",
+        "icon": "bolt"
+      }
     ],
-    "heroCardFooterTitle": "For traders, operators and sales teams",
-    "heroCardFooterText": "One platform to build offer visibility and start commercial conversations faster.",
     "latestEyebrow": "Latest publications",
     "latestTitle": "Recently added offers",
     "latestDescription": "Open the full list to filter, sort and categorize containers.",
@@ -2040,6 +2058,9 @@
       "previous": "Previous",
       "next": "Next",
       "searchResultsLabel": "Search results",
+      "deliveryReachEyebrow": "Alternative",
+      "deliveryReachTitle": "With free delivery to your location",
+      "deliveryReachText": "These containers are a bit farther away, but they include declared free transport to your location.",
       "allTab": "All",
       "favoritesTab": "Favorites",
       "loadingAria": "Loading containers",
@@ -2408,7 +2429,114 @@
       "deleteDialogText": "This action cannot be undone.",
       "locationLabel": "Location",
       "previous": "Previous",
-      "next": "Next"
+      "next": "Next",
+      "cancel": "Cancel",
+      "deactivating": "Deactivating...",
+      "deleteListingButton": "Delete listing",
+      "bulkImportErrorWithStatus": "Import error ({status})",
+      "conciergeErrorWithStatus": "Concierge error ({status})",
+      "bulkModalAria": "Multi Import",
+      "bulkModalTitle": "Multi Import",
+      "close": "Close",
+      "bulkChooseTitle": "What do you want to do?",
+      "bulkChooseDescription": "Choose how to add listings: self-service Multi Import or a Concierge request.",
+      "bulkSelfButton": "I will complete it myself",
+      "bulkConciergeButton": "Let us handle it",
+      "freeBadge": "FREE",
+      "bulkSelfDescription": "Download the Excel template, complete the rows and upload an XLSX or XLS file. The Dictionary sheet contains all allowed values. Yellow columns are required, and location is one text field. Maximum 250 rows per import. Multi Import creates sale offers only. If you run into any issues, contact us and we will be happy to help.",
+      "downloadExcelTemplate": "Download Excel template",
+      "chooseFile": "Choose file",
+      "noFileSelected": "No file selected",
+      "importedSummary": "Imported: {created} / {total}",
+      "rowError": "Row {row}: {error}",
+      "backToChoice": "Back to choice",
+      "importing": "Importing...",
+      "importListings": "Import listings",
+      "conciergeDescription": "Prefer us to do it for you? No problem. Send your stock in any format and we will prepare and publish the listings.",
+      "conciergeNoteLabel": "Note for the Concierge team (optional)",
+      "conciergeNotePlaceholder": "E.g. file format, priority, pricing or availability notes",
+      "conciergeSaved": "Concierge request saved.",
+      "fileLabel": "File",
+      "dateLabel": "Date",
+      "sending": "Sending...",
+      "sendToConcierge": "Send to Concierge",
+      "maxFileSize": "Maximum file size: {count} MB.",
+      "bulkNoCompanyLineOne": "Create a company profile to use Multi Import.",
+      "bulkNoCompanyLineTwo": "You can use our prepared Excel file.",
+      "or": "or",
+      "bulkNoCompanyConcierge": "Send us a file in any format and we will do it for you.",
+      "createCompanyProfile": "Create company profile",
+      "deleting": "Deleting..."
+    },
+    "bulkApi": {
+      "onlySell": "Bulk import supports sell offers only",
+      "invalidSize": "Invalid container size (container_size)",
+      "invalidHeight": "Invalid container height (container_height)",
+      "invalidType": "Invalid container type (container_type)",
+      "invalidCondition": "Invalid container condition (container_condition)",
+      "invalidQuantity": "Invalid quantity (quantity)",
+      "invalidAddress": "Invalid address (location_address)",
+      "availableFromRequired": "Provide available_from or set available_now=true",
+      "invalidAmount": "Invalid amount (price_amount)",
+      "invalidVatRate": "Invalid VAT rate (price_vat_rate)",
+      "invalidProductionYear": "Invalid production year (production_year)",
+      "cscBothRequired": "Provide both csc_valid_to_month and csc_valid_to_year",
+      "invalidCscMonth": "Invalid CSC month (csc_valid_to_month)",
+      "invalidCscYear": "Invalid CSC year (csc_valid_to_year)",
+      "transportDistanceRequired": "For included transport provide logistics_transport_free_distance_km",
+      "descriptionTooLong": "Description exceeds {count} characters",
+      "invalidContactEmail": "Invalid contact_email",
+      "excelMultipartRequired": "Import supports Excel file only (multipart/form-data)",
+      "excelMissing": "Missing Excel file for import",
+      "excelOnly": "Only Excel files are allowed (.xlsx, .xls)",
+      "noSheets": "Excel file has no sheets",
+      "firstSheetEmpty": "First Excel sheet is empty",
+      "unauthorized": "Unauthorized",
+      "blockedUserCannotCreate": "Blocked user cannot create listings",
+      "readExcelError": "Could not read Excel file",
+      "emptySheet": "Excel sheet is empty",
+      "excelTooLarge": "Excel data is too large (max {count} characters after conversion)",
+      "missingHeaders": "Missing headers in Excel file",
+      "noRows": "Excel file does not contain data",
+      "tooManyRows": "Excel file can contain up to {count} rows",
+      "missingRequiredColumn": "Missing required column: {column}",
+      "companyRequired": "Bulk import is available only for accounts with a completed company profile",
+      "unknownValidation": "Unknown validation error",
+      "tooManyRalColors": "Maximum {count} RAL colors",
+      "locationNotFound": "Location not found for: \"{location}\"",
+      "normalizeLocationError": "Could not normalize location",
+      "saveRecordError": "Could not save record",
+      "internalServerError": "Internal server error"
+    },
+    "bulkTemplate": {
+      "companyRequired": "Bulk import is available only for accounts with a completed company profile",
+      "dictionarySheetName": "Dictionary",
+      "onlySales": "Bulk import supports sale offers only",
+      "integer": "Integer",
+      "fullAddress": "Full text address",
+      "exampleAddress": "E.g. Marszalkowska 1, Warsaw, Poland",
+      "manyValuesHint": "Text field: separate multiple values with | , ; e.g. double_door|pallet_wide",
+      "oneFeatureOneCell": "Dropdown: 1 feature = 1 cell",
+      "defaultCompanyEmail": "Default company email, fallback: user email",
+      "defaultCompanyPhone": "Default company phone, fallback: user phone",
+      "maxRows": "Max 250 rows per import",
+      "excessRowsRejected": "Extra rows will be rejected",
+      "allowedValues": "Allowed values",
+      "chooseAllowedValue": "Choose a value from the allowed options list."
+    },
+    "conciergeApi": {
+      "multipartRequired": "Concierge upload supports multipart/form-data",
+      "missingStockFile": "Missing stock file to send",
+      "emptyStockFile": "Stock file is empty",
+      "stockFileTooLarge": "Stock file exceeds the 25 MB limit",
+      "noteTooLong": "Note can have up to {count} characters",
+      "unauthorized": "Unauthorized",
+      "blockedUser": "Blocked user",
+      "readStockError": "Could not read stock file",
+      "companyRequired": "Account must have a completed company profile to send stock to concierge",
+      "notificationEmailMissing": "CONCIERGE_NOTIFICATION_EMAIL is not configured",
+      "notificationWarning": "Request saved, but email notification could not be sent",
+      "internalServerError": "Internal server error"
     }
   },
   "adminMailPreviews": {
@@ -2420,7 +2548,37 @@
     "mockedRecipient": "Mocked recipient",
     "html": "HTML",
     "textVersion": "Text version",
-    "frameTitle": "Email preview: {label}"
+    "frameTitle": "Email preview: {label}",
+    "cases": {
+      "welcome": {
+        "label": "Welcome",
+        "description": "New account created with Google SSO"
+      },
+      "emailVerification": {
+        "label": "Email verification",
+        "description": "New local account registration"
+      },
+      "passwordReset": {
+        "label": "Password reset",
+        "description": "User requested a password reset"
+      },
+      "claimSubmitted": {
+        "label": "Claim submitted",
+        "description": "User submitted a company ownership claim"
+      },
+      "claimApproved": {
+        "label": "Claim approved",
+        "description": "Admin approved a company ownership claim"
+      },
+      "claimRejected": {
+        "label": "Claim rejected",
+        "description": "Admin rejected a company ownership claim"
+      },
+      "containerInquiry": {
+        "label": "Container inquiry",
+        "description": "Inquiry for a container listing (with optional price)"
+      }
+    }
   },
   "adminContainers": {
     "title": "Containers",
