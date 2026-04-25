@@ -84,6 +84,8 @@
     "finalCta": "Zapoznaj się"
   },
   "footer": {
+    "home": "Strona główna",
+    "brandTagline": "Buy, Sell & Connect",
     "privacyPolicy": "Polityka prywatności",
     "terms": "Regulamin",
     "cookies": "Cookies",
@@ -569,7 +571,8 @@
       "leadRequests": "Zapytania ofertowe",
       "users": "Uzytkownicy",
       "containers": "Kontenery",
-      "concierge": "Concierge"
+      "concierge": "Concierge",
+      "bulkImport": "Multi Import"
     }
   },
   "adminUsers": {
@@ -1421,7 +1424,7 @@
     "contactHidden": "Dostępne tylko dla zweryfikowanych firm.",
     "createdAtLabel": "Utworzono",
     "expiresAtLabel": "Wazne do",
-    "expiredHint": "Zapytanie wygasło. Możesz je przedłużyć o kolejne 14 dni.",
+    "expiredHint": "Zapytanie wygasło. Możesz je przedłużyć o kolejne 30 dni.",
     "detailsAction": "Zobacz szczegóły",
     "detailsModalTitle": "Szczegóły zapytania ofertowego",
     "editAction": "Edytuj",
@@ -1439,9 +1442,9 @@
     "saveSuccess": "Zapytanie zostało zaktualizowane.",
     "submitError": "Nie udało się dodać zapytania.",
     "saveError": "Nie udało się zaktualizować zapytania.",
-    "extendAction": "Przedluz o 14 dni",
+    "extendAction": "Przedluz o 30 dni",
     "extending": "Przedluzanie...",
-    "extendSuccess": "Zapytanie zostało przedluzone o 14 dni.",
+    "extendSuccess": "Zapytanie zostało przedluzone o 30 dni.",
     "extendError": "Nie udało się przedłużyć zapytania.",
     "validationError": "Sprawdź formularz i uzupełnij wymagane pola.",
     "turnstileRequired": "Potwierdź captcha, aby dodać zapytanie.",
@@ -2065,7 +2068,7 @@
       "detailsCta": "Szczegóły",
       "previous": "Poprzednia",
       "next": "Następna",
-      "searchResultsLabel": "Wyniki wyszukiwania",
+      "searchResultsLabel": "Wyniki",
       "deliveryReachEyebrow": "Alternatywa",
       "deliveryReachTitle": "Z darmową dostawą do Ciebie",
       "deliveryReachText": "Kontenery są trochę dalej, ale mają zadeklarowany darmowy transport do Twojej lokalizacji.",
@@ -2165,7 +2168,9 @@
       "submitLabel": "Publikuj kontener",
       "successMessage": "Kontener opublikowany",
       "backToList": "Powrót do listy kontenerów",
-      "intentModalTitle": "Wybierz typ ogłoszenia"
+      "intentModalTitle": "Wybierz typ ogłoszenia",
+      "adminCompanyContextLabel": "Dodaj w imieniu firmy",
+      "adminCompanyContextPlaceholder": "Bez kontekstu firmy"
     },
     "editPage": {
       "title": "Edytuj kontener",
@@ -2474,7 +2479,10 @@
       "or": "lub",
       "bulkNoCompanyConcierge": "Wyślij nam plik w dowolnym formacie i zrobimy to za Ciebie.",
       "createCompanyProfile": "Załóż profil firmy",
-      "deleting": "Usuwanie..."
+      "deleting": "Usuwanie...",
+      "bulkSelfDescriptionIntro": "Pobierz szablon Excel, uzupe?nij rekordy i wgraj plik XLSX lub XLS. W arkuszu S?ownik masz wszystkie dozwolone warto?ci. ???te kolumny s? wymagane, a lokalizacja to jedno pole tekstowe. Maksymalnie 250 rekord?w na import. Multiimport tworzy tylko oferty sprzeda?y.",
+      "bulkSupportLine": "W przypadku problem?w skontaktuj si? z nami, ch?tnie pomo?emy.",
+      "bulkPhotosSupportLine": "Je?li chcesz, ?eby?my zaj?li si? r?wnie? wprowadzeniem zdj??, wy?lij nam plik ZIP ze zdj?ciami."
     },
     "bulkApi": {
       "onlySell": "Bulk import obsługuje tylko oferty typu sell",
@@ -2607,7 +2615,8 @@
       "quantity": "Ilość",
       "status": "Status",
       "expires": "Wygasa",
-      "actions": "Akcje"
+      "actions": "Akcje",
+      "createdAt": "Data dodania"
     },
     "statusValues": {
       "active": "Aktywne",

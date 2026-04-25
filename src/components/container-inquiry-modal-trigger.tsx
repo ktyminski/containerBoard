@@ -287,8 +287,8 @@ export function ContainerInquiryModalTrigger({
           onClick={handleCopyLink}
           className="inline-flex items-center gap-2 rounded-md border border-neutral-300 bg-white px-3 py-2 text-sm text-neutral-700 hover:bg-neutral-100"
         >
-          {messages.copyLink}
-          <CopyLinkIcon className="h-4 w-4" />
+          <span className="truncate">{messages.copyLink}</span>
+          <CopyLinkIcon className="h-4 w-4 shrink-0" />
         </button>
         <button
           type="button"
@@ -302,8 +302,10 @@ export function ContainerInquiryModalTrigger({
             isPendingFavorite ? "opacity-60" : undefined,
           )}
         >
-          {isFavorite ? messages.favoriteActive : messages.favorite}
-          <svg aria-hidden="true" viewBox="0 0 20 20" className="h-4 w-4">
+          <span className="truncate">
+            {isFavorite ? messages.favoriteActive : messages.favorite}
+          </span>
+          <svg aria-hidden="true" viewBox="0 0 20 20" className="h-4 w-4 shrink-0">
             <path
               d="M10 17.2 3.9 13a4.4 4.4 0 0 1-1.8-3.6A4.4 4.4 0 0 1 6.5 5a4.6 4.6 0 0 1 3.5 1.6A4.6 4.6 0 0 1 13.5 5a4.4 4.4 0 0 1 4.4 4.4A4.4 4.4 0 0 1 16.1 13L10 17.2Z"
               fill={isFavorite ? "currentColor" : "none"}
@@ -319,8 +321,8 @@ export function ContainerInquiryModalTrigger({
           onClick={() => openForIntent("offer")}
           className="inline-flex items-center gap-2 rounded-md border border-sky-700 bg-sky-700 px-3 py-2 text-sm font-medium text-white hover:bg-sky-600"
         >
-          {messages.requestOffer}
-          <svg aria-hidden="true" viewBox="0 0 20 20" className="h-4 w-4">
+          <span className="truncate">{messages.requestOffer}</span>
+          <svg aria-hidden="true" viewBox="0 0 20 20" className="h-4 w-4 shrink-0">
             <path d="M3 10h10.5m0 0-3.75-3.75M13.5 10l-3.75 3.75" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
           </svg>
         </button>
@@ -330,8 +332,8 @@ export function ContainerInquiryModalTrigger({
             onClick={() => openForIntent("negotiate")}
             className="inline-flex items-center gap-2 rounded-md border border-rose-500 bg-gradient-to-r from-rose-500 to-fuchsia-500 px-3 py-2 text-sm font-semibold text-white transition-colors duration-200 hover:from-rose-600 hover:to-fuchsia-600 active:translate-y-px"
           >
-            {messages.negotiate}
-            <svg aria-hidden="true" viewBox="0 0 20 20" className="h-4 w-4">
+            <span className="truncate">{messages.negotiate}</span>
+            <svg aria-hidden="true" viewBox="0 0 20 20" className="h-4 w-4 shrink-0">
               <path d="M6 6h9m0 0-2.5-2.5M15 6l-2.5 2.5M14 14H5m0 0 2.5 2.5M5 14l2.5-2.5" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
             </svg>
           </button>

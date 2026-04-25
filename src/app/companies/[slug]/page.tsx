@@ -154,6 +154,19 @@ function buildLocalizedBranchAddress(input: {
   return input.fallbackLabel?.trim() ?? "";
 }
 
+function resolveInternalBackHref(
+  value: string | string[] | undefined,
+): string | null {
+  const resolved = typeof value === "string" ? value : value?.[0];
+  const normalized = resolved?.trim() ?? "";
+
+  if (!normalized.startsWith("/") || normalized.startsWith("//")) {
+    return null;
+  }
+
+  return normalized;
+}
+
 export async function generateMetadata({
   params,
   searchParams,
@@ -229,6 +242,7 @@ export default async function CompanyDetailsPage({
     company.createdByUserId?.toHexString() === currentUser?._id?.toHexString();
   const operatingArea = normalizeCompanyOperatingArea(company.operatingArea);
   const operatingAreaLabel = messages.companyCreate.operatingAreas[operatingArea];
+  const preferredBackHref = resolveInternalBackHref(query.back);
   const fallbackBackHref = withLang(canEdit ? "/containers/mine" : "/list", locale);
   const logoUrl = company.logo?.size || company.logo?.filename ? `/api/companies/${companyId}/logo` : null;
   const backgroundUrl = company.background?.size || company.background?.filename
@@ -352,6 +366,7 @@ export default async function CompanyDetailsPage({
           <div className="flex flex-wrap items-center gap-2">
             <SmartBackButton
               label={messages.companyDetails.back}
+              preferredHref={preferredBackHref ?? undefined}
               fallbackHref={fallbackBackHref}
               className={`${neutralActionButtonClass} w-fit cursor-pointer gap-2`}
             />

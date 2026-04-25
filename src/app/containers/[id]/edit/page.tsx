@@ -30,7 +30,7 @@ type EditContainerPageProps = {
 export async function generateMetadata({ params }: EditContainerPageProps): Promise<Metadata> {
   const { id } = await params;
   return {
-    title: `Edytuj kontener ${id} | ContainerBoard`,
+    title: `Edytuj kontener ${id}`,
   };
 }
 

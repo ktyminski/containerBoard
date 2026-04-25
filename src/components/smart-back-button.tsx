@@ -6,6 +6,7 @@ import { NAV_HISTORY_STACK_KEY } from "@/components/in-app-navigation-history-tr
 
 type SmartBackButtonProps = {
   label: string;
+  preferredHref?: string;
   fallbackHref?: string;
   hideWhenNoHistory?: boolean;
   className?: string;
@@ -19,8 +20,31 @@ function normalizeHrefForHistory(href: string): string {
   return normalizedQuery ? `${pathname}?${normalizedQuery}` : pathname;
 }
 
+function getSameOriginReferrerHref(): string | null {
+  if (typeof document === "undefined" || typeof window === "undefined") {
+    return null;
+  }
+
+  const rawReferrer = document.referrer?.trim();
+  if (!rawReferrer) {
+    return null;
+  }
+
+  try {
+    const referrerUrl = new URL(rawReferrer);
+    if (referrerUrl.origin !== window.location.origin) {
+      return null;
+    }
+
+    return `${referrerUrl.pathname}${referrerUrl.search}`;
+  } catch {
+    return null;
+  }
+}
+
 export function SmartBackButton({
   label,
+  preferredHref,
   fallbackHref,
   hideWhenNoHistory = false,
   className,
@@ -73,11 +97,42 @@ export function SmartBackButton({
       : null;
   }, [currentHref]);
 
+  const referrerTargetHref = useMemo(() => {
+    const target = getSameOriginReferrerHref();
+    return target &&
+      normalizeHrefForHistory(target) !== normalizeHrefForHistory(currentHref)
+      ? target
+      : null;
+  }, [currentHref]);
+
+  const preferredTargetHref = useMemo(() => {
+    const target = preferredHref?.trim();
+    return target &&
+      normalizeHrefForHistory(target) !== normalizeHrefForHistory(currentHref)
+      ? target
+      : null;
+  }, [currentHref, preferredHref]);
+
   const handleClick = () => {
+    if (preferredTargetHref) {
+      router.push(preferredTargetHref);
+      return;
+    }
+
     const currentFromWindow =
       typeof window !== "undefined"
         ? `${window.location.pathname}${window.location.search}`
         : currentHref;
+    const currentReferrerTarget = getSameOriginReferrerHref();
+    if (
+      currentReferrerTarget &&
+      normalizeHrefForHistory(currentReferrerTarget) !==
+        normalizeHrefForHistory(currentFromWindow)
+    ) {
+      router.push(currentReferrerTarget);
+      return;
+    }
+
     const target = getInternalBackTarget(currentFromWindow);
     if (
       target &&
@@ -104,7 +159,12 @@ export function SmartBackButton({
     router.push(fallbackHref);
   };
 
-  if (hideWhenNoHistory && !internalTargetHref) {
+  if (
+    hideWhenNoHistory &&
+    !preferredTargetHref &&
+    !internalTargetHref &&
+    !referrerTargetHref
+  ) {
     return null;
   }
 

@@ -72,6 +72,7 @@ import {
 import { normalizeCompanyVerificationStatus } from "@/lib/company-verification";
 import { enforceRateLimitOrResponse } from "@/lib/request-rate-limit";
 import { logError } from "@/lib/server-logger";
+import { USER_ROLE } from "@/lib/user-roles";
 
 export const runtime = "nodejs";
 const MAX_POPUP_DETAILS_IDS = 80;
@@ -567,6 +568,48 @@ type MapListingRow = Pick<
   | "locations"
 >;
 
+type DeliveryReachCandidateRow = Pick<
+  ContainerListingDocument,
+  | "_id"
+  | "createdAt"
+  | "locationLat"
+  | "locationLng"
+  | "locations"
+  | "logisticsTransportIncluded"
+  | "logisticsTransportFreeDistanceKm"
+>;
+
+const MAP_LISTING_PROJECTION = {
+  _id: 1,
+  type: 1,
+  quantity: 1,
+  locationLat: 1,
+  locationLng: 1,
+  locationCity: 1,
+  locationCountry: 1,
+  locationCountryCode: 1,
+  "locationAddressParts.city": 1,
+  "locationAddressParts.country": 1,
+  "locations.locationLat": 1,
+  "locations.locationLng": 1,
+  "locations.locationCity": 1,
+  "locations.locationCountry": 1,
+  "locations.locationCountryCode": 1,
+  "locations.locationAddressParts.city": 1,
+  "locations.locationAddressParts.country": 1,
+} as const;
+
+const DELIVERY_REACH_CANDIDATE_PROJECTION = {
+  _id: 1,
+  createdAt: 1,
+  locationLat: 1,
+  locationLng: 1,
+  logisticsTransportIncluded: 1,
+  logisticsTransportFreeDistanceKm: 1,
+  "locations.locationLat": 1,
+  "locations.locationLng": 1,
+} as const;
+
 function isSameCompanyName(left: string, right: string): boolean {
   return left.trim().toLocaleLowerCase() === right.trim().toLocaleLowerCase();
 }
@@ -767,14 +810,7 @@ async function getMapListingRows(input: {
         },
         { $limit: limit },
         {
-          $project: {
-            _id: 1,
-            type: 1,
-            quantity: 1,
-            locationLat: 1,
-            locationLng: 1,
-            locations: 1,
-          },
+          $project: MAP_LISTING_PROJECTION,
         },
       ])
       .toArray();
@@ -784,14 +820,7 @@ async function getMapListingRows(input: {
     .find(filter)
     .sort(sort)
     .limit(limit)
-    .project({
-      _id: 1,
-      type: 1,
-      quantity: 1,
-      locationLat: 1,
-      locationLng: 1,
-      locations: 1,
-    })
+    .project(MAP_LISTING_PROJECTION)
     .toArray() as Promise<MapListingRow[]>;
 }
 
@@ -1187,7 +1216,11 @@ export async function GET(request: NextRequest) {
         logisticsTransportIncluded: true,
         logisticsTransportFreeDistanceKm: { $gt: 0 },
       });
-      const candidateRows = await listings.find(deliveryReachFilter).toArray();
+      const candidateRows = await listings
+        .find(deliveryReachFilter, {
+          projection: DELIVERY_REACH_CANDIDATE_PROJECTION,
+        })
+        .toArray() as DeliveryReachCandidateRow[];
       const matchedRows = candidateRows
         .map((row) => ({
           row,
@@ -1214,24 +1247,40 @@ export async function GET(request: NextRequest) {
       const deliveryTotal = matchedRows.length;
       const deliveryTotalPages = Math.max(1, Math.ceil(deliveryTotal / pageSize));
       const deliveryCurrentPage = Math.min(page, deliveryTotalPages);
-      const deliveryPageRows = matchedRows
+      const deliveryPageIds = matchedRows
         .slice((deliveryCurrentPage - 1) * pageSize, deliveryCurrentPage * pageSize)
-        .map((entry) => entry.row);
+        .map((entry) => entry.row._id);
+      const deliveryPageRows =
+        deliveryPageIds.length > 0
+          ? await listings
+              .find({
+                _id: { $in: deliveryPageIds },
+              })
+              .toArray()
+          : [];
+      const deliveryPageRowsById = new Map(
+        deliveryPageRows.map((row) => [row._id.toHexString(), row]),
+      );
+      const orderedDeliveryPageRows = deliveryPageIds
+        .map((id) => deliveryPageRowsById.get(id.toHexString()))
+        .filter((row): row is ContainerListingDocument => Boolean(row));
 
       const [companyProfilesByOwnerUserId, favoriteIdSet] = await Promise.all([
-        getCompanyProfilesByOwnerUserId(deliveryPageRows),
+        getCompanyProfilesByOwnerUserId(orderedDeliveryPageRows),
         user?._id
           ? favorites
-            ? Promise.resolve(new Set(deliveryPageRows.map((row) => row._id.toHexString())))
+            ? Promise.resolve(
+                new Set(orderedDeliveryPageRows.map((row) => row._id.toHexString())),
+              )
             : getUserFavoriteListingIdSet(
                 user._id,
-                deliveryPageRows.map((row) => row._id),
+                orderedDeliveryPageRows.map((row) => row._id),
               )
           : Promise.resolve<Set<string> | undefined>(undefined),
       ]);
 
       return NextResponse.json({
-        items: mapRowsToItems(deliveryPageRows, {
+        items: mapRowsToItems(orderedDeliveryPageRows, {
           favoriteIdSet: favoriteIdSet ?? undefined,
           companyProfilesByOwnerUserId,
         }),
@@ -1438,6 +1487,37 @@ export async function POST(request: NextRequest) {
     const now = new Date();
     const listing = parsed.data;
     const companies = await getCompaniesCollection();
+    const adminSelectedCompanyId =
+      typeof listing.adminCompanyId === "string" && ObjectId.isValid(listing.adminCompanyId)
+        ? new ObjectId(listing.adminCompanyId)
+        : null;
+    if (adminSelectedCompanyId && user.role !== USER_ROLE.ADMIN) {
+      return NextResponse.json(
+        { error: "Only admins can publish listings on behalf of another company" },
+        { status: 403 },
+      );
+    }
+    const adminSelectedCompany = adminSelectedCompanyId
+      ? await companies.findOne(
+          {
+            _id: adminSelectedCompanyId,
+            isBlocked: { $ne: true },
+          },
+          {
+            projection: {
+              name: 1,
+              slug: 1,
+              createdByUserId: 1,
+            },
+          },
+        )
+      : null;
+    if (adminSelectedCompanyId && !adminSelectedCompany?._id) {
+      return NextResponse.json(
+        { error: "Selected company profile not found" },
+        { status: 400 },
+      );
+    }
     const ownerCompany = await companies.findOne(
       {
         createdByUserId: user._id,
@@ -1452,19 +1532,26 @@ export async function POST(request: NextRequest) {
       },
     );
     const publishAsCompanyRequested = listing.publishedAsCompany === true;
-    if (publishAsCompanyRequested && !ownerCompany?._id) {
+    if (!adminSelectedCompany && publishAsCompanyRequested && !ownerCompany?._id) {
       return NextResponse.json(
         { error: "Company profile not found for this user" },
         { status: 400 },
       );
     }
-    const publishedAsCompany = publishAsCompanyRequested && Boolean(ownerCompany?._id);
-    const effectiveCompanyName = publishedAsCompany
-      ? ownerCompany?.name?.trim() || listing.companyName.trim()
-      : listing.companyName.trim();
-    const effectiveCompanySlug = publishedAsCompany
-      ? ownerCompany?.slug?.trim() || undefined
-      : undefined;
+    const publishedAsCompany =
+      Boolean(adminSelectedCompany?._id) ||
+      (publishAsCompanyRequested && Boolean(ownerCompany?._id));
+    const effectiveCompanyName = adminSelectedCompany
+      ? adminSelectedCompany.name?.trim() || listing.companyName.trim()
+      : publishedAsCompany
+        ? ownerCompany?.name?.trim() || listing.companyName.trim()
+        : listing.companyName.trim();
+    const effectiveCompanySlug = adminSelectedCompany
+      ? adminSelectedCompany.slug?.trim() || undefined
+      : publishedAsCompany
+        ? ownerCompany?.slug?.trim() || undefined
+        : undefined;
+    const effectiveCreatedByUserId = adminSelectedCompany?.createdByUserId ?? user._id;
     const listingId = new ObjectId();
     const legacyLocationAddressLabel = normalizeOptionalString(listing.locationAddressLabel);
     const legacyLocationAddressParts = normalizeGeocodeAddressParts(listing.locationAddressParts);
@@ -1607,7 +1694,7 @@ export async function POST(request: NextRequest) {
         buildContainerListingDocument({
           listingId,
           now,
-          createdByUserId: user._id,
+          createdByUserId: effectiveCreatedByUserId,
           status: LISTING_STATUS.ACTIVE,
           type: listing.type,
           container: {

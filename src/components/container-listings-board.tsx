@@ -685,6 +685,11 @@ function setSourceData(map: maplibregl.Map, data: MapFeatureCollection): void {
   }
 }
 
+function getMapContainerSizeKey(map: maplibregl.Map): string {
+  const container = map.getContainer();
+  return `${container.clientWidth}x${container.clientHeight}`;
+}
+
 const ListingsMap = memo(function ListingsMap({
   locale,
   messages,
@@ -727,6 +732,8 @@ const ListingsMap = memo(function ListingsMap({
   const hasReportedReadyRef = useRef(false);
   const lastPreserveZoomChangeTokenRef = useRef(preserveZoomChangeToken);
   const pendingPreserveZoomChangeTokenRef = useRef<number | null>(null);
+  const lastMapContainerSizeKeyRef = useRef<string | null>(null);
+  const viewportVisibilityRef = useRef(false);
   const itemsByCoordinateRef = useRef<Map<string, ContainerListingMapPoint[]>>(
     new Map(),
   );
@@ -816,6 +823,20 @@ const ListingsMap = memo(function ListingsMap({
     hasReportedReadyRef.current = true;
     onReady?.();
   }, [onReady]);
+
+  const resizeMapIfNeeded = useCallback(
+    (map: maplibregl.Map, force = false) => {
+      const nextSizeKey = getMapContainerSizeKey(map);
+      if (!force && lastMapContainerSizeKeyRef.current === nextSizeKey) {
+        return false;
+      }
+
+      lastMapContainerSizeKeyRef.current = nextSizeKey;
+      map.resize();
+      return true;
+    },
+    [],
+  );
 
   useEffect(() => {
     const nextByCoordinate = new Map<string, ContainerListingMapPoint[]>();
@@ -1168,6 +1189,7 @@ const ListingsMap = memo(function ListingsMap({
       });
 
       setSourceData(map, featureCollectionRef.current);
+      lastMapContainerSizeKeyRef.current = getMapContainerSizeKey(map);
     });
 
     mapRef.current = map;
@@ -1259,7 +1281,7 @@ const ListingsMap = memo(function ListingsMap({
     }
 
     const frame = window.requestAnimationFrame(() => {
-      map.resize();
+      resizeMapIfNeeded(map, becameVisible);
       map.easeTo({
         center: [activeLocation.lng, activeLocation.lat],
         zoom: map.getZoom(),
@@ -1269,7 +1291,7 @@ const ListingsMap = memo(function ListingsMap({
     });
 
     return () => window.cancelAnimationFrame(frame);
-  }, [activeLocation, isVisible, reportReadyOnce]);
+  }, [activeLocation, isVisible, reportReadyOnce, resizeMapIfNeeded]);
 
   useEffect(() => {
     if (
@@ -1301,9 +1323,10 @@ const ListingsMap = memo(function ListingsMap({
     if (!map || !isVisible) {
       return;
     }
+    const becameVisible = isVisible && !viewportVisibilityRef.current;
 
     const frame = window.requestAnimationFrame(() => {
-      map.resize();
+      resizeMapIfNeeded(map, becameVisible);
       if (
         activeLocation &&
         Number.isFinite(activeLocation.lat) &&
@@ -1350,7 +1373,19 @@ const ListingsMap = memo(function ListingsMap({
     });
 
     return () => window.cancelAnimationFrame(frame);
-  }, [activeLocation, isVisible, points, preserveZoomChangeToken, reportReadyOnce, suppressAutoFit]);
+  }, [
+    activeLocation,
+    isVisible,
+    points,
+    preserveZoomChangeToken,
+    reportReadyOnce,
+    resizeMapIfNeeded,
+    suppressAutoFit,
+  ]);
+
+  useEffect(() => {
+    viewportVisibilityRef.current = isVisible;
+  }, [isVisible]);
 
   useEffect(() => {
     function handlePointerDown(event: PointerEvent): void {

@@ -9,7 +9,7 @@ type ContainerDetailsPageProps = {
 export async function generateMetadata({ params }: ContainerDetailsPageProps): Promise<Metadata> {
   const { id } = await params;
   return {
-    title: `Kontener ${id} | ContainerBoard`,
+    title: `Kontener ${id}`,
   };
 }
 

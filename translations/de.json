@@ -84,15 +84,17 @@
     "finalCta": "Gehe zu /maps"
   },
   "footer": {
+    "home": "Startseite",
+    "brandTagline": "Buy, Sell & Connect",
     "privacyPolicy": "Datenschutzrichtlinie",
     "terms": "Bedingungen",
     "cookies": "Kekse",
     "about": "Über uns",
-  "contact": "Kontakt",
-  "browseListings": "Anzeigen",
-  "addContainer": "Container hinzufügen",
-  "addAction": "Hinzufügen",
-  "mapLinksAria": "Kartenlinks",
+    "contact": "Kontakt",
+    "browseListings": "Anzeigen",
+    "addContainer": "Container hinzufügen",
+    "addAction": "Hinzufügen",
+    "mapLinksAria": "Kartenlinks",
     "infoLinksAria": "Informationslinks",
     "linkedinAria": "ContainerBoard LinkedIn-Profil",
     "facebookAria": "ContainerBoard Facebook-Profil",
@@ -569,7 +571,8 @@
       "leadRequests": "Angebotsanfragen",
       "users": "Benutzer",
       "containers": "Container",
-      "concierge": "Concierge"
+      "concierge": "Concierge",
+      "bulkImport": "Bulk-Import"
     }
   },
   "adminUsers": {
@@ -1421,7 +1424,7 @@
     "contactHidden": "Nur für verifizierte Unternehmen verfügbar.",
     "createdAtLabel": "Erstellt",
     "expiresAtLabel": "Gültig bis",
-    "expiredHint": "Diese Anfrage ist abgelaufen. Sie können es um weitere 14 Tage verlängern.",
+    "expiredHint": "Diese Anfrage ist abgelaufen. Sie können es um weitere 30 Tage verlängern.",
     "detailsAction": "Details anzeigen",
     "detailsModalTitle": "Details zur Angebotsanfrage",
     "editAction": "Bearbeiten",
@@ -1439,9 +1442,9 @@
     "saveSuccess": "Die Anfrage wurde aktualisiert.",
     "submitError": "Anfrage konnte nicht hinzugefügt werden.",
     "saveError": "Die Anforderung konnte nicht aktualisiert werden.",
-    "extendAction": "Verlängerung um 14 Tage",
+    "extendAction": "Verlängerung um 30 Tage",
     "extending": "Erweiterung...",
-    "extendSuccess": "Die Anfrage wurde um 14 Tage verlängert.",
+    "extendSuccess": "Die Anfrage wurde um 30 Tage verlängert.",
     "extendError": "Anfrage konnte nicht verlängert werden.",
     "validationError": "Überprüfen Sie das Formular und füllen Sie die erforderlichen Felder aus.",
     "turnstileRequired": "Bitte füllen Sie das Captcha aus, um eine Anfrage hinzuzufügen.",
@@ -2065,7 +2068,7 @@
       "detailsCta": "Details",
       "previous": "Zuruck",
       "next": "Weiter",
-      "searchResultsLabel": "Suchergebnisse",
+      "searchResultsLabel": "Ergebnisse",
       "deliveryReachEyebrow": "Alternative",
       "deliveryReachTitle": "Mit kostenloser Lieferung zu Ihrem Standort",
       "deliveryReachText": "Diese Container sind etwas weiter entfernt, haben aber einen angegebenen kostenlosen Transport zu Ihrem Standort.",
@@ -2165,7 +2168,9 @@
       "submitLabel": "Container veröffentlichen",
       "successMessage": "Container veröffentlicht",
       "backToList": "Zurück zur Containerliste",
-      "intentModalTitle": "Angebotsart wählen"
+      "intentModalTitle": "Angebotsart wählen",
+      "adminCompanyContextLabel": "Im Namen einer Firma hinzuf?gen",
+      "adminCompanyContextPlaceholder": "Ohne Firmenkontext"
     },
     "editPage": {
       "title": "Container bearbeiten",
@@ -2474,7 +2479,10 @@
       "or": "oder",
       "bulkNoCompanyConcierge": "Senden Sie uns eine Datei in einem beliebigen Format und wir erledigen es für Sie.",
       "createCompanyProfile": "Firmenprofil erstellen",
-      "deleting": "Wird gelöscht..."
+      "deleting": "Wird gelöscht...",
+      "bulkSelfDescriptionIntro": "Laden Sie die Excel-Vorlage herunter, erg?nzen Sie die Datens?tze und laden Sie eine XLSX- oder XLS-Datei hoch. Im Blatt W?rterbuch finden Sie alle zul?ssigen Werte. Gelbe Spalten sind Pflichtfelder, und der Standort ist ein einziges Textfeld. Maximal 250 Datens?tze pro Import. Der Bulk-Import erstellt nur Verkaufsangebote.",
+      "bulkSupportLine": "Wenn es Probleme gibt, kontaktieren Sie uns, wir helfen gern.",
+      "bulkPhotosSupportLine": "Wenn Sie m?chten, dass wir auch die Bilder einpflegen, senden Sie uns bitte eine ZIP-Datei mit den Fotos."
     },
     "bulkApi": {
       "onlySell": "Multi-Import unterstützt nur Verkaufsangebote",
@@ -2607,7 +2615,8 @@
       "quantity": "Menge",
       "status": "Status",
       "expires": "L?uft ab",
-      "actions": "Aktionen"
+      "actions": "Aktionen",
+      "createdAt": "Erstellt am"
     },
     "statusValues": {
       "active": "Aktiv",

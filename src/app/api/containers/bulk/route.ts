@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { ObjectId } from "mongodb";
+import sanitizeHtml from "sanitize-html";
 import { read, utils } from "xlsx";
 import { getCurrentUserFromRequest } from "@/lib/auth-user";
 import { getCompaniesCollection } from "@/lib/companies";
@@ -48,11 +49,13 @@ import {
 import { formatTemplate, getLocaleFromApiRequest, getMessages } from "@/lib/i18n";
 import { enforceRateLimitOrResponse } from "@/lib/request-rate-limit";
 import { logError } from "@/lib/server-logger";
+import { USER_ROLE } from "@/lib/user-roles";
 
 export const runtime = "nodejs";
 
 const MAX_BULK_ROWS = 250;
 const MAX_CSV_CHARS = 1_000_000;
+const BULK_CONTROL_CHARS_REGEX = /[\u0000-\u0008\u000B\u000C\u000E-\u001F\u007F]/g;
 const CONTAINER_FEATURE_SLOT_KEYS = [
   "container_feature_1",
   "container_feature_2",
@@ -225,6 +228,24 @@ function normalizeCsvHeader(value: string): string {
 
 function normalizeAddressQueryKey(value: string): string {
   return value.trim().toLocaleLowerCase().replace(/\s+/g, " ");
+}
+
+function sanitizeBulkRawCellValue(value: string): string {
+  return value
+    .replace(/^\uFEFF/, "")
+    .replace(BULK_CONTROL_CHARS_REGEX, " ");
+}
+
+function sanitizeBulkPlainTextValue(value?: string): string | undefined {
+  if (typeof value !== "string") {
+    return undefined;
+  }
+
+  const sanitized = sanitizeHtml(sanitizeBulkRawCellValue(value), {
+    allowedTags: [],
+    allowedAttributes: {},
+  }).trim();
+  return sanitized || undefined;
 }
 
 function buildAddressFallbackFromParts(parts: {
@@ -484,7 +505,8 @@ function getCellValue(row: string[], headerIndex: Map<string, number>, key: stri
   if (index === undefined) {
     return undefined;
   }
-  return row[index];
+  const value = row[index];
+  return typeof value === "string" ? sanitizeBulkRawCellValue(value) : undefined;
 }
 
 function parseBulkRow(input: {
@@ -495,7 +517,8 @@ function parseBulkRow(input: {
   fallbackLocationAddress?: string;
   messages: BulkApiMessages;
 }): { value?: ParsedBulkRow; error?: string } {
-  const get = (key: string) => getCellValue(input.row, input.headerIndex, key);
+  const getRaw = (key: string) => getCellValue(input.row, input.headerIndex, key);
+  const get = (key: string) => sanitizeBulkPlainTextValue(getRaw(key));
   const messages = input.messages;
 
   const parsedType = normalizeOptionalString(get("type"))
@@ -617,7 +640,7 @@ function parseBulkRow(input: {
   const hasWarranty = parseBooleanFlag(get("has_warranty")) === true;
   const hasBranding = parseBooleanFlag(get("has_branding")) === true;
 
-  const description = normalizeOptionalListingDescriptionHtml(get("description"));
+  const description = normalizeOptionalListingDescriptionHtml(getRaw("description"));
   if (
     description &&
     getRichTextLength(description) > LISTING_DESCRIPTION_MAX_TEXT_LENGTH
@@ -688,7 +711,7 @@ function parseBulkRow(input: {
 async function parseBulkRequestBody(
   request: NextRequest,
   messages: BulkApiMessages,
-): Promise<{ csv: string }> {
+): Promise<{ csv: string; adminCompanyId?: string }> {
   const contentType = request.headers.get("content-type") ?? "";
   if (!contentType.includes("multipart/form-data")) {
     throw new Error(messages.excelMultipartRequired);
@@ -696,6 +719,7 @@ async function parseBulkRequestBody(
 
   const formData = await request.formData();
   const uploadFile = formData.get("file");
+  const adminCompanyIdValue = formData.get("adminCompanyId");
   if (!(uploadFile instanceof File)) {
     throw new Error(messages.excelMissing);
   }
@@ -722,7 +746,13 @@ async function parseBulkRequestBody(
   if (!csv) {
     throw new Error(messages.firstSheetEmpty);
   }
-  return { csv };
+  return {
+    csv,
+    adminCompanyId:
+      typeof adminCompanyIdValue === "string" && adminCompanyIdValue.trim()
+        ? adminCompanyIdValue.trim()
+        : undefined,
+  };
 }
 
 export async function POST(request: NextRequest) {
@@ -765,7 +795,7 @@ export async function POST(request: NextRequest) {
       return userRateLimitResponse;
     }
 
-    let body: { csv: string };
+    let body: { csv: string; adminCompanyId?: string };
     try {
       body = await parseBulkRequestBody(request, moduleMessages);
     } catch (parseError) {
@@ -824,23 +854,54 @@ export async function POST(request: NextRequest) {
     }
 
     const companies = await getCompaniesCollection();
-    const ownerCompany = await companies.findOne(
+    const adminSelectedCompanyId =
+      typeof body.adminCompanyId === "string" && ObjectId.isValid(body.adminCompanyId)
+        ? new ObjectId(body.adminCompanyId)
+        : null;
+    if (body.adminCompanyId && !adminSelectedCompanyId) {
+      return NextResponse.json({ error: moduleMessages.companyRequired }, { status: 400 });
+    }
+    if (adminSelectedCompanyId && user.role !== USER_ROLE.ADMIN) {
+      return NextResponse.json({ error: moduleMessages.unauthorized }, { status: 403 });
+    }
+    const companyProjection = {
+      _id: 1,
+      name: 1,
+      slug: 1,
+      email: 1,
+      phone: 1,
+      locations: 1,
+      createdByUserId: 1,
+    } as const;
+    const ownerCompany = !adminSelectedCompanyId ? await companies.findOne(
       {
         createdByUserId: user._id,
         isBlocked: { $ne: true },
       },
       {
-        projection: { _id: 1, name: 1, slug: 1, email: 1, phone: 1, locations: 1 },
+        projection: companyProjection,
         sort: { updatedAt: -1 },
       },
-    );
-    if (!ownerCompany?._id || !ownerCompany.name?.trim()) {
+    ) : null;
+    const adminSelectedCompany = adminSelectedCompanyId
+      ? await companies.findOne(
+          {
+            _id: adminSelectedCompanyId,
+            isBlocked: { $ne: true },
+          },
+          {
+            projection: companyProjection,
+          },
+        )
+      : null;
+    const effectiveCompany = adminSelectedCompany ?? ownerCompany;
+    if (!effectiveCompany?._id || !effectiveCompany.name?.trim()) {
       return NextResponse.json(
         { error: "Bulk import jest dostępny tylko dla kont z uzupełnioną firmą" },
         { status: 403 },
       );
     }
-    const firstCompanyLocation = ownerCompany.locations?.[0];
+    const firstCompanyLocation = effectiveCompany.locations?.[0];
     const fallbackLocationAddress =
       normalizeOptionalString(firstCompanyLocation?.addressText) ??
       buildAddressFallbackFromParts({
@@ -851,9 +912,9 @@ export async function POST(request: NextRequest) {
         country: firstCompanyLocation?.addressParts?.country,
       });
     const fallbackContactEmail =
-      normalizeOptionalString(ownerCompany.email) ?? user.email;
+      normalizeOptionalString(effectiveCompany.email) ?? user.email;
     const fallbackContactPhone =
-      normalizeOptionalString(ownerCompany.phone) ??
+      normalizeOptionalString(effectiveCompany.phone) ??
       normalizeOptionalString(user.phone);
 
     const now = new Date();
@@ -960,12 +1021,12 @@ export async function POST(request: NextRequest) {
 
       const listingId = new ObjectId();
       const listingNow = new Date();
-      const effectiveCompanyName = ownerCompany.name.trim();
-      const effectiveCompanySlug = normalizeOptionalString(ownerCompany.slug);
+      const effectiveCompanyName = effectiveCompany.name.trim();
+      const effectiveCompanySlug = normalizeOptionalString(effectiveCompany.slug);
       const document: ContainerListingDocument = buildContainerListingDocument({
         listingId,
         now: listingNow,
-        createdByUserId: user._id,
+        createdByUserId: effectiveCompany.createdByUserId ?? user._id,
         status: LISTING_STATUS.ACTIVE,
         type: rowValue.type,
         container: {

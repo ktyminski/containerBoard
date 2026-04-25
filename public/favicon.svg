@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="ContainerBoard favicon">
+  <defs>
+    <linearGradient id="cb-bg" x1="4" y1="2" x2="60" y2="62" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#031a3c"/>
+      <stop offset="1" stop-color="#0c3466"/>
+    </linearGradient>
+  </defs>
+  <rect x="0" y="0" width="64" height="64" fill="url(#cb-bg)"/>
+
+  <rect x="0" y="0" width="10" height="64" fill="#e2efff"/>
+  <rect x="0" y="0" width="28" height="10" fill="#e2efff"/>
+  <rect x="0" y="54" width="28" height="10" fill="#e2efff"/>
+
+  <rect x="28" y="0" width="10" height="64" fill="#38bdf8"/>
+  <rect x="28" y="0" width="36" height="10" fill="#38bdf8"/>
+  <rect x="28" y="27" width="34" height="10" fill="#38bdf8"/>
+  <rect x="28" y="54" width="36" height="10" fill="#38bdf8"/>
+  <rect x="54" y="0" width="10" height="64" fill="#38bdf8"/>
+</svg>

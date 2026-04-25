@@ -137,7 +137,7 @@ type Inquiry = {
 - filter listings
 - listing details
 - send inquiry (email)
-- listing expiration (14 days)
+- listing expiration (30 days)
 - refresh listing
 
 ---

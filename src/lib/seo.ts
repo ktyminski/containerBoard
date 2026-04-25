@@ -7,7 +7,7 @@ import {
 import { stripHtmlToPlainText as stripHtmlToPlainTextBase } from "@/lib/rich-text";
 
 const DEFAULT_SITE_URL = "https://containerboard.pl";
-const SITE_NAME = "ContainerBoard";
+export const SITE_NAME = "ContainerBoard – Buy & Sell Shipping Containers";
 
 const OPEN_GRAPH_LOCALE: Record<AppLocale, string> = {
   pl: "pl_PL",

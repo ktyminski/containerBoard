@@ -13,14 +13,22 @@ export function AppFooter({ locale, messages }: AppFooterProps) {
   return (
     <footer className="relative overflow-hidden border-t border-[#1f4f86] bg-[linear-gradient(180deg,#031a3c_0%,#05244f_100%)]">
       <div className="relative z-10 mx-auto w-full max-w-5xl px-4 py-8 text-xs text-[#bcd6f3]">
-        <p className="text-left text-sm font-medium tracking-wide">
-          <span className="text-[#e2efff]">Container</span>
-          <span className="text-[#38bdf8]">Board</span>
-        </p>
+        <div className="flex flex-col items-start gap-0.5">
+          <p className="text-left text-[15px] font-semibold tracking-[0.06em] drop-shadow-[0_1px_8px_rgba(3,169,244,0.22)]">
+            <span className="text-[#e2efff]">Container</span>
+            <span className="text-[#38bdf8]">Board</span>
+          </p>
+          <p className="pl-px text-left text-[9px] font-medium uppercase tracking-[0.18em] text-[#8fb4dd]">
+            {messages.brandTagline}
+          </p>
+        </div>
         <nav
           aria-label={messages.infoLinksAria}
           className="mt-4 flex flex-wrap items-center gap-x-5 gap-y-2"
         >
+          <Link href={withLang("/", locale)} className="transition hover:text-[#7dd3fc]">
+            {messages.home}
+          </Link>
           <Link href={withLang("/list", locale)} className="transition hover:text-[#7dd3fc]">
             {messages.browseListings}
           </Link>

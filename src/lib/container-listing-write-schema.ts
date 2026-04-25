@@ -135,6 +135,7 @@ const listingWriteBaseObjectSchema = z.object({
   description: z.string().trim().max(16_000).optional(),
   companyName: z.string().trim().min(2).max(160),
   publishedAsCompany: z.coerce.boolean().optional(),
+  adminCompanyId: z.string().trim().regex(/^[a-f0-9]{24}$/i).optional(),
   contactEmail: z.email().trim().max(160),
   contactPhone: z.string().trim().max(40).optional(),
 });

@@ -84,15 +84,17 @@
     "finalCta": "Go to /maps"
   },
   "footer": {
+    "home": "Home",
+    "brandTagline": "Buy, Sell & Connect",
     "privacyPolicy": "Privacy Policy",
     "terms": "Terms",
     "cookies": "Cookies",
     "about": "About us",
-  "contact": "Contact",
-  "browseListings": "Listings",
-  "addContainer": "Add container",
-  "addAction": "Add",
-  "mapLinksAria": "Map links",
+    "contact": "Contact",
+    "browseListings": "Listings",
+    "addContainer": "Add container",
+    "addAction": "Add",
+    "mapLinksAria": "Map links",
     "infoLinksAria": "Information links",
     "linkedinAria": "ContainerBoard LinkedIn profile",
     "facebookAria": "ContainerBoard Facebook profile",
@@ -569,7 +571,8 @@
       "leadRequests": "Quote requests",
       "users": "Users",
       "containers": "Containers",
-      "concierge": "Concierge"
+      "concierge": "Concierge",
+      "bulkImport": "Bulk Import"
     }
   },
   "adminUsers": {
@@ -1421,7 +1424,7 @@
     "contactHidden": "Available only for verified companies.",
     "createdAtLabel": "Created",
     "expiresAtLabel": "Valid until",
-    "expiredHint": "This request has expired. You can extend it by another 14 days.",
+    "expiredHint": "This request has expired. You can extend it by another 30 days.",
     "detailsAction": "View details",
     "detailsModalTitle": "Quote request details",
     "editAction": "Edit",
@@ -1439,9 +1442,9 @@
     "saveSuccess": "Request has been updated.",
     "submitError": "Failed to add request.",
     "saveError": "Failed to update request.",
-    "extendAction": "Extend by 14 days",
+    "extendAction": "Extend by 30 days",
     "extending": "Extending...",
-    "extendSuccess": "Request has been extended by 14 days.",
+    "extendSuccess": "Request has been extended by 30 days.",
     "extendError": "Failed to extend request.",
     "validationError": "Check the form and complete required fields.",
     "turnstileRequired": "Please complete the captcha to add a request.",
@@ -2065,7 +2068,7 @@
       "detailsCta": "Details",
       "previous": "Previous",
       "next": "Next",
-      "searchResultsLabel": "Search results",
+      "searchResultsLabel": "Results",
       "deliveryReachEyebrow": "Alternative",
       "deliveryReachTitle": "With free delivery to your location",
       "deliveryReachText": "These containers are a bit farther away, but they include declared free transport to your location.",
@@ -2165,6 +2168,8 @@
       "submitLabel": "Publish container",
       "successMessage": "Container published",
       "backToList": "Back to container list",
+      "adminCompanyContextLabel": "Add on behalf of company",
+      "adminCompanyContextPlaceholder": "No company context",
       "intentModalTitle": "Choose listing type"
     },
     "editPage": {
@@ -2474,7 +2479,10 @@
       "or": "or",
       "bulkNoCompanyConcierge": "Send us a file in any format and we will do it for you.",
       "createCompanyProfile": "Create company profile",
-      "deleting": "Deleting..."
+      "deleting": "Deleting...",
+      "bulkSelfDescriptionIntro": "Download the Excel template, complete the rows and upload an XLSX or XLS file. The Dictionary sheet contains all allowed values. Yellow columns are required, and location is one text field. Maximum 250 rows per import. Bulk import creates sale offers only.",
+      "bulkSupportLine": "If you run into any issues, contact us and we will be happy to help.",
+      "bulkPhotosSupportLine": "If you want us to handle photo entry as well, send us a ZIP file with the photos."
     },
     "bulkApi": {
       "onlySell": "Bulk import supports sell offers only",
@@ -2607,7 +2615,8 @@
       "quantity": "Quantity",
       "status": "Status",
       "expires": "Expires",
-      "actions": "Actions"
+      "actions": "Actions",
+      "createdAt": "Created at"
     },
     "statusValues": {
       "active": "Active",

@@ -4,6 +4,7 @@ import { SESSION_COOKIE_NAME } from "@/lib/auth-session";
 import { getCurrentUserFromToken } from "@/lib/auth-user";
 import { AdminPanelTabs } from "@/components/admin-panel-tabs";
 import { USER_ROLE } from "@/lib/user-roles";
+import { getCompaniesCollection } from "@/lib/companies";
 import {
   getLocaleFromRequest,
   getMessages,
@@ -40,6 +41,20 @@ export default async function AdminPage({ searchParams }: AdminPageProps) {
     redirect(withLang("/", locale));
   }
 
+  const companies = await getCompaniesCollection();
+  const adminBulkImportCompanies = await companies
+    .find(
+      {
+        isBlocked: { $ne: true },
+        name: { $type: "string", $ne: "" },
+      },
+      {
+        projection: { _id: 1, name: 1 },
+        sort: { name: 1, updatedAt: -1 },
+      },
+    )
+    .toArray();
+
   return (
     <main className="mx-auto flex w-full max-w-6xl flex-col gap-6 px-4 py-6 sm:px-6">
       <header className="rounded-xl border border-neutral-800 bg-neutral-900/60 p-5">
@@ -50,6 +65,7 @@ export default async function AdminPage({ searchParams }: AdminPageProps) {
         locale={locale}
         initialTab={tabParam}
         messages={messages.adminPage}
+        moduleMessages={messages.containerModules}
         containersMessages={messages.adminContainers}
         conciergeMessages={messages.adminConcierge}
         listingMessages={messages.containerListings}
@@ -57,6 +73,10 @@ export default async function AdminPage({ searchParams }: AdminPageProps) {
         companiesMessages={messages.adminCompanies}
         companyStatusMessages={messages.companyStatus}
         roleMessages={messages.roles}
+        bulkImportCompanies={adminBulkImportCompanies.map((company) => ({
+          id: company._id.toHexString(),
+          name: company.name,
+        }))}
       />
     </main>
   );

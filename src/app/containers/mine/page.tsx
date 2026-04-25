@@ -15,7 +15,7 @@ import {
 } from "@/lib/i18n";
 
 export const metadata: Metadata = {
-  title: "Moje kontenery | ContainerBoard",
+  title: "Moje kontenery",
   description: "Zarządzaj swoimi ogłoszeniami kontenerów.",
 };
 

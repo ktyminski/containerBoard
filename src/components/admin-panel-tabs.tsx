@@ -1,18 +1,25 @@
 "use client";
 
 import { useState } from "react";
+import { AdminBulkImportPanel } from "@/components/admin-bulk-import-panel";
 import { AdminConciergeRequestsTable } from "@/components/admin-concierge-requests-table";
 import { AdminCompaniesTable } from "@/components/admin-companies-table";
 import { AdminContainersTable } from "@/components/admin-containers-table";
 import { AdminUsersTable } from "@/components/admin-users-table";
 import type { AppLocale, AppMessages } from "@/lib/i18n";
 
-type AdminTabKey = "containers" | "users" | "companies" | "concierge";
+type AdminTabKey = "containers" | "bulkImport" | "users" | "companies" | "concierge";
+
+type AdminBulkImportCompanyOption = {
+  id: string;
+  name: string;
+};
 
 type AdminPanelTabsProps = {
   locale: AppLocale;
   initialTab?: string;
   messages: AppMessages["adminPage"];
+  moduleMessages: AppMessages["containerModules"];
   containersMessages: AppMessages["adminContainers"];
   conciergeMessages: AppMessages["adminConcierge"];
   listingMessages: AppMessages["containerListings"];
@@ -20,9 +27,10 @@ type AdminPanelTabsProps = {
   companiesMessages: AppMessages["adminCompanies"];
   companyStatusMessages: AppMessages["companyStatus"];
   roleMessages: AppMessages["roles"];
+  bulkImportCompanies: AdminBulkImportCompanyOption[];
 };
 
-const ADMIN_TABS: AdminTabKey[] = ["containers", "users", "companies", "concierge"];
+const ADMIN_TABS: AdminTabKey[] = ["containers", "bulkImport", "users", "companies", "concierge"];
 
 function resolveAdminTab(value?: string): AdminTabKey {
   return ADMIN_TABS.includes(value as AdminTabKey)
@@ -34,6 +42,7 @@ export function AdminPanelTabs({
   locale,
   initialTab,
   messages,
+  moduleMessages,
   containersMessages,
   conciergeMessages,
   listingMessages,
@@ -41,10 +50,12 @@ export function AdminPanelTabs({
   companiesMessages,
   companyStatusMessages,
   roleMessages,
+  bulkImportCompanies,
 }: AdminPanelTabsProps) {
   const [activeTab, setActiveTab] = useState<AdminTabKey>(resolveAdminTab(initialTab));
   const tabLabels: Record<AdminTabKey, string> = {
     containers: messages.tabs.containers,
+    bulkImport: messages.tabs.bulkImport,
     users: messages.tabs.users,
     companies: messages.tabs.companies,
     concierge: messages.tabs.concierge,
@@ -79,6 +90,13 @@ export function AdminPanelTabs({
           locale={locale}
           messages={containersMessages}
           listingMessages={listingMessages}
+        />
+      ) : null}
+      {activeTab === "bulkImport" ? (
+        <AdminBulkImportPanel
+          companies={bulkImportCompanies}
+          moduleMessages={moduleMessages}
+          usersMessages={usersMessages}
         />
       ) : null}
       {activeTab === "users" ? (

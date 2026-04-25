@@ -1,8 +1,9 @@
 import { Buffer } from "node:buffer";
 import { NextRequest, NextResponse } from "next/server";
+import { ObjectId } from "mongodb";
 import ExcelJS from "exceljs";
 import { getCurrentUserFromRequest } from "@/lib/auth-user";
-import { formatTemplate, getLocaleFromApiRequest, getMessages } from "@/lib/i18n";
+import { getLocaleFromApiRequest, getMessages } from "@/lib/i18n";
 import { getCompaniesCollection } from "@/lib/companies";
 import {
   CONTAINER_CONDITIONS,
@@ -14,6 +15,7 @@ import {
   PRICE_CURRENCIES,
   PRICE_TAX_MODES,
 } from "@/lib/container-listing-types";
+import { USER_ROLE } from "@/lib/user-roles";
 
 export const runtime = "nodejs";
 
@@ -49,24 +51,57 @@ export async function GET(request: NextRequest) {
   }
 
   const companies = await getCompaniesCollection();
-  const ownerCompany = await companies.findOne(
-    {
-      createdByUserId: user._id,
-      isBlocked: { $ne: true },
-    },
-    {
-      projection: { _id: 1, name: 1, email: 1, phone: 1, locations: 1 },
-      sort: { updatedAt: -1 },
-    },
-  );
-  if (!ownerCompany?._id || !ownerCompany.name?.trim()) {
+  const adminCompanyIdParam = request.nextUrl.searchParams.get("adminCompanyId");
+  const adminSelectedCompanyId =
+    typeof adminCompanyIdParam === "string" && ObjectId.isValid(adminCompanyIdParam)
+      ? new ObjectId(adminCompanyIdParam)
+      : null;
+  if (adminCompanyIdParam && !adminSelectedCompanyId) {
+    return NextResponse.json(
+      { error: messages.companyRequired },
+      { status: 400 },
+    );
+  }
+  if (adminSelectedCompanyId && user.role !== USER_ROLE.ADMIN) {
+    return NextResponse.json(
+      { error: getMessages(locale).containerModules.bulkApi.unauthorized },
+      { status: 403 },
+    );
+  }
+
+  const companyProjection = { _id: 1, name: 1, email: 1, phone: 1, locations: 1 } as const;
+  const ownerCompany = !adminSelectedCompanyId
+    ? await companies.findOne(
+        {
+          createdByUserId: user._id,
+          isBlocked: { $ne: true },
+        },
+        {
+          projection: companyProjection,
+          sort: { updatedAt: -1 },
+        },
+      )
+    : null;
+  const adminSelectedCompany = adminSelectedCompanyId
+    ? await companies.findOne(
+        {
+          _id: adminSelectedCompanyId,
+          isBlocked: { $ne: true },
+        },
+        {
+          projection: companyProjection,
+        },
+      )
+    : null;
+  const effectiveCompany = adminSelectedCompany ?? ownerCompany;
+  if (!effectiveCompany?._id || !effectiveCompany.name?.trim()) {
     return NextResponse.json(
       { error: messages.companyRequired },
       { status: 403 },
     );
   }
 
-  const firstCompanyLocation = ownerCompany.locations?.[0];
+  const firstCompanyLocation = effectiveCompany.locations?.[0];
   const locationPrefill =
     normalizeOptionalString(firstCompanyLocation?.addressText) ??
     buildAddressFallbackFromParts({
@@ -77,9 +112,9 @@ export async function GET(request: NextRequest) {
       country: firstCompanyLocation?.addressParts?.country,
     }) ??
     "Warszawa, Polska";
-  const contactEmailPrefill = normalizeOptionalString(ownerCompany.email) ?? user.email;
+  const contactEmailPrefill = normalizeOptionalString(effectiveCompany.email) ?? user.email;
   const contactPhonePrefill =
-    normalizeOptionalString(ownerCompany.phone) ??
+    normalizeOptionalString(effectiveCompany.phone) ??
     normalizeOptionalString(user.phone) ??
     "";
   const requiredFields = [

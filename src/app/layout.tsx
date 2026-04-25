@@ -10,7 +10,7 @@ import { FocusVisibleInit } from "@/components/focus-visible-init";
 import { ToastProvider } from "@/components/toast-provider";
 import { SESSION_COOKIE_NAME } from "@/lib/auth-session";
 import { getMessages, LOCALE_COOKIE_NAME, resolveLocale } from "@/lib/i18n";
-import { getSiteUrl } from "@/lib/seo";
+import { getSiteUrl, SITE_NAME } from "@/lib/seo";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -26,17 +26,18 @@ const geistMono = Geist_Mono({
 export const metadata: Metadata = {
   metadataBase: new URL(getSiteUrl()),
   title: {
-    default: "ContainerBoard",
-    template: "%s | ContainerBoard",
+    default: SITE_NAME,
+    template: `%s | ${SITE_NAME}`,
   },
   icons: {
     icon: [
-      { url: "/favicon.ico", sizes: "any" },
+      { url: "/favicon.svg?v=8", type: "image/svg+xml" },
+      { url: "/favicon.ico?v=8", sizes: "any" },
     ],
-    shortcut: [{ url: "/favicon.ico" }],
+    shortcut: [{ url: "/favicon.ico?v=8" }],
   },
   openGraph: {
-    siteName: "ContainerBoard",
+    siteName: SITE_NAME,
     type: "website",
   },
   twitter: {

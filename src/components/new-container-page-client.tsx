@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import type { ContainerModuleMessages } from "@/components/container-modules-i18n";
 import type { ContainerListingsMessages } from "@/components/container-listings-i18n";
 import {
@@ -10,6 +10,16 @@ import {
 } from "@/components/container-listing-form";
 import { NoCompanyBenefitsBanner } from "@/components/no-company-benefits-banner";
 import { SmartBackButton } from "@/components/smart-back-button";
+import { SelectWithChevron } from "@/components/ui/select-with-chevron";
+
+type AdminCompanyContextOption = {
+  id: string;
+  name: string;
+  slug?: string;
+  contactEmail?: string;
+  contactPhone?: string;
+  locationPrefillOptions?: CompanyLocationPrefillOption[];
+};
 
 type NewContainerPageClientProps = {
   contactPrefill: {
@@ -23,6 +33,8 @@ type NewContainerPageClientProps = {
     slug?: string;
   } | null;
   companyLocationPrefillOptions?: CompanyLocationPrefillOption[];
+  isAdmin?: boolean;
+  adminCompanyOptions?: AdminCompanyContextOption[];
   locale: "pl" | "en" | "de" | "uk";
   messages: ContainerModuleMessages;
   listingMessages: ContainerListingsMessages;
@@ -33,6 +45,8 @@ export function NewContainerPageClient({
   initialListingIntent,
   ownedCompanyProfile,
   companyLocationPrefillOptions,
+  isAdmin = false,
+  adminCompanyOptions = [],
   locale,
   messages,
   listingMessages,
@@ -41,11 +55,41 @@ export function NewContainerPageClient({
     initialListingIntent ?? "sell",
   );
   const [isIntentModalOpen, setIsIntentModalOpen] = useState(false);
+  const [selectedAdminCompanyId, setSelectedAdminCompanyId] = useState("");
   const listingIntentOptions: Array<{ value: ListingIntent; label: string }> = [
     { value: "sell", label: messages.newPage.intentOptions.sell },
     { value: "rent", label: messages.newPage.intentOptions.rent },
     { value: "buy", label: messages.newPage.intentOptions.buy },
   ];
+  const selectedAdminCompany = useMemo(
+    () =>
+      isAdmin && selectedAdminCompanyId
+        ? adminCompanyOptions.find((option) => option.id === selectedAdminCompanyId) ?? null
+        : null,
+    [adminCompanyOptions, isAdmin, selectedAdminCompanyId],
+  );
+  const effectiveOwnedCompanyProfile = isAdmin
+    ? selectedAdminCompany
+      ? {
+          name: selectedAdminCompany.name,
+          slug: selectedAdminCompany.slug,
+        }
+      : null
+    : ownedCompanyProfile;
+  const effectiveContactPrefill =
+    isAdmin && selectedAdminCompany
+      ? {
+          companyName: selectedAdminCompany.name,
+          contactEmail:
+            selectedAdminCompany.contactEmail?.trim() || contactPrefill.contactEmail,
+          contactPhone:
+            selectedAdminCompany.contactPhone?.trim() || contactPrefill.contactPhone,
+        }
+      : contactPrefill;
+  const effectiveCompanyLocationPrefillOptions = isAdmin
+    ? selectedAdminCompany?.locationPrefillOptions ?? []
+    : companyLocationPrefillOptions;
+  const formKey = isAdmin ? `admin-company-${selectedAdminCompanyId || "none"}` : "default";
 
   return (
     <main className="mx-auto w-full max-w-5xl px-4 py-6 sm:px-6">
@@ -54,6 +98,30 @@ export function NewContainerPageClient({
         fallbackHref="/list"
         className="mb-4 inline-flex w-fit items-center gap-2 rounded-md border border-neutral-400 bg-white px-3 py-2 text-sm text-neutral-700 transition-colors hover:border-neutral-500"
       />
+
+      {isAdmin ? (
+        <section className="mb-3 rounded-md border border-neutral-300 bg-neutral-50/95 p-3 shadow-sm">
+          <div className="grid gap-1">
+            <label className="text-sm font-medium text-neutral-800">
+              {messages.newPage.adminCompanyContextLabel}
+            </label>
+            <SelectWithChevron
+              value={selectedAdminCompanyId}
+              onChange={(event) => {
+                setSelectedAdminCompanyId(event.target.value);
+              }}
+              wrapperClassName="w-full sm:max-w-md"
+            >
+              <option value="">{messages.newPage.adminCompanyContextPlaceholder}</option>
+              {adminCompanyOptions.map((option) => (
+                <option key={option.id} value={option.id}>
+                  {option.name}
+                </option>
+              ))}
+            </SelectWithChevron>
+          </div>
+        </section>
+      ) : null}
 
       <header className="mb-3">
         <div>
@@ -77,7 +145,7 @@ export function NewContainerPageClient({
         </div>
       </header>
 
-      {!ownedCompanyProfile?.name?.trim() && listingIntent !== "buy" ? (
+      {!isAdmin && !ownedCompanyProfile?.name?.trim() && listingIntent !== "buy" ? (
         <NoCompanyBenefitsBanner
           className="mb-3"
           messages={messages.banner}
@@ -85,6 +153,7 @@ export function NewContainerPageClient({
       ) : null}
 
       <ContainerListingForm
+        key={formKey}
         locale={locale}
         messages={messages}
         listingMessages={listingMessages}
@@ -96,13 +165,14 @@ export function NewContainerPageClient({
         backHref="/list"
         backLabel={messages.newPage.backToList}
         initialValues={{
-          companyName: contactPrefill.companyName,
-          publishedAsCompany: Boolean(ownedCompanyProfile?.name?.trim()),
-          contactEmail: contactPrefill.contactEmail,
-          contactPhone: contactPrefill.contactPhone,
+          companyName: effectiveContactPrefill.companyName,
+          publishedAsCompany: Boolean(effectiveOwnedCompanyProfile?.name?.trim()),
+          contactEmail: effectiveContactPrefill.contactEmail,
+          contactPhone: effectiveContactPrefill.contactPhone,
         }}
-        ownedCompanyProfile={ownedCompanyProfile}
-        companyLocationPrefillOptions={companyLocationPrefillOptions}
+        ownedCompanyProfile={effectiveOwnedCompanyProfile}
+        companyLocationPrefillOptions={effectiveCompanyLocationPrefillOptions}
+        adminCompanyId={isAdmin ? selectedAdminCompanyId || undefined : undefined}
         selectedListingIntent={listingIntent}
         onSelectedListingIntentChange={(nextValue) => {
           setListingIntent(nextValue ?? "sell");

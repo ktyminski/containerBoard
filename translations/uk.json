@@ -84,15 +84,17 @@
     "finalCta": "Pereity do /maps"
   },
   "footer": {
+    "home": "Holovna storinka",
+    "brandTagline": "Buy, Sell & Connect",
     "privacyPolicy": "Polityka pryvatnosti",
     "terms": "Rehuliamin",
     "cookies": "Cookies",
     "about": "Pro nas",
-  "contact": "Kontakty",
-  "browseListings": "Oholoshennia",
-  "addContainer": "Dodaty konteiner",
-  "addAction": "Додати",
-  "mapLinksAria": "Posylannia mapy",
+    "contact": "Kontakty",
+    "browseListings": "Oholoshennia",
+    "addContainer": "Dodaty konteiner",
+    "addAction": "Додати",
+    "mapLinksAria": "Posylannia mapy",
     "infoLinksAria": "Informatsiini posylannia",
     "linkedinAria": "Profil ContainerBoard u LinkedIn",
     "facebookAria": "Profil ContainerBoard u Facebook",
@@ -569,7 +571,8 @@
       "leadRequests": "Zapyty na propozytsii",
       "users": "Korystuvachi",
       "containers": "Konteinery",
-      "concierge": "Concierge"
+      "concierge": "Concierge",
+      "bulkImport": "????????????"
     }
   },
   "adminUsers": {
@@ -1421,7 +1424,7 @@
     "contactHidden": "Dostupno lyshe dlia pidtverdzhenykh kompanii.",
     "createdAtLabel": "Stvoreno",
     "expiresAtLabel": "Diisne do",
-    "expiredHint": "Tsei zapyt vycherpano. Vy mozhete podovzhyty yoho shche na 14 dniv.",
+    "expiredHint": "Tsei zapyt vycherpano. Vy mozhete podovzhyty yoho shche na 30 dniv.",
     "detailsAction": "Perehlianuty detali",
     "detailsModalTitle": "Detali zapytu na propozytsiiu",
     "editAction": "Redahuvaty",
@@ -1439,9 +1442,9 @@
     "saveSuccess": "Zapyt onovleno.",
     "submitError": "Ne vdalosia dodaty zapyt.",
     "saveError": "Ne vdalosia onovyty zapyt.",
-    "extendAction": "Podovzhyty na 14 dniv",
+    "extendAction": "Podovzhyty na 30 dniv",
     "extending": "Podovzhennia...",
-    "extendSuccess": "Zapyt podovzheno na 14 dniv.",
+    "extendSuccess": "Zapyt podovzheno na 30 dniv.",
     "extendError": "Ne vdalosia podovzhyty zapyt.",
     "validationError": "Perevirte formu ta zapovnit oboviazkovi polia.",
     "turnstileRequired": "Pidtverdte captcha, shchob dodaty zapyt.",
@@ -2065,7 +2068,7 @@
       "detailsCta": "Деталі",
       "previous": "Назад",
       "next": "Далі",
-      "searchResultsLabel": "Результати пошуку",
+      "searchResultsLabel": "Результати",
       "deliveryReachEyebrow": "Альтернатива",
       "deliveryReachTitle": "З безкоштовною доставкою до вас",
       "deliveryReachText": "Ці контейнери трохи далі, але мають заявлену безкоштовну доставку до вашої локації.",
@@ -2165,7 +2168,9 @@
       "submitLabel": "Опублікувати контейнер",
       "successMessage": "Контейнер опубліковано",
       "backToList": "Назад до списку контейнерів",
-      "intentModalTitle": "Виберіть тип оголошення"
+      "intentModalTitle": "Виберіть тип оголошення",
+      "adminCompanyContextLabel": "?????? ??? ????? ????????",
+      "adminCompanyContextPlaceholder": "??? ????????? ????????"
     },
     "editPage": {
       "title": "Редагувати контейнер",
@@ -2474,7 +2479,10 @@
       "or": "або",
       "bulkNoCompanyConcierge": "Надішліть нам файл у будь-якому форматі, і ми зробимо це за вас.",
       "createCompanyProfile": "Створити профіль компанії",
-      "deleting": "Видалення..."
+      "deleting": "Видалення...",
+      "bulkSelfDescriptionIntro": "?????????? ?????? Excel, ????????? ????? ?? ?????????? ???? XLSX ??? XLS. ?? ?????? ????????? ? ??? ????????? ????????. ????? ??????? ? ?????????????, ? ??????? ???????????? ????? ????????? ?????. ???????? 250 ?????? ?? ??????. ???????????? ??????? ???? ?????????? ??? ??????.",
+      "bulkSupportLine": "? ???? ??????? ?????????? ? ????, ?? ?? ???????????? ??????????.",
+      "bulkPhotosSupportLine": "???? ?? ??????, ??? ?? ????? ?????? ????, ????????? ??? ZIP-???? ?? ????????????."
     },
     "bulkApi": {
       "onlySell": "Мультиімпорт підтримує лише оголошення про продаж",
@@ -2607,7 +2615,8 @@
       "quantity": "Kilkyist",
       "status": "Status",
       "expires": "Diie do",
-      "actions": "Dii"
+      "actions": "Dii",
+      "createdAt": "???? ?????????"
     },
     "statusValues": {
       "active": "Aktyvni",

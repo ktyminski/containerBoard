@@ -35,9 +35,9 @@ export function DetailsBackButton({
       }}
       className={className}
     >
-      <span className="inline-flex items-center gap-2">
+      <span className="inline-flex min-w-0 max-w-full items-center gap-2">
         <svg
-          className="h-4 w-4"
+          className="h-4 w-4 shrink-0"
           viewBox="0 0 24 24"
           fill="none"
           stroke="currentColor"
@@ -46,7 +46,7 @@ export function DetailsBackButton({
         >
           <path d="M15 18 9 12l6-6" />
         </svg>
-        <span>{label}</span>
+        <span className="min-w-0 truncate">{label}</span>
       </span>
     </button>
   );

@@ -853,7 +853,7 @@ const ContainerListingResultCard = memo(function ContainerListingResultCard({
                 </span>
               ) : null}
             </p>
-            <div className="ml-auto flex w-full items-center justify-end gap-2 rounded-md border border-neutral-200 bg-neutral-50/95 p-1.5 shadow-sm sm:w-auto sm:rounded-none sm:border-0 sm:bg-transparent sm:p-0 sm:shadow-none">
+            <div className="ml-auto flex w-full items-center justify-end gap-2 sm:w-auto">
               <button
                 type="button"
                 className={`hidden rounded-md border p-2 transition-colors sm:inline-flex ${
@@ -983,7 +983,7 @@ function ContainerListingsResultsComponent({
 
   return (
     <section className="grid content-start gap-3">
-      {showSummaryBar ? (
+      {showSummaryBar && !isLoading ? (
         <div className="flex flex-wrap items-center justify-between gap-2 rounded-md border border-neutral-300 bg-neutral-50/95 p-3 shadow-sm backdrop-blur supports-[backdrop-filter]:bg-neutral-50/90">
           <div className="flex flex-wrap items-center gap-2">
             <p className="text-sm text-neutral-700">

@@ -186,6 +186,7 @@ export function AdminContainersTable({
               <th className="pb-2">{messages.columns.company}</th>
               <th className="pb-2">{messages.columns.container}</th>
               <th className="pb-2">{messages.columns.location}</th>
+              <th className="pb-2">{messages.columns.createdAt}</th>
               <th className="pb-2">{messages.columns.quantity}</th>
               <th className="pb-2">{messages.columns.status}</th>
               <th className="pb-2">{messages.columns.expires}</th>
@@ -201,6 +202,9 @@ export function AdminContainersTable({
                   {getListingKindLabel(listingMessages, item.type)})
                 </td>
                 <td className="py-2 pr-3 text-neutral-300">{item.locationCity}, {item.locationCountry}</td>
+                <td className="py-2 pr-3 text-neutral-300">
+                  {new Date(item.createdAt).toLocaleString(locale)}
+                </td>
                 <td className="py-2 pr-3 text-neutral-300">{item.quantity}</td>
                 <td className="py-2 pr-3 text-neutral-300">{messages.statusValues[item.status]}</td>
                 <td className="py-2 pr-3 text-neutral-300">{new Date(item.expiresAt).toLocaleDateString(locale)}</td>

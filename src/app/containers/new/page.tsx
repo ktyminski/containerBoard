@@ -11,9 +11,10 @@ import {
   getMessages,
   LOCALE_COOKIE_NAME,
 } from "@/lib/i18n";
+import { USER_ROLE } from "@/lib/user-roles";
 
 export const metadata: Metadata = {
-  title: "Dodaj kontener | ContainerBoard",
+  title: "Dodaj kontener",
   description: "Dodaj nowe ogłoszenie kontenera w mniej niż minutę.",
 };
 
@@ -51,27 +52,52 @@ export default async function NewContainerPage({
   if (!user?._id) {
     redirect(`/login?next=${encodeURIComponent(nextPath)}`);
   }
+  const isAdmin = user.role === USER_ROLE.ADMIN;
 
   const companies = await getCompaniesCollection();
-  const ownedCompany = await companies.findOne(
-    { createdByUserId: user._id },
-    {
-      projection: {
-        _id: 1,
-        name: 1,
-        slug: 1,
-        email: 1,
-        phone: 1,
-        "locations.label": 1,
-        "locations.point": 1,
-        "locations.addressText": 1,
-        "locations.addressParts": 1,
-      },
-      sort: { updatedAt: -1 },
-    },
-  );
-  const companyLocationPrefillOptions = (ownedCompany?.locations ?? [])
-    .map((location, index) => {
+  const companyProjection = {
+    _id: 1,
+    name: 1,
+    slug: 1,
+    email: 1,
+    phone: 1,
+    "locations.label": 1,
+    "locations.point": 1,
+    "locations.addressText": 1,
+    "locations.addressParts": 1,
+  } as const;
+  const ownedCompany = !isAdmin
+    ? await companies.findOne(
+        { createdByUserId: user._id },
+        {
+          projection: companyProjection,
+          sort: { updatedAt: -1 },
+        },
+      )
+    : null;
+  const adminCompanies = isAdmin
+    ? await companies
+        .find(
+          { isBlocked: { $ne: true } },
+          {
+            projection: companyProjection,
+            sort: { name: 1, updatedAt: -1 },
+          },
+        )
+        .toArray()
+    : [];
+  const mapCompanyLocationPrefillOptions = (
+    locations:
+      | Array<{
+          label?: string;
+          point?: { coordinates?: unknown };
+          addressText?: string;
+          addressParts?: Record<string, unknown>;
+        }>
+      | undefined,
+  ) =>
+    (locations ?? [])
+      .map((location, index) => {
       const coordinates = location?.point?.coordinates;
       const hasValidCoordinates =
         Array.isArray(coordinates) &&
@@ -101,21 +127,30 @@ export default async function NewContainerPage({
       };
     })
     .filter((location) => location !== null);
+  const companyLocationPrefillOptions = mapCompanyLocationPrefillOptions(
+    ownedCompany?.locations,
+  );
 
-  const contactPrefill = {
-    companyName:
-      ownedCompany?.name?.trim() ||
-      user.name?.trim() ||
-      "",
-    contactEmail:
-      ownedCompany?.email?.trim() ||
-      user.email?.trim() ||
-      "",
-    contactPhone:
-      ownedCompany?.phone?.trim() ||
-      user.phone?.trim() ||
-      "",
-  };
+  const contactPrefill = isAdmin
+    ? {
+        companyName: user.name?.trim() || "",
+        contactEmail: user.email?.trim() || "",
+        contactPhone: user.phone?.trim() || "",
+      }
+    : {
+        companyName:
+          ownedCompany?.name?.trim() ||
+          user.name?.trim() ||
+          "",
+        contactEmail:
+          ownedCompany?.email?.trim() ||
+          user.email?.trim() ||
+          "",
+        contactPhone:
+          ownedCompany?.phone?.trim() ||
+          user.phone?.trim() ||
+          "",
+      };
 
   return (
     <NewContainerPageClient
@@ -124,6 +159,15 @@ export default async function NewContainerPage({
       listingMessages={messages.containerListings}
       contactPrefill={contactPrefill}
       initialListingIntent={initialListingIntent}
+      isAdmin={isAdmin}
+      adminCompanyOptions={adminCompanies.map((company) => ({
+        id: company._id.toHexString(),
+        name: company.name,
+        slug: company.slug,
+        contactEmail: company.email?.trim() || undefined,
+        contactPhone: company.phone?.trim() || undefined,
+        locationPrefillOptions: mapCompanyLocationPrefillOptions(company.locations),
+      }))}
       ownedCompanyProfile={
         ownedCompany
           ? {

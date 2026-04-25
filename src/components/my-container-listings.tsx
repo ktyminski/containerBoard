@@ -726,13 +726,13 @@ export function MyContainerListings(input?: {
           </SelectWithChevron>
           <Link
             href="/containers/new"
-            className={`inline-flex h-10 items-center gap-2 rounded-md px-3 text-sm font-medium ${DARK_BLUE_CTA_CLASS}`}
+            className={`inline-flex h-10 min-w-0 max-w-[12rem] items-center gap-2 overflow-hidden rounded-md px-3 text-sm font-medium ${DARK_BLUE_CTA_CLASS}`}
           >
-            <span>{messages.addListing}</span>
+            <span className="min-w-0 truncate">{messages.addListing}</span>
             <svg
               viewBox="0 0 20 20"
               fill="none"
-              className="h-4 w-4"
+              className="h-4 w-4 shrink-0"
               aria-hidden="true"
             >
               <path

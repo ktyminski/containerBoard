@@ -1,26 +1,52 @@
 ﻿"use client";
 
-import NextImage from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import {
-  useCallback,
-  useEffect,
-  useMemo,
-  useRef,
-  useState,
-  type ReactNode,
-} from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Controller, useForm } from "react-hook-form";
 import {
   ContactPublishModal,
   PublishSuccessModal,
 } from "@/components/container-listing-form-dialogs";
+import {
+  CompanyLocationPrefillDropdown,
+  ContainerFeaturesMultiSelect,
+  FormSection,
+  LocationFlag,
+} from "@/components/container-listing-form-parts";
+import {
+  CREATE_FLOW_PRECHECK_FIELDS,
+  MAX_ADDITIONAL_LOCATIONS,
+  MAX_CONTAINER_PHOTO_MB,
+  MAX_CONTAINER_PHOTOS,
+  PRIMARY_LOCATION_MAP_ID,
+  buildLocationDisplay,
+  getContainerLogoPlaceholderSrc,
+  getDefaultValues,
+  getListingIntentFromType,
+  getRalCodeDigitsLabel,
+  getRalPreviewLabelStyle,
+  hasInitialCertificationSectionContent,
+  hasInitialDescriptionSectionContent,
+  hasInitialTransportSectionContent,
+  isCreateFormReadyToPublish,
+  isStandardContainerSize,
+  mapListingIntentToType,
+  normalizeContainerFeatures,
+  normalizeOptionalInteger,
+  normalizeOptionalNumber,
+  normalizeOptionalRichText,
+  normalizeOptionalText,
+  parseCoordinate,
+  validateContainerRalColorsInput,
+  type AdditionalLocationInitialValue,
+  type CompanyLocationPrefillOption,
+  type ContainerListingFormValues,
+  type ListingIntent,
+} from "@/components/container-listing-form-shared";
 import { type ContainerModuleMessages } from "@/components/container-modules-i18n";
 import {
   getContainerConditionOptions,
-  getContainerFeatureLabel,
-  getContainerFeatureOptions,
   getContainerHeightOptions,
   getContainerTypeOptions,
   getListingKindLabel,
@@ -28,135 +54,27 @@ import {
 } from "@/components/container-listings-i18n";
 import { MapLocationPicker } from "@/components/map-location-picker";
 import { ImageCropModal } from "@/components/new-company-form/image-crop-modal";
-import { cropImageFile } from "@/components/new-company-form/helpers";
 import { ImageDropzone } from "@/components/new-company-form/image-dropzone";
 import { ImageGrid } from "@/components/new-company-form/image-grid";
-import type { ImageCropState } from "@/components/new-company-form/types";
 import { SimpleRichTextEditor } from "@/components/simple-rich-text-editor";
 import { useToast } from "@/components/toast-provider";
 import { SelectWithChevron } from "@/components/ui/select-with-chevron";
-import type { GeocodeAddressParts } from "@/lib/geocode-address";
+import { useContainerListingFormPhotos } from "@/components/use-container-listing-form-photos";
+import { useContainerListingFormLocations } from "@/components/use-container-listing-form-locations";
 import {
-  MAX_CONTAINER_RAL_COLORS,
   parseContainerRalColors,
 } from "@/lib/container-ral-colors";
-import { getCountryFlagEmoji, getCountryFlagSvgUrl } from "@/lib/country-flags";
 import { formatTemplate, getMessages, type AppLocale } from "@/lib/i18n";
-import { getRichTextLength, hasRichTextContent } from "@/lib/listing-rich-text";
+import { getRichTextLength } from "@/lib/listing-rich-text";
 import { MAX_LISTING_LOCATIONS } from "@/lib/listing-locations";
 import {
   CONTAINER_SIZE,
-  CONTAINER_CONDITIONS,
-  CONTAINER_FEATURES,
-  CONTAINER_HEIGHTS,
   CONTAINER_SIZES,
-  CONTAINER_TYPES,
-  LISTING_TYPES,
   PRICE_CURRENCIES,
   PRICE_TAX_MODES,
-  type ContainerCondition,
-  type ContainerFeature,
-  type ContainerHeight,
-  type ContainerSize,
-  type ContainerType,
-  type Currency,
-  type ListingType,
-  type TaxMode,
 } from "@/lib/container-listing-types";
 
-type ContainerListingFormValues = {
-  type: ListingType;
-  containerSize: ContainerSize;
-  containerHeight: ContainerHeight;
-  containerType: ContainerType;
-  containerFeatures: ContainerFeature[];
-  containerCondition: ContainerCondition;
-  containerColorsRal: string;
-  hasCscPlate: boolean;
-  hasCscCertification: boolean;
-  hasBranding: boolean;
-  hasWarranty: boolean;
-  cscValidToMonth: string;
-  cscValidToYear: string;
-  productionYear: string;
-  quantity: number;
-  locationLat: string;
-  locationLng: string;
-  locationAddressLabel: string;
-  locationStreet: string;
-  locationHouseNumber: string;
-  locationPostalCode: string;
-  locationAddressCity: string;
-  locationAddressCountry: string;
-  availableNow: boolean;
-  availableFromApproximate: boolean;
-  availableFrom: string;
-  logisticsTransportAvailable: boolean;
-  logisticsTransportIncluded: boolean;
-  logisticsTransportFreeDistanceKm: string;
-  logisticsUnloadingAvailable: boolean;
-  logisticsUnloadingIncluded: boolean;
-  logisticsComment: string;
-  priceValueAmount: string;
-  priceCurrency: Currency;
-  priceTaxMode: TaxMode;
-  priceVatRate: string;
-  priceNegotiable: boolean;
-  description: string;
-  companyName: string;
-  publishedAsCompany: boolean;
-  contactEmail: string;
-  contactPhone: string;
-};
-
-const CREATE_FLOW_PRECHECK_FIELDS: Array<keyof ContainerListingFormValues> = [
-  "type",
-  "containerSize",
-  "containerHeight",
-  "containerType",
-  "containerFeatures",
-  "containerCondition",
-  "containerColorsRal",
-  "hasCscPlate",
-  "hasCscCertification",
-  "hasBranding",
-  "hasWarranty",
-  "cscValidToMonth",
-  "cscValidToYear",
-  "productionYear",
-  "quantity",
-  "locationLat",
-  "locationLng",
-  "locationAddressLabel",
-  "locationStreet",
-  "locationHouseNumber",
-  "locationPostalCode",
-  "locationAddressCity",
-  "locationAddressCountry",
-  "availableNow",
-  "availableFromApproximate",
-  "availableFrom",
-  "logisticsTransportAvailable",
-  "logisticsTransportIncluded",
-  "logisticsTransportFreeDistanceKm",
-  "logisticsUnloadingAvailable",
-  "logisticsUnloadingIncluded",
-  "logisticsComment",
-  "priceValueAmount",
-  "priceCurrency",
-  "priceTaxMode",
-  "priceVatRate",
-  "priceNegotiable",
-  "description",
-];
-
-export type ListingIntent = ListingType;
-
-type ImageItem = {
-  id: string;
-  file: File;
-  previewUrl: string;
-};
+export type { CompanyLocationPrefillOption, ListingIntent };
 
 type ContainerListingFormProps = {
   mode?: "create" | "edit";
@@ -182,52 +100,7 @@ type ContainerListingFormProps = {
     name: string;
     slug?: string;
   } | null;
-};
-
-type AdditionalLocationInitialValue = {
-  locationLat?: number | null;
-  locationLng?: number | null;
-  locationAddressLabel?: string;
-  locationAddressParts?: GeocodeAddressParts | null;
-};
-
-export type CompanyLocationPrefillOption = {
-  id: string;
-  name: string;
-  locationLat: number;
-  locationLng: number;
-  locationAddressLabel?: string;
-  locationAddressParts?: GeocodeAddressParts | null;
-};
-
-type AdditionalLocationDraft = {
-  id: string;
-  search: string;
-  isSearching: boolean;
-  locationLat: number | null;
-  locationLng: number | null;
-  locationAddressLabel: string;
-  locationAddressParts: GeocodeAddressParts | null;
-};
-
-type GeocodeSearchResponse = {
-  item?: {
-    lat: number;
-    lng: number;
-    label: string;
-    shortLabel?: string;
-    addressParts?: GeocodeAddressParts | null;
-  } | null;
-  error?: string;
-};
-
-type ReverseGeocodeResponse = {
-  item?: {
-    label: string;
-    shortLabel?: string;
-    addressParts?: GeocodeAddressParts | null;
-  } | null;
-  error?: string;
+  adminCompanyId?: string;
 };
 
 const LISTING_INTENT_BUTTON_THEME: Record<
@@ -253,988 +126,8 @@ const LISTING_INTENT_BUTTON_THEME: Record<
       "border-[#c39a57] bg-[#5b421c] text-[#fff3dc] shadow-[0_0_0_1px_rgba(195,154,87,0.42)]",
   },
 };
-const MAX_CONTAINER_PHOTOS = 4;
-const MAX_CONTAINER_PHOTO_BYTES = 5 * 1024 * 1024;
-const MAX_CONTAINER_PHOTO_MB = 5;
-const MAX_ADDITIONAL_LOCATIONS = MAX_LISTING_LOCATIONS - 1;
-const PRIMARY_LOCATION_MAP_ID = "primary-location";
-const MAX_CLIENT_IMAGE_DIMENSION = 2200;
-const IMAGE_OPTIMIZATION_QUALITY_STEPS = [0.9, 0.84, 0.78] as const;
 
-function mapListingIntentToType(intent: ListingIntent): ListingType {
-  return intent;
-}
 
-function getListingIntentFromType(type: ListingType): ListingIntent {
-  if (type === "sell" || type === "rent" || type === "buy") {
-    return type;
-  }
-  return "sell";
-}
-
-function createImageItems(files: File[]): ImageItem[] {
-  return files.map((file) => ({
-    id: `${Date.now()}-${Math.random().toString(36).slice(2)}`,
-    file,
-    previewUrl: URL.createObjectURL(file),
-  }));
-}
-
-function revokeImageItems(items: ImageItem[]): void {
-  for (const item of items) {
-    URL.revokeObjectURL(item.previewUrl);
-  }
-}
-
-function removeImageItem(items: ImageItem[], id: string): ImageItem[] {
-  const target = items.find((item) => item.id === id);
-  if (target) {
-    URL.revokeObjectURL(target.previewUrl);
-  }
-  return items.filter((item) => item.id !== id);
-}
-
-function getContainerLogoPlaceholderSrc(size?: number): string {
-  if (size === 20) {
-    return "/placeholders/containers/container-20.svg";
-  }
-  if (size === 40) {
-    return "/placeholders/containers/container-40.svg";
-  }
-  return "/placeholders/containers/container-unknown.svg";
-}
-
-function replaceFileExtension(filename: string, nextExtension: string): string {
-  const trimmed = filename.trim();
-  if (!trimmed) {
-    return `image.${nextExtension}`;
-  }
-  const nextBase = trimmed.replace(/\.[^.]+$/, "");
-  return `${nextBase || "image"}.${nextExtension}`;
-}
-
-async function loadImageFromFile(file: File): Promise<HTMLImageElement> {
-  const objectUrl = URL.createObjectURL(file);
-  try {
-    const image = new Image();
-    image.src = objectUrl;
-    await new Promise<void>((resolve, reject) => {
-      image.onload = () => resolve();
-      image.onerror = () => reject(new Error("Failed to load image"));
-    });
-    return image;
-  } finally {
-    URL.revokeObjectURL(objectUrl);
-  }
-}
-
-async function canvasToBlob(
-  canvas: HTMLCanvasElement,
-  type: string,
-  quality?: number,
-): Promise<Blob> {
-  return new Promise<Blob>((resolve, reject) => {
-    canvas.toBlob(
-      (result) => {
-        if (!result) {
-          reject(new Error("Failed to save image"));
-          return;
-        }
-        resolve(result);
-      },
-      type,
-      quality,
-    );
-  });
-}
-
-async function optimizeListingImageForUpload(
-  file: File,
-  maxBytes: number,
-): Promise<File> {
-  if (!file.type.startsWith("image/")) {
-    return file;
-  }
-
-  try {
-    const image = await loadImageFromFile(file);
-    const sourceWidth = image.naturalWidth || image.width;
-    const sourceHeight = image.naturalHeight || image.height;
-    if (!sourceWidth || !sourceHeight) {
-      return file;
-    }
-
-    const scale = Math.min(
-      1,
-      MAX_CLIENT_IMAGE_DIMENSION / Math.max(sourceWidth, sourceHeight),
-    );
-    const outputWidth = Math.max(1, Math.round(sourceWidth * scale));
-    const outputHeight = Math.max(1, Math.round(sourceHeight * scale));
-
-    const canvas = document.createElement("canvas");
-    canvas.width = outputWidth;
-    canvas.height = outputHeight;
-    const ctx = canvas.getContext("2d");
-    if (!ctx) {
-      return file;
-    }
-
-    ctx.clearRect(0, 0, outputWidth, outputHeight);
-    ctx.drawImage(image, 0, 0, outputWidth, outputHeight);
-
-    let smallestBlob: Blob | null = null;
-    for (const quality of IMAGE_OPTIMIZATION_QUALITY_STEPS) {
-      const nextBlob = await canvasToBlob(canvas, "image/webp", quality);
-      if (!smallestBlob || nextBlob.size < smallestBlob.size) {
-        smallestBlob = nextBlob;
-      }
-      if (nextBlob.size <= maxBytes) {
-        smallestBlob = nextBlob;
-        break;
-      }
-    }
-
-    if (!smallestBlob) {
-      return file;
-    }
-
-    if (file.size <= maxBytes && smallestBlob.size >= file.size * 0.95) {
-      return file;
-    }
-    if (smallestBlob.size >= file.size && file.size <= maxBytes) {
-      return file;
-    }
-
-    return new File([smallestBlob], replaceFileExtension(file.name, "webp"), {
-      type: "image/webp",
-      lastModified: Date.now(),
-    });
-  } catch {
-    return file;
-  }
-}
-
-function validateContainerRalColorsInput(input: string): true | string {
-  const parsed = parseContainerRalColors(input);
-  if (parsed.tooMany) {
-    return `Maximum ${MAX_CONTAINER_RAL_COLORS} RAL colors`;
-  }
-  return true;
-}
-
-function getRalCodeDigitsLabel(ralCode: string): string {
-  return ralCode.replace(/^RAL\s*/i, "").trim();
-}
-
-function getRalPreviewLabelStyle(rgb: { r: number; g: number; b: number }): {
-  color: string;
-  textShadow: string;
-} {
-  const luminance = (0.2126 * rgb.r + 0.7152 * rgb.g + 0.0722 * rgb.b) / 255;
-  if (luminance >= 0.62) {
-    return {
-      color: "#111827",
-      textShadow: "0 1px 1px rgba(255,255,255,0.35)",
-    };
-  }
-  return {
-    color: "#F9FAFB",
-    textShadow: "0 1px 1px rgba(0,0,0,0.45)",
-  };
-}
-
-function toCoordinateText(value: number | undefined): string {
-  return Number.isFinite(value) ? Number(value).toFixed(6) : "";
-}
-
-function parseCoordinate(value: string): number | null {
-  const normalized = value.trim();
-  if (!normalized) {
-    return null;
-  }
-  const parsed = Number(normalized);
-  return Number.isFinite(parsed) ? parsed : null;
-}
-
-function normalizeOptionalText(value: string): string | undefined {
-  const trimmed = value.trim();
-  return trimmed.length > 0 ? trimmed : undefined;
-}
-
-function buildLocationLabelFromAddressParts(
-  parts?: GeocodeAddressParts | null,
-): string {
-  if (!parts) {
-    return "";
-  }
-
-  const city = parts.city?.trim() ?? "";
-  const country = parts.country?.trim() ?? "";
-  const street = parts.street?.trim() ?? "";
-  const houseNumber = parts.houseNumber?.trim() ?? "";
-  const postalCode = parts.postalCode?.trim() ?? "";
-
-  const streetLabel = [street, houseNumber].filter(Boolean).join(" ");
-  const localityLabel = [postalCode, city].filter(Boolean).join(" ");
-
-  return [streetLabel, localityLabel, country].filter(Boolean).join(", ");
-}
-
-function buildLocationDisplay(input: {
-  parts?: GeocodeAddressParts | null;
-  fallbackLabel?: string;
-}): { postalCode?: string; rest: string; country?: string } {
-  const postalCode = input.parts?.postalCode?.trim() ?? "";
-  const street = input.parts?.street?.trim() ?? "";
-  const houseNumber = input.parts?.houseNumber?.trim() ?? "";
-  const city = input.parts?.city?.trim() ?? "";
-  const country = input.parts?.country?.trim() ?? "";
-
-  const streetLabel = [street, houseNumber].filter(Boolean).join(" ");
-  const rest = [streetLabel, city, country].filter(Boolean).join(" ").trim();
-  const fallback = input.fallbackLabel?.trim() ?? "";
-
-  return {
-    postalCode: postalCode || undefined,
-    rest: rest || fallback,
-    country: country || undefined,
-  };
-}
-
-function LocationFlag({
-  country,
-  className,
-}: {
-  country?: string;
-  className?: string;
-}) {
-  const flagUrl = getCountryFlagSvgUrl(country);
-  if (flagUrl) {
-    return (
-      <NextImage
-        src={flagUrl}
-        alt=""
-        aria-hidden="true"
-        width={16}
-        height={12}
-        unoptimized
-        className={`inline-block h-3 w-4 rounded-[2px] border border-neutral-400/60 object-cover ${className ?? ""}`}
-      />
-    );
-  }
-
-  const emoji = getCountryFlagEmoji(country);
-  if (emoji === "??") {
-    return null;
-  }
-
-  return (
-    <span aria-hidden="true" className={className}>
-      {emoji}
-    </span>
-  );
-}
-
-function createAdditionalLocationDraft(
-  input?: AdditionalLocationInitialValue,
-): AdditionalLocationDraft {
-  const locationAddressLabel = input?.locationAddressLabel?.trim() ?? "";
-  const parts = input?.locationAddressParts ?? null;
-  const fallbackLabel = buildLocationLabelFromAddressParts(parts);
-  const search = locationAddressLabel || fallbackLabel;
-  const locationLat =
-    typeof input?.locationLat === "number" && Number.isFinite(input.locationLat)
-      ? input.locationLat
-      : null;
-  const locationLng =
-    typeof input?.locationLng === "number" && Number.isFinite(input.locationLng)
-      ? input.locationLng
-      : null;
-
-  return {
-    id: `${Date.now()}-${Math.random().toString(36).slice(2)}`,
-    search,
-    isSearching: false,
-    locationLat,
-    locationLng,
-    locationAddressLabel,
-    locationAddressParts: parts,
-  };
-}
-
-function normalizeOptionalRichText(value: string): string | undefined {
-  const trimmed = value.trim();
-  return hasRichTextContent(trimmed) ? trimmed : undefined;
-}
-
-function normalizeOptionalNumber(value: string): number | undefined {
-  const normalized = value.replace(",", ".").trim();
-  if (!normalized) {
-    return undefined;
-  }
-  const parsed = Number(normalized);
-  if (!Number.isFinite(parsed) || parsed < 0) {
-    return undefined;
-  }
-  return parsed;
-}
-
-function normalizeOptionalInteger(value: string): number | undefined {
-  const parsed = normalizeOptionalNumber(value);
-  if (typeof parsed !== "number") {
-    return undefined;
-  }
-  if (!Number.isInteger(parsed)) {
-    return undefined;
-  }
-  return parsed;
-}
-
-function normalizeContainerFeatures(
-  values: ContainerFeature[],
-): ContainerFeature[] {
-  const selected = new Set(
-    values.filter((feature) =>
-      CONTAINER_FEATURES.includes(feature as ContainerFeature),
-    ),
-  );
-  return CONTAINER_FEATURES.filter((feature) => selected.has(feature));
-}
-
-function hasInitialTransportSectionContent(
-  initialValues?: Partial<ContainerListingFormValues>,
-): boolean {
-  return (
-    initialValues?.logisticsTransportAvailable === true ||
-    initialValues?.logisticsTransportIncluded === true ||
-    initialValues?.logisticsUnloadingAvailable === true ||
-    initialValues?.logisticsUnloadingIncluded === true ||
-    (initialValues?.logisticsComment?.trim().length ?? 0) > 0 ||
-    (initialValues?.logisticsTransportFreeDistanceKm?.trim().length ?? 0) > 0
-  );
-}
-
-function hasInitialDescriptionSectionContent(
-  initialValues?: Partial<ContainerListingFormValues>,
-): boolean {
-  return (
-    (initialValues?.description?.trim().length ?? 0) > 0 ||
-    (initialValues?.containerColorsRal?.trim().length ?? 0) > 0 ||
-    initialValues?.hasBranding === true
-  );
-}
-
-function hasInitialCertificationSectionContent(
-  initialValues?: Partial<ContainerListingFormValues>,
-): boolean {
-  return (
-    initialValues?.hasCscPlate === true ||
-    initialValues?.hasCscCertification === true ||
-    initialValues?.hasWarranty === true ||
-    (initialValues?.cscValidToMonth?.trim().length ?? 0) > 0 ||
-    (initialValues?.cscValidToYear?.trim().length ?? 0) > 0
-  );
-}
-
-function isCreateFormReadyToPublish(
-  values: ContainerListingFormValues,
-): boolean {
-  if (!LISTING_TYPES.includes(values.type)) {
-    return false;
-  }
-
-  if (
-    !(
-      values.containerSize === CONTAINER_SIZE.CUSTOM ||
-      isStandardContainerSize(Number(values.containerSize))
-    )
-  ) {
-    return false;
-  }
-
-  if (!CONTAINER_HEIGHTS.includes(values.containerHeight)) {
-    return false;
-  }
-  if (!CONTAINER_TYPES.includes(values.containerType)) {
-    return false;
-  }
-  if (!CONTAINER_CONDITIONS.includes(values.containerCondition)) {
-    return false;
-  }
-
-  if (
-    !Number.isFinite(values.quantity) ||
-    !Number.isInteger(values.quantity) ||
-    values.quantity < 1
-  ) {
-    return false;
-  }
-
-  if (
-    !values.availableNow &&
-    (values.availableFrom ?? "").trim().length === 0
-  ) {
-    return false;
-  }
-
-  if (parseCoordinate(values.locationLat) === null) {
-    return false;
-  }
-  if (parseCoordinate(values.locationLng) === null) {
-    return false;
-  }
-
-  if ((values.priceValueAmount ?? "").trim().length > 0) {
-    const parsedPriceAmount = normalizeOptionalInteger(values.priceValueAmount);
-    if (typeof parsedPriceAmount !== "number") {
-      return false;
-    }
-  }
-
-  if (!PRICE_CURRENCIES.includes(values.priceCurrency)) {
-    return false;
-  }
-  if (!PRICE_TAX_MODES.includes(values.priceTaxMode)) {
-    return false;
-  }
-
-  const logisticsDistance = normalizeOptionalInteger(
-    values.logisticsTransportFreeDistanceKm,
-  );
-  if (
-    values.logisticsTransportIncluded &&
-    !(
-      typeof logisticsDistance === "number" &&
-      logisticsDistance > 0 &&
-      logisticsDistance <= 10_000
-    )
-  ) {
-    return false;
-  }
-
-  if ((values.logisticsComment ?? "").length > 600) {
-    return false;
-  }
-
-  if (getRichTextLength(values.description ?? "") > 1000) {
-    return false;
-  }
-
-  if (
-    validateContainerRalColorsInput(values.containerColorsRal ?? "") !== true
-  ) {
-    return false;
-  }
-
-  const monthDigits = (values.cscValidToMonth ?? "").replace(/\D+/g, "");
-  if (monthDigits.length > 2) {
-    return false;
-  }
-  const yearDigits = (values.cscValidToYear ?? "").replace(/\D+/g, "");
-  if (yearDigits.length > 4) {
-    return false;
-  }
-  const cscMonth = normalizeOptionalInteger(values.cscValidToMonth ?? "");
-  const cscYear = normalizeOptionalInteger(values.cscValidToYear ?? "");
-  if (!(cscMonth === undefined && cscYear === undefined)) {
-    if (!(typeof cscMonth === "number" && cscMonth >= 1 && cscMonth <= 12)) {
-      return false;
-    }
-    if (!(typeof cscYear === "number" && cscYear >= 1900 && cscYear <= 2100)) {
-      return false;
-    }
-  }
-
-  return true;
-}
-
-type ContainerFeaturesMultiSelectProps = {
-  values: ContainerFeature[];
-  onChange: (next: ContainerFeature[]) => void;
-  onBlur: () => void;
-  messages: ContainerModuleMessages["shared"];
-  listingMessages: ContainerListingsMessages;
-};
-
-type FormSectionProps = {
-  id?: string;
-  title: string;
-  description?: ReactNode;
-  optional?: boolean;
-  className?: string;
-  contentClassName?: string;
-  children: ReactNode;
-};
-
-function FormSection({
-  id,
-  title,
-  description,
-  optional = false,
-  className,
-  contentClassName,
-  children,
-}: FormSectionProps) {
-  return (
-    <section
-      id={id}
-      className={`rounded-md border border-neutral-300 bg-neutral-50/95 p-3 ${className ?? ""}`}
-    >
-      <div className="mb-3 flex flex-wrap items-center gap-2">
-        <p className="text-sm font-semibold text-neutral-900">{title}</p>
-        {optional ? (
-          <span className="rounded-md border border-neutral-300 bg-white px-1.5 py-0.5 text-[10px] uppercase tracking-wide text-neutral-600">
-            opcjonalnie
-          </span>
-        ) : null}
-      </div>
-      {description ? (
-        <div className="mb-3 text-xs text-neutral-500">{description}</div>
-      ) : null}
-      <div className={contentClassName ?? "grid gap-3"}>{children}</div>
-    </section>
-  );
-}
-
-type CompanyLocationPrefillDropdownProps = {
-  options: CompanyLocationPrefillOption[];
-  onApply: (selectedOptions: CompanyLocationPrefillOption[]) => void;
-  onClear: () => void;
-  variant?: "light" | "dark";
-  messages: ContainerModuleMessages["shared"];
-};
-
-function CompanyLocationPrefillDropdown({
-  options,
-  onApply,
-  onClear,
-  variant = "dark",
-  messages,
-}: CompanyLocationPrefillDropdownProps) {
-  const detailsRef = useRef<HTMLDetailsElement | null>(null);
-  const isLight = variant === "light";
-  const [checkedIds, setCheckedIds] = useState<string[]>(() =>
-    options.length > 0 ? [options[0].id] : [],
-  );
-  const resolvedCheckedIds = useMemo(() => {
-    const validCheckedIds = checkedIds.filter((id) =>
-      options.some((option) => option.id === id),
-    );
-    if (validCheckedIds.length > 0 || checkedIds.length === 0) {
-      return validCheckedIds;
-    }
-    return options.length > 0 ? [options[0].id] : [];
-  }, [checkedIds, options]);
-
-  useEffect(() => {
-    const handlePointerDown = (event: PointerEvent) => {
-      const detailsElement = detailsRef.current;
-      if (!detailsElement || !detailsElement.open) {
-        return;
-      }
-
-      const target = event.target;
-      if (!(target instanceof Node)) {
-        return;
-      }
-
-      if (detailsElement.contains(target)) {
-        return;
-      }
-
-      detailsElement.removeAttribute("open");
-    };
-
-    const handleKeyDown = (event: KeyboardEvent) => {
-      if (event.key !== "Escape") {
-        return;
-      }
-      const detailsElement = detailsRef.current;
-      if (!detailsElement?.open) {
-        return;
-      }
-      detailsElement.removeAttribute("open");
-    };
-
-    document.addEventListener("pointerdown", handlePointerDown);
-    document.addEventListener("keydown", handleKeyDown);
-
-    return () => {
-      document.removeEventListener("pointerdown", handlePointerDown);
-      document.removeEventListener("keydown", handleKeyDown);
-    };
-  }, []);
-
-  if (options.length === 0) {
-    return null;
-  }
-
-  if (options.length === 1) {
-    return (
-      <button
-        type="button"
-        onClick={() => {
-          onApply([options[0]]);
-        }}
-        className={
-          isLight
-            ? "inline-flex h-9 items-center rounded-md border border-neutral-300 bg-white px-3 text-sm font-normal text-neutral-700 transition hover:bg-neutral-100"
-            : "inline-flex h-9 items-center rounded-md border border-neutral-600 px-3 text-sm font-normal text-neutral-200 transition hover:border-neutral-500 hover:bg-neutral-800 hover:text-white"
-        }
-      >
-        {messages.setFromCompany}
-      </button>
-    );
-  }
-
-  return (
-    <details ref={detailsRef} className="relative">
-      <summary
-        className={`relative flex h-9 cursor-pointer list-none items-center rounded-md px-3 pr-8 text-sm font-normal transition [&::-webkit-details-marker]:hidden ${
-          isLight
-            ? "border border-neutral-300 bg-white text-neutral-700 hover:bg-neutral-100"
-            : "border border-neutral-600 text-neutral-200 hover:border-neutral-500 hover:bg-neutral-800 hover:text-white"
-        }`}
-      >
-        {messages.setFromCompany}
-        <svg
-          viewBox="0 0 20 20"
-          aria-hidden="true"
-          className={`pointer-events-none absolute right-2 top-1/2 h-4 w-4 -translate-y-1/2 ${
-            isLight ? "text-neutral-500" : "text-neutral-400"
-          }`}
-          fill="none"
-        >
-          <path
-            d="M5 7.5L10 12.5L15 7.5"
-            stroke="currentColor"
-            strokeWidth="1.75"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-          />
-        </svg>
-      </summary>
-      <div
-        className={`absolute right-0 top-full z-50 mt-1 min-w-[240px] rounded-md shadow-lg ${
-          isLight
-            ? "border border-neutral-300 bg-white"
-            : "border border-neutral-700 bg-neutral-900"
-        }`}
-      >
-        <div className="max-h-64 overflow-y-auto p-1">
-          {options.map((option) => {
-            const isChecked = resolvedCheckedIds.includes(option.id);
-            return (
-              <label
-                key={option.id}
-                className={`flex cursor-pointer items-center gap-2 rounded-md px-2 py-1.5 text-xs ${
-                  isLight
-                    ? "text-neutral-700 hover:bg-neutral-100"
-                    : "text-neutral-200 hover:bg-neutral-800"
-                }`}
-              >
-                <input
-                  type="checkbox"
-                  checked={isChecked}
-                  onChange={(event) => {
-                    const isNextChecked = event.target.checked;
-                    setCheckedIds((current) => {
-                      if (isNextChecked) {
-                        if (current.includes(option.id)) {
-                          return current;
-                        }
-                        return [...current, option.id];
-                      }
-                      return current.filter((id) => id !== option.id);
-                    });
-                  }}
-                  className={`h-4 w-4 rounded ${
-                    isLight
-                      ? "border-neutral-400 bg-white text-[#2f639a] focus:ring-[#4e86c3]"
-                      : "border-neutral-500 bg-neutral-900 text-[#2f639a] focus:ring-[#4e86c3]"
-                  }`}
-                />
-                <span className="min-w-0 truncate">{option.name}</span>
-              </label>
-            );
-          })}
-        </div>
-        <div
-          className={`flex items-center justify-end gap-2 border-t px-2 py-2 ${
-            isLight ? "border-neutral-200" : "border-neutral-700"
-          }`}
-        >
-          <button
-            type="button"
-            onClick={() => {
-              setCheckedIds([]);
-              onClear();
-              detailsRef.current?.removeAttribute("open");
-            }}
-            className={`rounded-md px-2 py-1 text-[11px] ${
-              isLight
-                ? "text-neutral-600 hover:bg-neutral-100"
-                : "text-neutral-300 hover:bg-neutral-800"
-            }`}
-          >
-            {messages.clear}
-          </button>
-          <button
-            type="button"
-            disabled={resolvedCheckedIds.length === 0}
-            onClick={() => {
-              const selectedOptions = options.filter((option) =>
-                resolvedCheckedIds.includes(option.id),
-              );
-              if (selectedOptions.length === 0) {
-                return;
-              }
-              onApply(selectedOptions);
-              detailsRef.current?.removeAttribute("open");
-            }}
-            className={`rounded-md px-2 py-1 text-[11px] ${
-              isLight
-                ? "border border-neutral-300 bg-white text-neutral-700 hover:border-neutral-400 hover:bg-neutral-100"
-                : "border border-neutral-600 text-neutral-200 hover:border-neutral-500 hover:bg-neutral-800 hover:text-white"
-            } disabled:cursor-not-allowed disabled:opacity-50`}
-          >
-            {messages.apply}
-          </button>
-        </div>
-      </div>
-    </details>
-  );
-}
-
-function ContainerFeaturesMultiSelect({
-  values,
-  onChange,
-  onBlur,
-  messages,
-  listingMessages,
-}: ContainerFeaturesMultiSelectProps) {
-  const detailsRef = useRef<HTMLDetailsElement | null>(null);
-  const selectedCount = values.length;
-  const selectedSummaryLabel =
-    selectedCount === 0
-      ? messages.any
-      : selectedCount === 1
-        ? values[0]
-          ? getContainerFeatureLabel(listingMessages, values[0])
-          : messages.oneSelected
-        : formatTemplate(messages.selectedCount, { count: selectedCount });
-
-  useEffect(() => {
-    const handlePointerDown = (event: PointerEvent) => {
-      const detailsElement = detailsRef.current;
-      if (!detailsElement || !detailsElement.open) {
-        return;
-      }
-
-      const target = event.target;
-      if (!(target instanceof Node)) {
-        return;
-      }
-
-      if (detailsElement.contains(target)) {
-        return;
-      }
-
-      detailsElement.removeAttribute("open");
-      onBlur();
-    };
-
-    const handleKeyDown = (event: KeyboardEvent) => {
-      if (event.key !== "Escape") {
-        return;
-      }
-      const detailsElement = detailsRef.current;
-      if (!detailsElement?.open) {
-        return;
-      }
-      detailsElement.removeAttribute("open");
-      onBlur();
-    };
-
-    document.addEventListener("pointerdown", handlePointerDown);
-    document.addEventListener("keydown", handleKeyDown);
-
-    return () => {
-      document.removeEventListener("pointerdown", handlePointerDown);
-      document.removeEventListener("keydown", handleKeyDown);
-    };
-  }, [onBlur]);
-
-  const toggleFeature = (feature: ContainerFeature) => {
-    const isSelected = values.includes(feature);
-    const nextValues = isSelected
-      ? values.filter((value) => value !== feature)
-      : [...values, feature];
-    onChange(normalizeContainerFeatures(nextValues));
-  };
-
-  return (
-    <div className="grid gap-2">
-      <details
-        ref={detailsRef}
-        className="relative"
-        onToggle={(event) => {
-          if (!event.currentTarget.open) {
-            onBlur();
-          }
-        }}
-      >
-        <summary className="multi-checkbox-summary relative flex h-10 w-full cursor-pointer list-none items-center rounded-md border border-neutral-700 bg-neutral-950 px-3 pr-11 text-sm text-neutral-100 [&::-webkit-details-marker]:hidden">
-          <span
-            className={`block min-w-0 truncate ${
-              selectedCount > 0 ? "text-neutral-100" : "text-neutral-500"
-            }`}
-            title={selectedSummaryLabel}
-          >
-            {selectedSummaryLabel}
-          </span>
-          <svg
-            viewBox="0 0 20 20"
-            aria-hidden="true"
-            className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-neutral-400"
-            fill="none"
-          >
-            <path
-              d="M5 7.5L10 12.5L15 7.5"
-              stroke="currentColor"
-              strokeWidth="1.75"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            />
-          </svg>
-        </summary>
-        <div className="absolute left-0 top-full z-40 mt-1 w-full rounded-md border border-neutral-700 bg-neutral-900 p-2 shadow-lg">
-          <div className="max-h-64 space-y-1 overflow-y-auto pr-1">
-            {getContainerFeatureOptions(listingMessages).map((option) => (
-              <label
-                key={option.value}
-                className="flex cursor-pointer items-center gap-2 rounded-md px-2 py-1.5 text-sm text-neutral-200 hover:bg-neutral-800"
-              >
-                <input
-                  type="checkbox"
-                  checked={values.includes(option.value)}
-                  onChange={() => {
-                    toggleFeature(option.value);
-                  }}
-                  className="h-4 w-4 rounded border-neutral-500 bg-neutral-900 text-[#2f639a] focus:ring-[#4e86c3]"
-                />
-                <span>{option.label}</span>
-              </label>
-            ))}
-          </div>
-          <button
-            type="button"
-            onClick={() => {
-              onChange([]);
-            }}
-            className="mt-2 w-full rounded-md border border-neutral-600 bg-neutral-900 px-3 py-1.5 text-xs font-medium text-neutral-200 hover:border-neutral-500 hover:bg-neutral-800"
-          >
-            {messages.clear}
-          </button>
-        </div>
-      </details>
-
-      {values.length > 0 ? (
-        <div className="flex flex-wrap gap-2">
-          {values.map((feature) => (
-            <span
-              key={feature}
-              className="inline-flex items-center gap-1 rounded-md border border-neutral-700 bg-neutral-900 px-2.5 py-1 text-xs font-medium text-neutral-200"
-            >
-              <span>{getContainerFeatureLabel(listingMessages, feature)}</span>
-              <button
-                type="button"
-                onClick={() => {
-                  toggleFeature(feature);
-                }}
-                className="rounded px-1 text-neutral-200 hover:bg-neutral-800"
-                aria-label={formatTemplate(messages.removeFeature, {
-                  label: getContainerFeatureLabel(listingMessages, feature),
-                })}
-              >
-                x
-              </button>
-            </span>
-          ))}
-        </div>
-      ) : null}
-    </div>
-  );
-}
-
-function isStandardContainerSize(value: number): boolean {
-  return CONTAINER_SIZES.includes(value as (typeof CONTAINER_SIZES)[number]);
-}
-
-function getDefaultValues(
-  initialValues?: Partial<ContainerListingFormValues>,
-): ContainerListingFormValues {
-  const today = new Date().toISOString().slice(0, 10);
-  const initialContainerSize =
-    typeof initialValues?.containerSize === "number" &&
-    Number.isFinite(initialValues.containerSize) &&
-    initialValues.containerSize >= 0
-      ? Math.trunc(initialValues.containerSize)
-      : 40;
-  const hasCustomContainerSize = !isStandardContainerSize(initialContainerSize);
-  const defaultContainerSize: ContainerSize = hasCustomContainerSize
-    ? CONTAINER_SIZE.CUSTOM
-    : (initialContainerSize as (typeof CONTAINER_SIZES)[number]);
-  return {
-    type: initialValues?.type ?? "sell",
-    containerSize: defaultContainerSize,
-    containerHeight: initialValues?.containerHeight ?? "standard",
-    containerType: initialValues?.containerType ?? "dry",
-    containerFeatures: initialValues?.containerFeatures ?? [],
-    containerCondition: initialValues?.containerCondition ?? "cargo_worthy",
-    containerColorsRal: initialValues?.containerColorsRal ?? "",
-    hasCscPlate: initialValues?.hasCscPlate ?? false,
-    hasCscCertification: initialValues?.hasCscCertification ?? false,
-    hasBranding: initialValues?.hasBranding ?? false,
-    hasWarranty: initialValues?.hasWarranty ?? false,
-    cscValidToMonth: initialValues?.cscValidToMonth ?? "",
-    cscValidToYear: initialValues?.cscValidToYear ?? "",
-    productionYear: initialValues?.productionYear ?? "",
-    quantity: initialValues?.quantity ?? 1,
-    locationLat: initialValues?.locationLat ?? "",
-    locationLng: initialValues?.locationLng ?? "",
-    locationAddressLabel: initialValues?.locationAddressLabel ?? "",
-    locationStreet: initialValues?.locationStreet ?? "",
-    locationHouseNumber: initialValues?.locationHouseNumber ?? "",
-    locationPostalCode: initialValues?.locationPostalCode ?? "",
-    locationAddressCity: initialValues?.locationAddressCity ?? "",
-    locationAddressCountry: initialValues?.locationAddressCountry ?? "",
-    availableNow: initialValues?.availableNow ?? false,
-    availableFromApproximate: initialValues?.availableFromApproximate ?? false,
-    availableFrom: initialValues?.availableFrom ?? today,
-    logisticsTransportAvailable:
-      initialValues?.logisticsTransportAvailable ?? false,
-    logisticsTransportIncluded:
-      initialValues?.logisticsTransportIncluded ?? false,
-    logisticsTransportFreeDistanceKm:
-      initialValues?.logisticsTransportFreeDistanceKm ?? "",
-    logisticsUnloadingAvailable:
-      initialValues?.logisticsUnloadingAvailable ?? false,
-    logisticsUnloadingIncluded:
-      initialValues?.logisticsUnloadingIncluded ?? false,
-    logisticsComment: initialValues?.logisticsComment ?? "",
-    priceValueAmount: initialValues?.priceValueAmount ?? "",
-    priceCurrency: initialValues?.priceCurrency ?? "PLN",
-    priceTaxMode: initialValues?.priceTaxMode ?? "net",
-    priceVatRate: initialValues?.priceVatRate ?? "",
-    priceNegotiable: initialValues?.priceNegotiable ?? false,
-    description: initialValues?.description ?? "",
-    companyName: initialValues?.companyName ?? "",
-    publishedAsCompany: initialValues?.publishedAsCompany ?? false,
-    contactEmail: initialValues?.contactEmail ?? "",
-    contactPhone: initialValues?.contactPhone ?? "",
-  };
-}
 
 export function ContainerListingForm({
   mode = "create",
@@ -1257,6 +150,7 @@ export function ContainerListingForm({
   showListingIntentSelector = true,
   companyLocationPrefillOptions,
   ownedCompanyProfile,
+  adminCompanyId,
 }: ContainerListingFormProps) {
   const router = useRouter();
   const toast = useToast();
@@ -1290,49 +184,11 @@ export function ContainerListingForm({
   );
   const [showAdditionalPhotosSection, setShowAdditionalPhotosSection] =
     useState((initialPhotoUrls?.length ?? 0) > 0);
-  const reverseLookupRequestRef = useRef(0);
-  const additionalReverseLookupRequestRef = useRef<Record<string, number>>({});
   const inlineSubmitContainerRef = useRef<HTMLDivElement | null>(null);
-  const stableInitialPhotoUrls = useMemo(
-    () => initialPhotoUrls ?? [],
-    [initialPhotoUrls],
-  );
-  const [locationSearch, setLocationSearch] = useState(
-    [
-      initialValues?.locationAddressLabel,
-      initialValues?.locationPostalCode,
-      initialValues?.locationAddressCity,
-      initialValues?.locationAddressCountry,
-    ]
-      .map((value) => value?.trim())
-      .filter(Boolean)
-      .join(", "),
-  );
-  const [isSearchingLocation, setIsSearchingLocation] = useState(false);
-  const [isReverseLookupPending, setIsReverseLookupPending] = useState(false);
-  const [additionalLocations, setAdditionalLocations] = useState<
-    AdditionalLocationDraft[]
-  >(() =>
-    (initialAdditionalLocations ?? [])
-      .slice(0, MAX_ADDITIONAL_LOCATIONS)
-      .map((location) => createAdditionalLocationDraft(location)),
-  );
-  const [coverPhotoItem, setCoverPhotoItem] = useState<ImageItem | null>(null);
-  const [coverPhotoCrop, setCoverPhotoCrop] = useState<ImageCropState | null>(
-    null,
-  );
-  const coverPhotoInputRef = useRef<HTMLInputElement | null>(null);
-  const coverPhotoCropSourceUrlRef = useRef<string | null>(null);
-  const [isProcessingImages, setIsProcessingImages] = useState(false);
-  const [activeMapLocationId, setActiveMapLocationId] = useState<string>(
-    PRIMARY_LOCATION_MAP_ID,
-  );
-  const [isLocationModalOpen, setIsLocationModalOpen] = useState(false);
   const [isContactModalOpen, setIsContactModalOpen] = useState(false);
   const [isPublishSuccessModalOpen, setIsPublishSuccessModalOpen] =
     useState(false);
   const [isInlineSubmitVisible, setIsInlineSubmitVisible] = useState(true);
-  const [photoItems, setPhotoItems] = useState<ImageItem[]>([]);
   const [internalListingIntent, setInternalListingIntent] =
     useState<ListingIntent | null>(() => {
       if (initialListingIntent) {
@@ -1356,11 +212,30 @@ export function ContainerListingForm({
     },
     [onSelectedListingIntentChange, selectedListingIntent],
   );
-  const [keptInitialPhotoIndexes, setKeptInitialPhotoIndexes] = useState<
-    number[]
-  >(() => stableInitialPhotoUrls.map((_, index) => index));
-  const photoItemsRef = useRef<ImageItem[]>([]);
-  const coverPhotoItemRef = useRef<ImageItem | null>(null);
+  const {
+    additionalInitialPhotoIndexes,
+    appendPhotosToFormData,
+    coverPhotoCrop,
+    coverPhotoInputRef,
+    handleAdditionalPhotoFilesAdded,
+    handleApplyCoverPhotoCrop,
+    handleCancelCoverPhotoCrop,
+    handleCoverPhotoFilesAdded,
+    isProcessingImages,
+    mainPhotoPreviewUrl,
+    photoItems,
+    removeInitialPhoto,
+    removeMainPhoto,
+    removeUploadedPhoto,
+    resetPhotosAfterSuccessfulSave,
+    setCoverPhotoCrop,
+    stableInitialPhotoUrls,
+    totalPhotoCount,
+  } = useContainerListingFormPhotos({
+    initialPhotoUrls,
+    messages,
+    onWarning: toast.warning,
+  });
 
   const {
     control,
@@ -1399,9 +274,6 @@ export function ContainerListingForm({
     () => new Date().toISOString().slice(0, 10),
     [],
   );
-  const latNumber = parseCoordinate(latValue);
-  const lngNumber = parseCoordinate(lngValue);
-  const primaryLocationLabel = (locationAddressLabelValue ?? "").trim();
   const parsedRalColorsPreview = useMemo(
     () =>
       parseContainerRalColors(containerColorsRalValue ?? "", {
@@ -1411,101 +283,55 @@ export function ContainerListingForm({
   );
   const shouldShowRalColorsPreview =
     parsedRalColorsPreview.colors.length > 0 && !parsedRalColorsPreview.tooMany;
-  const isLocationBusy = isSearchingLocation || isReverseLookupPending;
-  const resolvedCompanyLocationPrefillOptions = useMemo(
-    () =>
-      (companyLocationPrefillOptions ?? []).filter(
-        (option) =>
-          Number.isFinite(option.locationLat) &&
-          Number.isFinite(option.locationLng),
-      ),
-    [companyLocationPrefillOptions],
-  );
-  const hasCompanyLocationPrefill =
-    resolvedCompanyLocationPrefillOptions.length > 0;
+  const {
+    activeMapLocationId,
+    activeMapLocationLabel,
+    additionalLocations,
+    configuredLocationsCount,
+    handleAddAdditionalLocation,
+    handleApplyCompanyLocation,
+    handleClearLocations,
+    handleRemoveAdditionalLocation,
+    handleRemovePrimaryLocation,
+    handleSearchAdditionalLocation,
+    handleSearchLocation,
+    handleSharedMapPointChange,
+    handleUpdateAdditionalLocationSearch,
+    hasCompanyLocationPrefill,
+    hiddenConfiguredLocationsCount,
+    isLocationBusy,
+    isLocationModalOpen,
+    locationMapPoints,
+    locationSearch,
+    primaryLocationDisplay,
+    resolvedCompanyLocationPrefillOptions,
+    setActiveMapLocationId,
+    setIsLocationModalOpen,
+    setLocationSearch,
+    visibleConfiguredLocationDisplays,
+  } = useContainerListingFormLocations({
+    clearErrors,
+    companyLocationPrefillOptions,
+    initialAdditionalLocations,
+    initialValues,
+    locale,
+    locationAddressCityValue,
+    locationAddressCountryValue,
+    locationAddressLabelValue,
+    locationHouseNumberValue,
+    locationPostalCodeValue,
+    locationStreetValue,
+    lngValue,
+    latValue,
+    messages,
+    onError: toast.error,
+    onInfo: toast.info,
+    onSuccess: toast.success,
+    onWarning: toast.warning,
+    setValue,
+  });
   const ownedCompanyName = ownedCompanyProfile?.name?.trim() ?? "";
   const hasOwnedCompanyProfile = ownedCompanyName.length > 0;
-  const primaryLocationDisplay = useMemo(
-    () =>
-      buildLocationDisplay({
-        parts: {
-          street: locationStreetValue,
-          houseNumber: locationHouseNumberValue,
-          postalCode: locationPostalCodeValue,
-          city: locationAddressCityValue,
-          country: locationAddressCountryValue,
-        },
-        fallbackLabel: primaryLocationLabel,
-      }),
-    [
-      locationAddressCityValue,
-      locationAddressCountryValue,
-      locationHouseNumberValue,
-      locationPostalCodeValue,
-      locationStreetValue,
-      primaryLocationLabel,
-    ],
-  );
-  const configuredAdditionalLocationsCount = additionalLocations.filter(
-    (location) =>
-      location.locationLat !== null && location.locationLng !== null,
-  ).length;
-  const configuredLocationsCount =
-    (latNumber !== null && lngNumber !== null ? 1 : 0) +
-    configuredAdditionalLocationsCount;
-  const configuredLocationDisplays = useMemo(() => {
-    const result: Array<{
-      key: string;
-      postalCode?: string;
-      rest: string;
-      country?: string;
-    }> = [];
-
-    if (latNumber !== null && lngNumber !== null) {
-      result.push({
-        key: PRIMARY_LOCATION_MAP_ID,
-        postalCode: primaryLocationDisplay.postalCode,
-        rest: primaryLocationDisplay.rest,
-        country: primaryLocationDisplay.country,
-      });
-    }
-
-    for (const location of additionalLocations) {
-      if (location.locationLat === null || location.locationLng === null) {
-        continue;
-      }
-      const display = buildLocationDisplay({
-        parts: location.locationAddressParts,
-        fallbackLabel: location.locationAddressLabel || location.search,
-      });
-      result.push({
-        key: location.id,
-        postalCode: display.postalCode,
-        rest: display.rest,
-        country: display.country,
-      });
-    }
-
-    return result;
-  }, [additionalLocations, latNumber, lngNumber, primaryLocationDisplay]);
-  const visibleConfiguredLocationDisplays = configuredLocationDisplays.slice(
-    0,
-    3,
-  );
-  const hiddenConfiguredLocationsCount = Math.max(
-    0,
-    configuredLocationDisplays.length -
-      visibleConfiguredLocationDisplays.length,
-  );
-  const visibleInitialPhotoCount = keptInitialPhotoIndexes.length;
-  const totalPhotoCount =
-    visibleInitialPhotoCount + photoItems.length + (coverPhotoItem ? 1 : 0);
-  const mainPhotoPreviewUrl =
-    coverPhotoItem?.previewUrl ??
-    (keptInitialPhotoIndexes.length > 0
-      ? (stableInitialPhotoUrls[keptInitialPhotoIndexes[0]] ?? null)
-      : null);
-  const additionalInitialPhotoIndexes = keptInitialPhotoIndexes.slice(1);
   const containerLogoPlaceholderSrc = useMemo(
     () =>
       getContainerLogoPlaceholderSrc(
@@ -1515,71 +341,6 @@ export function ContainerListingForm({
   );
   const canProceedFromIntentStep =
     !isCreateMode || resolvedListingIntent !== null;
-  const locationMapPoints = useMemo(
-    () => [
-      {
-        id: PRIMARY_LOCATION_MAP_ID,
-        lat: latNumber,
-        lng: lngNumber,
-        isPrimary: true,
-      },
-      ...additionalLocations.map((location) => ({
-        id: location.id,
-        lat: location.locationLat,
-        lng: location.locationLng,
-        isPrimary: false,
-      })),
-    ],
-    [additionalLocations, latNumber, lngNumber],
-  );
-  const activeMapLocationLabel = useMemo(() => {
-    if (activeMapLocationId === PRIMARY_LOCATION_MAP_ID) {
-      return formatTemplate(messages.shared.locationLabelTemplate, {
-        index: 1,
-      });
-    }
-    const additionalLocationIndex = additionalLocations.findIndex(
-      (location) => location.id === activeMapLocationId,
-    );
-    if (additionalLocationIndex >= 0) {
-      return formatTemplate(messages.shared.locationLabelTemplate, {
-        index: additionalLocationIndex + 2,
-      });
-    }
-    return formatTemplate(messages.shared.locationLabelTemplate, { index: 1 });
-  }, [
-    activeMapLocationId,
-    additionalLocations,
-    messages.shared.locationLabelTemplate,
-  ]);
-
-  useEffect(() => {
-    setKeptInitialPhotoIndexes(stableInitialPhotoUrls.map((_, index) => index));
-  }, [stableInitialPhotoUrls]);
-
-  useEffect(() => {
-    photoItemsRef.current = photoItems;
-  }, [photoItems]);
-
-  useEffect(() => {
-    coverPhotoItemRef.current = coverPhotoItem;
-  }, [coverPhotoItem]);
-
-  useEffect(() => {
-    coverPhotoCropSourceUrlRef.current = coverPhotoCrop?.sourceUrl ?? null;
-  }, [coverPhotoCrop?.sourceUrl]);
-
-  useEffect(() => {
-    return () => {
-      if (coverPhotoCropSourceUrlRef.current) {
-        URL.revokeObjectURL(coverPhotoCropSourceUrlRef.current);
-      }
-      revokeImageItems(photoItemsRef.current);
-      if (coverPhotoItemRef.current) {
-        URL.revokeObjectURL(coverPhotoItemRef.current.previewUrl);
-      }
-    };
-  }, []);
 
   useEffect(() => {
     if (!isCreateMode || !resolvedListingIntent) {
@@ -1611,17 +372,6 @@ export function ContainerListingForm({
     setValue,
   ]);
 
-  useEffect(() => {
-    if (activeMapLocationId === PRIMARY_LOCATION_MAP_ID) {
-      return;
-    }
-    const exists = additionalLocations.some(
-      (location) => location.id === activeMapLocationId,
-    );
-    if (!exists) {
-      setActiveMapLocationId(PRIMARY_LOCATION_MAP_ID);
-    }
-  }, [activeMapLocationId, additionalLocations]);
   const canManageListingPhotos = listingTypeValue !== "buy";
   const isCreatePublishReady = useMemo(() => {
     if (!isCreateMode || !canProceedFromIntentStep) {
@@ -1753,803 +503,6 @@ export function ContainerListingForm({
     "rounded-md bg-gradient-to-r from-rose-500 to-fuchsia-500 px-4 py-2 text-sm font-semibold text-white transition hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-60";
   const createSubmitInactiveButtonClass =
     "rounded-md border border-neutral-300 bg-neutral-200 px-4 py-2 text-sm font-semibold text-neutral-600 transition hover:bg-neutral-300";
-
-  const applyCoordinates = useCallback(
-    (nextLat: number, nextLng: number) => {
-      setValue("locationLat", toCoordinateText(nextLat), {
-        shouldDirty: true,
-        shouldTouch: true,
-        shouldValidate: true,
-      });
-      setValue("locationLng", toCoordinateText(nextLng), {
-        shouldDirty: true,
-        shouldTouch: true,
-        shouldValidate: true,
-      });
-      clearErrors(["locationLat", "locationLng"]);
-    },
-    [clearErrors, setValue],
-  );
-
-  const applyAddressParts = useCallback(
-    (parts?: GeocodeAddressParts | null) => {
-      const city = parts?.city?.trim();
-      const country = parts?.country?.trim();
-      const street = parts?.street?.trim() ?? "";
-      const houseNumber = parts?.houseNumber?.trim() ?? "";
-      const postalCode = parts?.postalCode?.trim() ?? "";
-
-      setValue("locationStreet", street, {
-        shouldDirty: true,
-        shouldTouch: true,
-      });
-      setValue("locationHouseNumber", houseNumber, {
-        shouldDirty: true,
-        shouldTouch: true,
-      });
-      setValue("locationPostalCode", postalCode, {
-        shouldDirty: true,
-        shouldTouch: true,
-      });
-
-      if (city) {
-        setValue("locationAddressCity", city, {
-          shouldDirty: true,
-          shouldTouch: true,
-        });
-      }
-
-      if (country) {
-        setValue("locationAddressCountry", country, {
-          shouldDirty: true,
-          shouldTouch: true,
-        });
-      }
-    },
-    [setValue],
-  );
-
-  const handleMapChange = useCallback(
-    async (next: { lat: number; lng: number }) => {
-      applyCoordinates(next.lat, next.lng);
-
-      const currentRequestId = reverseLookupRequestRef.current + 1;
-      reverseLookupRequestRef.current = currentRequestId;
-      setIsReverseLookupPending(true);
-
-      try {
-        const response = await fetch(
-          `/api/geocode/reverse?lat=${encodeURIComponent(next.lat.toFixed(6))}&lng=${encodeURIComponent(next.lng.toFixed(6))}&lang=${locale}`,
-        );
-        const data = (await response.json()) as ReverseGeocodeResponse;
-
-        if (reverseLookupRequestRef.current !== currentRequestId) {
-          return;
-        }
-
-        if (!response.ok || data.error || !data.item) {
-          return;
-        }
-
-        applyAddressParts(data.item.addressParts);
-        if (data.item.shortLabel || data.item.label) {
-          const locationLabel = data.item.shortLabel ?? data.item.label;
-          setLocationSearch(locationLabel);
-          setValue("locationAddressLabel", locationLabel, {
-            shouldDirty: true,
-            shouldTouch: true,
-          });
-        }
-      } catch {
-        // keep coordinates and silently ignore reverse geocode failures
-      } finally {
-        if (reverseLookupRequestRef.current === currentRequestId) {
-          setIsReverseLookupPending(false);
-        }
-      }
-    },
-    [applyAddressParts, applyCoordinates, setValue],
-  );
-
-  const fetchSingleGeocodeLocation = useCallback(
-    async (
-      query: string,
-    ): Promise<NonNullable<GeocodeSearchResponse["item"]>> => {
-      const response = await fetch(
-        `/api/geocode?q=${encodeURIComponent(query)}&lang=${locale}&limit=1`,
-      );
-      const data = (await response.json()) as GeocodeSearchResponse;
-
-      if (!response.ok || data.error) {
-        throw new Error(data.error ?? messages.form.locationFetchError);
-      }
-
-      if (!data.item) {
-        throw new Error(messages.form.locationNoResults);
-      }
-
-      return data.item;
-    },
-    [locale, messages.form.locationFetchError, messages.form.locationNoResults],
-  );
-
-  const handleSearchLocation = useCallback(async () => {
-    const query = locationSearch.trim();
-    if (query.length < 3) {
-      toast.error(messages.form.locationMinChars);
-      return;
-    }
-
-    setActiveMapLocationId(PRIMARY_LOCATION_MAP_ID);
-    setIsSearchingLocation(true);
-
-    try {
-      const geocodeItem = await fetchSingleGeocodeLocation(query);
-      applyCoordinates(geocodeItem.lat, geocodeItem.lng);
-      applyAddressParts(geocodeItem.addressParts);
-      const locationLabel = geocodeItem.shortLabel ?? geocodeItem.label;
-      setLocationSearch(locationLabel);
-      setValue("locationAddressLabel", locationLabel, {
-        shouldDirty: true,
-        shouldTouch: true,
-      });
-    } catch (error) {
-      toast.error(
-        error instanceof Error
-          ? error.message
-          : messages.form.locationSearchError,
-      );
-    } finally {
-      setIsSearchingLocation(false);
-    }
-  }, [
-    applyAddressParts,
-    applyCoordinates,
-    fetchSingleGeocodeLocation,
-    locationSearch,
-    setValue,
-    toast,
-  ]);
-
-  const handleAddAdditionalLocation = useCallback(() => {
-    if (additionalLocations.length >= MAX_ADDITIONAL_LOCATIONS) {
-      toast.warning(
-        formatTemplate(messages.form.maxLocations, {
-          count: MAX_LISTING_LOCATIONS,
-        }),
-      );
-      return;
-    }
-
-    const nextLocation = createAdditionalLocationDraft();
-    setAdditionalLocations((current) => [...current, nextLocation]);
-    setActiveMapLocationId(nextLocation.id);
-  }, [additionalLocations.length, toast]);
-
-  const handleRemoveAdditionalLocation = useCallback(
-    (id: string) => {
-      delete additionalReverseLookupRequestRef.current[id];
-      if (activeMapLocationId === id) {
-        setActiveMapLocationId(PRIMARY_LOCATION_MAP_ID);
-      }
-      setAdditionalLocations((current) =>
-        current.filter((location) => location.id !== id),
-      );
-    },
-    [activeMapLocationId],
-  );
-
-  const applyPrimaryLocationFromDraft = useCallback(
-    (draft: AdditionalLocationDraft) => {
-      const nextLat = draft.locationLat;
-      const nextLng = draft.locationLng;
-      const nextAddressParts = draft.locationAddressParts;
-      const nextAddressLabel =
-        draft.locationAddressLabel.trim() ||
-        buildLocationLabelFromAddressParts(nextAddressParts) ||
-        draft.search.trim();
-
-      setValue("locationLat", toCoordinateText(nextLat ?? undefined), {
-        shouldDirty: true,
-        shouldTouch: true,
-        shouldValidate: true,
-      });
-      setValue("locationLng", toCoordinateText(nextLng ?? undefined), {
-        shouldDirty: true,
-        shouldTouch: true,
-        shouldValidate: true,
-      });
-      setValue("locationAddressLabel", nextAddressLabel, {
-        shouldDirty: true,
-        shouldTouch: true,
-      });
-      setValue("locationStreet", nextAddressParts?.street?.trim() ?? "", {
-        shouldDirty: true,
-        shouldTouch: true,
-      });
-      setValue(
-        "locationHouseNumber",
-        nextAddressParts?.houseNumber?.trim() ?? "",
-        {
-          shouldDirty: true,
-          shouldTouch: true,
-        },
-      );
-      setValue(
-        "locationPostalCode",
-        nextAddressParts?.postalCode?.trim() ?? "",
-        {
-          shouldDirty: true,
-          shouldTouch: true,
-        },
-      );
-      setValue("locationAddressCity", nextAddressParts?.city?.trim() ?? "", {
-        shouldDirty: true,
-        shouldTouch: true,
-      });
-      setValue(
-        "locationAddressCountry",
-        nextAddressParts?.country?.trim() ?? "",
-        {
-          shouldDirty: true,
-          shouldTouch: true,
-        },
-      );
-      setLocationSearch(nextAddressLabel);
-
-      if (nextLat !== null && nextLng !== null) {
-        clearErrors(["locationLat", "locationLng"]);
-      }
-    },
-    [clearErrors, setValue],
-  );
-
-  const handleRemovePrimaryLocation = useCallback(() => {
-    if (additionalLocations.length === 0) {
-      setActiveMapLocationId(PRIMARY_LOCATION_MAP_ID);
-      setLocationSearch("");
-      setValue("locationLat", "", {
-        shouldDirty: true,
-        shouldTouch: true,
-        shouldValidate: true,
-      });
-      setValue("locationLng", "", {
-        shouldDirty: true,
-        shouldTouch: true,
-        shouldValidate: true,
-      });
-      setValue("locationAddressLabel", "", {
-        shouldDirty: true,
-        shouldTouch: true,
-      });
-      setValue("locationStreet", "", {
-        shouldDirty: true,
-        shouldTouch: true,
-      });
-      setValue("locationHouseNumber", "", {
-        shouldDirty: true,
-        shouldTouch: true,
-      });
-      setValue("locationPostalCode", "", {
-        shouldDirty: true,
-        shouldTouch: true,
-      });
-      setValue("locationAddressCity", "", {
-        shouldDirty: true,
-        shouldTouch: true,
-      });
-      setValue("locationAddressCountry", "", {
-        shouldDirty: true,
-        shouldTouch: true,
-      });
-      clearErrors(["locationLat", "locationLng"]);
-      toast.info(formatTemplate(messages.form.locationRemoved, { index: 1 }));
-      return;
-    }
-
-    const promotedIndex = additionalLocations.findIndex(
-      (location) =>
-        location.locationLat !== null && location.locationLng !== null,
-    );
-    const nextPrimaryIndex = promotedIndex >= 0 ? promotedIndex : 0;
-    const nextPrimary = additionalLocations[nextPrimaryIndex];
-    if (!nextPrimary) {
-      return;
-    }
-
-    const remainingAdditionalLocations = additionalLocations.filter(
-      (_, index) => index !== nextPrimaryIndex,
-    );
-    applyPrimaryLocationFromDraft(nextPrimary);
-    setAdditionalLocations(remainingAdditionalLocations);
-    setActiveMapLocationId(PRIMARY_LOCATION_MAP_ID);
-
-    const nextReverseLookupMap: Record<string, number> = {};
-    for (const location of remainingAdditionalLocations) {
-      const requestId = additionalReverseLookupRequestRef.current[location.id];
-      if (typeof requestId === "number") {
-        nextReverseLookupMap[location.id] = requestId;
-      }
-    }
-    additionalReverseLookupRequestRef.current = nextReverseLookupMap;
-
-    toast.info(messages.form.locationPromoted);
-  }, [
-    additionalLocations,
-    applyPrimaryLocationFromDraft,
-    clearErrors,
-    setLocationSearch,
-    setValue,
-    toast,
-  ]);
-
-  const handleUpdateAdditionalLocationSearch = useCallback(
-    (id: string, value: string) => {
-      setAdditionalLocations((current) =>
-        current.map((location) =>
-          location.id === id
-            ? {
-                ...location,
-                search: value,
-              }
-            : location,
-        ),
-      );
-    },
-    [],
-  );
-
-  const handleSearchAdditionalLocation = useCallback(
-    async (id: string) => {
-      const target = additionalLocations.find((location) => location.id === id);
-      if (!target) {
-        return;
-      }
-
-      setActiveMapLocationId(id);
-      const query = target.search.trim();
-      if (query.length < 3) {
-        toast.error(messages.form.locationMinChars);
-        return;
-      }
-
-      setAdditionalLocations((current) =>
-        current.map((location) =>
-          location.id === id
-            ? {
-                ...location,
-                isSearching: true,
-              }
-            : location,
-        ),
-      );
-
-      try {
-        const geocodeItem = await fetchSingleGeocodeLocation(query);
-        const locationLabel = geocodeItem.shortLabel ?? geocodeItem.label;
-
-        setAdditionalLocations((current) =>
-          current.map((location) =>
-            location.id === id
-              ? {
-                  ...location,
-                  search: locationLabel,
-                  isSearching: false,
-                  locationLat: geocodeItem.lat,
-                  locationLng: geocodeItem.lng,
-                  locationAddressLabel: locationLabel,
-                  locationAddressParts: geocodeItem.addressParts ?? null,
-                }
-              : location,
-          ),
-        );
-      } catch (error) {
-        setAdditionalLocations((current) =>
-          current.map((location) =>
-            location.id === id
-              ? {
-                  ...location,
-                  isSearching: false,
-                }
-              : location,
-          ),
-        );
-        toast.error(
-          error instanceof Error
-            ? error.message
-            : messages.form.locationSearchError,
-        );
-      }
-    },
-    [additionalLocations, fetchSingleGeocodeLocation, toast],
-  );
-
-  const handleAdditionalLocationMapChange = useCallback(
-    async (id: string, next: { lat: number; lng: number }) => {
-      const currentRequestId =
-        (additionalReverseLookupRequestRef.current[id] ?? 0) + 1;
-      additionalReverseLookupRequestRef.current[id] = currentRequestId;
-
-      setAdditionalLocations((current) =>
-        current.map((location) =>
-          location.id === id
-            ? {
-                ...location,
-                locationLat: next.lat,
-                locationLng: next.lng,
-                isSearching: true,
-              }
-            : location,
-        ),
-      );
-
-      try {
-        const response = await fetch(
-          `/api/geocode/reverse?lat=${encodeURIComponent(next.lat.toFixed(6))}&lng=${encodeURIComponent(next.lng.toFixed(6))}&lang=${locale}`,
-        );
-        const data = (await response.json()) as ReverseGeocodeResponse;
-
-        if (
-          additionalReverseLookupRequestRef.current[id] !== currentRequestId
-        ) {
-          return;
-        }
-
-        if (!response.ok || data.error || !data.item) {
-          setAdditionalLocations((current) =>
-            current.map((location) =>
-              location.id === id
-                ? {
-                    ...location,
-                    isSearching: false,
-                  }
-                : location,
-            ),
-          );
-          return;
-        }
-
-        const locationLabel = data.item.shortLabel ?? data.item.label;
-        setAdditionalLocations((current) =>
-          current.map((location) =>
-            location.id === id
-              ? {
-                  ...location,
-                  search: locationLabel,
-                  isSearching: false,
-                  locationAddressLabel: locationLabel,
-                  locationAddressParts: data.item?.addressParts ?? null,
-                }
-              : location,
-          ),
-        );
-      } catch {
-        if (
-          additionalReverseLookupRequestRef.current[id] !== currentRequestId
-        ) {
-          return;
-        }
-        setAdditionalLocations((current) =>
-          current.map((location) =>
-            location.id === id
-              ? {
-                  ...location,
-                  isSearching: false,
-                }
-              : location,
-          ),
-        );
-      }
-    },
-    [],
-  );
-
-  const handleSharedMapPointChange = useCallback(
-    async (id: string, next: { lat: number; lng: number }) => {
-      if (id === PRIMARY_LOCATION_MAP_ID) {
-        await handleMapChange(next);
-        return;
-      }
-      await handleAdditionalLocationMapChange(id, next);
-    },
-    [handleAdditionalLocationMapChange, handleMapChange],
-  );
-
-  const handleApplyCompanyLocation = useCallback(
-    (selectedOptions?: CompanyLocationPrefillOption[]) => {
-      const requestedOptions =
-        selectedOptions && selectedOptions.length > 0
-          ? selectedOptions
-          : resolvedCompanyLocationPrefillOptions.slice(0, 1);
-      if (requestedOptions.length === 0) {
-        return;
-      }
-
-      const normalizedOptions = requestedOptions.filter(
-        (option) =>
-          Number.isFinite(option.locationLat) &&
-          Number.isFinite(option.locationLng),
-      );
-      if (normalizedOptions.length === 0) {
-        return;
-      }
-
-      const dedupedOptions: CompanyLocationPrefillOption[] = [];
-      const seenKeys = new Set<string>();
-      for (const option of normalizedOptions) {
-        const key = `${option.locationLat.toFixed(6)}:${option.locationLng.toFixed(6)}`;
-        if (seenKeys.has(key)) {
-          continue;
-        }
-        seenKeys.add(key);
-        dedupedOptions.push(option);
-      }
-
-      if (dedupedOptions.length > MAX_LISTING_LOCATIONS) {
-        toast.warning(
-          formatTemplate(messages.form.maxLocations, {
-            count: MAX_LISTING_LOCATIONS,
-          }),
-        );
-      }
-      const limitedOptions = dedupedOptions.slice(0, MAX_LISTING_LOCATIONS);
-      const [primaryOption, ...restOptions] = limitedOptions;
-      if (!primaryOption) {
-        return;
-      }
-
-      const {
-        name,
-        locationLat,
-        locationLng,
-        locationAddressLabel,
-        locationAddressParts,
-      } = primaryOption;
-      if (!Number.isFinite(locationLat) || !Number.isFinite(locationLng)) {
-        return;
-      }
-
-      setActiveMapLocationId(PRIMARY_LOCATION_MAP_ID);
-      applyCoordinates(locationLat, locationLng);
-      applyAddressParts(locationAddressParts ?? null);
-      if (!locationAddressParts?.city?.trim()) {
-        setValue("locationAddressCity", "", {
-          shouldDirty: true,
-          shouldTouch: true,
-        });
-      }
-      if (!locationAddressParts?.country?.trim()) {
-        setValue("locationAddressCountry", "", {
-          shouldDirty: true,
-          shouldTouch: true,
-        });
-      }
-
-      const fallbackLabel =
-        buildLocationLabelFromAddressParts(locationAddressParts);
-      const resolvedLabel = locationAddressLabel?.trim() || fallbackLabel;
-      setLocationSearch(resolvedLabel);
-      setValue("locationAddressLabel", resolvedLabel, {
-        shouldDirty: true,
-        shouldTouch: true,
-      });
-      additionalReverseLookupRequestRef.current = {};
-      setAdditionalLocations(
-        restOptions.slice(0, MAX_ADDITIONAL_LOCATIONS).map((option) =>
-          createAdditionalLocationDraft({
-            locationLat: option.locationLat,
-            locationLng: option.locationLng,
-            locationAddressLabel: option.locationAddressLabel,
-            locationAddressParts: option.locationAddressParts ?? null,
-          }),
-        ),
-      );
-
-      clearErrors(["locationLat", "locationLng"]);
-    },
-    [
-      additionalReverseLookupRequestRef,
-      applyAddressParts,
-      applyCoordinates,
-      clearErrors,
-      resolvedCompanyLocationPrefillOptions,
-      setValue,
-    ],
-  );
-
-  const handleClearLocations = useCallback(() => {
-    setActiveMapLocationId(PRIMARY_LOCATION_MAP_ID);
-    setLocationSearch("");
-    additionalReverseLookupRequestRef.current = {};
-    setAdditionalLocations([]);
-
-    setValue("locationLat", "", {
-      shouldDirty: true,
-      shouldTouch: true,
-    });
-    setValue("locationLng", "", {
-      shouldDirty: true,
-      shouldTouch: true,
-    });
-    setValue("locationAddressLabel", "", {
-      shouldDirty: true,
-      shouldTouch: true,
-    });
-    setValue("locationStreet", "", {
-      shouldDirty: true,
-      shouldTouch: true,
-    });
-    setValue("locationHouseNumber", "", {
-      shouldDirty: true,
-      shouldTouch: true,
-    });
-    setValue("locationPostalCode", "", {
-      shouldDirty: true,
-      shouldTouch: true,
-    });
-    setValue("locationAddressCity", "", {
-      shouldDirty: true,
-      shouldTouch: true,
-    });
-    setValue("locationAddressCountry", "", {
-      shouldDirty: true,
-      shouldTouch: true,
-    });
-
-    clearErrors(["locationLat", "locationLng"]);
-    toast.success(messages.form.locationsCleared);
-  }, [clearErrors, setValue, toast]);
-
-  const handleCoverPhotoFilesAdded = useCallback(
-    (files: File[]) => {
-      const firstImage = files.find((file) => file.type.startsWith("image/"));
-      if (!firstImage) {
-        toast.warning(messages.form.addGraphicFile);
-        return;
-      }
-      if (!coverPhotoItem && totalPhotoCount >= MAX_CONTAINER_PHOTOS) {
-        toast.warning(
-          formatTemplate(messages.form.removePhotoForCover, {
-            count: MAX_CONTAINER_PHOTOS,
-          }),
-        );
-        return;
-      }
-
-      if (coverPhotoCrop?.sourceUrl) {
-        URL.revokeObjectURL(coverPhotoCrop.sourceUrl);
-      }
-      const sourceUrl = URL.createObjectURL(firstImage);
-      setCoverPhotoCrop({
-        sourceUrl,
-        zoom: 1,
-        offsetX: 0,
-        offsetY: 0,
-      });
-    },
-    [coverPhotoCrop, coverPhotoItem, toast, totalPhotoCount],
-  );
-
-  const handleApplyCoverPhotoCrop = useCallback(async () => {
-    if (!coverPhotoCrop) {
-      return;
-    }
-
-    setIsProcessingImages(true);
-    try {
-      const croppedFile = await cropImageFile(
-        coverPhotoCrop,
-        "listing-cover-cropped.png",
-        {
-          outputWidth: 1200,
-          outputHeight: 1200,
-          fitMode: "cover",
-        },
-      );
-      const optimized = await optimizeListingImageForUpload(
-        croppedFile,
-        MAX_CONTAINER_PHOTO_BYTES,
-      );
-
-      if (optimized.size > MAX_CONTAINER_PHOTO_BYTES) {
-        toast.warning(
-          `Zdjecie glowne moze miec maksymalnie ${MAX_CONTAINER_PHOTO_MB} MB.`,
-        );
-        return;
-      }
-
-      const nextCover = createImageItems([optimized])[0];
-      setCoverPhotoItem((previous) => {
-        if (previous) {
-          URL.revokeObjectURL(previous.previewUrl);
-        }
-        return nextCover;
-      });
-
-      URL.revokeObjectURL(coverPhotoCrop.sourceUrl);
-      setCoverPhotoCrop(null);
-    } finally {
-      setIsProcessingImages(false);
-    }
-  }, [coverPhotoCrop, toast]);
-
-  const handleCancelCoverPhotoCrop = useCallback(() => {
-    if (coverPhotoCrop?.sourceUrl) {
-      URL.revokeObjectURL(coverPhotoCrop.sourceUrl);
-    }
-    setCoverPhotoCrop(null);
-  }, [coverPhotoCrop]);
-
-  const handleAdditionalPhotoFilesAdded = useCallback(
-    async (files: File[]) => {
-      const imageFiles = files.filter((file) => file.type.startsWith("image/"));
-      if (imageFiles.length !== files.length) {
-        toast.warning(messages.form.imagesOnly);
-      }
-      if (imageFiles.length === 0) {
-        return;
-      }
-
-      const remainingSlots = Math.max(
-        0,
-        MAX_CONTAINER_PHOTOS - totalPhotoCount,
-      );
-      if (remainingSlots === 0) {
-        toast.warning(
-          formatTemplate(messages.form.maxPhotosTotal, {
-            count: MAX_CONTAINER_PHOTOS,
-          }),
-        );
-        return;
-      }
-
-      let candidateFiles = imageFiles;
-      if (candidateFiles.length > remainingSlots) {
-        candidateFiles = candidateFiles.slice(0, remainingSlots);
-        toast.warning(
-          formatTemplate(messages.form.remainingPhotos, {
-            count: remainingSlots,
-          }),
-        );
-      }
-
-      setIsProcessingImages(true);
-      try {
-        const optimizedFiles = await Promise.all(
-          candidateFiles.map((file) =>
-            optimizeListingImageForUpload(file, MAX_CONTAINER_PHOTO_BYTES),
-          ),
-        );
-
-        const acceptedFiles = optimizedFiles.filter(
-          (file) => file.size <= MAX_CONTAINER_PHOTO_BYTES,
-        );
-        if (acceptedFiles.length !== optimizedFiles.length) {
-          toast.warning(
-            formatTemplate(messages.form.photoLimitPerFile, {
-              count: MAX_CONTAINER_PHOTO_MB,
-            }),
-          );
-        }
-
-        if (acceptedFiles.length === 0) {
-          return;
-        }
-
-        const accepted = createImageItems(acceptedFiles);
-        setPhotoItems((prev) => [...prev, ...accepted]);
-      } finally {
-        setIsProcessingImages(false);
-      }
-    },
-    [
-      messages.form.imagesOnly,
-      messages.form.maxPhotosTotal,
-      messages.form.remainingPhotos,
-      toast,
-      totalPhotoCount,
-    ],
-  );
 
   const onSubmit = async (values: ContainerListingFormValues) => {
     if (isCreateMode && !resolvedListingIntent) {
@@ -2776,6 +729,7 @@ export function ContainerListingForm({
       ...(mode === "edit" && reactivateOnSave
         ? { reactivateOnSave: true }
         : {}),
+      ...(adminCompanyId?.trim() ? { adminCompanyId: adminCompanyId.trim() } : {}),
       type: values.type,
       container: {
         size: resolvedContainerSize,
@@ -2841,27 +795,10 @@ export function ContainerListingForm({
     try {
       const formData = new FormData();
       formData.set("payload", JSON.stringify(payload));
-      if (mode === "edit") {
-        formData.set(
-          "keepPhotoIndexes",
-          JSON.stringify(keptInitialPhotoIndexes),
-        );
-        if (
-          canUploadPhotosForSubmission &&
-          coverPhotoItem &&
-          keptInitialPhotoIndexes.length > 0
-        ) {
-          formData.set("prependUploadedPhotos", "1");
-        }
-      }
-      if (canUploadPhotosForSubmission) {
-        if (coverPhotoItem) {
-          formData.append("photos", coverPhotoItem.file);
-        }
-        for (const item of photoItems) {
-          formData.append("photos", item.file);
-        }
-      }
+      appendPhotosToFormData(formData, {
+        mode,
+        canUploadPhotos: canUploadPhotosForSubmission,
+      });
 
       const response = await fetch(submitEndpoint, {
         method: submitMethod,
@@ -2888,13 +825,7 @@ export function ContainerListingForm({
         return;
       }
       toast.success(successMessage);
-
-      if (coverPhotoItem) {
-        URL.revokeObjectURL(coverPhotoItem.previewUrl);
-      }
-      revokeImageItems(photoItems);
-      setCoverPhotoItem(null);
-      setPhotoItems([]);
+      resetPhotosAfterSuccessfulSave();
       router.push(backHref);
       router.refresh();
     } catch (error) {
@@ -3069,18 +1000,7 @@ export function ContainerListingForm({
                       <button
                         type="button"
                         onClick={() => {
-                          if (coverPhotoItem) {
-                            setCoverPhotoItem((previous) => {
-                              if (previous) {
-                                URL.revokeObjectURL(previous.previewUrl);
-                              }
-                              return null;
-                            });
-                            return;
-                          }
-                          setKeptInitialPhotoIndexes((previous) =>
-                            previous.slice(1),
-                          );
+                          removeMainPhoto();
                         }}
                         disabled={isSubmitting || isProcessingImages}
                         className="inline-flex h-9 items-center justify-center rounded-md border border-neutral-600 px-3 text-sm font-medium text-neutral-300 transition hover:border-neutral-500 hover:bg-neutral-800 hover:text-white"
@@ -4048,9 +1968,7 @@ export function ContainerListingForm({
                           type="button"
                           className="flex h-28 w-full cursor-pointer items-center justify-center overflow-hidden rounded-sm"
                           onClick={() => {
-                            setKeptInitialPhotoIndexes((prev) =>
-                              prev.filter((value) => value !== index),
-                            );
+                            removeInitialPhoto(index);
                           }}
                           title={messages.form.removePhoto}
                         >
@@ -4064,9 +1982,7 @@ export function ContainerListingForm({
                           type="button"
                           className="absolute right-1 top-1 cursor-pointer rounded-full bg-black/70 px-2 py-0.5 text-xs text-white opacity-90"
                           onClick={() => {
-                            setKeptInitialPhotoIndexes((prev) =>
-                              prev.filter((value) => value !== index),
-                            );
+                            removeInitialPhoto(index);
                           }}
                           title={messages.form.removePhoto}
                           aria-label={messages.form.removePhoto}
@@ -4082,9 +1998,7 @@ export function ContainerListingForm({
               {photoItems.length > 0 ? (
                 <ImageGrid
                   items={photoItems}
-                  onRemove={(id) => {
-                    setPhotoItems((prev) => removeImageItem(prev, id));
-                  }}
+                  onRemove={removeUploadedPhoto}
                   removeLabel={messages.form.removePhoto}
                   previewAlt={messages.form.photoPreviewAlt}
                 />
