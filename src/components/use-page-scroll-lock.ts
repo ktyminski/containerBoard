@@ -10,6 +10,10 @@ function getScrollbarWidth(): number {
   return Math.max(0, window.innerWidth - document.documentElement.clientWidth);
 }
 
+function shouldCompensateScrollbarWidth(): boolean {
+  return window.matchMedia("(min-width: 640px)").matches;
+}
+
 function applyScrollLock(): void {
   const body = document.body;
   previousBodyOverflow = body.style.overflow;
@@ -22,7 +26,7 @@ function applyScrollLock(): void {
   const safePaddingRight = Number.isFinite(computedPaddingRight) ? computedPaddingRight : 0;
 
   body.style.overflow = "hidden";
-  if (scrollbarWidth > 0) {
+  if (scrollbarWidth > 0 && shouldCompensateScrollbarWidth()) {
     body.style.paddingRight = `${safePaddingRight + scrollbarWidth}px`;
   }
 }
@@ -64,4 +68,3 @@ export function usePageScrollLock(isLocked: boolean): void {
     return acquirePageScrollLock();
   }, [isLocked]);
 }
-

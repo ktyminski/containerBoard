@@ -90,7 +90,7 @@ export function ContainerDetailsRelatedListings({
   currentListingId,
   companySlug,
   isLoggedIn,
-  limit = 3,
+  limit = 4,
 }: ContainerDetailsRelatedListingsProps) {
   const locale = useMemo(
     () =>

@@ -86,8 +86,6 @@ type ContainerListingResultCardProps = {
 };
 
 const DAY_IN_MS = 24 * 60 * 60 * 1000;
-const MAX_LOGISTICS_TOOLTIP_LENGTH = 120;
-
 function getDaysLabel(
   messages: ContainerListingsMessages,
   locale: AppLocale,
@@ -147,18 +145,6 @@ function getAvailableFromLabel(
 
   const dateLabel = availableFrom.toLocaleDateString(locale);
   return item.availableFromApproximate ? `~${dateLabel}` : dateLabel;
-}
-
-function truncateTooltipText(
-  value: string,
-  maxLength = MAX_LOGISTICS_TOOLTIP_LENGTH,
-): string {
-  const normalizedValue = value.trim();
-  if (normalizedValue.length <= maxLength) {
-    return normalizedValue;
-  }
-
-  return `${normalizedValue.slice(0, maxLength).trimEnd()}...`;
 }
 
 function formatVatRateLabel(locale: AppLocale, vatRate: number | null): string | null {
@@ -520,117 +506,6 @@ function getAllLocationLabels(
   return labels.length > 0 ? labels : [messages.utils.noLocation];
 }
 
-function getContainerColorBadgeLabel(color: {
-  ral: string;
-  rgb: { r: number; g: number; b: number };
-}): string {
-  return `${color.ral} (RGB ${color.rgb.r}, ${color.rgb.g}, ${color.rgb.b})`;
-}
-
-function getRalColorCode(value: string): string {
-  const normalized = value
-    .trim()
-    .replace(/^RAL[\s-]*/i, "")
-    .trim();
-  return normalized.length > 0 ? normalized : value.trim();
-}
-
-function getRalTileTextClass(color: {
-  r: number;
-  g: number;
-  b: number;
-}): string {
-  const luminance = (color.r * 299 + color.g * 587 + color.b * 114) / 1000;
-  return luminance > 160 ? "text-neutral-900" : "text-white";
-}
-
-function ContainerColorsInlineSummary({
-  messages,
-  colors,
-  itemId,
-}: {
-  messages: ContainerListingsMessages;
-  colors: Array<{
-    ral: string;
-    rgb: { r: number; g: number; b: number };
-  }>;
-  itemId: string;
-}) {
-  if (colors.length === 0) {
-    return null;
-  }
-
-  const previewColors = colors.slice(0, 3);
-  const additionalCount = Math.max(colors.length - previewColors.length, 0);
-  const tooltipColumns = Math.min(colors.length, 5);
-  const tooltipContentWidthRem =
-    tooltipColumns * 4 + (tooltipColumns - 1) * 0.625;
-
-  return (
-    <div
-      className="group relative inline-flex items-center gap-2"
-      tabIndex={0}
-      aria-label={`${messages.results.ralColorsAria}: ${colors.map((color) => color.ral).join(", ")}`}
-    >
-      <span className="text-sm text-neutral-700">{messages.results.colorLabel}</span>
-      <div className="inline-flex items-center gap-1">
-        {previewColors.map((color, index) => (
-          <span
-            key={`${itemId}-preview-${color.ral}-${index}`}
-            className="h-3.5 w-3.5 rounded-[3px] border border-neutral-300"
-            style={{
-              backgroundColor: `rgb(${color.rgb.r}, ${color.rgb.g}, ${color.rgb.b})`,
-            }}
-            aria-label={getContainerColorBadgeLabel(color)}
-            title={color.ral}
-          />
-        ))}
-        {additionalCount > 0 ? (
-          <span className="text-xs font-medium text-neutral-600">
-            + {additionalCount}
-          </span>
-        ) : null}
-      </div>
-      <div className="pointer-events-none absolute bottom-full right-0 z-30 mb-2 w-fit translate-y-1 rounded-md border border-neutral-700 bg-neutral-900 p-2.5 opacity-0 shadow-xl transition duration-150 group-hover:delay-300 group-hover:translate-y-0 group-hover:opacity-100 group-focus-within:delay-300 group-focus-within:translate-y-0 group-focus-within:opacity-100">
-        <div
-          className="flex flex-wrap gap-2.5"
-          style={{
-            width: `${tooltipContentWidthRem}rem`,
-          }}
-        >
-          {colors.map((color, index) => {
-            const textClass = getRalTileTextClass(color.rgb);
-            return (
-              <span
-                key={`${itemId}-tooltip-${color.ral}-${index}`}
-                className={`relative inline-flex h-16 w-16 rounded-md border border-neutral-800/50 shadow-sm ${textClass}`}
-                style={{
-                  backgroundColor: `rgb(${color.rgb.r}, ${color.rgb.g}, ${color.rgb.b})`,
-                }}
-                aria-label={getContainerColorBadgeLabel(color)}
-                title={getContainerColorBadgeLabel(color)}
-              >
-                <span className="absolute bottom-1 right-1 inline-flex flex-col items-end leading-none">
-                  <span className="text-[9px] font-semibold uppercase tracking-[0.01em]">
-                    RAL
-                  </span>
-                  <span className="max-w-[56px] truncate text-right text-[13px] font-bold">
-                    {getRalColorCode(color.ral)}
-                  </span>
-                </span>
-              </span>
-            );
-          })}
-        </div>
-        <span
-          aria-hidden="true"
-          className="absolute -bottom-1 left-3 h-2 w-2 rotate-45 border-b border-r border-neutral-700 bg-neutral-900"
-        />
-      </div>
-    </div>
-  );
-}
-
 function CscInfoBadge({
   item,
   messages,
@@ -711,7 +586,7 @@ function LocationInfoBadge({
 
   return (
     <div
-      className={`flex w-full min-w-0 items-center gap-1.5 text-sm text-neutral-600 ${
+      className={`flex w-full min-w-0 items-center gap-1.5 text-[10px] sm:text-sm sm:text-neutral-600 ${
         showTooltip ? "group relative" : ""
       }`}
       {...(showTooltip
@@ -722,7 +597,7 @@ function LocationInfoBadge({
         : {})}
     >
       <svg
-        className="h-4 w-4 shrink-0 text-neutral-500"
+        className="hidden h-4 w-4 shrink-0 text-neutral-500 sm:block"
         viewBox="0 0 24 24"
         fill="none"
         stroke="currentColor"
@@ -733,12 +608,14 @@ function LocationInfoBadge({
         <circle cx="12" cy="10" r="2.5" />
       </svg>
       <span
-        className={`min-w-0 flex-1 truncate ${showTooltip ? "cursor-help" : ""}`}
+        className={`min-w-0 flex-1 min-h-[2.4em] line-clamp-2 text-[13px] font-semibold leading-[1.2] text-emerald-800 sm:min-h-0 sm:truncate sm:text-sm sm:font-normal sm:leading-normal sm:text-neutral-600 ${
+          showTooltip ? "cursor-help" : ""
+        }`}
       >
         {locationSummaryLabel}
       </span>
       {showTooltip ? (
-        <div className="pointer-events-none absolute bottom-full left-0 z-30 mb-2 w-72 max-w-[85vw] translate-y-1 rounded-md border border-neutral-700 bg-neutral-900 px-2.5 py-2 text-left text-xs leading-5 text-neutral-100 opacity-0 shadow-xl transition duration-150 group-hover:delay-500 group-hover:translate-y-0 group-hover:opacity-100 group-focus-within:delay-500 group-focus-within:translate-y-0 group-focus-within:opacity-100">
+        <div className="pointer-events-none absolute bottom-full left-0 z-30 mb-2 hidden w-72 max-w-[85vw] translate-y-1 rounded-md border border-neutral-700 bg-neutral-900 px-2.5 py-2 text-left text-xs leading-5 text-neutral-100 opacity-0 shadow-xl transition duration-150 group-hover:delay-500 group-hover:translate-y-0 group-hover:opacity-100 group-focus-within:delay-500 group-focus-within:translate-y-0 group-focus-within:opacity-100 sm:block">
           <ul className="space-y-0.5">
             {allLocationLabels.map((label) => (
               <li key={`${item.id}-location-${label}`}>{label}</li>
@@ -754,39 +631,19 @@ function LocationInfoBadge({
   );
 }
 
-function getLogisticsSummaryLabels(
+function getTransportSummaryLabel(
   messages: ContainerListingsMessages,
   item: ContainerListingItem,
-): string[] {
-  const labels: string[] = [];
-
-  if (item.logisticsTransportAvailable) {
-    if (item.logisticsTransportIncluded) {
-      const distanceKm =
-        typeof item.logisticsTransportFreeDistanceKm === "number" &&
-        Number.isFinite(item.logisticsTransportFreeDistanceKm) &&
-        item.logisticsTransportFreeDistanceKm > 0
-          ? Math.trunc(item.logisticsTransportFreeDistanceKm)
-          : null;
-      labels.push(
-        distanceKm
-          ? `${messages.results.freeTransportLabel} ${distanceKm} km`
-          : messages.results.freeTransportLabel,
-      );
-    } else {
-      labels.push(messages.results.transportAvailableLabel);
-    }
+): string {
+  if (!item.logisticsTransportAvailable) {
+    return messages.results.noTransportLabel;
   }
 
-  if (item.logisticsUnloadingAvailable) {
-    labels.push(
-      item.logisticsUnloadingIncluded
-        ? messages.results.freeUnloadingLabel
-        : messages.results.unloadingAvailableLabel,
-    );
+  if (item.logisticsTransportIncluded) {
+    return messages.results.freeTransportLabel;
   }
 
-  return labels;
+  return messages.results.transportAvailableLabel;
 }
 
 const ContainerListingResultCard = memo(function ContainerListingResultCard({
@@ -818,13 +675,8 @@ const ContainerListingResultCard = memo(function ContainerListingResultCard({
   );
   const availableFromLabel = getAvailableFromLabel(messages, locale, item);
   const fallbackTitle = getContainerShortLabelLocalized(messages, item.container);
-  const logisticsSummaryLabels = getLogisticsSummaryLabels(messages, item);
-  const logisticsComment = item.logisticsComment?.trim();
-  const logisticsTooltipText =
-    logisticsComment && logisticsComment.length > 0
-      ? truncateTooltipText(logisticsComment)
-      : messages.results.contactForDetails;
-  const showLogisticsTooltip = logisticsSummaryLabels.length > 0;
+  const transportSummaryLabel = getTransportSummaryLabel(messages, item);
+  const shouldShowTransportSummaryOnDesktop = item.logisticsTransportAvailable;
   const detailsHref =
     detailsQueryString && detailsQueryString.length > 0
       ? `${detailsHrefPrefix}/${item.id}?${detailsQueryString}`
@@ -836,13 +688,17 @@ const ContainerListingResultCard = memo(function ContainerListingResultCard({
     ...(typeof item.productionYear === "number" ? [String(item.productionYear)] : []),
     ...containerFeatureLabels,
   ];
-  const containerColors = item.containerColors ?? [];
+  const compactPriceMetaLine = priceDisplay.metaLine
+    .split(" | ")
+    .map((part) => part.trim())
+    .filter((part) => part.length > 0 && part !== messages.results.negotiable)
+    .join(" | ");
 
   return (
-    <li className="w-full rounded-md border border-neutral-200 bg-white p-4 shadow-sm transition-colors duration-150 hover:border-sky-100 hover:bg-sky-50/60">
-      <div className="flex flex-col gap-4 sm:flex-row">
-        <div className="relative aspect-square w-full shrink-0 sm:w-44">
-          <div className="absolute inset-0 overflow-hidden rounded-md border border-neutral-200 bg-neutral-100">
+    <li className="w-full rounded-md border border-neutral-200 bg-white p-1.5 shadow-sm transition-colors duration-150 hover:border-sky-100 hover:bg-sky-50/60 sm:p-4">
+      <div className="flex h-full flex-col gap-2 sm:flex-row sm:gap-4">
+        <div className="w-full shrink-0 sm:w-44">
+          <div className="relative aspect-square overflow-hidden rounded-t-md border border-neutral-200 border-b-0 bg-neutral-100 sm:rounded-md sm:border-b">
             <ContainerPhotoWithPlaceholder
               src={getContainerPreviewSrc(item)}
               alt=""
@@ -856,17 +712,22 @@ const ContainerListingResultCard = memo(function ContainerListingResultCard({
               priority={shouldPrioritizeImage}
             />
           </div>
+          <span
+            className={`-mt-px inline-flex w-full items-center justify-center rounded-b-md border px-2 py-1 text-[10px] font-medium sm:hidden ${CONTAINER_CONDITION_COLOR_TOKENS[item.container.condition].badgeClassName}`}
+          >
+            {getContainerConditionLabel(messages, item.container.condition)}
+          </span>
         </div>
-        <div className="min-w-0 flex-1">
-          <div className="flex min-w-0 items-start gap-3">
-            <div className="w-0 flex-1">
+        <div className="flex min-w-0 flex-1 flex-col">
+          <div className="flex min-w-0 flex-col gap-2 sm:flex-row sm:items-start sm:gap-3">
+            <div className="min-w-0 sm:w-0 sm:flex-1">
               {item.companySlug ? (
-                <span className="inline-flex min-w-0 items-center gap-1">
+                <div className="flex min-w-0 items-center gap-1">
                   <Link
                     href={`/companies/${item.companySlug}`}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="block min-w-0 truncate text-xs uppercase tracking-wide text-sky-700 decoration-sky-400 underline underline-offset-2 hover:text-sky-800"
+                    className="block min-w-0 truncate text-[11px] uppercase leading-[1.15] tracking-[0.08em] text-sky-700 decoration-sky-400 underline underline-offset-2 hover:text-sky-800 sm:text-xs"
                     onClick={(event) => {
                       event.stopPropagation();
                     }}
@@ -895,13 +756,13 @@ const ContainerListingResultCard = memo(function ContainerListingResultCard({
                       </svg>
                     </span>
                   ) : null}
-                </span>
+                </div>
               ) : (
-                <p className="truncate text-xs uppercase tracking-wide text-neutral-500">
+                <p className="truncate text-[11px] uppercase leading-[1.15] tracking-[0.08em] text-neutral-500 sm:text-xs">
                   {item.companyName}
                 </p>
               )}
-              <h3 className="mt-1 truncate text-xl font-semibold text-neutral-900">
+              <h3 className="mt-1 truncate text-[17px] font-semibold leading-tight text-neutral-900 sm:text-xl">
                 {fallbackTitle}
               </h3>
               <div className="mt-1 min-w-0">
@@ -914,29 +775,29 @@ const ContainerListingResultCard = memo(function ContainerListingResultCard({
               </div>
               {containerMetaParts.length > 0 ? (
                 <p
-                  className="mt-1 w-full truncate text-xs text-neutral-500"
+                  className="mt-1 w-full truncate text-[12px] text-neutral-500 sm:text-xs"
                   title={containerMetaParts.join(", ")}
                 >
                   {containerMetaParts.join(", ")}
                 </p>
               ) : null}
             </div>
-            <div className="ml-auto grid shrink-0 justify-items-end gap-2 text-right">
+            <div className="hidden w-full justify-items-start gap-1.5 text-left sm:ml-auto sm:grid sm:w-auto sm:shrink-0 sm:justify-items-end sm:gap-2 sm:text-right">
               <div>
                 <p
-                  className={`max-w-full overflow-hidden text-ellipsis whitespace-nowrap text-lg font-bold sm:text-xl ${
+                  className={`max-w-full overflow-hidden text-ellipsis whitespace-nowrap text-sm font-bold sm:text-xl ${
                     priceDisplay.isRequestPrice ? "text-neutral-700" : "text-amber-600"
                   }`}
                 >
                   {priceDisplay.amountLabel}
                 </p>
                 {priceDisplay.metaLine ? (
-                  <p className="max-w-full overflow-hidden text-ellipsis whitespace-nowrap text-xs text-neutral-600">
+                  <p className="max-w-full overflow-hidden text-ellipsis whitespace-nowrap text-[10px] text-neutral-600 sm:text-xs">
                     {priceDisplay.metaLine}
                   </p>
                 ) : null}
               </div>
-              <div className="flex flex-wrap items-center justify-end gap-2">
+              <div className="hidden flex-wrap items-center justify-end gap-2 sm:flex">
                 {item.hasCscPlate ||
                 item.hasCscCertification ||
                 item.hasWarranty ||
@@ -950,53 +811,21 @@ const ContainerListingResultCard = memo(function ContainerListingResultCard({
                   {getContainerConditionLabel(messages, item.container.condition)}
                 </span>
               </div>
-              <p className="text-right text-xs text-neutral-400">
+              <p className="hidden text-right text-xs text-neutral-400 sm:block">
                 {messages.results.expiresLabel}: {expiresInLabel}
               </p>
             </div>
           </div>
 
-          <div className="mt-3 flex flex-wrap items-center gap-2 text-xs text-neutral-500">
-            <div
-              className={`group relative flex flex-wrap items-center gap-x-1 gap-y-1 ${
-                showLogisticsTooltip ? "cursor-help" : ""
+          <div className="mt-2 flex items-center gap-2 overflow-hidden text-[12px] text-neutral-500 sm:mt-3 sm:flex-wrap sm:overflow-visible sm:text-xs">
+            <p
+              className={`min-w-0 truncate text-neutral-600 ${
+                shouldShowTransportSummaryOnDesktop ? "sm:block" : "sm:hidden"
               }`}
-              {...(showLogisticsTooltip
-                ? {
-                    tabIndex: 0,
-                    "aria-label": messages.results.logisticsCommentAria,
-                  }
-                : {})}
             >
-              {logisticsSummaryLabels.map((label, index) => {
-                const isFreeLabel =
-                  label === messages.results.freeUnloadingLabel ||
-                  label === messages.results.freeTransportLabel ||
-                  label.startsWith(`${messages.results.freeTransportLabel} `);
-                return (
-                  <span
-                    key={`${item.id}-${label}`}
-                    className={isFreeLabel ? "font-medium text-neutral-700" : undefined}
-                  >
-                    {label}
-                    {index < logisticsSummaryLabels.length - 1 ? "," : ""}
-                  </span>
-                );
-              })}
-              {showLogisticsTooltip ? (
-                <div className="pointer-events-none absolute bottom-full left-0 z-30 mb-2 w-72 max-w-[85vw] translate-y-1 rounded-md border border-neutral-700 bg-neutral-900 px-2.5 py-2 text-left text-xs leading-5 text-neutral-100 opacity-0 shadow-xl transition duration-150 group-hover:delay-500 group-hover:translate-y-0 group-hover:opacity-100 group-focus-within:delay-500 group-focus-within:translate-y-0 group-focus-within:opacity-100">
-                  <p className="mb-1 font-medium text-neutral-200">
-                    {messages.results.sellerCommentLabel}
-                  </p>
-                  <p>{logisticsTooltipText}</p>
-                  <span
-                    aria-hidden="true"
-                    className="absolute -bottom-1 left-3 h-2 w-2 rotate-45 border-b border-r border-neutral-700 bg-neutral-900"
-                  />
-                </div>
-              ) : null}
-            </div>
-            <p className="ml-auto text-right text-sm text-neutral-700">
+              {transportSummaryLabel}
+            </p>
+            <p className="ml-auto hidden text-right text-sm text-neutral-700 sm:block">
               {messages.results.availableFromLabel}:{" "}
               <span className="font-medium text-neutral-900">
                 {availableFromLabel}
@@ -1004,27 +833,30 @@ const ContainerListingResultCard = memo(function ContainerListingResultCard({
             </p>
           </div>
 
-          <div className="mt-3 flex flex-wrap items-center justify-between gap-2">
-            {item.quantity > 1 || containerColors.length > 0 ? (
-              <div className="flex flex-wrap items-center gap-3">
-                {item.quantity > 1 ? (
-                  <p className="text-sm text-neutral-700">
-                    {messages.results.quantityLabel}: <span className="font-medium text-neutral-900">{item.quantity}</span>
-                  </p>
-                ) : null}
-                <ContainerColorsInlineSummary
-                  messages={messages}
-                  colors={containerColors}
-                  itemId={item.id}
-                />
-              </div>
-            ) : (
-              <span />
-            )}
-            <div className="ml-auto flex items-center justify-end gap-2">
+          <div className="mt-auto pt-3 flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
+            <div className="flex flex-wrap items-center gap-3">
+              <p className="text-[12px] text-neutral-700 sm:text-sm">
+                {messages.results.quantityLabel}: <span className="font-medium text-neutral-900">{item.quantity}</span>
+              </p>
+            </div>
+            <p className="min-h-[3.2rem] text-center sm:hidden">
+              <span
+                className={`text-[17px] font-semibold ${
+                  priceDisplay.isRequestPrice ? "text-neutral-700" : "text-amber-600"
+                }`}
+              >
+                {priceDisplay.amountLabel}
+              </span>
+              {compactPriceMetaLine ? (
+                <span className="mt-0.5 block text-[14px] font-medium leading-tight text-neutral-700">
+                  {compactPriceMetaLine}
+                </span>
+              ) : null}
+            </p>
+            <div className="ml-auto flex w-full items-center justify-end gap-2 rounded-md border border-neutral-200 bg-neutral-50/95 p-1.5 shadow-sm sm:w-auto sm:rounded-none sm:border-0 sm:bg-transparent sm:p-0 sm:shadow-none">
               <button
                 type="button"
-                className={`rounded-md border p-2 transition-colors ${
+                className={`hidden rounded-md border p-2 transition-colors sm:inline-flex ${
                   item.isFavorite
                     ? "border-rose-300 bg-rose-100 text-rose-700 hover:bg-rose-200"
                     : "border-neutral-300 bg-white text-neutral-600 hover:border-neutral-400 hover:bg-neutral-100 hover:text-neutral-800"
@@ -1049,7 +881,7 @@ const ContainerListingResultCard = memo(function ContainerListingResultCard({
               </button>
               <button
                 type="button"
-                className="rounded-md border border-neutral-300 bg-white p-2 text-neutral-600 transition-colors hover:border-neutral-400 hover:bg-neutral-100 hover:text-neutral-800"
+                className="hidden rounded-md border border-neutral-300 bg-white p-2 text-neutral-600 transition-colors hover:border-neutral-400 hover:bg-neutral-100 hover:text-neutral-800 sm:inline-flex"
                 onClick={() => {
                   onCopyListingLink(item.id);
                 }}
@@ -1069,7 +901,7 @@ const ContainerListingResultCard = memo(function ContainerListingResultCard({
                   event.preventDefault();
                   onOpenDetails(detailsHref);
                 }}
-                className={`rounded-md px-3 py-2 text-sm font-medium ${darkBlueCtaClass}`}
+                className={`inline-flex w-full items-center justify-center rounded-md px-2.5 py-1.5 text-[12px] font-medium sm:w-auto sm:px-3 sm:py-2 sm:text-sm ${darkBlueCtaClass}`}
               >
                 {messages.results.detailsCta}
               </Link>
@@ -1107,13 +939,18 @@ function ContainerListingsResultsComponent({
   footerContent,
   administrativeLocationFilter,
 }: ContainerListingsResultsProps) {
-  const renderPaginationControls = (extraClassName?: string) => {
+  const renderPaginationControls = (
+    extraClassName?: string,
+    variant: "plain" | "card" = "card",
+  ) => {
     if (totalPages <= 1) {
       return null;
     }
 
     const className = [
-      "flex items-center justify-end gap-2",
+      variant === "card"
+        ? "flex max-w-full flex-wrap items-center justify-end gap-2 rounded-md border border-neutral-200 bg-neutral-50/95 px-2 py-2 shadow-sm sm:rounded-none sm:border-0 sm:bg-transparent sm:px-0 sm:py-0 sm:shadow-none"
+        : "flex max-w-full flex-wrap items-center justify-end gap-2",
       extraClassName ?? "",
     ]
       .join(" ")
@@ -1125,18 +962,18 @@ function ContainerListingsResultsComponent({
           type="button"
           disabled={page <= 1}
           onClick={onPreviousPage}
-          className="rounded-md border border-neutral-300 px-3 py-1.5 text-sm text-neutral-700 disabled:cursor-not-allowed disabled:opacity-50"
+          className="rounded-md border border-neutral-300 px-2.5 py-1.5 text-[12px] text-neutral-700 disabled:cursor-not-allowed disabled:opacity-50 sm:px-3 sm:text-sm"
         >
           {messages.results.previous}
         </button>
-        <span className="text-xs text-neutral-500">
+        <span className="text-[12px] text-neutral-500 sm:text-xs">
           {page} / {totalPages}
         </span>
         <button
           type="button"
           disabled={page >= totalPages}
           onClick={onNextPage}
-          className="rounded-md border border-neutral-300 px-3 py-1.5 text-sm text-neutral-700 disabled:cursor-not-allowed disabled:opacity-50"
+          className="rounded-md border border-neutral-300 px-2.5 py-1.5 text-[12px] text-neutral-700 disabled:cursor-not-allowed disabled:opacity-50 sm:px-3 sm:text-sm"
         >
           {messages.results.next}
         </button>
@@ -1183,8 +1020,8 @@ function ContainerListingsResultsComponent({
               </div>
             ) : null}
           </div>
-          <div className="flex items-center gap-4">
-            {renderPaginationControls()}
+          <div className="flex min-w-0 max-w-full flex-wrap items-center justify-end gap-4">
+            {renderPaginationControls(undefined, "plain")}
           </div>
         </div>
       ) : null}
@@ -1202,7 +1039,7 @@ function ContainerListingsResultsComponent({
       ) : null}
 
       {!isLoading ? (
-        <div className="rounded-md border border-neutral-300 bg-neutral-100/95 p-3 shadow-sm">
+        <div className="sm:rounded-md sm:border sm:border-neutral-300 sm:bg-neutral-100/95 sm:p-3 sm:shadow-sm">
           {error ? <p className="text-sm text-neutral-700">{error}</p> : null}
 
           {items.length === 0 ? (
@@ -1228,7 +1065,7 @@ function ContainerListingsResultsComponent({
 
           {items.length > 0 ? (
             <>
-              <ul className="w-full space-y-3">
+              <ul className="grid w-full grid-cols-2 gap-2 sm:grid-cols-1 sm:gap-3">
                 {items.map((item, index) => {
                   return (
                     <ContainerListingResultCard
@@ -1252,8 +1089,8 @@ function ContainerListingsResultsComponent({
                 })}
               </ul>
 
-              {renderPaginationControls("mt-4")}
-              {footerContent ? <div className="mt-3">{footerContent}</div> : null}
+              {renderPaginationControls("mt-4 px-1.5 sm:px-0")}
+              {footerContent ? <div className="mt-3 px-1.5 sm:px-0">{footerContent}</div> : null}
             </>
           ) : null}
         </div>

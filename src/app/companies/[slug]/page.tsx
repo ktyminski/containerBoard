@@ -643,7 +643,7 @@ export default async function CompanyDetailsPage({
           <CompanyProfileListings
             companySlug={company.slug}
             isLoggedIn={Boolean(currentUser?._id)}
-            limit={3}
+            limit={4}
             allListingsHref={allCompanyListingsHref}
           />
         </section>

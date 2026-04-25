@@ -11,6 +11,7 @@ import {
   type ReactNode,
   type RefObject,
 } from "react";
+import { createPortal } from "react-dom";
 import { useFormContext, useWatch } from "react-hook-form";
 import {
   getContainerConditionFilterOptions,
@@ -36,6 +37,7 @@ import {
   AUTO_APPLY_FILTERS_DEBOUNCE_MS,
   AUTO_APPLY_TYPED_FILTERS_DEBOUNCE_MS,
   CONTAINER_CONDITION_COLOR_TOKENS,
+  FILTER_FORM_DEFAULTS,
   LOCATION_RADIUS_OPTIONS,
   areNonLocationFiltersEqual,
   pickNonLocationFilters,
@@ -47,6 +49,7 @@ import {
   type MultiFilterKey,
   type NonLocationFilters,
 } from "@/components/container-listings-shared";
+import { usePageScrollLock } from "@/components/use-page-scroll-lock";
 import { formatTemplate } from "@/lib/i18n";
 
 const PRICE_FILTER_CURRENCIES = [...PRICE_CURRENCIES] as Currency[];
@@ -232,10 +235,72 @@ function MultiCheckboxFilter<T extends string>({
   );
 }
 
+function FiltersIcon() {
+  return (
+    <svg viewBox="0 0 20 20" fill="none" className="h-4 w-4 text-current" aria-hidden="true">
+      <path d="M4 6H16" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+      <path d="M7 10H13" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+      <path d="M9 14H11" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+    </svg>
+  );
+}
+
+function CloseIcon() {
+  return (
+    <svg viewBox="0 0 20 20" fill="none" className="h-4 w-4" aria-hidden="true">
+      <path d="M6 6L14 14" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
+      <path d="M14 6L6 14" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
+    </svg>
+  );
+}
+
+function countMobileAdditionalFilters(filters: NonLocationFilters): number {
+  let count = 0;
+
+  if (filters.listingKind !== FILTER_FORM_DEFAULTS.listingKind) {
+    count += 1;
+  }
+  if (filters.containerFeatures.length > 0) {
+    count += 1;
+  }
+  if (filters.containerRalColors.length > 0) {
+    count += 1;
+  }
+  if (filters.priceNegotiableOnly) {
+    count += 1;
+  }
+  if (filters.logisticsTransportOnly) {
+    count += 1;
+  }
+  if (filters.logisticsUnloadingOnly) {
+    count += 1;
+  }
+  if (filters.hasCscPlateOnly) {
+    count += 1;
+  }
+  if (filters.hasCscCertificationOnly) {
+    count += 1;
+  }
+  if (filters.priceDisplayCurrency !== FILTER_FORM_DEFAULTS.priceDisplayCurrency) {
+    count += 1;
+  }
+  if (filters.priceMinInput.length > 0 || filters.priceMaxInput.length > 0) {
+    count += 1;
+  }
+  if (filters.productionYearInput.trim().length > 0) {
+    count += 1;
+  }
+
+  return count;
+}
+
 type ContainerListingsFiltersProps = {
   messages: ContainerListingsMessages;
   children: ReactNode;
   locationControlsRef: RefObject<HTMLDivElement | null>;
+  sectionRef?: RefObject<HTMLElement | null>;
+  sectionId?: string;
+  sectionClassName?: string;
   appliedFilters: AppliedFilters;
   restoreAppliedLocationOnBlur: (
     event: FocusEvent<HTMLInputElement | HTMLSelectElement>,
@@ -251,6 +316,9 @@ function ContainerListingsFiltersComponent({
   messages,
   children,
   locationControlsRef,
+  sectionRef,
+  sectionId,
+  sectionClassName,
   appliedFilters,
   restoreAppliedLocationOnBlur,
   isResolvingLocation,
@@ -261,6 +329,7 @@ function ContainerListingsFiltersComponent({
 }: ContainerListingsFiltersProps) {
   const { register, setValue, control } = useFormContext<FiltersFormValues>();
   const filterMessages = messages.filters;
+  const [isMobileAdditionalFiltersOpen, setIsMobileAdditionalFiltersOpen] = useState(false);
   const [openMultiFilters, setOpenMultiFilters] = useState<
     Record<MultiFilterKey, boolean>
   >({
@@ -271,10 +340,29 @@ function ContainerListingsFiltersComponent({
     features: false,
   });
 
+  usePageScrollLock(isMobileAdditionalFiltersOpen);
+
   const isAnyMultiFilterOpen = useMemo(
     () => Object.values(openMultiFilters).some(Boolean),
     [openMultiFilters],
   );
+
+  useEffect(() => {
+    if (!isMobileAdditionalFiltersOpen) {
+      return;
+    }
+
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        setIsMobileAdditionalFiltersOpen(false);
+      }
+    };
+
+    document.addEventListener("keydown", handleKeyDown);
+    return () => {
+      document.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [isMobileAdditionalFiltersOpen]);
 
   const listingKind = useWatch({ control, name: "listingKind" }) ?? "sell";
   const selectedContainerSizesValue = useWatch({
@@ -478,184 +566,252 @@ function ContainerListingsFiltersComponent({
     priceMinInputValue.trim().length > 0 ||
     priceMaxInputValue.trim().length > 0;
   const isPriceFilterApplied = hasPriceRangeFilter;
+  const mobileAdditionalFiltersCount = useMemo(
+    () => countMobileAdditionalFilters(draftNonLocationFilters),
+    [draftNonLocationFilters],
+  );
+  const mobileMoreFiltersAriaLabel =
+    mobileAdditionalFiltersCount > 0
+      ? formatTemplate(filterMessages.moreFiltersActive, {
+          count: mobileAdditionalFiltersCount,
+        })
+      : filterMessages.moreFilters;
+
+  const renderSizesFilter = (className?: string, dropdownClassName?: string) => (
+    <MultiCheckboxFilter
+      messages={filterMessages}
+      label={filterMessages.size}
+      values={selectedContainerSizes}
+      options={containerSizeOptions}
+      className={className}
+      dropdownClassName={dropdownClassName}
+      onOpenChange={(isOpen) => {
+        setOpenMultiFilters((current) => ({ ...current, sizes: isOpen }));
+      }}
+      onToggle={(value) => {
+        setValue("containerSizes", toggleMultiValue(selectedContainerSizes, value), {
+          shouldDirty: true,
+          shouldTouch: true,
+        });
+      }}
+      onClear={() => {
+        setValue("containerSizes", [], {
+          shouldDirty: true,
+          shouldTouch: true,
+        });
+      }}
+    />
+  );
+
+  const renderHeightsFilter = (className?: string, dropdownClassName?: string) => (
+    <MultiCheckboxFilter
+      messages={filterMessages}
+      label={filterMessages.height}
+      values={selectedContainerHeights}
+      options={containerHeightOptions}
+      className={className}
+      dropdownClassName={dropdownClassName}
+      onOpenChange={(isOpen) => {
+        setOpenMultiFilters((current) => ({ ...current, heights: isOpen }));
+      }}
+      onToggle={(value) => {
+        setValue("containerHeights", toggleMultiValue(selectedContainerHeights, value), {
+          shouldDirty: true,
+          shouldTouch: true,
+        });
+      }}
+      onClear={() => {
+        setValue("containerHeights", [], {
+          shouldDirty: true,
+          shouldTouch: true,
+        });
+      }}
+    />
+  );
+
+  const renderTypesFilter = (className?: string, dropdownClassName?: string) => (
+    <MultiCheckboxFilter
+      messages={filterMessages}
+      label={filterMessages.type}
+      values={selectedContainerTypes}
+      options={containerTypeOptions}
+      className={className}
+      dropdownClassName={dropdownClassName}
+      onOpenChange={(isOpen) => {
+        setOpenMultiFilters((current) => ({ ...current, types: isOpen }));
+      }}
+      onToggle={(value) => {
+        setValue("containerTypes", toggleMultiValue(selectedContainerTypes, value), {
+          shouldDirty: true,
+          shouldTouch: true,
+        });
+      }}
+      onClear={() => {
+        setValue("containerTypes", [], {
+          shouldDirty: true,
+          shouldTouch: true,
+        });
+      }}
+    />
+  );
+
+  const renderConditionsFilter = (className?: string, dropdownClassName?: string) => (
+    <MultiCheckboxFilter
+      messages={filterMessages}
+      label={filterMessages.condition}
+      values={selectedContainerConditions}
+      options={containerConditionOptions}
+      getOptionAccentClassName={(value) =>
+        CONTAINER_CONDITION_COLOR_TOKENS[value].dotClassName
+      }
+      className={className}
+      dropdownClassName={dropdownClassName}
+      onOpenChange={(isOpen) => {
+        setOpenMultiFilters((current) => ({ ...current, conditions: isOpen }));
+      }}
+      onToggle={(value) => {
+        setValue("containerConditions", toggleMultiValue(selectedContainerConditions, value), {
+          shouldDirty: true,
+          shouldTouch: true,
+        });
+      }}
+      onClear={() => {
+        setValue("containerConditions", [], {
+          shouldDirty: true,
+          shouldTouch: true,
+        });
+      }}
+    />
+  );
+
+  const renderFeaturesFilter = (className?: string, dropdownClassName?: string) => (
+    <MultiCheckboxFilter
+      messages={filterMessages}
+      label={filterMessages.feature}
+      values={selectedContainerFeatures}
+      options={containerFeatureOptions}
+      className={className}
+      dropdownClassName={dropdownClassName}
+      onOpenChange={(isOpen) => {
+        setOpenMultiFilters((current) => ({ ...current, features: isOpen }));
+      }}
+      onToggle={(value) => {
+        setValue("containerFeatures", toggleMultiValue(selectedContainerFeatures, value), {
+          shouldDirty: true,
+          shouldTouch: true,
+        });
+      }}
+      onClear={() => {
+        setValue("containerFeatures", [], {
+          shouldDirty: true,
+          shouldTouch: true,
+        });
+      }}
+    />
+  );
 
   return (
     <>
       <input type="hidden" {...register("listingKind")} />
-      <section className="sticky top-[4.5rem] z-30 rounded-md border border-neutral-300 bg-neutral-50/95 p-3 shadow-sm backdrop-blur supports-[backdrop-filter]:bg-neutral-50/90">
-        <div className="grid gap-2 grid-cols-[minmax(100px,0.85fr)_minmax(100px,0.85fr)_minmax(100px,1fr)_minmax(100px,1fr)_minmax(360px,3fr)]">
-          <MultiCheckboxFilter
-            messages={filterMessages}
-            label={filterMessages.size}
-            values={selectedContainerSizes}
-            options={containerSizeOptions}
-            onOpenChange={(isOpen) => {
-              setOpenMultiFilters((current) => ({ ...current, sizes: isOpen }));
-            }}
-            onToggle={(value) => {
-              setValue(
-                "containerSizes",
-                toggleMultiValue(selectedContainerSizes, value),
-                {
-                  shouldDirty: true,
-                  shouldTouch: true,
-                },
-              );
-            }}
-            onClear={() => {
-              setValue("containerSizes", [], {
-                shouldDirty: true,
-                shouldTouch: true,
-              });
-            }}
-          />
+      <section
+        ref={sectionRef}
+        id={sectionId}
+        className={`z-30 rounded-md border border-neutral-300 bg-neutral-50/95 p-3 shadow-sm backdrop-blur supports-[backdrop-filter]:bg-neutral-50/90 sm:sticky sm:top-[4.5rem] ${
+          sectionClassName ?? ""
+        }`}
+      >
+        <div id="container-listings-primary-filters">
+          <div className="grid gap-2 lg:grid-cols-[minmax(100px,0.85fr)_minmax(100px,0.85fr)_minmax(100px,1fr)_minmax(100px,1fr)_minmax(280px,1fr)_minmax(180px,220px)_auto]">
+            <div className="grid grid-cols-2 gap-2 sm:grid-cols-4 lg:contents">
+              {renderSizesFilter(undefined, "w-[min(20rem,calc(100vw-2rem))]")}
+              {renderHeightsFilter(undefined, "w-[min(20rem,calc(100vw-2rem))]")}
+              {renderTypesFilter(undefined, "w-[min(20rem,calc(100vw-2rem))]")}
+              {renderConditionsFilter(undefined, "w-[min(20rem,calc(100vw-2rem))]")}
+            </div>
 
-          <MultiCheckboxFilter
-            messages={filterMessages}
-            label={filterMessages.height}
-            values={selectedContainerHeights}
-            options={containerHeightOptions}
-            onOpenChange={(isOpen) => {
-              setOpenMultiFilters((current) => ({
-                ...current,
-                heights: isOpen,
-              }));
-            }}
-            onToggle={(value) => {
-              setValue(
-                "containerHeights",
-                toggleMultiValue(selectedContainerHeights, value),
-                {
-                  shouldDirty: true,
-                  shouldTouch: true,
-                },
-              );
-            }}
-            onClear={() => {
-              setValue("containerHeights", [], {
-                shouldDirty: true,
-                shouldTouch: true,
-              });
-            }}
-          />
-
-          <MultiCheckboxFilter
-            messages={filterMessages}
-            label={filterMessages.type}
-            values={selectedContainerTypes}
-            options={containerTypeOptions}
-            onOpenChange={(isOpen) => {
-              setOpenMultiFilters((current) => ({ ...current, types: isOpen }));
-            }}
-            onToggle={(value) => {
-              setValue(
-                "containerTypes",
-                toggleMultiValue(selectedContainerTypes, value),
-                {
-                  shouldDirty: true,
-                  shouldTouch: true,
-                },
-              );
-            }}
-            onClear={() => {
-              setValue("containerTypes", [], {
-                shouldDirty: true,
-                shouldTouch: true,
-              });
-            }}
-          />
-
-          <MultiCheckboxFilter
-            messages={filterMessages}
-            label={filterMessages.condition}
-            values={selectedContainerConditions}
-            options={containerConditionOptions}
-            getOptionAccentClassName={(value) =>
-              CONTAINER_CONDITION_COLOR_TOKENS[value].dotClassName
-            }
-            onOpenChange={(isOpen) => {
-              setOpenMultiFilters((current) => ({
-                ...current,
-                conditions: isOpen,
-              }));
-            }}
-            onToggle={(value) => {
-              setValue(
-                "containerConditions",
-                toggleMultiValue(selectedContainerConditions, value),
-                {
-                  shouldDirty: true,
-                  shouldTouch: true,
-                },
-              );
-            }}
-            onClear={() => {
-              setValue("containerConditions", [], {
-                shouldDirty: true,
-                shouldTouch: true,
-              });
-            }}
-          />
-          <div
-            ref={locationControlsRef}
-            className="grid h-full self-stretch gap-2 grid-cols-[minmax(220px,1fr)_minmax(100px,130px)_auto]"
-          >
-            <div className="relative">
-              <input
-                {...register("locationInput")}
-                placeholder={filterMessages.anyLocation}
-                className={`h-full min-h-12 w-full rounded-md border px-3 py-2 text-sm text-neutral-900 ${
+            <div
+              ref={locationControlsRef}
+              className="grid gap-2 grid-cols-[minmax(0,1fr)_auto_auto] lg:contents"
+            >
+              <div className="relative">
+                <input
+                  {...register("locationInput")}
+                  placeholder={filterMessages.anyLocation}
+                  className={`h-full min-h-12 w-full rounded-md border px-3 py-2 text-sm text-neutral-900 ${
+                    isLocationApplied
+                      ? "border-sky-400 bg-sky-100/70 pr-11 shadow-[0_0_0_1px_rgba(56,189,248,0.15)]"
+                      : "border-neutral-300 bg-white"
+                  }`}
+                  onBlur={restoreAppliedLocationOnBlur}
+                />
+                {isLocationApplied ? (
+                  <button
+                    type="button"
+                    onClick={clearLocationFilter}
+                    className="absolute right-2 top-1/2 inline-flex h-7 w-7 -translate-y-1/2 items-center justify-center rounded-md border border-sky-300 bg-white/85 text-sm font-semibold text-sky-800 transition hover:border-sky-400 hover:bg-white"
+                    aria-label={filterMessages.clearLocation}
+                    title={filterMessages.clearLocation}
+                  >
+                    x
+                  </button>
+                ) : null}
+              </div>
+              <SelectWithChevron
+                {...register("locationRadiusKmInput")}
+                wrapperClassName="hidden lg:block"
+                className={`h-full min-h-12 rounded-md border px-3 py-2 pr-10 ${
                   isLocationApplied
-                    ? "border-sky-400 bg-sky-100/70 pr-11 shadow-[0_0_0_1px_rgba(56,189,248,0.15)]"
-                    : "border-neutral-300 bg-white"
+                    ? "border-sky-400 bg-sky-100/70 text-sky-800 shadow-[0_0_0_1px_rgba(56,189,248,0.15)]"
+                    : "border-neutral-300 bg-white text-neutral-900"
                 }`}
                 onBlur={restoreAppliedLocationOnBlur}
-              />
-              {isLocationApplied ? (
-                <button
-                  type="button"
-                  onClick={clearLocationFilter}
-                  className="absolute right-2 top-1/2 inline-flex h-7 w-7 -translate-y-1/2 items-center justify-center rounded-md border border-sky-300 bg-white/85 text-sm font-semibold text-sky-800 transition hover:border-sky-400 hover:bg-white"
-                  aria-label={filterMessages.clearLocation}
-                  title={filterMessages.clearLocation}
-                >
-                  x
-                </button>
-              ) : null}
+                title={filterMessages.anyLocation}
+              >
+                {LOCATION_RADIUS_OPTIONS.map((value) => (
+                  <option key={value} value={String(value)}>
+                    +{value} km
+                  </option>
+                ))}
+              </SelectWithChevron>
+              <button
+                type="button"
+                onClick={() => {
+                  setIsMobileAdditionalFiltersOpen(true);
+                }}
+                className={`relative inline-flex min-h-12 w-12 items-center justify-center rounded-md border text-sm transition-colors lg:hidden ${
+                  mobileAdditionalFiltersCount > 0
+                    ? "border-sky-400 bg-sky-100 text-sky-900 shadow-[0_0_0_1px_rgba(56,189,248,0.15)]"
+                    : "border-neutral-300 bg-white text-neutral-700 hover:bg-neutral-100"
+                }`}
+                aria-label={mobileMoreFiltersAriaLabel}
+                title={mobileMoreFiltersAriaLabel}
+              >
+                <FiltersIcon />
+                {mobileAdditionalFiltersCount > 0 ? (
+                  <span className="absolute -right-1.5 -top-1.5 inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-sky-500 px-1 text-[10px] font-semibold text-white">
+                    {mobileAdditionalFiltersCount}
+                  </span>
+                ) : null}
+              </button>
+              <button
+                type="submit"
+                disabled={isResolvingLocation}
+                className="h-full min-h-12 shrink-0 whitespace-nowrap rounded-md border border-rose-500 bg-gradient-to-r from-rose-500 to-fuchsia-500 px-3.5 text-sm font-semibold text-white transition-colors duration-200 hover:from-rose-600 hover:to-fuchsia-600 active:translate-y-px disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                {isResolvingLocation
+                  ? filterMessages.searching
+                  : filterMessages.search}
+              </button>
             </div>
-            <SelectWithChevron
-              {...register("locationRadiusKmInput")}
-              className={`h-full min-h-12 rounded-md border px-3 py-2 pr-10 ${
-                isLocationApplied
-                  ? "border-sky-400 bg-sky-100/70 text-sky-800 shadow-[0_0_0_1px_rgba(56,189,248,0.15)]"
-                  : "border-neutral-300 bg-white text-neutral-900"
-              }`}
-              onBlur={restoreAppliedLocationOnBlur}
-            >
-              {LOCATION_RADIUS_OPTIONS.map((value) => (
-                <option key={value} value={String(value)}>
-                  +{value} km
-                </option>
-              ))}
-            </SelectWithChevron>
-            <button
-              type="submit"
-              disabled={isResolvingLocation}
-              className="h-full min-h-12 shrink-0 whitespace-nowrap rounded-md border border-rose-500 bg-gradient-to-r from-rose-500 to-fuchsia-500 px-3.5 text-sm font-semibold text-white transition-colors duration-200 hover:from-rose-600 hover:to-fuchsia-600 active:translate-y-px disabled:cursor-not-allowed disabled:opacity-60"
-            >
-              {isResolvingLocation
-                ? filterMessages.searching
-                : filterMessages.search}
-            </button>
           </div>
+          {locationFilterError ? (
+            <p className="mt-2 text-xs text-neutral-600">{locationFilterError}</p>
+          ) : null}
         </div>
-        {locationFilterError ? (
-          <p className="mt-2 text-xs text-neutral-600">{locationFilterError}</p>
-        ) : null}
       </section>
 
       <div className="grid items-start gap-4 lg:grid-cols-[280px_minmax(0,1fr)]">
-        <aside className="h-fit min-w-0 rounded-md border border-neutral-300 bg-neutral-50/95 p-4 shadow-sm lg:sticky lg:top-[11rem] lg:z-20 lg:max-h-[calc(100dvh-12rem)] lg:overflow-y-auto">
+        <aside className="hidden h-fit min-w-0 rounded-md border border-neutral-300 bg-neutral-50/95 p-4 shadow-sm lg:sticky lg:top-[11rem] lg:z-20 lg:block lg:max-h-[calc(100dvh-12rem)] lg:overflow-y-auto">
           <div className="grid gap-3">
             <label className="grid gap-1 text-sm">
               <span className="text-neutral-600">{filterMessages.sort}</span>
@@ -730,36 +886,7 @@ function ContainerListingsFiltersComponent({
 
             <div className="grid gap-1 text-sm">
               <span className="text-neutral-600">{filterMessages.feature}</span>
-              <MultiCheckboxFilter
-                messages={filterMessages}
-                label={filterMessages.feature}
-                values={selectedContainerFeatures}
-                options={containerFeatureOptions}
-                onOpenChange={(isOpen) => {
-                  setOpenMultiFilters((current) => ({
-                    ...current,
-                    features: isOpen,
-                  }));
-                }}
-                onToggle={(value) => {
-                  setValue(
-                    "containerFeatures",
-                    toggleMultiValue(selectedContainerFeatures, value),
-                    {
-                      shouldDirty: true,
-                      shouldTouch: true,
-                    },
-                  );
-                }}
-                onClear={() => {
-                  setValue("containerFeatures", [], {
-                    shouldDirty: true,
-                    shouldTouch: true,
-                  });
-                }}
-                className="relative"
-                dropdownClassName="w-full"
-              />
+              {renderFeaturesFilter("relative", "w-full")}
             </div>
 
             <div className="grid gap-1 text-sm">
@@ -993,6 +1120,435 @@ function ContainerListingsFiltersComponent({
 
         {children}
       </div>
+
+      {typeof document !== "undefined" && isMobileAdditionalFiltersOpen
+        ? createPortal(
+            <div className="fixed inset-x-0 bottom-0 top-16 z-[70] flex items-end justify-center bg-neutral-950/70 p-0 backdrop-blur-sm lg:hidden">
+              <button
+                type="button"
+                className="absolute inset-0"
+                aria-label={filterMessages.closeFiltersModal}
+                onClick={() => {
+                  setIsMobileAdditionalFiltersOpen(false);
+                }}
+              />
+              <section
+                aria-modal="true"
+                role="dialog"
+                className="relative flex max-h-[calc(100dvh-4rem)] w-full flex-col overflow-hidden border border-neutral-200 bg-white shadow-2xl"
+              >
+                <div className="flex items-start justify-between gap-3 border-b border-neutral-200 px-4 py-4">
+                  <div>
+                    <h2 className="text-base font-semibold text-neutral-950">
+                      {filterMessages.additionalFiltersTitle}
+                    </h2>
+                  </div>
+                  <button
+                    type="button"
+                    className="inline-flex h-10 w-10 items-center justify-center rounded-full border border-neutral-300 bg-white text-neutral-600"
+                    aria-label={filterMessages.closeFiltersModal}
+                    onClick={() => {
+                      setIsMobileAdditionalFiltersOpen(false);
+                    }}
+                  >
+                    <CloseIcon />
+                  </button>
+                </div>
+
+                <div className="min-h-0 flex-1 overflow-y-auto px-4 py-4">
+                  <div className="grid gap-4">
+                    <div className="grid gap-2 text-sm">
+                      <span className="text-neutral-600">{filterMessages.listingKind}</span>
+                      <div className="grid grid-cols-1 overflow-hidden rounded-md border border-neutral-300 text-sm">
+                        {listingKindOptions.map((option) => (
+                          <button
+                            key={option.value}
+                            type="button"
+                            onClick={() => {
+                              setValue("listingKind", option.value, {
+                                shouldDirty: true,
+                                shouldTouch: true,
+                              });
+                            }}
+                            className={`border-b border-neutral-300 px-3 py-2 text-left last:border-b-0 ${
+                              listingKind === option.value
+                                ? option.value === "buy"
+                                  ? "bg-amber-500 font-semibold text-white"
+                                  : "bg-[#0c3466] font-semibold text-white"
+                                : option.value === "buy"
+                                  ? "bg-amber-50 text-amber-900"
+                                  : "bg-white text-neutral-700"
+                            }`}
+                          >
+                            {option.label}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+
+                    <div className="grid gap-2 text-sm">
+                      <span className="text-neutral-600">{filterMessages.sort}</span>
+                      <SelectWithChevron
+                        value={sortPresetValue}
+                        onChange={(event) => {
+                          setValue(
+                            "sortPreset",
+                            event.target.value as FiltersFormValues["sortPreset"],
+                            {
+                              shouldDirty: true,
+                              shouldTouch: true,
+                            },
+                          );
+                        }}
+                        className={`rounded-md border px-3 py-2 text-neutral-900 ${
+                          sortPresetValue !== "newest"
+                            ? "border-sky-400 bg-sky-100/70 shadow-[0_0_0_1px_rgba(56,189,248,0.15)]"
+                            : "border-neutral-300 bg-white"
+                        }`}
+                      >
+                        {sortOptions.map((option) => (
+                          <option key={option.value} value={option.value}>
+                            {option.label}
+                          </option>
+                        ))}
+                      </SelectWithChevron>
+                    </div>
+
+                    <div className="grid gap-2 text-sm">
+                      <span className="text-neutral-600">{filterMessages.feature}</span>
+                      {renderFeaturesFilter("relative", "w-full")}
+                    </div>
+
+                    <label className="grid gap-1 text-sm">
+                      <span className="text-neutral-600">{filterMessages.convertPricesTo}</span>
+                      <SelectWithChevron
+                        value={priceDisplayCurrencyValue}
+                        onChange={(event) => {
+                          setValue(
+                            "priceDisplayCurrency",
+                            event.target.value as FiltersFormValues["priceDisplayCurrency"],
+                            {
+                              shouldDirty: true,
+                              shouldTouch: true,
+                            },
+                          );
+                        }}
+                        className={`rounded-md border px-3 py-2 text-neutral-900 ${
+                          priceDisplayCurrencyValue !== "original"
+                            ? "border-sky-400 bg-sky-100/70 shadow-[0_0_0_1px_rgba(56,189,248,0.15)]"
+                            : "border-neutral-300 bg-white"
+                        }`}
+                      >
+                        {priceDisplayOptions.map((option) => (
+                          <option key={option.value} value={option.value}>
+                            {option.label}
+                          </option>
+                        ))}
+                      </SelectWithChevron>
+                    </label>
+
+                    <label
+                      className={`inline-flex items-center gap-2 rounded-md border px-3 py-2 text-sm ${
+                        priceNegotiableOnlyValue
+                          ? "border-sky-400 bg-sky-100/70 text-sky-900 shadow-[0_0_0_1px_rgba(56,189,248,0.15)]"
+                          : "border-neutral-300 bg-white text-neutral-700"
+                      }`}
+                    >
+                      <input
+                        type="checkbox"
+                        checked={priceNegotiableOnlyValue}
+                        onChange={(event) => {
+                          setValue("priceNegotiableOnly", event.target.checked, {
+                            shouldDirty: true,
+                            shouldTouch: true,
+                          });
+                        }}
+                        onKeyDown={handleCheckboxEnterToggle}
+                        className="h-4 w-4 rounded border-neutral-400 text-neutral-700 focus:ring-neutral-400"
+                      />
+                      <span>{filterMessages.negotiablePrice}</span>
+                    </label>
+
+                    <div className="grid gap-2 text-sm">
+                      <span className="text-neutral-600">{filterMessages.logistics}</span>
+                      <div className="grid gap-2">
+                        <label
+                          className={`inline-flex items-center gap-2 rounded-md border px-3 py-2 text-sm ${
+                            logisticsTransportOnlyValue
+                              ? "border-sky-400 bg-sky-100/70 text-sky-900 shadow-[0_0_0_1px_rgba(56,189,248,0.15)]"
+                              : "border-neutral-300 bg-white text-neutral-700"
+                          }`}
+                        >
+                          <input
+                            type="checkbox"
+                            checked={logisticsTransportOnlyValue}
+                            onChange={(event) => {
+                              setValue("logisticsTransportOnly", event.target.checked, {
+                                shouldDirty: true,
+                                shouldTouch: true,
+                              });
+                            }}
+                            onKeyDown={handleCheckboxEnterToggle}
+                            className="h-4 w-4 rounded border-neutral-400 text-neutral-700 focus:ring-neutral-400"
+                          />
+                          <span>{filterMessages.transport}</span>
+                        </label>
+                        <label
+                          className={`inline-flex items-center gap-2 rounded-md border px-3 py-2 text-sm ${
+                            logisticsUnloadingOnlyValue
+                              ? "border-sky-400 bg-sky-100/70 text-sky-900 shadow-[0_0_0_1px_rgba(56,189,248,0.15)]"
+                              : "border-neutral-300 bg-white text-neutral-700"
+                          }`}
+                        >
+                          <input
+                            type="checkbox"
+                            checked={logisticsUnloadingOnlyValue}
+                            onChange={(event) => {
+                              setValue("logisticsUnloadingOnly", event.target.checked, {
+                                shouldDirty: true,
+                                shouldTouch: true,
+                              });
+                            }}
+                            onKeyDown={handleCheckboxEnterToggle}
+                            className="h-4 w-4 rounded border-neutral-400 text-neutral-700 focus:ring-neutral-400"
+                          />
+                          <span>{filterMessages.unloading}</span>
+                        </label>
+                      </div>
+                    </div>
+
+                    <div className="grid gap-2 text-sm">
+                      <span className="text-neutral-600">{filterMessages.price}</span>
+                      <div
+                        className={`grid gap-2 rounded-md border p-3 ${
+                          isPriceFilterApplied
+                            ? "border-sky-400 bg-sky-100/70 shadow-[0_0_0_1px_rgba(56,189,248,0.15)]"
+                            : "border-neutral-300 bg-white"
+                        }`}
+                      >
+                        <div className="grid gap-2 sm:grid-cols-2">
+                          <label className="grid gap-1">
+                            <span className="text-xs text-neutral-500">{filterMessages.currency}</span>
+                            <SelectWithChevron
+                              value={priceCurrencyValue}
+                              onChange={(event) => {
+                                setValue(
+                                  "priceCurrency",
+                                  event.target.value as FiltersFormValues["priceCurrency"],
+                                  {
+                                    shouldDirty: true,
+                                    shouldTouch: true,
+                                  },
+                                );
+                              }}
+                              className="h-10 rounded-md border border-neutral-300 bg-white px-3 py-2 pr-10 text-neutral-900"
+                            >
+                              {PRICE_FILTER_CURRENCIES.map((currency) => (
+                                <option key={currency} value={currency}>
+                                  {PRICE_CURRENCY_LABEL[currency]}
+                                </option>
+                              ))}
+                            </SelectWithChevron>
+                          </label>
+                          <label className="grid gap-1">
+                            <span className="text-xs text-neutral-500">{filterMessages.variant}</span>
+                            <SelectWithChevron
+                              value={priceTaxModeValue}
+                              onChange={(event) => {
+                                setValue(
+                                  "priceTaxMode",
+                                  event.target.value as FiltersFormValues["priceTaxMode"],
+                                  {
+                                    shouldDirty: true,
+                                    shouldTouch: true,
+                                  },
+                                );
+                              }}
+                              className="h-10 rounded-md border border-neutral-300 bg-white px-3 py-2 pr-10 text-neutral-900"
+                            >
+                              {PRICE_TAX_MODES.map((priceTaxMode) => (
+                                <option key={priceTaxMode} value={priceTaxMode}>
+                                  {getPriceTaxModeLabel(messages, priceTaxMode)}
+                                </option>
+                              ))}
+                            </SelectWithChevron>
+                          </label>
+                        </div>
+
+                        <div className="grid gap-2 sm:grid-cols-2">
+                          <label className="grid gap-1">
+                            <span className="text-xs text-neutral-500">{filterMessages.min}</span>
+                            <input
+                              type="number"
+                              min={0}
+                              step="0.01"
+                              inputMode="decimal"
+                              value={priceMinInputValue}
+                              onChange={(event) => {
+                                setValue("priceMinInput", event.target.value, {
+                                  shouldDirty: true,
+                                  shouldTouch: true,
+                                });
+                              }}
+                              className={`w-full min-w-0 rounded-md border px-3 py-2 text-neutral-900 ${
+                                hasPriceRangeFilter
+                                  ? "border-sky-400 bg-sky-100/70 shadow-[0_0_0_1px_rgba(56,189,248,0.15)]"
+                                  : "border-neutral-300 bg-white"
+                              }`}
+                              placeholder={filterMessages.fromPlaceholder}
+                            />
+                          </label>
+                          <label className="grid gap-1">
+                            <span className="text-xs text-neutral-500">{filterMessages.max}</span>
+                            <input
+                              type="number"
+                              min={0}
+                              step="0.01"
+                              inputMode="decimal"
+                              value={priceMaxInputValue}
+                              onChange={(event) => {
+                                setValue("priceMaxInput", event.target.value, {
+                                  shouldDirty: true,
+                                  shouldTouch: true,
+                                });
+                              }}
+                              className={`w-full min-w-0 rounded-md border px-3 py-2 text-neutral-900 ${
+                                hasPriceRangeFilter
+                                  ? "border-sky-400 bg-sky-100/70 shadow-[0_0_0_1px_rgba(56,189,248,0.15)]"
+                                  : "border-neutral-300 bg-white"
+                              }`}
+                              placeholder={filterMessages.toPlaceholder}
+                            />
+                          </label>
+                        </div>
+                      </div>
+                    </div>
+
+                    <label className="grid gap-1 text-sm">
+                      <span className="text-neutral-600">{filterMessages.productionYearFrom}</span>
+                      <input
+                        type="number"
+                        min={1900}
+                        max={2100}
+                        step={1}
+                        inputMode="numeric"
+                        value={productionYearInputValue}
+                        onChange={(event) => {
+                          setValue("productionYearInput", event.target.value, {
+                            shouldDirty: true,
+                            shouldTouch: true,
+                          });
+                        }}
+                        className={`w-full min-w-0 rounded-md border px-3 py-2 text-neutral-900 ${
+                          productionYearInputValue.trim().length > 0
+                            ? "border-sky-400 bg-sky-100/70 shadow-[0_0_0_1px_rgba(56,189,248,0.15)]"
+                            : "border-neutral-300 bg-white"
+                        }`}
+                        placeholder={filterMessages.productionYearPlaceholder}
+                      />
+                    </label>
+
+                    <div className="grid gap-2 text-sm">
+                      <span className="text-neutral-600">{filterMessages.certification}</span>
+                      <div className="grid gap-2">
+                        <label
+                          className={`inline-flex items-center gap-2 rounded-md border px-3 py-2 text-sm ${
+                            hasCscPlateOnlyValue
+                              ? "border-sky-400 bg-sky-100/70 text-sky-900 shadow-[0_0_0_1px_rgba(56,189,248,0.15)]"
+                              : "border-neutral-300 bg-white text-neutral-700"
+                          }`}
+                        >
+                          <input
+                            type="checkbox"
+                            checked={hasCscPlateOnlyValue}
+                            onChange={(event) => {
+                              setValue("hasCscPlateOnly", event.target.checked, {
+                                shouldDirty: true,
+                                shouldTouch: true,
+                              });
+                            }}
+                            onKeyDown={handleCheckboxEnterToggle}
+                            className="h-4 w-4 rounded border-neutral-400 text-neutral-700 focus:ring-neutral-400"
+                          />
+                          <span>{filterMessages.cscPlate}</span>
+                        </label>
+                        <label
+                          className={`inline-flex items-center gap-2 rounded-md border px-3 py-2 text-sm ${
+                            hasCscCertificationOnlyValue
+                              ? "border-sky-400 bg-sky-100/70 text-sky-900 shadow-[0_0_0_1px_rgba(56,189,248,0.15)]"
+                              : "border-neutral-300 bg-white text-neutral-700"
+                          }`}
+                        >
+                          <input
+                            type="checkbox"
+                            checked={hasCscCertificationOnlyValue}
+                            onChange={(event) => {
+                              setValue("hasCscCertificationOnly", event.target.checked, {
+                                shouldDirty: true,
+                                shouldTouch: true,
+                              });
+                            }}
+                            onKeyDown={handleCheckboxEnterToggle}
+                            className="h-4 w-4 rounded border-neutral-400 text-neutral-700 focus:ring-neutral-400"
+                          />
+                          <span>{filterMessages.cscCertification}</span>
+                        </label>
+                      </div>
+                    </div>
+
+                    <label className="grid gap-1 text-sm">
+                      <span className="text-neutral-600">{filterMessages.ralColors}</span>
+                      <input
+                        value={containerRalInputValue}
+                        onChange={(event) => {
+                          setValue("containerRalInput", event.target.value, {
+                            shouldDirty: true,
+                            shouldTouch: true,
+                          });
+                        }}
+                        placeholder={filterMessages.ralPlaceholder}
+                        className={`w-full min-w-0 rounded-md border px-3 py-2 text-neutral-900 ${
+                          containerRalInputValue.trim().length > 0
+                            ? "border-sky-400 bg-sky-100/70 shadow-[0_0_0_1px_rgba(56,189,248,0.15)]"
+                            : "border-neutral-300 bg-white"
+                        }`}
+                      />
+                    </label>
+                  </div>
+                </div>
+
+                <div className="flex items-center justify-between gap-3 border-t border-neutral-200 px-4 py-4">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      clearAllFilters();
+                      setOpenMultiFilters({
+                        sizes: false,
+                        heights: false,
+                        types: false,
+                        conditions: false,
+                        features: false,
+                      });
+                    }}
+                    className="rounded-md border border-neutral-300 bg-white px-3 py-2 text-sm font-medium text-neutral-700"
+                  >
+                    {filterMessages.clearAll}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setIsMobileAdditionalFiltersOpen(false);
+                    }}
+                    className="rounded-md bg-[#0c3466] px-4 py-2 text-sm font-semibold text-white"
+                  >
+                    {filterMessages.closeFiltersModal}
+                  </button>
+                </div>
+              </section>
+            </div>,
+            document.body,
+          )
+        : null}
     </>
   );
 }

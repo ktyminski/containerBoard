@@ -16,9 +16,7 @@ import {
   ContactPublishModal,
   PublishSuccessModal,
 } from "@/components/container-listing-form-dialogs";
-import {
-  type ContainerModuleMessages,
-} from "@/components/container-modules-i18n";
+import { type ContainerModuleMessages } from "@/components/container-modules-i18n";
 import {
   getContainerConditionOptions,
   getContainerFeatureLabel,
@@ -638,7 +636,9 @@ function hasInitialCertificationSectionContent(
   );
 }
 
-function isCreateFormReadyToPublish(values: ContainerListingFormValues): boolean {
+function isCreateFormReadyToPublish(
+  values: ContainerListingFormValues,
+): boolean {
   if (!LISTING_TYPES.includes(values.type)) {
     return false;
   }
@@ -720,7 +720,9 @@ function isCreateFormReadyToPublish(values: ContainerListingFormValues): boolean
     return false;
   }
 
-  if (validateContainerRalColorsInput(values.containerColorsRal ?? "") !== true) {
+  if (
+    validateContainerRalColorsInput(values.containerColorsRal ?? "") !== true
+  ) {
     return false;
   }
 
@@ -1017,9 +1019,9 @@ function ContainerFeaturesMultiSelect({
     selectedCount === 0
       ? messages.any
       : selectedCount === 1
-        ? (values[0]
-            ? getContainerFeatureLabel(listingMessages, values[0])
-            : messages.oneSelected)
+        ? values[0]
+          ? getContainerFeatureLabel(listingMessages, values[0])
+          : messages.oneSelected
         : formatTemplate(messages.selectedCount, { count: selectedCount });
 
   useEffect(() => {
@@ -1085,9 +1087,7 @@ function ContainerFeaturesMultiSelect({
         <summary className="multi-checkbox-summary relative flex h-10 w-full cursor-pointer list-none items-center rounded-md border border-neutral-700 bg-neutral-950 px-3 pr-11 text-sm text-neutral-100 [&::-webkit-details-marker]:hidden">
           <span
             className={`block min-w-0 truncate ${
-              selectedCount > 0
-                ? "text-neutral-100"
-                : "text-neutral-500"
+              selectedCount > 0 ? "text-neutral-100" : "text-neutral-500"
             }`}
             title={selectedSummaryLabel}
           >
@@ -1260,7 +1260,8 @@ export function ContainerListingForm({
 }: ContainerListingFormProps) {
   const router = useRouter();
   const toast = useToast();
-  const resolvedListingMessages = listingMessages ?? getMessages(locale).containerListings;
+  const resolvedListingMessages =
+    listingMessages ?? getMessages(locale).containerListings;
   const companyNameValidation = useMemo(
     () => ({
       required: messages.form.companyNameRequired,
@@ -1287,9 +1288,8 @@ export function ContainerListingForm({
   const [showCertificationSection, setShowCertificationSection] = useState(
     hasInitialCertificationSectionContent(initialValues),
   );
-  const [showAdditionalPhotosSection, setShowAdditionalPhotosSection] = useState(
-    (initialPhotoUrls?.length ?? 0) > 0,
-  );
+  const [showAdditionalPhotosSection, setShowAdditionalPhotosSection] =
+    useState((initialPhotoUrls?.length ?? 0) > 0);
   const reverseLookupRequestRef = useRef(0);
   const additionalReverseLookupRequestRef = useRef<Record<string, number>>({});
   const inlineSubmitContainerRef = useRef<HTMLDivElement | null>(null);
@@ -1488,10 +1488,14 @@ export function ContainerListingForm({
 
     return result;
   }, [additionalLocations, latNumber, lngNumber, primaryLocationDisplay]);
-  const visibleConfiguredLocationDisplays = configuredLocationDisplays.slice(0, 3);
+  const visibleConfiguredLocationDisplays = configuredLocationDisplays.slice(
+    0,
+    3,
+  );
   const hiddenConfiguredLocationsCount = Math.max(
     0,
-    configuredLocationDisplays.length - visibleConfiguredLocationDisplays.length,
+    configuredLocationDisplays.length -
+      visibleConfiguredLocationDisplays.length,
   );
   const visibleInitialPhotoCount = keptInitialPhotoIndexes.length;
   const totalPhotoCount =
@@ -1530,7 +1534,9 @@ export function ContainerListingForm({
   );
   const activeMapLocationLabel = useMemo(() => {
     if (activeMapLocationId === PRIMARY_LOCATION_MAP_ID) {
-      return formatTemplate(messages.shared.locationLabelTemplate, { index: 1 });
+      return formatTemplate(messages.shared.locationLabelTemplate, {
+        index: 1,
+      });
     }
     const additionalLocationIndex = additionalLocations.findIndex(
       (location) => location.id === activeMapLocationId,
@@ -1541,7 +1547,11 @@ export function ContainerListingForm({
       });
     }
     return formatTemplate(messages.shared.locationLabelTemplate, { index: 1 });
-  }, [activeMapLocationId, additionalLocations, messages.shared.locationLabelTemplate]);
+  }, [
+    activeMapLocationId,
+    additionalLocations,
+    messages.shared.locationLabelTemplate,
+  ]);
 
   useEffect(() => {
     setKeptInitialPhotoIndexes(stableInitialPhotoUrls.map((_, index) => index));
@@ -1965,18 +1975,26 @@ export function ContainerListingForm({
           shouldTouch: true,
         },
       );
-      setValue("locationPostalCode", nextAddressParts?.postalCode?.trim() ?? "", {
-        shouldDirty: true,
-        shouldTouch: true,
-      });
+      setValue(
+        "locationPostalCode",
+        nextAddressParts?.postalCode?.trim() ?? "",
+        {
+          shouldDirty: true,
+          shouldTouch: true,
+        },
+      );
       setValue("locationAddressCity", nextAddressParts?.city?.trim() ?? "", {
         shouldDirty: true,
         shouldTouch: true,
       });
-      setValue("locationAddressCountry", nextAddressParts?.country?.trim() ?? "", {
-        shouldDirty: true,
-        shouldTouch: true,
-      });
+      setValue(
+        "locationAddressCountry",
+        nextAddressParts?.country?.trim() ?? "",
+        {
+          shouldDirty: true,
+          shouldTouch: true,
+        },
+      );
       setLocationSearch(nextAddressLabel);
 
       if (nextLat !== null && nextLng !== null) {
@@ -2025,9 +2043,7 @@ export function ContainerListingForm({
         shouldTouch: true,
       });
       clearErrors(["locationLat", "locationLng"]);
-      toast.info(
-        formatTemplate(messages.form.locationRemoved, { index: 1 }),
-      );
+      toast.info(formatTemplate(messages.form.locationRemoved, { index: 1 }));
       return;
     }
 
@@ -2090,12 +2106,12 @@ export function ContainerListingForm({
         return;
       }
 
-    setActiveMapLocationId(id);
-    const query = target.search.trim();
-    if (query.length < 3) {
-      toast.error(messages.form.locationMinChars);
-      return;
-    }
+      setActiveMapLocationId(id);
+      const query = target.search.trim();
+      if (query.length < 3) {
+        toast.error(messages.form.locationMinChars);
+        return;
+      }
 
       setAdditionalLocations((current) =>
         current.map((location) =>
@@ -2251,7 +2267,8 @@ export function ContainerListingForm({
 
       const normalizedOptions = requestedOptions.filter(
         (option) =>
-          Number.isFinite(option.locationLat) && Number.isFinite(option.locationLng),
+          Number.isFinite(option.locationLat) &&
+          Number.isFinite(option.locationLng),
       );
       if (normalizedOptions.length === 0) {
         return;
@@ -2308,9 +2325,8 @@ export function ContainerListingForm({
         });
       }
 
-      const fallbackLabel = buildLocationLabelFromAddressParts(
-        locationAddressParts,
-      );
+      const fallbackLabel =
+        buildLocationLabelFromAddressParts(locationAddressParts);
       const resolvedLabel = locationAddressLabel?.trim() || fallbackLabel;
       setLocationSearch(resolvedLabel);
       setValue("locationAddressLabel", resolvedLabel, {
@@ -2319,16 +2335,14 @@ export function ContainerListingForm({
       });
       additionalReverseLookupRequestRef.current = {};
       setAdditionalLocations(
-        restOptions
-          .slice(0, MAX_ADDITIONAL_LOCATIONS)
-          .map((option) =>
-            createAdditionalLocationDraft({
-              locationLat: option.locationLat,
-              locationLng: option.locationLng,
-              locationAddressLabel: option.locationAddressLabel,
-              locationAddressParts: option.locationAddressParts ?? null,
-            }),
-          ),
+        restOptions.slice(0, MAX_ADDITIONAL_LOCATIONS).map((option) =>
+          createAdditionalLocationDraft({
+            locationLat: option.locationLat,
+            locationLng: option.locationLng,
+            locationAddressLabel: option.locationAddressLabel,
+            locationAddressParts: option.locationAddressParts ?? null,
+          }),
+        ),
       );
 
       clearErrors(["locationLat", "locationLng"]);
@@ -2528,7 +2542,13 @@ export function ContainerListingForm({
         setIsProcessingImages(false);
       }
     },
-    [messages.form.imagesOnly, messages.form.maxPhotosTotal, messages.form.remainingPhotos, toast, totalPhotoCount],
+    [
+      messages.form.imagesOnly,
+      messages.form.maxPhotosTotal,
+      messages.form.remainingPhotos,
+      toast,
+      totalPhotoCount,
+    ],
   );
 
   const onSubmit = async (values: ContainerListingFormValues) => {
@@ -2724,7 +2744,10 @@ export function ContainerListingForm({
       return;
     }
     const canUploadPhotosForSubmission = values.type !== "buy";
-    if (canUploadPhotosForSubmission && totalPhotoCount > MAX_CONTAINER_PHOTOS) {
+    if (
+      canUploadPhotosForSubmission &&
+      totalPhotoCount > MAX_CONTAINER_PHOTOS
+    ) {
       toast.error(
         formatTemplate(messages.form.maxPhotosTotal, {
           count: MAX_CONTAINER_PHOTOS,
@@ -2750,7 +2773,9 @@ export function ContainerListingForm({
 
     const payload = {
       ...(mode === "edit" ? { action: "update" } : {}),
-      ...(mode === "edit" && reactivateOnSave ? { reactivateOnSave: true } : {}),
+      ...(mode === "edit" && reactivateOnSave
+        ? { reactivateOnSave: true }
+        : {}),
       type: values.type,
       container: {
         size: resolvedContainerSize,
@@ -2913,7 +2938,9 @@ export function ContainerListingForm({
         <>
           <input
             type="hidden"
-            {...register("type", { required: messages.shared.selectListingType })}
+            {...register("type", {
+              required: messages.shared.selectListingType,
+            })}
           />
           {showListingIntentSelector ? (
             resolvedListingIntent === null ? (
@@ -2976,7 +3003,9 @@ export function ContainerListingForm({
         <>
           <input
             type="hidden"
-            {...register("type", { required: messages.shared.selectListingType })}
+            {...register("type", {
+              required: messages.shared.selectListingType,
+            })}
           />
           <input
             type="checkbox"
@@ -2995,7 +3024,7 @@ export function ContainerListingForm({
             <div
               className={
                 canManageListingPhotos
-                  ? "grid gap-4 lg:grid-cols-[220px_minmax(0,1fr)] lg:items-start"
+                  ? "grid gap-4 sm:grid-cols-[220px_minmax(0,1fr)] sm:items-start"
                   : "grid gap-4"
               }
             >
@@ -3003,7 +3032,7 @@ export function ContainerListingForm({
                 <div className="grid gap-3 rounded-md bg-neutral-950/70">
                   <button
                     type="button"
-                    className="relative aspect-square w-full cursor-pointer overflow-hidden rounded-md border border-neutral-200 bg-neutral-100"
+                    className="relative aspect-square w-full cursor-pointer overflow-hidden rounded-md border border-neutral-200 bg-neutral-100 max-sm:mx-auto max-sm:max-w-[375px]"
                     onClick={() => {
                       coverPhotoInputRef.current?.click();
                     }}
@@ -3134,27 +3163,33 @@ export function ContainerListingForm({
                         required: messages.form.selectHeight,
                       })}
                     >
-                      {getContainerHeightOptions(resolvedListingMessages).map((height) => (
-                        <option key={height.value} value={height.value}>
-                          {height.label}
-                        </option>
-                      ))}
+                      {getContainerHeightOptions(resolvedListingMessages).map(
+                        (height) => (
+                          <option key={height.value} value={height.value}>
+                            {height.label}
+                          </option>
+                        ),
+                      )}
                     </SelectWithChevron>
                   </label>
 
                   <label className="flex min-w-[180px] flex-[1_1_220px] flex-col gap-1 text-sm">
-                    <span className="text-neutral-700">{messages.form.typeLabel}</span>
+                    <span className="text-neutral-700">
+                      {messages.form.typeLabel}
+                    </span>
                     <SelectWithChevron
                       tone="dark"
                       {...register("containerType", {
                         required: messages.form.selectType,
                       })}
                     >
-                      {getContainerTypeOptions(resolvedListingMessages).map((type) => (
-                        <option key={type.value} value={type.value}>
-                          {type.label}
-                        </option>
-                      ))}
+                      {getContainerTypeOptions(resolvedListingMessages).map(
+                        (type) => (
+                          <option key={type.value} value={type.value}>
+                            {type.label}
+                          </option>
+                        ),
+                      )}
                     </SelectWithChevron>
                   </label>
 
@@ -3168,7 +3203,9 @@ export function ContainerListingForm({
                         required: messages.form.selectCondition,
                       })}
                     >
-                      {getContainerConditionOptions(resolvedListingMessages).map((condition) => (
+                      {getContainerConditionOptions(
+                        resolvedListingMessages,
+                      ).map((condition) => (
                         <option key={condition.value} value={condition.value}>
                           {condition.label}
                         </option>
@@ -3253,7 +3290,8 @@ export function ContainerListingForm({
 
               <label className="flex min-w-[220px] flex-[1_1_220px] flex-col gap-1 text-sm">
                 <span className="text-neutral-700">
-                  {messages.form.availableFromLabel} {availableNowValue ? "" : "*"}
+                  {messages.form.availableFromLabel}{" "}
+                  {availableNowValue ? "" : "*"}
                 </span>
                 <input
                   type="date"
@@ -3323,9 +3361,7 @@ export function ContainerListingForm({
             </div>
           </FormSection>
 
-          <FormSection
-            title={messages.form.locationSectionTitle}
-          >
+          <FormSection title={messages.form.locationSectionTitle}>
             <div className="flex flex-wrap items-center gap-2">
               {hasCompanyLocationPrefill ? (
                 <CompanyLocationPrefillDropdown
@@ -3349,14 +3385,17 @@ export function ContainerListingForm({
 
             <div className="rounded-md border border-neutral-300 bg-white p-2 text-xs text-neutral-600">
               <p className="font-medium text-neutral-700">
-                {messages.form.configuredLocationsLabel}: {configuredLocationsCount}/
-                {MAX_LISTING_LOCATIONS}
+                {messages.form.configuredLocationsLabel}:{" "}
+                {configuredLocationsCount}/{MAX_LISTING_LOCATIONS}
               </p>
               {visibleConfiguredLocationDisplays.length > 0 ? (
                 <div className="mt-1 grid gap-1 text-neutral-600">
                   {visibleConfiguredLocationDisplays.map((location, index) => (
                     <div key={location.key} className="flex items-center gap-1">
-                      <LocationFlag country={location.country} className="shrink-0" />
+                      <LocationFlag
+                        country={location.country}
+                        className="shrink-0"
+                      />
                       <span className="min-w-0 truncate">
                         {location.postalCode ? (
                           <strong className="font-semibold text-neutral-700">
@@ -3365,7 +3404,8 @@ export function ContainerListingForm({
                         ) : null}
                         {location.postalCode && location.rest ? " " : null}
                         {location.rest}
-                        {index === visibleConfiguredLocationDisplays.length - 1 &&
+                        {index ===
+                          visibleConfiguredLocationDisplays.length - 1 &&
                         hiddenConfiguredLocationsCount > 0 ? (
                           <strong className="font-semibold text-neutral-700">
                             {" "}
@@ -3413,9 +3453,7 @@ export function ContainerListingForm({
             ) : null}
           </FormSection>
 
-          <FormSection
-            title={messages.form.priceSectionTitle}
-          >
+          <FormSection title={messages.form.priceSectionTitle}>
             <div className="flex flex-wrap items-end gap-3">
               <label className="flex min-w-[220px] flex-[1.6_1_320px] flex-col gap-1 text-sm">
                 <span className="text-neutral-700">
@@ -3467,7 +3505,9 @@ export function ContainerListingForm({
                 </span>
                 <SelectWithChevron
                   tone="dark"
-                  {...register("priceCurrency", { required: messages.form.selectCurrency })}
+                  {...register("priceCurrency", {
+                    required: messages.form.selectCurrency,
+                  })}
                 >
                   {PRICE_CURRENCIES.map((currency) => (
                     <option key={currency} value={currency}>
@@ -3510,260 +3550,256 @@ export function ContainerListingForm({
           </FormSection>
 
           {showDescriptionSection ? (
-            <FormSection
-              title={messages.form.descriptionSectionTitle}
-            >
-            <div className="grid gap-1 text-sm">
-              <span className="text-neutral-700">
-                {messages.form.descriptionLabel} ({messages.shared.optional})
-              </span>
-              <Controller
-                name="description"
-                control={control}
-                rules={{
-                  validate: (value) =>
-                    getRichTextLength(value) <= 1000 ||
-                    messages.form.descriptionMaxLength,
-                }}
-                render={({ field }) => (
-                  <SimpleRichTextEditor
-                    value={field.value}
-                    onChange={field.onChange}
-                    maxCharacters={1000}
-                    placeholder={messages.form.descriptionPlaceholder}
-                    disabled={isSubmitting}
-                  />
-                )}
-              />
-              {errors.description?.message ? (
-                <span className="text-xs text-red-700">
-                  {errors.description.message}
+            <FormSection title={messages.form.descriptionSectionTitle}>
+              <div className="grid gap-1 text-sm">
+                <span className="text-neutral-700">
+                  {messages.form.descriptionLabel} ({messages.shared.optional})
                 </span>
-              ) : null}
-            </div>
-
-            <div className="grid gap-3 sm:grid-cols-2 sm:items-center">
-              <div className="grid gap-2 text-sm">
-                <label htmlFor="containerColorsRal" className="text-neutral-700">
-                  {messages.form.ralColorsLabel}
-                </label>
-                <input
-                  id="containerColorsRal"
-                  {...register("containerColorsRal", {
-                    validate: validateContainerRalColorsInput,
-                    maxLength: {
-                      value: 320,
-                      message: messages.form.ralListMaxLength,
-                    },
-                  })}
-                  className="rounded-md border border-neutral-700 bg-neutral-950 px-3 py-2 text-neutral-100"
-                  placeholder={messages.form.ralPlaceholder}
+                <Controller
+                  name="description"
+                  control={control}
+                  rules={{
+                    validate: (value) =>
+                      getRichTextLength(value) <= 1000 ||
+                      messages.form.descriptionMaxLength,
+                  }}
+                  render={({ field }) => (
+                    <SimpleRichTextEditor
+                      value={field.value}
+                      onChange={field.onChange}
+                      maxCharacters={1000}
+                      placeholder={messages.form.descriptionPlaceholder}
+                      disabled={isSubmitting}
+                    />
+                  )}
                 />
-                <span className="text-xs text-neutral-400">
-                  {messages.form.ralHint}
-                </span>
-                {errors.containerColorsRal?.message ? (
+                {errors.description?.message ? (
                   <span className="text-xs text-red-700">
-                    {errors.containerColorsRal.message}
+                    {errors.description.message}
                   </span>
                 ) : null}
-                <label className="mt-1 inline-flex h-9 w-fit items-center gap-2 rounded-md border border-neutral-700 bg-neutral-900/70 px-3 text-sm text-neutral-200">
-                  <input
-                    type="checkbox"
-                    {...register("hasBranding")}
-                    className="h-4 w-4 rounded border-neutral-600 bg-neutral-950 text-[#2f639a] focus:ring-[#4e86c3]"
-                  />
-                  <span>{messages.form.brandingLabel}</span>
-                </label>
               </div>
-              <div className="flex w-full flex-wrap items-start justify-end gap-2">
-                {shouldShowRalColorsPreview
-                  ? parsedRalColorsPreview.colors.map((color) => {
-                      const labelStyle = getRalPreviewLabelStyle(color.rgb);
-                      return (
-                        <span
-                          key={color.ral}
-                          title={`${color.ral} (${color.hex})`}
-                          aria-label={`${color.ral} ${color.hex}`}
-                          className="relative h-16 w-16 overflow-hidden rounded-md border border-neutral-600 shadow-inner"
-                          style={{ backgroundColor: color.hex }}
-                        >
+
+              <div className="grid gap-3 sm:grid-cols-2 sm:items-center">
+                <div className="grid gap-2 text-sm">
+                  <label
+                    htmlFor="containerColorsRal"
+                    className="text-neutral-700"
+                  >
+                    {messages.form.ralColorsLabel}
+                  </label>
+                  <input
+                    id="containerColorsRal"
+                    {...register("containerColorsRal", {
+                      validate: validateContainerRalColorsInput,
+                      maxLength: {
+                        value: 320,
+                        message: messages.form.ralListMaxLength,
+                      },
+                    })}
+                    className="rounded-md border border-neutral-700 bg-neutral-950 px-3 py-2 text-neutral-100"
+                    placeholder={messages.form.ralPlaceholder}
+                  />
+                  <span className="text-xs text-neutral-400">
+                    {messages.form.ralHint}
+                  </span>
+                  {errors.containerColorsRal?.message ? (
+                    <span className="text-xs text-red-700">
+                      {errors.containerColorsRal.message}
+                    </span>
+                  ) : null}
+                  <label className="mt-1 inline-flex h-9 w-fit items-center gap-2 rounded-md border border-neutral-700 bg-neutral-900/70 px-3 text-sm text-neutral-200">
+                    <input
+                      type="checkbox"
+                      {...register("hasBranding")}
+                      className="h-4 w-4 rounded border-neutral-600 bg-neutral-950 text-[#2f639a] focus:ring-[#4e86c3]"
+                    />
+                    <span>{messages.form.brandingLabel}</span>
+                  </label>
+                </div>
+                <div className="flex w-full flex-wrap items-start justify-end gap-2">
+                  {shouldShowRalColorsPreview
+                    ? parsedRalColorsPreview.colors.map((color) => {
+                        const labelStyle = getRalPreviewLabelStyle(color.rgb);
+                        return (
                           <span
-                            className="pointer-events-none absolute bottom-1 right-1 flex flex-col items-end leading-none"
-                            style={labelStyle}
+                            key={color.ral}
+                            title={`${color.ral} (${color.hex})`}
+                            aria-label={`${color.ral} ${color.hex}`}
+                            className="relative h-16 w-16 overflow-hidden rounded-md border border-neutral-600 shadow-inner"
+                            style={{ backgroundColor: color.hex }}
                           >
-                            <span className="text-[9px] font-semibold tracking-[0.08em]">
-                              RAL
-                            </span>
-                            <span className="text-[11px] font-bold">
-                              {getRalCodeDigitsLabel(color.ral)}
+                            <span
+                              className="pointer-events-none absolute bottom-1 right-1 flex flex-col items-end leading-none"
+                              style={labelStyle}
+                            >
+                              <span className="text-[9px] font-semibold tracking-[0.08em]">
+                                RAL
+                              </span>
+                              <span className="text-[11px] font-bold">
+                                {getRalCodeDigitsLabel(color.ral)}
+                              </span>
                             </span>
                           </span>
-                        </span>
-                      );
-                    })
-                  : null}
+                        );
+                      })
+                    : null}
+                </div>
               </div>
-            </div>
-
             </FormSection>
           ) : null}
 
           {showTransportSection ? (
-            <FormSection
-              title={messages.form.logisticsSectionTitle}
-            >
-            <div className="grid gap-2 sm:grid-cols-2">
-              <label className="flex w-full min-w-0 items-center gap-2 rounded-md border border-neutral-700 bg-neutral-900/70 px-3 py-2 text-sm text-neutral-200">
-                <input
-                  type="checkbox"
-                  {...register("logisticsTransportAvailable", {
-                    onChange: (event) => {
-                      if (event.target.checked !== true) {
-                        setValue("logisticsTransportIncluded", false, {
-                          shouldDirty: true,
-                          shouldTouch: true,
-                        });
-                        setValue("logisticsTransportFreeDistanceKm", "", {
-                          shouldDirty: true,
-                          shouldTouch: true,
-                        });
-                      }
-                    },
-                  })}
-                  className="h-4 w-4 rounded border-neutral-600 bg-neutral-950 text-[#2f639a] focus:ring-[#4e86c3]"
-                />
-                <span className="min-w-0 leading-snug">
-                  {messages.form.transportAvailableLabel}
-                </span>
-              </label>
-              <label className="flex w-full min-w-0 items-center gap-2 rounded-md border border-neutral-700 bg-neutral-900/70 px-3 py-2 text-sm text-neutral-200">
-                <input
-                  type="checkbox"
-                  {...register("logisticsTransportIncluded", {
-                    onChange: (event) => {
-                      if (event.target.checked === true) {
-                        setValue("logisticsTransportAvailable", true, {
-                          shouldDirty: true,
-                          shouldTouch: true,
-                        });
-                      }
-                      if (event.target.checked !== true) {
-                        setValue("logisticsTransportFreeDistanceKm", "", {
-                          shouldDirty: true,
-                          shouldTouch: true,
-                        });
-                      }
-                    },
-                  })}
-                  className="h-4 w-4 rounded border-neutral-600 bg-neutral-950 text-[#2f639a] focus:ring-[#4e86c3]"
-                />
-                <span className="min-w-0 leading-snug">
-                  {messages.form.transportIncludedLabel}
-                </span>
-              </label>
-              <label className="flex w-full min-w-0 items-center gap-2 rounded-md border border-neutral-700 bg-neutral-900/70 px-3 py-2 text-sm text-neutral-200">
-                <input
-                  type="checkbox"
-                  {...register("logisticsUnloadingAvailable", {
-                    onChange: (event) => {
-                      if (event.target.checked !== true) {
-                        setValue("logisticsUnloadingIncluded", false, {
-                          shouldDirty: true,
-                          shouldTouch: true,
-                        });
-                      }
-                    },
-                  })}
-                  className="h-4 w-4 rounded border-neutral-600 bg-neutral-950 text-[#2f639a] focus:ring-[#4e86c3]"
-                />
-                <span className="min-w-0 leading-snug">
-                  {messages.form.unloadingAvailableLabel}
-                </span>
-              </label>
-              <label className="flex w-full min-w-0 items-center gap-2 rounded-md border border-neutral-700 bg-neutral-900/70 px-3 py-2 text-sm text-neutral-200">
-                <input
-                  type="checkbox"
-                  {...register("logisticsUnloadingIncluded", {
-                    onChange: (event) => {
-                      if (event.target.checked === true) {
-                        setValue("logisticsUnloadingAvailable", true, {
-                          shouldDirty: true,
-                          shouldTouch: true,
-                        });
-                      }
-                    },
-                  })}
-                  className="h-4 w-4 rounded border-neutral-600 bg-neutral-950 text-[#2f639a] focus:ring-[#4e86c3]"
-                />
-                <span className="min-w-0 leading-snug">
-                  {messages.form.unloadingIncludedLabel}
-                </span>
-              </label>
-            </div>
+            <FormSection title={messages.form.logisticsSectionTitle}>
+              <div className="grid gap-2 sm:grid-cols-2">
+                <label className="flex w-full min-w-0 items-center gap-2 rounded-md border border-neutral-700 bg-neutral-900/70 px-3 py-2 text-sm text-neutral-200">
+                  <input
+                    type="checkbox"
+                    {...register("logisticsTransportAvailable", {
+                      onChange: (event) => {
+                        if (event.target.checked !== true) {
+                          setValue("logisticsTransportIncluded", false, {
+                            shouldDirty: true,
+                            shouldTouch: true,
+                          });
+                          setValue("logisticsTransportFreeDistanceKm", "", {
+                            shouldDirty: true,
+                            shouldTouch: true,
+                          });
+                        }
+                      },
+                    })}
+                    className="h-4 w-4 rounded border-neutral-600 bg-neutral-950 text-[#2f639a] focus:ring-[#4e86c3]"
+                  />
+                  <span className="min-w-0 leading-snug">
+                    {messages.form.transportAvailableLabel}
+                  </span>
+                </label>
+                <label className="flex w-full min-w-0 items-center gap-2 rounded-md border border-neutral-700 bg-neutral-900/70 px-3 py-2 text-sm text-neutral-200">
+                  <input
+                    type="checkbox"
+                    {...register("logisticsTransportIncluded", {
+                      onChange: (event) => {
+                        if (event.target.checked === true) {
+                          setValue("logisticsTransportAvailable", true, {
+                            shouldDirty: true,
+                            shouldTouch: true,
+                          });
+                        }
+                        if (event.target.checked !== true) {
+                          setValue("logisticsTransportFreeDistanceKm", "", {
+                            shouldDirty: true,
+                            shouldTouch: true,
+                          });
+                        }
+                      },
+                    })}
+                    className="h-4 w-4 rounded border-neutral-600 bg-neutral-950 text-[#2f639a] focus:ring-[#4e86c3]"
+                  />
+                  <span className="min-w-0 leading-snug">
+                    {messages.form.transportIncludedLabel}
+                  </span>
+                </label>
+                <label className="flex w-full min-w-0 items-center gap-2 rounded-md border border-neutral-700 bg-neutral-900/70 px-3 py-2 text-sm text-neutral-200">
+                  <input
+                    type="checkbox"
+                    {...register("logisticsUnloadingAvailable", {
+                      onChange: (event) => {
+                        if (event.target.checked !== true) {
+                          setValue("logisticsUnloadingIncluded", false, {
+                            shouldDirty: true,
+                            shouldTouch: true,
+                          });
+                        }
+                      },
+                    })}
+                    className="h-4 w-4 rounded border-neutral-600 bg-neutral-950 text-[#2f639a] focus:ring-[#4e86c3]"
+                  />
+                  <span className="min-w-0 leading-snug">
+                    {messages.form.unloadingAvailableLabel}
+                  </span>
+                </label>
+                <label className="flex w-full min-w-0 items-center gap-2 rounded-md border border-neutral-700 bg-neutral-900/70 px-3 py-2 text-sm text-neutral-200">
+                  <input
+                    type="checkbox"
+                    {...register("logisticsUnloadingIncluded", {
+                      onChange: (event) => {
+                        if (event.target.checked === true) {
+                          setValue("logisticsUnloadingAvailable", true, {
+                            shouldDirty: true,
+                            shouldTouch: true,
+                          });
+                        }
+                      },
+                    })}
+                    className="h-4 w-4 rounded border-neutral-600 bg-neutral-950 text-[#2f639a] focus:ring-[#4e86c3]"
+                  />
+                  <span className="min-w-0 leading-snug">
+                    {messages.form.unloadingIncludedLabel}
+                  </span>
+                </label>
+              </div>
 
-            <label className="grid gap-1 text-sm sm:max-w-xs">
-              <span className="text-neutral-700">
-                {messages.form.freeTransportDistanceLabel}
-              </span>
-              <input
-                type="number"
-                min={1}
-                step={1}
-                inputMode="numeric"
-                disabled={!logisticsTransportIncludedValue}
-                {...register("logisticsTransportFreeDistanceKm", {
-                  validate: (value) => {
-                    if (!logisticsTransportIncludedValue) {
-                      return true;
-                    }
-                    const parsed = normalizeOptionalInteger(value);
-                    return (
-                      (typeof parsed === "number" &&
-                        parsed > 0 &&
-                        parsed <= 10_000) ||
-                      messages.form.transportDistanceRange
-                    );
-                  },
-                })}
-                className="rounded-md border border-neutral-700 bg-neutral-950 px-3 py-2 text-neutral-100 disabled:cursor-not-allowed disabled:opacity-60"
-                placeholder={messages.form.transportDistancePlaceholder}
-              />
-              {errors.logisticsTransportFreeDistanceKm?.message ? (
-                <span className="text-xs text-red-700">
-                  {errors.logisticsTransportFreeDistanceKm.message}
+              <label className="grid gap-1 text-sm sm:max-w-xs">
+                <span className="text-neutral-700">
+                  {messages.form.freeTransportDistanceLabel}
                 </span>
-              ) : null}
-            </label>
+                <input
+                  type="number"
+                  min={1}
+                  step={1}
+                  inputMode="numeric"
+                  disabled={!logisticsTransportIncludedValue}
+                  {...register("logisticsTransportFreeDistanceKm", {
+                    validate: (value) => {
+                      if (!logisticsTransportIncludedValue) {
+                        return true;
+                      }
+                      const parsed = normalizeOptionalInteger(value);
+                      return (
+                        (typeof parsed === "number" &&
+                          parsed > 0 &&
+                          parsed <= 10_000) ||
+                        messages.form.transportDistanceRange
+                      );
+                    },
+                  })}
+                  className="rounded-md border border-neutral-700 bg-neutral-950 px-3 py-2 text-neutral-100 disabled:cursor-not-allowed disabled:opacity-60"
+                  placeholder={messages.form.transportDistancePlaceholder}
+                />
+                {errors.logisticsTransportFreeDistanceKm?.message ? (
+                  <span className="text-xs text-red-700">
+                    {errors.logisticsTransportFreeDistanceKm.message}
+                  </span>
+                ) : null}
+              </label>
 
-            <label className="grid gap-1 text-sm">
-              <span className="text-neutral-700">
-                {messages.form.logisticsCommentLabel}
-              </span>
-              <textarea
-                rows={3}
-                {...register("logisticsComment", {
-                  maxLength: {
-                    value: 600,
-                    message: messages.form.logisticsCommentMaxLength,
-                  },
-                })}
-                className="rounded-md border border-neutral-700 bg-neutral-950 px-3 py-2 text-neutral-100"
-                placeholder={messages.form.logisticsCommentPlaceholder}
-              />
-              {errors.logisticsComment?.message ? (
-                <span className="text-xs text-red-700">
-                  {errors.logisticsComment.message}
+              <label className="grid gap-1 text-sm">
+                <span className="text-neutral-700">
+                  {messages.form.logisticsCommentLabel}
                 </span>
-              ) : null}
-            </label>
+                <textarea
+                  rows={3}
+                  {...register("logisticsComment", {
+                    maxLength: {
+                      value: 600,
+                      message: messages.form.logisticsCommentMaxLength,
+                    },
+                  })}
+                  className="rounded-md border border-neutral-700 bg-neutral-950 px-3 py-2 text-neutral-100"
+                  placeholder={messages.form.logisticsCommentPlaceholder}
+                />
+                {errors.logisticsComment?.message ? (
+                  <span className="text-xs text-red-700">
+                    {errors.logisticsComment.message}
+                  </span>
+                ) : null}
+              </label>
             </FormSection>
           ) : null}
 
           {!isCreateMode ? (
-            <FormSection
-              title={messages.form.contactSectionTitle}
-            >
+            <FormSection title={messages.form.contactSectionTitle}>
               <div className="grid gap-4 sm:grid-cols-2">
                 <label className="grid gap-1 text-sm">
                   <span className="text-neutral-700">
@@ -3811,241 +3847,255 @@ export function ContainerListingForm({
           ) : null}
 
           {showCertificationSection ? (
-            <FormSection
-              title={messages.form.certificationSectionTitle}
-            >
-            <div className="flex flex-wrap items-start gap-3">
-              <div className="flex w-fit flex-col gap-1 text-sm">
-                <span className="invisible text-neutral-700" aria-hidden="true">
-                  {messages.form.monthLabel}
-                </span>
-                <label className="inline-flex h-9 w-fit items-center gap-2 rounded-md border border-neutral-700 bg-neutral-900/70 px-3 text-sm text-neutral-200">
+            <FormSection title={messages.form.certificationSectionTitle}>
+              <div className="flex flex-wrap items-start gap-3">
+                <div className="flex w-fit flex-col gap-1 text-sm">
+                  <span
+                    className="invisible text-neutral-700"
+                    aria-hidden="true"
+                  >
+                    {messages.form.monthLabel}
+                  </span>
+                  <label className="inline-flex h-9 w-fit items-center gap-2 rounded-md border border-neutral-700 bg-neutral-900/70 px-3 text-sm text-neutral-200">
+                    <input
+                      type="checkbox"
+                      {...register("hasCscPlate")}
+                      className="h-4 w-4 rounded border-neutral-600 bg-neutral-950 text-[#2f639a] focus:ring-[#4e86c3]"
+                    />
+                    <span>{messages.form.cscPlateLabel}</span>
+                  </label>
+                  <span
+                    className="min-h-4 text-xs text-transparent"
+                    aria-hidden="true"
+                  >
+                    {"\u00A0"}
+                  </span>
+                </div>
+                <div className="flex w-fit flex-col gap-1 text-sm">
+                  <span
+                    className="invisible text-neutral-700"
+                    aria-hidden="true"
+                  >
+                    {messages.form.monthLabel}
+                  </span>
+                  <label className="inline-flex h-9 w-fit items-center gap-2 rounded-md border border-neutral-700 bg-neutral-900/70 px-3 text-sm text-neutral-200">
+                    <input
+                      type="checkbox"
+                      {...register("hasCscCertification")}
+                      className="h-4 w-4 rounded border-neutral-600 bg-neutral-950 text-[#2f639a] focus:ring-[#4e86c3]"
+                    />
+                    <span>{messages.form.cscCertificationLabel}</span>
+                  </label>
+                  <span
+                    className="min-h-4 text-xs text-transparent"
+                    aria-hidden="true"
+                  >
+                    {"\u00A0"}
+                  </span>
+                </div>
+                <label className="flex w-fit flex-col gap-1 text-sm">
+                  <span className="text-neutral-700">
+                    {messages.form.monthLabel}
+                  </span>
                   <input
-                    type="checkbox"
-                    {...register("hasCscPlate")}
-                    className="h-4 w-4 rounded border-neutral-600 bg-neutral-950 text-[#2f639a] focus:ring-[#4e86c3]"
+                    type="text"
+                    inputMode="numeric"
+                    maxLength={2}
+                    pattern="[0-9]*"
+                    {...register("cscValidToMonth", {
+                      validate: (value) => {
+                        const monthDigits = value.replace(/\D+/g, "");
+                        if (monthDigits.length > 2) {
+                          return messages.form.monthFormat;
+                        }
+                        const month = normalizeOptionalInteger(value);
+                        const year = normalizeOptionalInteger(
+                          watch("cscValidToYear"),
+                        );
+                        if (month === undefined && year === undefined) {
+                          return true;
+                        }
+                        return (
+                          (typeof month === "number" &&
+                            month >= 1 &&
+                            month <= 12) ||
+                          messages.form.monthRange
+                        );
+                      },
+                    })}
+                    onInput={(event) => {
+                      const target = event.currentTarget;
+                      const digitsOnly = target.value.replace(/\D+/g, "");
+                      const nextValue = digitsOnly.slice(0, 2);
+                      if (target.value !== nextValue) {
+                        target.value = nextValue;
+                      }
+                    }}
+                    className="w-[90px] rounded-md border border-neutral-700 bg-neutral-950 px-3 py-2 text-neutral-100"
+                    placeholder="MM"
                   />
-                  <span>{messages.form.cscPlateLabel}</span>
+                  <span
+                    className={`min-h-4 text-xs ${
+                      errors.cscValidToMonth?.message
+                        ? "text-red-700"
+                        : "text-transparent"
+                    }`}
+                    aria-live="polite"
+                  >
+                    {errors.cscValidToMonth?.message ?? "\u00A0"}
+                  </span>
                 </label>
-                <span className="min-h-4 text-xs text-transparent" aria-hidden="true">
-                  {"\u00A0"}
-                </span>
-              </div>
-              <div className="flex w-fit flex-col gap-1 text-sm">
-                <span className="invisible text-neutral-700" aria-hidden="true">
-                  {messages.form.monthLabel}
-                </span>
-                <label className="inline-flex h-9 w-fit items-center gap-2 rounded-md border border-neutral-700 bg-neutral-900/70 px-3 text-sm text-neutral-200">
+                <label className="flex w-fit flex-col gap-1 text-sm">
+                  <span className="text-neutral-700">
+                    {messages.form.yearLabel}
+                  </span>
                   <input
-                    type="checkbox"
-                    {...register("hasCscCertification")}
-                    className="h-4 w-4 rounded border-neutral-600 bg-neutral-950 text-[#2f639a] focus:ring-[#4e86c3]"
+                    type="text"
+                    inputMode="numeric"
+                    maxLength={4}
+                    pattern="[0-9]*"
+                    {...register("cscValidToYear", {
+                      validate: (value) => {
+                        const yearDigits = value.replace(/\D+/g, "");
+                        if (yearDigits.length > 4) {
+                          return messages.form.yearFormat;
+                        }
+                        const year = normalizeOptionalInteger(value);
+                        const month = normalizeOptionalInteger(
+                          watch("cscValidToMonth"),
+                        );
+                        if (month === undefined && year === undefined) {
+                          return true;
+                        }
+                        return (
+                          (typeof year === "number" &&
+                            year >= 1900 &&
+                            year <= 2100) ||
+                          messages.form.yearValid
+                        );
+                      },
+                    })}
+                    onInput={(event) => {
+                      const target = event.currentTarget;
+                      const digitsOnly = target.value.replace(/\D+/g, "");
+                      const nextValue = digitsOnly.slice(0, 4);
+                      if (target.value !== nextValue) {
+                        target.value = nextValue;
+                      }
+                    }}
+                    className="w-[110px] rounded-md border border-neutral-700 bg-neutral-950 px-3 py-2 text-neutral-100"
+                    placeholder="RRRR"
                   />
-                  <span>{messages.form.cscCertificationLabel}</span>
+                  <span
+                    className={`min-h-4 text-xs ${
+                      errors.cscValidToYear?.message
+                        ? "text-red-700"
+                        : "text-transparent"
+                    }`}
+                    aria-live="polite"
+                  >
+                    {errors.cscValidToYear?.message ?? "\u00A0"}
+                  </span>
                 </label>
-                <span className="min-h-4 text-xs text-transparent" aria-hidden="true">
-                  {"\u00A0"}
-                </span>
               </div>
-              <label className="flex w-fit flex-col gap-1 text-sm">
-                <span className="text-neutral-700">{messages.form.monthLabel}</span>
+              <label className="inline-flex h-9 w-fit items-center gap-2 rounded-md border border-neutral-700 bg-neutral-900/70 px-3 text-sm text-neutral-200">
                 <input
-                  type="text"
-                  inputMode="numeric"
-                  maxLength={2}
-                  pattern="[0-9]*"
-                  {...register("cscValidToMonth", {
-                    validate: (value) => {
-                      const monthDigits = value.replace(/\D+/g, "");
-                      if (monthDigits.length > 2) {
-                        return messages.form.monthFormat;
-                      }
-                      const month = normalizeOptionalInteger(value);
-                      const year = normalizeOptionalInteger(
-                        watch("cscValidToYear"),
-                      );
-                      if (month === undefined && year === undefined) {
-                        return true;
-                      }
-                      return (
-                        (typeof month === "number" &&
-                          month >= 1 &&
-                          month <= 12) ||
-                        messages.form.monthRange
-                      );
-                    },
-                  })}
-                  onInput={(event) => {
-                    const target = event.currentTarget;
-                    const digitsOnly = target.value.replace(/\D+/g, "");
-                    const nextValue = digitsOnly.slice(0, 2);
-                    if (target.value !== nextValue) {
-                      target.value = nextValue;
-                    }
-                  }}
-                  className="w-[90px] rounded-md border border-neutral-700 bg-neutral-950 px-3 py-2 text-neutral-100"
-                  placeholder="MM"
+                  type="checkbox"
+                  {...register("hasWarranty")}
+                  className="h-4 w-4 rounded border-neutral-600 bg-neutral-950 text-[#2f639a] focus:ring-[#4e86c3]"
                 />
-                <span
-                  className={`min-h-4 text-xs ${
-                    errors.cscValidToMonth?.message
-                      ? "text-red-700"
-                      : "text-transparent"
-                  }`}
-                  aria-live="polite"
-                >
-                  {errors.cscValidToMonth?.message ?? "\u00A0"}
-                </span>
+                <span>{messages.form.warrantyLabel}</span>
               </label>
-              <label className="flex w-fit flex-col gap-1 text-sm">
-                <span className="text-neutral-700">{messages.form.yearLabel}</span>
-                <input
-                  type="text"
-                  inputMode="numeric"
-                  maxLength={4}
-                  pattern="[0-9]*"
-                  {...register("cscValidToYear", {
-                    validate: (value) => {
-                      const yearDigits = value.replace(/\D+/g, "");
-                      if (yearDigits.length > 4) {
-                        return messages.form.yearFormat;
-                      }
-                      const year = normalizeOptionalInteger(value);
-                      const month = normalizeOptionalInteger(
-                        watch("cscValidToMonth"),
-                      );
-                      if (month === undefined && year === undefined) {
-                        return true;
-                      }
-                      return (
-                        (typeof year === "number" &&
-                          year >= 1900 &&
-                          year <= 2100) ||
-                        messages.form.yearValid
-                      );
-                    },
-                  })}
-                  onInput={(event) => {
-                    const target = event.currentTarget;
-                    const digitsOnly = target.value.replace(/\D+/g, "");
-                    const nextValue = digitsOnly.slice(0, 4);
-                    if (target.value !== nextValue) {
-                      target.value = nextValue;
-                    }
-                  }}
-                  className="w-[110px] rounded-md border border-neutral-700 bg-neutral-950 px-3 py-2 text-neutral-100"
-                  placeholder="RRRR"
-                />
-                <span
-                  className={`min-h-4 text-xs ${
-                    errors.cscValidToYear?.message
-                      ? "text-red-700"
-                      : "text-transparent"
-                  }`}
-                  aria-live="polite"
-                >
-                  {errors.cscValidToYear?.message ?? "\u00A0"}
-                </span>
-              </label>
-            </div>
-            <label className="inline-flex h-9 w-fit items-center gap-2 rounded-md border border-neutral-700 bg-neutral-900/70 px-3 text-sm text-neutral-200">
-              <input
-                type="checkbox"
-                {...register("hasWarranty")}
-                className="h-4 w-4 rounded border-neutral-600 bg-neutral-950 text-[#2f639a] focus:ring-[#4e86c3]"
-              />
-              <span>{messages.form.warrantyLabel}</span>
-            </label>
             </FormSection>
           ) : null}
 
           {canManageListingPhotos && showAdditionalPhotosSection ? (
             <section className="grid gap-4 rounded-lg border border-neutral-300 bg-neutral-50/95 p-3">
-            <div className="grid gap-2">
-              <ImageDropzone
-                title={formatTemplate(messages.form.additionalPhotosTitle, {
-                  count: MAX_CONTAINER_PHOTOS,
-                })}
-                hintText={formatTemplate(messages.form.photoHint, {
-                  count: MAX_CONTAINER_PHOTO_MB,
-                })}
-                variant="light"
-                onFilesAdded={(files) => {
-                  void handleAdditionalPhotoFilesAdded(files);
-                }}
-              />
-              {isProcessingImages ? (
-                <p className="text-xs text-neutral-600">
-                  {messages.form.processingPhotos}
-                </p>
-              ) : null}
-            </div>
-
-            {additionalInitialPhotoIndexes.length > 0 ? (
-              <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-                {additionalInitialPhotoIndexes.map((index) => {
-                  const url = stableInitialPhotoUrls[index];
-                  if (!url) {
-                    return null;
-                  }
-
-                  return (
-                    <div
-                      key={`initial-container-photo-${index + 1}`}
-                      className="group relative rounded-md border border-neutral-700 bg-neutral-900 p-1"
-                    >
-                      <button
-                        type="button"
-                        className="flex h-28 w-full cursor-pointer items-center justify-center overflow-hidden rounded-sm"
-                        onClick={() => {
-                          setKeptInitialPhotoIndexes((prev) =>
-                            prev.filter((value) => value !== index),
-                          );
-                        }}
-                        title={messages.form.removePhoto}
-                      >
-                        <img
-                          src={url}
-                          alt={messages.form.photoPreviewAlt}
-                          className="max-h-24 w-auto max-w-full object-contain transition-transform duration-300 ease-out group-hover:scale-105"
-                        />
-                      </button>
-                      <button
-                        type="button"
-                        className="absolute right-1 top-1 cursor-pointer rounded-full bg-black/70 px-2 py-0.5 text-xs text-white opacity-90"
-                        onClick={() => {
-                          setKeptInitialPhotoIndexes((prev) =>
-                            prev.filter((value) => value !== index),
-                          );
-                        }}
-                        title={messages.form.removePhoto}
-                        aria-label={messages.form.removePhoto}
-                      >
-                        x
-                      </button>
-                    </div>
-                  );
-                })}
+              <div className="grid gap-2">
+                <ImageDropzone
+                  title={formatTemplate(messages.form.additionalPhotosTitle, {
+                    count: MAX_CONTAINER_PHOTOS,
+                  })}
+                  hintText={formatTemplate(messages.form.photoHint, {
+                    count: MAX_CONTAINER_PHOTO_MB,
+                  })}
+                  variant="light"
+                  onFilesAdded={(files) => {
+                    void handleAdditionalPhotoFilesAdded(files);
+                  }}
+                />
+                {isProcessingImages ? (
+                  <p className="text-xs text-neutral-600">
+                    {messages.form.processingPhotos}
+                  </p>
+                ) : null}
               </div>
-            ) : null}
 
-            {photoItems.length > 0 ? (
-              <ImageGrid
-                items={photoItems}
-                onRemove={(id) => {
-                  setPhotoItems((prev) => removeImageItem(prev, id));
-                }}
-                removeLabel={messages.form.removePhoto}
-                previewAlt={messages.form.photoPreviewAlt}
-              />
-            ) : null}
+              {additionalInitialPhotoIndexes.length > 0 ? (
+                <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+                  {additionalInitialPhotoIndexes.map((index) => {
+                    const url = stableInitialPhotoUrls[index];
+                    if (!url) {
+                      return null;
+                    }
+
+                    return (
+                      <div
+                        key={`initial-container-photo-${index + 1}`}
+                        className="group relative rounded-md border border-neutral-700 bg-neutral-900 p-1"
+                      >
+                        <button
+                          type="button"
+                          className="flex h-28 w-full cursor-pointer items-center justify-center overflow-hidden rounded-sm"
+                          onClick={() => {
+                            setKeptInitialPhotoIndexes((prev) =>
+                              prev.filter((value) => value !== index),
+                            );
+                          }}
+                          title={messages.form.removePhoto}
+                        >
+                          <img
+                            src={url}
+                            alt={messages.form.photoPreviewAlt}
+                            className="max-h-24 w-auto max-w-full object-contain transition-transform duration-300 ease-out group-hover:scale-105"
+                          />
+                        </button>
+                        <button
+                          type="button"
+                          className="absolute right-1 top-1 cursor-pointer rounded-full bg-black/70 px-2 py-0.5 text-xs text-white opacity-90"
+                          onClick={() => {
+                            setKeptInitialPhotoIndexes((prev) =>
+                              prev.filter((value) => value !== index),
+                            );
+                          }}
+                          title={messages.form.removePhoto}
+                          aria-label={messages.form.removePhoto}
+                        >
+                          x
+                        </button>
+                      </div>
+                    );
+                  })}
+                </div>
+              ) : null}
+
+              {photoItems.length > 0 ? (
+                <ImageGrid
+                  items={photoItems}
+                  onRemove={(id) => {
+                    setPhotoItems((prev) => removeImageItem(prev, id));
+                  }}
+                  removeLabel={messages.form.removePhoto}
+                  previewAlt={messages.form.photoPreviewAlt}
+                />
+              ) : null}
             </section>
           ) : null}
 
-          {(!showDescriptionSection ||
-            !showTransportSection ||
-            !showCertificationSection ||
-            (canManageListingPhotos && !showAdditionalPhotosSection)) ? (
+          {!showDescriptionSection ||
+          !showTransportSection ||
+          !showCertificationSection ||
+          (canManageListingPhotos && !showAdditionalPhotosSection) ? (
             <section className="mx-auto grid w-full max-w-3xl gap-2 sm:grid-cols-2">
               {!showDescriptionSection ? (
                 <button
@@ -4158,9 +4208,7 @@ export function ContainerListingForm({
                 <div className="grid max-h-[calc(100dvh-11rem)] gap-3 overflow-y-auto pr-1">
                   <div className="flex flex-wrap items-center justify-between gap-2">
                     <div className="text-xs text-neutral-400">
-                      <p>
-                        {messages.form.locationModalHint}
-                      </p>
+                      <p>{messages.form.locationModalHint}</p>
                       <p className="mt-1 text-neutral-500">
                         {formatTemplate(messages.form.maxLocations, {
                           count: MAX_LISTING_LOCATIONS,
@@ -4185,7 +4233,10 @@ export function ContainerListingForm({
                       <div className="mb-2 flex items-center justify-between gap-2">
                         <div className="flex items-center gap-2">
                           <p className="text-xs font-medium text-neutral-300">
-                            {formatTemplate(messages.shared.locationLabelTemplate, { index: 1 })}
+                            {formatTemplate(
+                              messages.shared.locationLabelTemplate,
+                              { index: 1 },
+                            )}
                           </p>
                           {activeMapLocationId === PRIMARY_LOCATION_MAP_ID ? (
                             <span className="inline-flex items-center rounded border border-neutral-300 bg-white px-2 py-0.5 text-xs text-neutral-700">
@@ -4230,7 +4281,9 @@ export function ContainerListingForm({
                               }
                             }}
                             className="w-full border-0 bg-transparent px-3 py-2 pr-9 text-sm text-neutral-100"
-                            placeholder={messages.form.locationSearchPlaceholder}
+                            placeholder={
+                              messages.form.locationSearchPlaceholder
+                            }
                           />
                           {isLocationBusy ? (
                             <span
@@ -4283,9 +4336,12 @@ export function ContainerListingForm({
                         <div className="mb-2 flex items-center justify-between gap-2">
                           <div className="flex items-center gap-2">
                             <p className="text-xs font-medium text-neutral-300">
-                              {formatTemplate(messages.shared.locationLabelTemplate, {
-                                index: index + 2,
-                              })}
+                              {formatTemplate(
+                                messages.shared.locationLabelTemplate,
+                                {
+                                  index: index + 2,
+                                },
+                              )}
                             </p>
                             {activeMapLocationId === location.id ? (
                               <span className="inline-flex items-center rounded border border-neutral-300 bg-white px-2 py-0.5 text-xs text-neutral-700">
@@ -4337,7 +4393,9 @@ export function ContainerListingForm({
                                 }
                               }}
                               className="w-full border-0 bg-transparent px-3 py-2 pr-9 text-sm text-neutral-100"
-                              placeholder={messages.form.locationSearchPlaceholder}
+                              placeholder={
+                                messages.form.locationSearchPlaceholder
+                              }
                             />
                             {location.isSearching ? (
                               <span
@@ -4406,7 +4464,10 @@ export function ContainerListingForm({
                         className="inline-flex h-9 items-center gap-2 rounded-md border border-neutral-300 bg-white px-3 text-sm font-semibold text-neutral-800 transition hover:bg-neutral-100 disabled:cursor-not-allowed disabled:opacity-60"
                       >
                         <span>{messages.form.addNextLocation}</span>
-                        <span aria-hidden="true" className="text-sm leading-none">
+                        <span
+                          aria-hidden="true"
+                          className="text-sm leading-none"
+                        >
                           +
                         </span>
                       </button>
@@ -4488,8 +4549,8 @@ export function ContainerListingForm({
               void handleSubmit(onSubmit, (invalidFields) => {
                 const hasContactErrors = Boolean(
                   invalidFields.companyName ||
-                    invalidFields.contactEmail ||
-                    invalidFields.contactPhone,
+                  invalidFields.contactEmail ||
+                  invalidFields.contactPhone,
                 );
                 if (!hasContactErrors) {
                   setIsContactModalOpen(false);
@@ -4597,7 +4658,3 @@ export function ContainerListingForm({
     </form>
   );
 }
-
-
-
-

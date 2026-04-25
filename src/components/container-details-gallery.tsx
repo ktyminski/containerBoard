@@ -12,6 +12,9 @@ type ContainerDetailsGalleryProps = {
   mainImagePriority?: boolean;
   showThumbnails?: boolean;
   className?: string;
+  mainImageClassName?: string;
+  thumbnailsGridClassName?: string;
+  thumbnailButtonClassName?: string;
   messages: ContainerModuleMessages["gallery"];
 };
 
@@ -22,6 +25,9 @@ export function ContainerDetailsGallery({
   mainImagePriority = false,
   showThumbnails = true,
   className,
+  mainImageClassName,
+  thumbnailsGridClassName,
+  thumbnailButtonClassName,
   messages,
 }: ContainerDetailsGalleryProps) {
   const [selectedIndex, setSelectedIndex] = useState(0);
@@ -77,7 +83,7 @@ export function ContainerDetailsGallery({
             onClick={() => {
               setZoomedIndex(Math.min(selectedIndex, images.length - 1));
             }}
-            className="relative h-36 w-36 overflow-hidden rounded-md border border-neutral-200 bg-neutral-100 sm:h-44 sm:w-44"
+            className={mainImageClassName ?? "relative h-36 w-36 overflow-hidden rounded-md border border-neutral-200 bg-neutral-100 sm:h-44 sm:w-44"}
           >
             <ContainerPhotoWithPlaceholder
               src={selectedImage}
@@ -92,7 +98,7 @@ export function ContainerDetailsGallery({
         ) : null}
 
         {showThumbnails ? (
-          <div className="grid grid-cols-3 gap-2 sm:grid-cols-5">
+          <div className={thumbnailsGridClassName ?? "grid grid-cols-3 gap-2 sm:grid-cols-5"}>
             {images.map((imageSrc, index) => {
               const isSelected = index === selectedIndex;
               return (
@@ -103,9 +109,12 @@ export function ContainerDetailsGallery({
                     setSelectedIndex(index);
                     setZoomedIndex(index);
                   }}
-                  className={`relative aspect-square overflow-hidden rounded-md border bg-neutral-100 transition ${
-                    isSelected ? "border-sky-400 ring-1 ring-sky-300" : "border-neutral-200"
-                  }`}
+                  className={
+                    thumbnailButtonClassName ??
+                    `relative aspect-square overflow-hidden rounded-md border bg-neutral-100 transition ${
+                      isSelected ? "border-sky-400 ring-1 ring-sky-300" : "border-neutral-200"
+                    }`
+                  }
                 >
                   <ContainerPhotoWithPlaceholder
                     src={imageSrc}

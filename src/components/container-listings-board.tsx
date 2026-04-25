@@ -13,6 +13,7 @@ import {
 } from "@/components/container-listings-i18n";
 import { ContainerListingsFilters } from "@/components/container-listings-filters";
 import { ContainerListingsResults } from "@/components/container-listings-results";
+import { NAV_HISTORY_STACK_KEY } from "@/components/in-app-navigation-history-tracker";
 import { useToast } from "@/components/toast-provider";
 import { usePageScrollLock } from "@/components/use-page-scroll-lock";
 import {
@@ -256,6 +257,47 @@ function fitMapToPoints(
 
   if (!bounds.isEmpty()) {
     map.fitBounds(bounds, { padding: 60, maxZoom: 9, duration: 500 });
+  }
+}
+
+function centerMapToPointsPreservingZoom(
+  map: maplibregl.Map,
+  points: ContainerListingMapPoint[],
+): void {
+  const currentZoom = map.getZoom();
+
+  if (points.length === 0) {
+    map.easeTo({ center: DEFAULT_MAP_CENTER, zoom: currentZoom, duration: 400 });
+    return;
+  }
+
+  if (points.length === 1) {
+    const point = points[0];
+    if (point.locationLat !== null && point.locationLng !== null) {
+      map.easeTo({
+        center: [point.locationLng, point.locationLat],
+        zoom: currentZoom,
+        duration: 500,
+      });
+    }
+    return;
+  }
+
+  const bounds = new maplibregl.LngLatBounds();
+  for (const point of points) {
+    if (point.locationLat === null || point.locationLng === null) {
+      continue;
+    }
+    bounds.extend([point.locationLng, point.locationLat]);
+  }
+
+  if (!bounds.isEmpty()) {
+    const center = bounds.getCenter();
+    map.easeTo({
+      center: [center.lng, center.lat],
+      zoom: currentZoom,
+      duration: 500,
+    });
   }
 }
 
@@ -653,6 +695,10 @@ const ListingsMap = memo(function ListingsMap({
   activeLocation,
   activeLocationLabel,
   suppressAutoFit = false,
+  preserveZoomChangeToken = 0,
+  outerClassName = "relative",
+  mapClassName = "container-listings-map h-[320px] w-full overflow-visible md:h-[420px]",
+  onReady,
 }: {
   locale: AppLocale;
   messages: ContainerListingsMessages;
@@ -663,6 +709,10 @@ const ListingsMap = memo(function ListingsMap({
   activeLocation: { lat: number; lng: number } | null;
   activeLocationLabel?: string;
   suppressAutoFit?: boolean;
+  preserveZoomChangeToken?: number;
+  outerClassName?: string;
+  mapClassName?: string;
+  onReady?: () => void;
 }) {
   const mapContainerRef = useRef<HTMLDivElement | null>(null);
   const mapRef = useRef<maplibregl.Map | null>(null);
@@ -674,6 +724,9 @@ const ListingsMap = memo(function ListingsMap({
   const wasVisibleRef = useRef(false);
   const popupRequestSeqRef = useRef(0);
   const hasAutoFittedViewRef = useRef(false);
+  const hasReportedReadyRef = useRef(false);
+  const lastPreserveZoomChangeTokenRef = useRef(preserveZoomChangeToken);
+  const pendingPreserveZoomChangeTokenRef = useRef<number | null>(null);
   const itemsByCoordinateRef = useRef<Map<string, ContainerListingMapPoint[]>>(
     new Map(),
   );
@@ -754,6 +807,15 @@ const ListingsMap = memo(function ListingsMap({
       .map((id) => cached.get(id))
       .filter((item): item is ContainerListingItem => Boolean(item));
   }, [requestHeaders]);
+
+  const reportReadyOnce = useCallback(() => {
+    if (hasReportedReadyRef.current) {
+      return;
+    }
+
+    hasReportedReadyRef.current = true;
+    onReady?.();
+  }, [onReady]);
 
   useEffect(() => {
     const nextByCoordinate = new Map<string, ContainerListingMapPoint[]>();
@@ -1203,10 +1265,11 @@ const ListingsMap = memo(function ListingsMap({
         zoom: map.getZoom(),
         duration: 500,
       });
+      reportReadyOnce();
     });
 
     return () => window.cancelAnimationFrame(frame);
-  }, [activeLocation, isVisible]);
+  }, [activeLocation, isVisible, reportReadyOnce]);
 
   useEffect(() => {
     if (
@@ -1225,6 +1288,15 @@ const ListingsMap = memo(function ListingsMap({
   }, [activeLocation]);
 
   useEffect(() => {
+    if (lastPreserveZoomChangeTokenRef.current === preserveZoomChangeToken) {
+      return;
+    }
+
+    lastPreserveZoomChangeTokenRef.current = preserveZoomChangeToken;
+    pendingPreserveZoomChangeTokenRef.current = preserveZoomChangeToken;
+  }, [preserveZoomChangeToken]);
+
+  useEffect(() => {
     const map = mapRef.current;
     if (!map || !isVisible) {
       return;
@@ -1237,28 +1309,48 @@ const ListingsMap = memo(function ListingsMap({
         Number.isFinite(activeLocation.lat) &&
         Number.isFinite(activeLocation.lng)
       ) {
+        reportReadyOnce();
         return;
       }
 
       if (suppressNextAutoFitRef.current) {
         suppressNextAutoFitRef.current = false;
         hasAutoFittedViewRef.current = true;
+        reportReadyOnce();
+        return;
+      }
+
+      if (pendingPreserveZoomChangeTokenRef.current === preserveZoomChangeToken) {
+        if (points.length === 0) {
+          reportReadyOnce();
+          return;
+        }
+
+        centerMapToPointsPreservingZoom(map, points);
+        pendingPreserveZoomChangeTokenRef.current = null;
+        hasAutoFittedViewRef.current = true;
+        reportReadyOnce();
         return;
       }
 
       if (suppressAutoFit) {
         hasAutoFittedViewRef.current = true;
+        reportReadyOnce();
         return;
       }
 
       if (!hasAutoFittedViewRef.current && points.length > 0) {
         fitMapToPoints(map, points);
         hasAutoFittedViewRef.current = true;
+        reportReadyOnce();
+        return;
       }
+
+      reportReadyOnce();
     });
 
     return () => window.cancelAnimationFrame(frame);
-  }, [activeLocation, isVisible, points, suppressAutoFit]);
+  }, [activeLocation, isVisible, points, preserveZoomChangeToken, reportReadyOnce, suppressAutoFit]);
 
   useEffect(() => {
     function handlePointerDown(event: PointerEvent): void {
@@ -1287,10 +1379,10 @@ const ListingsMap = memo(function ListingsMap({
   }, []);
 
   return (
-    <div className="relative">
+    <div className={outerClassName}>
       <div
         ref={mapContainerRef}
-        className="container-listings-map h-[320px] w-full overflow-visible md:h-[420px]"
+        className={mapClassName}
       />
     </div>
   );
@@ -1331,6 +1423,7 @@ export function ContainerListingsBoard({
   const [totalPages, setTotalPages] = useState(1);
   const [total, setTotal] = useState(0);
   const [activeTab, setActiveTab] = useState<"all" | "favorites">(initialTab);
+  const [mapTabSwitchToken, setMapTabSwitchToken] = useState(0);
   const [pendingFavoriteId, setPendingFavoriteId] = useState<string | null>(null);
   const [hasAnyFavorites, setHasAnyFavorites] = useState(false);
   const [hasResolvedFavoritesVisibility, setHasResolvedFavoritesVisibility] = useState(false);
@@ -1338,7 +1431,9 @@ export function ContainerListingsBoard({
   const [guestFavoriteListingIds, setGuestFavoriteListingIds] = useState<string[]>([]);
   const [hasHydratedGuestFavorites, setHasHydratedGuestFavorites] = useState(isLoggedIn);
 
-  const [isMapOpen, setIsMapOpen] = useState(true);
+  const [isMapOpen, setIsMapOpen] = useState(false);
+  const [isDesktopMapOpen, setIsDesktopMapOpen] = useState(true);
+  const [isMobileMapLoading, setIsMobileMapLoading] = useState(false);
   const [pendingDetailsNavigation, setPendingDetailsNavigation] = useState<{
     listHref: string;
   } | null>(null);
@@ -1347,6 +1442,7 @@ export function ContainerListingsBoard({
   const pendingOverlayOpenRafRef = useRef<number | null>(null);
   const cancelledPendingOverlayListHrefRef = useRef<string | null>(null);
   const locationControlsRef = useRef<HTMLDivElement | null>(null);
+  const filtersSectionRef = useRef<HTMLDivElement | null>(null);
   const resultsTopRef = useRef<HTMLDivElement | null>(null);
   const hasSeenFirstAppliedFiltersRef = useRef(false);
 
@@ -1405,11 +1501,12 @@ export function ContainerListingsBoard({
 
   const isLocationApplied = appliedFilters.locationQuery.trim().length > 0;
   const isDetailsOverlayPending = pendingDetailsNavigation !== null;
-  usePageScrollLock(isDetailsOverlayPending && !isDetailsOverlayRouteActive);
+  usePageScrollLock((isDetailsOverlayPending && !isDetailsOverlayRouteActive) || isMapOpen);
   const currentListHref = useMemo(() => {
     const params = searchParams.toString();
     return params ? `${pathname}?${params}` : pathname;
   }, [pathname, searchParams]);
+  const lastActiveTabRef = useRef(activeTab);
   const requestHeaders = useMemo(
     () => ({
       [LOCALE_HEADER_NAME]: locale,
@@ -1481,6 +1578,45 @@ export function ContainerListingsBoard({
       window.clearTimeout(timeoutId);
     };
   }, [isDetailsOverlayPending, isDetailsOverlayRouteActive]);
+
+  useEffect(() => {
+    if (!hiddenCompanySlug || isDetailsOverlayRouteActive) {
+      return;
+    }
+
+    let previousHref = "";
+    try {
+      const rawHistory = window.sessionStorage.getItem(NAV_HISTORY_STACK_KEY);
+      const parsedHistory = rawHistory ? (JSON.parse(rawHistory) as unknown) : [];
+      const historyStack = Array.isArray(parsedHistory)
+        ? parsedHistory.filter((entry): entry is string => typeof entry === "string")
+        : [];
+      previousHref = historyStack.length >= 2 ? historyStack[historyStack.length - 2] : "";
+    } catch {
+      previousHref = "";
+    }
+
+    if (previousHref.startsWith("/list")) {
+      return;
+    }
+
+    window.requestAnimationFrame(() => {
+      window.scrollTo({
+        top: 0,
+        left: 0,
+        behavior: "auto",
+      });
+    });
+  }, [hiddenCompanySlug, isDetailsOverlayRouteActive]);
+
+  useEffect(() => {
+    if (lastActiveTabRef.current === activeTab) {
+      return;
+    }
+
+    lastActiveTabRef.current = activeTab;
+    setMapTabSwitchToken((current) => current + 1);
+  }, [activeTab]);
 
   useEffect(() => {
     if (isLoggedIn) {
@@ -2028,7 +2164,6 @@ export function ContainerListingsBoard({
     const controller = new AbortController();
 
     async function loadMapContainers() {
-      setMapItems([]);
       try {
         const response = await fetch(mapRequestUrl, {
           cache: "no-store",
@@ -2094,13 +2229,29 @@ export function ContainerListingsBoard({
     setLocationFilterError(null);
   }, [reset]);
 
-  const goToPreviousPage = useCallback(() => {
-    setPage((current) => Math.max(1, current - 1));
+  const scrollToResultsTop = useCallback((behavior: ScrollBehavior = "smooth") => {
+    const targetElement = resultsTopRef.current;
+    if (!targetElement) {
+      return;
+    }
+
+    window.requestAnimationFrame(() => {
+      targetElement.scrollIntoView({
+        behavior,
+        block: "start",
+      });
+    });
   }, []);
 
+  const goToPreviousPage = useCallback(() => {
+    scrollToResultsTop();
+    setPage((current) => Math.max(1, current - 1));
+  }, [scrollToResultsTop]);
+
   const goToNextPage = useCallback(() => {
+    scrollToResultsTop();
     setPage((current) => Math.min(totalPages, current + 1));
-  }, [totalPages]);
+  }, [scrollToResultsTop, totalPages]);
 
   const handleTabChange = useCallback(
     (nextTab: "all" | "favorites") => {
@@ -2290,19 +2441,137 @@ export function ContainerListingsBoard({
     }, OVERLAY_CLOSE_ANIMATION_MS);
   }, [isPendingOverlayClosing, pendingDetailsNavigation, router]);
 
+  const scrollToFiltersSection = useCallback(() => {
+    filtersSectionRef.current?.scrollIntoView({
+      behavior: "smooth",
+      block: "start",
+    });
+  }, []);
+
   return (
     <FormProvider {...formMethods}>
       <form onSubmit={submitFilters} className="grid gap-4">
-        <section className="w-full">
+        <section className="hidden w-full lg:block">
           <div className="relative overflow-visible">
             <div
-              id="containers-listings-map-panel"
+              id="containers-listings-desktop-map-panel"
               className={`w-full transition-[max-height,opacity] duration-300 ease-out ${
-                isMapOpen
+                isDesktopMapOpen
                   ? "max-h-[520px] overflow-visible opacity-100"
                   : "pointer-events-none max-h-0 overflow-hidden opacity-0"
               }`}
             >
+              <ListingsMap
+                locale={locale}
+                messages={messages}
+                items={mapItems}
+                isVisible={isDesktopMapOpen}
+                detailsHrefPrefix={detailsHrefPrefix}
+                detailsQueryString={detailsQueryString}
+                activeLocation={
+                  resolvedLocationMode === "point" ? appliedFilters.locationCenter : null
+                }
+                activeLocationLabel={appliedFilters.locationQuery}
+                suppressAutoFit={resolvedLocationMode === "country"}
+                preserveZoomChangeToken={mapTabSwitchToken}
+              />
+            </div>
+          </div>
+          <div
+            className={`pointer-events-none relative z-10 flex justify-center ${
+              isDesktopMapOpen ? "-mt-2.5" : "mt-1"
+            }`}
+          >
+            <button
+              type="button"
+              onClick={() => setIsDesktopMapOpen((current) => !current)}
+              aria-expanded={isDesktopMapOpen}
+              aria-controls="containers-listings-desktop-map-panel"
+              className={`pointer-events-auto inline-flex min-h-10 items-center rounded-md px-5 text-sm font-semibold shadow-[0_10px_24px_-12px_rgba(5,36,79,0.8)] ${DARK_BLUE_CTA_BASE_CLASS}`}
+            >
+              {isDesktopMapOpen ? messages.map.collapseMap : messages.map.expandMap}
+            </button>
+          </div>
+        </section>
+
+        {!isMapOpen ? (
+          <div className="pointer-events-none fixed bottom-[max(1rem,calc(env(safe-area-inset-bottom)+0.5rem))] right-4 z-30 lg:hidden">
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={scrollToFiltersSection}
+                aria-controls="container-listings-filters-section"
+                aria-label={messages.filters.moreFilters}
+                title={messages.filters.moreFilters}
+                className="pointer-events-auto inline-flex h-11 w-11 items-center justify-center rounded-full border border-neutral-300 bg-white/92 text-neutral-600 shadow-[0_12px_26px_-18px_rgba(15,23,42,0.55)] backdrop-blur-sm transition hover:border-neutral-400 hover:bg-white"
+              >
+                <svg viewBox="0 0 24 24" aria-hidden="true" className="h-4.5 w-4.5" fill="none">
+                  <path
+                    d="M4 7h16M7 12h10M10 17h4"
+                    stroke="currentColor"
+                    strokeWidth="1.8"
+                    strokeLinecap="round"
+                  />
+                </svg>
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setIsMobileMapLoading(true);
+                  setIsMapOpen(true);
+                }}
+                aria-expanded={isMapOpen}
+                aria-controls="containers-listings-mobile-map-panel"
+                aria-label={messages.map.expandMap}
+                title={messages.map.expandMap}
+                className="pointer-events-auto inline-flex h-11 w-11 items-center justify-center rounded-full border border-[#9db9d8] bg-white/92 text-[#355a82] shadow-[0_12px_26px_-18px_rgba(15,23,42,0.55)] backdrop-blur-sm transition hover:border-[#7ea6cf] hover:bg-white"
+              >
+                <svg viewBox="0 0 24 24" aria-hidden="true" className="h-4.5 w-4.5" fill="none">
+                  <path
+                    d="M4 7.5L9 5l6 2.5L20 5v11.5L15 19l-6-2.5L4 19V7.5Z"
+                    stroke="currentColor"
+                    strokeWidth="1.7"
+                    strokeLinejoin="round"
+                  />
+                  <path d="M9 5v11.5M15 7.5V19" stroke="currentColor" strokeWidth="1.7" />
+                </svg>
+              </button>
+            </div>
+          </div>
+        ) : null}
+
+        {isMapOpen ? (
+          <section
+            id="containers-listings-mobile-map-panel"
+            className="fixed inset-x-0 bottom-0 top-16 z-[45] overflow-hidden bg-white lg:hidden"
+          >
+            <div className="relative h-full">
+              <div className="pointer-events-none absolute inset-x-0 top-3 z-20 flex justify-center px-4">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIsMapOpen(false);
+                    setIsMobileMapLoading(false);
+                  }}
+                  className={`pointer-events-auto inline-flex min-h-11 items-center rounded-full px-5 text-sm font-semibold shadow-[0_14px_30px_-16px_rgba(5,36,79,0.8)] ${DARK_BLUE_CTA_BASE_CLASS}`}
+                >
+                  {messages.map.collapseMap}
+                </button>
+              </div>
+              {isMobileMapLoading ? (
+                <div className="pointer-events-none absolute inset-0 z-10 flex items-center justify-center bg-white/88">
+                  <div className="inline-flex items-center gap-3 rounded-full border border-neutral-300 bg-white px-4 py-2 shadow-sm">
+                    <span
+                      className="h-5 w-5 animate-spin rounded-full border-2 border-neutral-300 border-t-neutral-500"
+                      aria-label={messages.results.loadingAria}
+                      role="status"
+                    />
+                    <span className="text-sm font-medium text-neutral-700">
+                      {messages.results.loading}
+                    </span>
+                  </div>
+                </div>
+              ) : null}
               <ListingsMap
                 locale={locale}
                 messages={messages}
@@ -2315,30 +2584,24 @@ export function ContainerListingsBoard({
                 }
                 activeLocationLabel={appliedFilters.locationQuery}
                 suppressAutoFit={resolvedLocationMode === "country"}
+                preserveZoomChangeToken={mapTabSwitchToken}
+                outerClassName="h-full"
+                mapClassName="h-full w-full"
+                onReady={() => {
+                  setIsMobileMapLoading(false);
+                }}
               />
             </div>
-          </div>
-          <div
-            className={`pointer-events-none relative z-10 flex justify-center ${
-              isMapOpen ? "-mt-2.5" : "mt-1"
-            }`}
-          >
-            <button
-              type="button"
-              onClick={() => setIsMapOpen((current) => !current)}
-              aria-expanded={isMapOpen}
-              aria-controls="containers-listings-map-panel"
-              className={`pointer-events-auto inline-flex min-h-10 items-center rounded-md px-5 text-sm font-semibold shadow-[0_10px_24px_-12px_rgba(5,36,79,0.8)] ${DARK_BLUE_CTA_BASE_CLASS}`}
-            >
-              {isMapOpen ? messages.map.collapseMap : messages.map.expandMap}
-            </button>
-          </div>
-        </section>
+          </section>
+        ) : null}
 
         <div className="mx-auto grid w-full max-w-[1400px] gap-4 px-4 sm:px-6">
           <ContainerListingsFilters
             messages={messages}
             locationControlsRef={locationControlsRef}
+            sectionRef={filtersSectionRef}
+            sectionId="container-listings-filters-section"
+            sectionClassName="scroll-mt-20 sm:scroll-mt-28"
             appliedFilters={appliedFilters}
             restoreAppliedLocationOnBlur={restoreAppliedLocationOnBlur}
             isResolvingLocation={isResolvingLocation}

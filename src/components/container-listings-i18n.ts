@@ -80,10 +80,10 @@ export function getPriceTaxModeLabel(
 }
 
 export function getContainerConditionLabel(
-  messages: ContainerListingsMessages,
+  _messages: ContainerListingsMessages,
   value: ContainerCondition,
 ): string {
-  return messages.shared.containerConditions[value];
+  return CONTAINER_CONDITION_LABEL[value];
 }
 
 export function getContainerFeatureLabel(
@@ -101,10 +101,17 @@ export function getContainerHeightLabel(
 }
 
 export function getContainerTypeLabel(
+  _messages: ContainerListingsMessages,
+  value: ContainerType,
+): string {
+  return CONTAINER_TYPE_LABEL[value];
+}
+
+export function getContainerTypeDetailTitleLabel(
   messages: ContainerListingsMessages,
   value: ContainerType,
 ): string {
-  const baseLabel = messages.shared.containerTypes[value];
+  const baseLabel = getContainerTypeLabel(messages, value);
   if (value === CONTAINER_TYPE.DRY) {
     return `${baseLabel} (DV | GP)`;
   }
@@ -265,6 +272,18 @@ export function getContainerShortLabelLocalized(
       ? messages.shared.customContainerShort
       : `${container.size}'${container.height === "HC" ? "HC" : ""}`;
   const typeLabel = getContainerTypeLabel(messages, container.type);
+  return `${sizeLabel} ${typeLabel}`;
+}
+
+export function getContainerShortDetailTitleLocalized(
+  messages: ContainerListingsMessages,
+  container: Container,
+): string {
+  const sizeLabel =
+    container.size === CONTAINER_SIZE.CUSTOM
+      ? messages.shared.customContainerShort
+      : `${container.size}'${container.height === "HC" ? "HC" : ""}`;
+  const typeLabel = getContainerTypeDetailTitleLabel(messages, container.type);
   return `${sizeLabel} ${typeLabel}`;
 }
 

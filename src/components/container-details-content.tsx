@@ -7,6 +7,7 @@ import { CONTAINER_CONDITION_COLOR_TOKENS } from "@/components/container-listing
 import { ContainerDetailsGallery } from "@/components/container-details-gallery";
 import { ContainerDetailsRelatedListings } from "@/components/container-details-related-listings";
 import { ContainerDetailsScrollTop } from "@/components/container-details-scroll-top";
+import { ContainerPhotoWithPlaceholder } from "@/components/container-photo-with-placeholder";
 import {
   ContainerDetailsLocationsMap,
   type ContainerDetailsLocationPoint,
@@ -21,13 +22,12 @@ import { normalizeCompanyVerificationStatus } from "@/lib/company-verification";
 import {
   getContainerConditionLabel,
   getContainerFeatureLabel,
-  getContainerShortLabelLocalized,
+  getContainerShortDetailTitleLocalized,
   getPriceTaxModeLabel,
   type ContainerListingsMessages,
 } from "@/components/container-listings-i18n";
 import type {
   ContainerListingItem,
-  ContainerListingDocument,
 } from "@/lib/container-listings";
 import {
   ensureContainerListingsIndexes,
@@ -213,40 +213,6 @@ function getContainerPlaceholderSrc(item: ContainerListingItem): string {
   return "/placeholders/containers/container-unknown.svg";
 }
 
-function normalizeImageCandidate(value: unknown): string[] {
-  if (typeof value === "string") {
-    const trimmed = value.trim();
-    return trimmed ? [trimmed] : [];
-  }
-  if (!Array.isArray(value)) {
-    return [];
-  }
-
-  const output: string[] = [];
-  for (const entry of value) {
-    if (typeof entry === "string") {
-      const trimmed = entry.trim();
-      if (trimmed) {
-        output.push(trimmed);
-      }
-      continue;
-    }
-    if (!entry || typeof entry !== "object") {
-      continue;
-    }
-    const record = entry as Record<string, unknown>;
-    for (const key of ["url", "src", "path"]) {
-      const candidate = record[key];
-      if (typeof candidate === "string" && candidate.trim()) {
-        output.push(candidate.trim());
-        break;
-      }
-    }
-  }
-
-  return output;
-}
-
 function isSupportedImageSource(src: string): boolean {
   return (
     src.startsWith("/") ||
@@ -255,36 +221,8 @@ function isSupportedImageSource(src: string): boolean {
   );
 }
 
-function extractImageUrls(source: unknown): string[] {
-  if (!source || typeof source !== "object") {
-    return [];
-  }
-
-  const record = source as Record<string, unknown>;
-  const output: string[] = [];
-  for (const key of ["images", "imageUrls", "photoUrls", "photos", "gallery"]) {
-    output.push(...normalizeImageCandidate(record[key]));
-  }
-  return output;
-}
-
 function isPlaceholderImageSource(src: string): boolean {
   return src.startsWith("/placeholders/");
-}
-
-function resolveListingRealImages(
-  listing: ContainerListingDocument,
-  listingItem: ContainerListingItem,
-): string[] {
-  const dynamicCandidates = [
-    ...(listingItem.photoUrls ?? []),
-    ...extractImageUrls(listing),
-    ...extractImageUrls(listingItem as unknown),
-  ].filter(
-    (source) => isSupportedImageSource(source) && !isPlaceholderImageSource(source),
-  );
-
-  return Array.from(new Set(dynamicCandidates));
 }
 
 type LocationDisplayItem = {
@@ -601,7 +539,7 @@ export async function ContainerDetailsContent({
     notFound();
   }
 
-  const galleryTitle = getContainerShortLabelLocalized(
+  const galleryTitle = getContainerShortDetailTitleLocalized(
     listingMessages,
     listingItem.container,
   );
@@ -618,9 +556,12 @@ export async function ContainerDetailsContent({
     listingMessages,
     moduleMessages,
   );
-  const realImages = resolveListingRealImages(listing, listingItem);
-  const mainImage = realImages[0] ?? getContainerPlaceholderSrc(listingItem);
-  const additionalRealImages = realImages.length > 1 ? realImages.slice(1) : [];
+  const detailPhotoUrls = (listingItem.photoUrls ?? []).filter(
+    (source) => isSupportedImageSource(source) && !isPlaceholderImageSource(source),
+  );
+  const mainImage = detailPhotoUrls[0] ?? getContainerPlaceholderSrc(listingItem);
+  const additionalRealImages = detailPhotoUrls.slice(1);
+  const hasRealMainImage = detailPhotoUrls.length > 0;
   const hasAnyCertification =
     listingItem.hasCscPlate || listingItem.hasCscCertification || listingItem.hasWarranty;
   const quantityDisplay = getQuantityDisplay(listingItem.quantity);
@@ -676,7 +617,23 @@ export async function ContainerDetailsContent({
         <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_320px] lg:items-stretch">
           <section className="h-full rounded-md border border-neutral-300 bg-white p-4">
             <div className="grid gap-4 sm:grid-cols-[176px_minmax(0,1fr)] sm:items-start">
-              <div className="grid h-fit justify-items-start">
+              {hasRealMainImage ? (
+                <div className="sm:hidden">
+                  <div className="relative mx-auto aspect-square w-full max-w-[375px] overflow-hidden rounded-md border border-neutral-200 bg-neutral-100">
+                    <ContainerPhotoWithPlaceholder
+                      src={mainImage}
+                      alt={galleryTitle}
+                      fill
+                      unoptimized
+                      className="object-contain p-1"
+                      sizes="(max-width: 640px) 100vw, 375px"
+                      priority
+                    />
+                  </div>
+                </div>
+              ) : null}
+
+              <div className="hidden h-fit justify-items-start sm:grid">
                 <ContainerDetailsGallery
                   images={[mainImage]}
                   title={galleryTitle}
@@ -726,7 +683,7 @@ export async function ContainerDetailsContent({
                   <p className="text-sm text-neutral-600">{listing.companyName}</p>
                 )}
                 <h1 className="mt-2 text-3xl font-semibold text-neutral-900">
-                  {getContainerShortLabelLocalized(listingMessages, listingItem.container)}
+                  {getContainerShortDetailTitleLocalized(listingMessages, listingItem.container)}
                 </h1>
                 <div className="mt-2 grid gap-2 text-sm text-neutral-700">
                   <div className="flex items-center">
@@ -1036,6 +993,8 @@ export async function ContainerDetailsContent({
               showMainImage={false}
               showThumbnails
               className="mt-3"
+              thumbnailsGridClassName="grid gap-3 sm:grid-cols-2"
+              thumbnailButtonClassName="relative aspect-[4/3] overflow-hidden rounded-md border border-neutral-200 bg-neutral-100 transition hover:border-sky-300 hover:ring-1 hover:ring-sky-200"
               messages={moduleMessages.gallery}
             />
           </section>
@@ -1063,7 +1022,7 @@ export async function ContainerDetailsContent({
           currentListingId={listing._id.toHexString()}
           companySlug={relatedCompanySlug}
           isLoggedIn={isLoggedIn}
-          limit={3}
+          limit={4}
         />
       ) : null}
     </div>

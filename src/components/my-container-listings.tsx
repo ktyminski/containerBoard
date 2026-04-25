@@ -200,8 +200,8 @@ const MyContainerListingRow = memo(function MyContainerListingRow({
     <li
       className="rounded-md border border-neutral-200 bg-white p-4 shadow-sm transition-colors duration-150 hover:border-sky-100 hover:bg-sky-50/60"
     >
-      <div className="flex flex-col gap-4 sm:grid sm:grid-cols-[auto_minmax(0,1fr)] sm:items-stretch">
-        <div className="relative h-32 w-32 shrink-0 sm:h-auto sm:w-auto sm:aspect-square sm:self-stretch">
+      <div className="flex flex-col gap-4 sm:grid sm:grid-cols-[auto_minmax(0,1fr)] sm:items-start">
+        <div className="relative h-32 w-32 shrink-0 sm:self-start">
           <div className="absolute inset-0 overflow-hidden rounded-md border border-neutral-200 bg-neutral-100">
             <ContainerPhotoWithPlaceholder
               src={getContainerPreviewSrc(item)}
@@ -219,13 +219,13 @@ const MyContainerListingRow = memo(function MyContainerListingRow({
 
         <div className="min-w-0">
           <div className="flex flex-wrap items-center justify-between gap-2">
-            <h2 className="text-lg font-semibold text-neutral-900">
+            <h2 className="min-w-0 text-lg font-semibold text-neutral-900">
               {getContainerShortLabelLocalized(listingMessages, item.container)}{" "}
               <span className="text-base font-medium text-neutral-500">
                 | {getContainerConditionLabel(listingMessages, item.container.condition)}
               </span>
             </h2>
-            <div className="grid justify-items-end gap-1">
+            <div className="grid min-w-0 justify-items-start gap-1 sm:justify-items-end">
               <div className="flex flex-wrap items-center justify-end gap-2">
                 <span className={STATUS_BADGE_CLASS[item.status]}>
                   {messages.statusLabels[item.status]}
@@ -252,7 +252,7 @@ const MyContainerListingRow = memo(function MyContainerListingRow({
           </div>
 
           <div className="mt-3 flex flex-wrap items-center justify-between gap-2">
-            <div className="flex flex-wrap items-center gap-2">
+            <div className="flex min-w-0 flex-wrap items-center gap-2">
               <button
                 type="button"
                 onClick={() => {
@@ -277,7 +277,7 @@ const MyContainerListingRow = memo(function MyContainerListingRow({
                 {messages.edit}
               </Link>
             </div>
-            <div className="flex flex-wrap items-center justify-end gap-2">
+            <div className="flex min-w-0 flex-wrap items-center justify-start gap-2 sm:justify-end">
               {item.status !== LISTING_STATUS.CLOSED ? (
                 <button
                   type="button"

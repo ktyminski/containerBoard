@@ -941,10 +941,6 @@ export function buildContainerListingsFilter(input: {
     } as Filter<ContainerListingDocument>);
   }
 
-  if (input.priceCurrency) {
-    filter["pricing.original.currency"] = input.priceCurrency;
-  }
-
   if (input.hasCscPlate === true) {
     filter.hasCscPlate = true;
   }
