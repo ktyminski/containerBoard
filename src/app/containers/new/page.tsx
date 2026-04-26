@@ -16,6 +16,10 @@ import { USER_ROLE } from "@/lib/user-roles";
 export const metadata: Metadata = {
   title: "Dodaj kontener",
   description: "Dodaj nowe ogłoszenie kontenera w mniej niż minutę.",
+  robots: {
+    index: false,
+    follow: false,
+  },
 };
 
 type NewContainerPageProps = {

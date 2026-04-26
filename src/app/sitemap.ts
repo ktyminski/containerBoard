@@ -22,7 +22,6 @@ import { getAbsoluteUrl, getLanguageAlternates } from "@/lib/seo";
 const STATIC_PATHS = [
   "/",
   "/list",
-  "/containers/new",
   "/about",
   "/contact",
   "/privacy-policy",

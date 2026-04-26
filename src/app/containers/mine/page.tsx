@@ -17,6 +17,10 @@ import {
 export const metadata: Metadata = {
   title: "Moje kontenery",
   description: "Zarządzaj swoimi ogłoszeniami kontenerów.",
+  robots: {
+    index: false,
+    follow: false,
+  },
 };
 
 type MyContainersPageProps = {

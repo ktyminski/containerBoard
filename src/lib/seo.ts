@@ -65,7 +65,7 @@ export function buildPageMetadata(input: {
   path: string;
   locale: AppLocale;
   title: string;
-  description: string;
+  description?: string;
   imagePath?: string;
   type?: "website" | "article";
   noIndex?: boolean;

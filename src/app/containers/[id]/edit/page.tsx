@@ -31,6 +31,10 @@ export async function generateMetadata({ params }: EditContainerPageProps): Prom
   const { id } = await params;
   return {
     title: `Edytuj kontener ${id}`,
+    robots: {
+      index: false,
+      follow: false,
+    },
   };
 }
 
