@@ -24,9 +24,31 @@ export async function AuthNav({ locale, messages, roleMessages }: AuthNavProps) 
       <div className="flex items-center gap-2">
         <Link
           href={withLang("/login", locale)}
-          className="inline-flex h-9 shrink-0 items-center rounded-md border border-[#2f639a] bg-[#082650]/80 px-3 text-sm text-[#e2efff] whitespace-nowrap transition hover:border-[#4e86c3] hover:bg-[#0c3466]"
+          className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-md border border-[#2f639a] bg-[#082650]/80 text-sm text-[#e2efff] whitespace-nowrap transition hover:border-[#4e86c3] hover:bg-[#0c3466] sm:w-auto sm:px-3"
+          aria-label={messages.login}
         >
-          {messages.login}
+          <svg
+            viewBox="0 0 24 24"
+            aria-hidden="true"
+            className="h-5 w-5 shrink-0 sm:hidden"
+            fill="none"
+          >
+            <path
+              d="M13 4.75h4a1.75 1.75 0 0 1 1.75 1.75v11A1.75 1.75 0 0 1 17 19.25h-4"
+              stroke="currentColor"
+              strokeWidth="1.9"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            />
+            <path
+              d="M10 7.5 14.5 12 10 16.5M14 12H5.25"
+              stroke="currentColor"
+              strokeWidth="1.9"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            />
+          </svg>
+          <span className="hidden sm:inline">{messages.login}</span>
         </Link>
         <Link
           href={withLang("/register", locale)}

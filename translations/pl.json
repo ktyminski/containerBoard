@@ -978,6 +978,7 @@
     "branchAddressRequiredForSearch": "Podaj adres oddziału (min. 3 znaki), aby wyszukać lokalizację.",
     "branchLocationManualSet": "Lokalizacja ustawiona ręcznie na mapie.",
     "branchLocationRequiredError": "Każdy oddział musi mieć ustawiona lokalizację na mapie.",
+    "branchAddressGeocodeRequired": "Każdy oddział musi mieć geokodowalny adres. Po zmianie adresu wyszukaj go ponownie lub ustaw pinezkę na mapie.",
     "requiredField": "To pole jest wymagane",
     "invalidPhone": "Niepoprawny numer telefonu",
     "invalidEmail": "Niepoprawny adres email",

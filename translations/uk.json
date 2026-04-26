@@ -977,6 +977,7 @@
     "branchAddressRequiredForSearch": "Vvedit adresu viddilennia (min. 3 symvoly), shchob znayty lokalizatsiiu.",
     "branchLocationManualSet": "Lokalizatsiiu vstanovleno vruchnu na mapi.",
     "branchLocationRequiredError": "Kozhne viddilennia povynno maty vstanovlenu lokalizatsiiu na mapi.",
+    "branchAddressGeocodeRequired": "Kozhne viddilennia povynno maty heokodovanu adresu. Pislia zminy adresy znajdit yii znovu abo vstanovit poznychku na mapi.",
     "requiredField": "Tse pole obovyazkove",
     "invalidPhone": "Nekorektnyi nomer telefonu",
     "invalidEmail": "Nekorektna adresa email",

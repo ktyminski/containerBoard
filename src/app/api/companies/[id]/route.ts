@@ -23,7 +23,7 @@ import {
   normalizeCompanyOperatingArea,
 } from "@/lib/company-operating-area";
 import { normalizeCompanyVerificationStatus } from "@/lib/company-verification";
-import { normalizeGeocodeAddressParts } from "@/lib/geocode-address";
+import { hasGeocodedAddressParts, normalizeGeocodeAddressParts } from "@/lib/geocode-address";
 import { USER_ROLE } from "@/lib/user-roles";
 import { logError } from "@/lib/server-logger";
 
@@ -306,6 +306,21 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
         {
           error: "Invalid payload",
           issues: parsed.error.issues.map((issue) => issue.message),
+        },
+        { status: 400 },
+      );
+    }
+
+    const invalidBranchAddressIssues = parsed.data.branches.flatMap((branch, index) =>
+      hasGeocodedAddressParts(branch.addressParts)
+        ? []
+        : [`branch ${index + 1} must use a geocoded address`],
+    );
+    if (invalidBranchAddressIssues.length > 0) {
+      return NextResponse.json(
+        {
+          error: "Invalid payload",
+          issues: invalidBranchAddressIssues,
         },
         { status: 400 },
       );

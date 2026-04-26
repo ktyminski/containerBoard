@@ -8,7 +8,7 @@ import type {
 } from "react-hook-form";
 import { BranchLocationPicker } from "@/components/branch-location-picker";
 import type { AppLocale, AppMessages } from "@/lib/i18n";
-import type { GeocodeAddressParts } from "@/lib/geocode-address";
+import { hasGeocodedAddressParts, type GeocodeAddressParts } from "@/lib/geocode-address";
 import {
   PHONE_REGEX,
   getFieldMessage,
@@ -98,6 +98,10 @@ export function BranchCard({
         return;
       }
 
+      setValue(`branches.${index}.addressParts`, data.item.addressParts ?? null, {
+        shouldDirty: true,
+        shouldValidate: false,
+      });
       setValue(`branches.${index}.addressText`, data.item.label, {
         shouldDirty: true,
         shouldValidate: true,
@@ -109,10 +113,6 @@ export function BranchCard({
       setValue(`branches.${index}.lng`, data.item.lng.toFixed(6), {
         shouldDirty: true,
         shouldValidate: true,
-      });
-      setValue(`branches.${index}.addressParts`, data.item.addressParts ?? null, {
-        shouldDirty: true,
-        shouldValidate: false,
       });
       setLocationStatus(messages.branchLocationFound);
     } catch {
@@ -161,10 +161,21 @@ export function BranchCard({
               required: messages.requiredField,
               minLength: { value: 1, message: messages.requiredField },
               maxLength: { value: 200, message: messages.validationError },
+              validate: () =>
+                hasGeocodedAddressParts(getValues(`branches.${index}.addressParts`))
+                  || messages.branchAddressGeocodeRequired,
               onChange: () => {
                 setValue(`branches.${index}.addressParts`, null, {
                   shouldDirty: true,
                   shouldValidate: false,
+                });
+                setValue(`branches.${index}.lat`, "", {
+                  shouldDirty: true,
+                  shouldValidate: true,
+                });
+                setValue(`branches.${index}.lng`, "", {
+                  shouldDirty: true,
+                  shouldValidate: true,
                 });
               },
             })}
@@ -216,16 +227,16 @@ export function BranchCard({
             shouldDirty: true,
             shouldValidate: true,
           });
-          if (next.addressText) {
-            setValue(`branches.${index}.addressText`, next.addressText, {
-              shouldDirty: true,
-              shouldValidate: true,
-            });
-          }
           if (typeof next.addressParts !== "undefined") {
             setValue(`branches.${index}.addressParts`, next.addressParts ?? null, {
               shouldDirty: true,
               shouldValidate: false,
+            });
+          }
+          if (next.addressText) {
+            setValue(`branches.${index}.addressText`, next.addressText, {
+              shouldDirty: true,
+              shouldValidate: true,
             });
           }
         }}

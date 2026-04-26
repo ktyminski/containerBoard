@@ -19,7 +19,7 @@ import {
   safeDeleteBlobUrls,
   uploadBlobFromBuffer,
 } from "@/lib/blob-storage";
-import { normalizeGeocodeAddressParts } from "@/lib/geocode-address";
+import { hasGeocodedAddressParts, normalizeGeocodeAddressParts } from "@/lib/geocode-address";
 import {
   COMPANY_OPERATING_AREAS,
   normalizeCompanyOperatingArea,
@@ -445,6 +445,21 @@ export async function POST(request: NextRequest) {
         {
           error: "Invalid payload",
           issues: parsed.error.issues.map((issue) => issue.message),
+        },
+        { status: 400 },
+      );
+    }
+
+    const invalidBranchAddressIssues = parsed.data.branches.flatMap((branch, index) =>
+      hasGeocodedAddressParts(branch.addressParts)
+        ? []
+        : [`branch ${index + 1} must use a geocoded address`],
+    );
+    if (invalidBranchAddressIssues.length > 0) {
+      return NextResponse.json(
+        {
+          error: "Invalid payload",
+          issues: invalidBranchAddressIssues,
         },
         { status: 400 },
       );

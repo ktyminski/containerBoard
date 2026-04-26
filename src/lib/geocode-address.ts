@@ -70,6 +70,17 @@ export function normalizeGeocodeAddressParts(
     : undefined;
 }
 
+export function hasGeocodedAddressParts(
+  parts: GeocodeAddressParts | null | undefined,
+): boolean {
+  const normalized = normalizeGeocodeAddressParts(parts);
+  if (!normalized?.country) {
+    return false;
+  }
+
+  return Boolean(normalized.city || normalized.street || normalized.postalCode);
+}
+
 export function buildGeocodeAddressParts(
   address: NominatimAddress | undefined,
 ): GeocodeAddressParts | undefined {

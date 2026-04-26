@@ -978,6 +978,7 @@
     "branchAddressRequiredForSearch": "Geben Sie die Filialadresse (mindestens 3 Zeichen) an, um den Standort zu suchen.",
     "branchLocationManualSet": "Standort manuell auf der Karte festgelegt.",
     "branchLocationRequiredError": "Für jede Filiale muss auf der Karte ein Standort festgelegt sein.",
+    "branchAddressGeocodeRequired": "Jede Filiale muss eine geokodierbare Adresse haben. Nach einer Adressänderung suchen Sie sie erneut oder setzen Sie die Stecknadel auf der Karte.",
     "requiredField": "Dieses Feld ist erforderlich",
     "invalidPhone": "Ungültige Telefonnummer",
     "invalidEmail": "Ungültige E-Mail-Adresse",

@@ -12,6 +12,7 @@ import { CompanyMediaSection } from "@/components/new-company-form/company-media
 import { ImageCropModal } from "@/components/new-company-form/image-crop-modal";
 import { useCompanyMediaState } from "@/components/new-company-form/use-company-media-state";
 import { FacebookIcon, InstagramIcon, LinkedInIcon } from "@/components/social-icons";
+import { hasGeocodedAddressParts } from "@/lib/geocode-address";
 import {
   PHONE_REGEX,
   createEmptyBranch,
@@ -318,6 +319,14 @@ export function NewCompanyForm({
     );
     if (missingLocation) {
       toast.warning(messages.branchLocationRequiredError);
+      return;
+    }
+
+    const missingGeocodedAddress = values.branches.find(
+      (branch) => !hasGeocodedAddressParts(branch.addressParts),
+    );
+    if (missingGeocodedAddress) {
+      toast.warning(messages.branchAddressGeocodeRequired);
       return;
     }
 

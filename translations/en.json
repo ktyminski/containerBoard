@@ -978,6 +978,7 @@
     "branchAddressRequiredForSearch": "Provide branch address (min. 3 characters) to search location.",
     "branchLocationManualSet": "Location set manually on the map.",
     "branchLocationRequiredError": "Each branch must have a location set on the map.",
+    "branchAddressGeocodeRequired": "Each branch must use a geocodable address. After changing the address, search for it again or place the pin on the map.",
     "requiredField": "This field is required",
     "invalidPhone": "Invalid phone number",
     "invalidEmail": "Invalid email address",
