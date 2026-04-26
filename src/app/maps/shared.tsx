@@ -87,7 +87,7 @@ export async function renderMapsPage(input: {
 
   return (
     <main className="w-full overflow-x-hidden">
-      <section className="flex h-[calc(100svh-4rem)] flex-col supports-[height:100dvh]:h-[calc(100dvh-4rem)]">
+      <section className="flex h-[calc(100vh-4rem)] flex-col supports-[height:100svh]:h-[calc(100svh-4rem)]">
         <div className="min-h-0 flex-1">
           <MainMapModules
             locale={locale}

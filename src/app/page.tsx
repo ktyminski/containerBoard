@@ -135,7 +135,7 @@ export default async function LandingPage() {
         />
         <div className="absolute inset-0 bg-[#061933]/88" aria-hidden="true" />
 
-        <div className="relative mx-auto grid min-h-[calc(100svh-4rem)] w-full max-w-6xl content-center gap-6 px-4 py-12 supports-[height:100dvh]:min-h-[calc(100dvh-4rem)] sm:min-h-[34rem] sm:px-6 lg:grid-cols-[minmax(0,1.15fr)_minmax(18rem,0.8fr)] lg:content-normal lg:items-center lg:gap-8 lg:py-20">
+        <div className="relative mx-auto grid min-h-[calc(100vh-4rem)] w-full max-w-6xl content-center gap-6 px-4 py-12 supports-[height:100svh]:min-h-[calc(100svh-4rem)] sm:min-h-[34rem] sm:px-6 lg:grid-cols-[minmax(0,1.15fr)_minmax(18rem,0.8fr)] lg:content-normal lg:items-center lg:gap-8 lg:py-20">
           <div className="mx-auto max-w-3xl text-center lg:ml-auto lg:mr-0 lg:text-right">
             <h1 className="mx-auto mt-4 max-w-3xl text-4xl font-semibold leading-tight text-white sm:text-5xl lg:mx-0 lg:text-6xl">
               {landing.heroTitle}
