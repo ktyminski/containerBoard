@@ -1,7 +1,8 @@
 import type { Metadata } from "next";
+import { getContainerFeatureLabel } from "@/components/container-listings-i18n";
 import type { ContainerListingItem } from "@/lib/container-listings";
 import { LISTING_STATUS, type ContainerCondition, type ContainerType, type ListingType } from "@/lib/container-listing-types";
-import type { AppLocale } from "@/lib/i18n";
+import { getMessages, type AppLocale } from "@/lib/i18n";
 import { buildPageMetadata, getAbsoluteUrl, stripHtmlToPlainText } from "@/lib/seo";
 
 type ListingSeoCopy = {
@@ -392,15 +393,6 @@ function getListingSeoPrice(item: ContainerListingItem, locale: AppLocale): List
   };
 }
 
-function getAvailabilitySentence(item: ContainerListingItem, locale: AppLocale): string {
-  const copy = getListingCopy(locale);
-  if (item.availableNow) {
-    return `${copy.availabilityLabel}: ${copy.availabilityNow}.`;
-  }
-  const dateLabel = new Date(item.availableFrom).toLocaleDateString(locale);
-  return `${copy.availabilityLabel}: ${copy.availabilityFrom(dateLabel, item.availableFromApproximate)}.`;
-}
-
 function getTransportDetails(item: ContainerListingItem, locale: AppLocale): string | null {
   const parts: string[] = [];
   if (locale === "pl") {
@@ -445,6 +437,327 @@ function getTransportDetails(item: ContainerListingItem, locale: AppLocale): str
   }
 
   return parts.length > 0 ? parts.join(", ") : null;
+}
+
+function joinNaturalLanguage(values: string[], locale: AppLocale): string {
+  if (values.length <= 1) {
+    return values[0] ?? "";
+  }
+  if (values.length === 2) {
+    const glue = locale === "pl" ? " i " : " and ";
+    return `${values[0]}${glue}${values[1]}`;
+  }
+
+  const glue = locale === "pl" ? " i " : " and ";
+  return `${values.slice(0, -1).join(", ")}${glue}${values[values.length - 1]}`;
+}
+
+function getFeatureSentence(item: ContainerListingItem, locale: AppLocale): string | null {
+  if (!item.container.features || item.container.features.length === 0) {
+    return null;
+  }
+
+  const listingMessages = getMessages(locale).containerListings;
+  const labels = item.container.features
+    .map((feature) => getContainerFeatureLabel(listingMessages, feature).trim())
+    .filter(Boolean);
+  if (labels.length === 0) {
+    return null;
+  }
+
+  if (locale === "pl") {
+    return `Dodatkowe cechy kontenera obejmują ${joinNaturalLanguage(labels, locale)}.`;
+  }
+  if (locale === "de") {
+    return `Zu den zusätzlichen Merkmalen des Containers gehören ${joinNaturalLanguage(labels, locale)}.`;
+  }
+  if (locale === "uk") {
+    return `Dodatkovi kharakterystyky konteynera vkliuchaiut ${joinNaturalLanguage(labels, locale)}.`;
+  }
+  return `Additional container features include ${joinNaturalLanguage(labels, locale)}.`;
+}
+
+function getColorSentence(item: ContainerListingItem, locale: AppLocale): string | null {
+  if (!item.containerColors || item.containerColors.length === 0) {
+    return null;
+  }
+
+  const colors = item.containerColors
+    .map((color) => color.ral?.trim())
+    .filter((value): value is string => Boolean(value));
+  if (colors.length === 0) {
+    return null;
+  }
+
+  if (locale === "pl") {
+    return `Kontener jest oferowany w kolorystyce ${joinNaturalLanguage(colors, locale)}.`;
+  }
+  if (locale === "de") {
+    return `Der Container wird in der Farbgebung ${joinNaturalLanguage(colors, locale)} angeboten.`;
+  }
+  if (locale === "uk") {
+    return `Konteiner proponuietsia v kolorakh ${joinNaturalLanguage(colors, locale)}.`;
+  }
+  return `The container is offered in the following colors: ${joinNaturalLanguage(colors, locale)}.`;
+}
+
+function getNarrativeSubject(item: ContainerListingItem, locale: AppLocale): string {
+  const copy = getListingCopy(locale);
+  const sizeLabel = getContainerSeoSizeLabel(item);
+  const typeLabel = getTypeLabel(locale, item.container.type);
+
+  if (locale === "pl") {
+    return `${copy.shippingContainer} ${sizeLabel} typu ${typeLabel}`;
+  }
+  if (locale === "de") {
+    return `${copy.shippingContainer} ${sizeLabel} vom Typ ${typeLabel}`;
+  }
+  if (locale === "uk") {
+    return `${copy.shippingContainer} ${sizeLabel} typu ${typeLabel}`;
+  }
+  return `${sizeLabel} ${typeLabel} ${copy.shippingContainer}`;
+}
+
+function getNarrativeLocationPhrase(
+  locationLabel: string | null,
+  locale: AppLocale,
+): string {
+  if (locale === "pl") {
+    return locationLabel
+      ? `w lokalizacji ${locationLabel}`
+      : "w podanej lokalizacji";
+  }
+  if (locale === "de") {
+    return locationLabel ? `am Standort ${locationLabel}` : "am angegebenen Standort";
+  }
+  if (locale === "uk") {
+    return locationLabel ? `u lokatsii ${locationLabel}` : "u vkazanii lokatsii";
+  }
+  return locationLabel ? `in ${locationLabel}` : "in the selected location";
+}
+
+function getNarrativeLeadSentence(
+  item: ContainerListingItem,
+  locale: AppLocale,
+  locationLabel: string | null,
+): string {
+  const subject = getNarrativeSubject(item, locale);
+  const locationPhrase = getNarrativeLocationPhrase(locationLabel, locale);
+
+  if (locale === "pl") {
+    if (item.type === "rent") {
+      return `Do wynajęcia ${subject}, dostępny ${locationPhrase}.`;
+    }
+    if (item.type === "buy") {
+      return `Poszukiwany ${subject}, preferowany ${locationPhrase}.`;
+    }
+    return `Na sprzedaż ${subject}, dostępny ${locationPhrase}.`;
+  }
+
+  if (locale === "de") {
+    if (item.type === "rent") {
+      return `Zur Miete angeboten wird ${subject}, verfügbar ${locationPhrase}.`;
+    }
+    if (item.type === "buy") {
+      return `Gesucht wird ${subject}, bevorzugt ${locationPhrase}.`;
+    }
+    return `Zum Verkauf steht ${subject}, verfügbar ${locationPhrase}.`;
+  }
+
+  if (locale === "uk") {
+    if (item.type === "rent") {
+      return `Dostupnyi dlia orendy ${subject}, dostupnyi ${locationPhrase}.`;
+    }
+    if (item.type === "buy") {
+      return `Shukaetsia ${subject}, bazhano ${locationPhrase}.`;
+    }
+    return `Na prodazh ${subject}, dostupnyi ${locationPhrase}.`;
+  }
+
+  if (item.type === "rent") {
+    return `Available for rent: ${subject}, located ${locationPhrase}.`;
+  }
+  if (item.type === "buy") {
+    return `Wanted: ${subject}, preferably located ${locationPhrase}.`;
+  }
+  return `For sale: ${subject}, located ${locationPhrase}.`;
+}
+
+function getConditionExplanation(
+  condition: ContainerCondition,
+  locale: AppLocale,
+): string | null {
+  if (locale === "pl") {
+    if (condition === "cargo_worthy") {
+      return "czyli nadającej się do dalszego wykorzystania w transporcie lub magazynowaniu";
+    }
+    if (condition === "wind_water_tight") {
+      return "czyli szczelnej i odpowiedniej do bezpiecznego magazynowania";
+    }
+    if (condition === "one_trip") {
+      return "czyli po pojedynczym użyciu w transporcie";
+    }
+  }
+
+  if (locale === "de") {
+    if (condition === "cargo_worthy") {
+      return "also für den weiteren Einsatz im Transport oder zur Lagerung geeignet";
+    }
+    if (condition === "wind_water_tight") {
+      return "also dicht und für eine sichere Lagerung geeignet";
+    }
+    if (condition === "one_trip") {
+      return "also nach nur einem Transporteinsatz";
+    }
+  }
+
+  if (locale === "uk") {
+    if (condition === "cargo_worthy") {
+      return "to bto prydatnyi dlia podalshoho vykorystannia v perevezenni abo zberihanni";
+    }
+    if (condition === "wind_water_tight") {
+      return "to bto hermetychnyi i prydatnyi dlia bezpechnoho zberihannia";
+    }
+    if (condition === "one_trip") {
+      return "to bto pislia odnoho reisu";
+    }
+  }
+
+  if (condition === "cargo_worthy") {
+    return "which means it is suitable for further transport or storage use";
+  }
+  if (condition === "wind_water_tight") {
+    return "which means it remains wind and watertight for storage use";
+  }
+  if (condition === "one_trip") {
+    return "which means it has seen only one transport journey";
+  }
+
+  return null;
+}
+
+function getConditionNarrativeSentence(
+  item: ContainerListingItem,
+  locale: AppLocale,
+): string {
+  const quantity = Math.max(1, Math.trunc(item.quantity || 1));
+  const conditionLabel = getConditionLabel(locale, item.container.condition);
+  const explanation = getConditionExplanation(item.container.condition, locale);
+
+  if (locale === "pl") {
+    const quantityPart =
+      quantity === 1 ? "Oferta dotyczy jednej sztuki" : `Oferta dotyczy ${quantity} sztuk`;
+    return explanation
+      ? `${quantityPart} w stanie ${conditionLabel}, ${explanation}.`
+      : `${quantityPart} w stanie ${conditionLabel}.`;
+  }
+
+  if (locale === "de") {
+    const quantityPart =
+      quantity === 1 ? "Das Angebot betrifft eine Einheit" : `Das Angebot betrifft ${quantity} Einheiten`;
+    return explanation
+      ? `${quantityPart} im Zustand ${conditionLabel}, ${explanation}.`
+      : `${quantityPart} im Zustand ${conditionLabel}.`;
+  }
+
+  if (locale === "uk") {
+    const quantityPart =
+      quantity === 1 ? "Propozytsiia stosuietsia odniiei odynytsi" : `Propozytsiia stosuietsia ${quantity} odynyts`;
+    return explanation
+      ? `${quantityPart} u stani ${conditionLabel}, ${explanation}.`
+      : `${quantityPart} u stani ${conditionLabel}.`;
+  }
+
+  const quantityPart =
+    quantity === 1 ? "The offer covers one unit" : `The offer covers ${quantity} units`;
+  return explanation
+    ? `${quantityPart} in ${conditionLabel} condition, ${explanation}.`
+    : `${quantityPart} in ${conditionLabel} condition.`;
+}
+
+function getAvailabilityNarrativeSentence(
+  item: ContainerListingItem,
+  locale: AppLocale,
+): string {
+  if (item.availableNow) {
+    if (locale === "pl") {
+      return "Kontener jest dostępny od ręki.";
+    }
+    if (locale === "de") {
+      return "Der Container ist sofort verfügbar.";
+    }
+    if (locale === "uk") {
+      return "Konteiner dostupnyi vidrazu.";
+    }
+    return "The container is available immediately.";
+  }
+
+  const dateLabel = new Date(item.availableFrom).toLocaleDateString(locale);
+  if (locale === "pl") {
+    return item.availableFromApproximate
+      ? `Kontener powinien być dostępny orientacyjnie od ${dateLabel}.`
+      : `Kontener będzie dostępny od ${dateLabel}.`;
+  }
+  if (locale === "de") {
+    return item.availableFromApproximate
+      ? `Der Container sollte voraussichtlich ab ${dateLabel} verfügbar sein.`
+      : `Der Container ist ab ${dateLabel} verfügbar.`;
+  }
+  if (locale === "uk") {
+    return item.availableFromApproximate
+      ? `Konteiner maie buty dostupnyi oriientovno z ${dateLabel}.`
+      : `Konteiner bude dostupnyi z ${dateLabel}.`;
+  }
+  return item.availableFromApproximate
+    ? `The container should be available approximately from ${dateLabel}.`
+    : `The container will be available from ${dateLabel}.`;
+}
+
+function getPriceNarrativeSentence(
+  item: ContainerListingItem,
+  locale: AppLocale,
+): string {
+  const price = getListingSeoPrice(item, locale);
+
+  if (locale === "pl") {
+    return price.descriptionLabel
+      ? `Cena wynosi ${price.descriptionLabel}.`
+      : "Cena jest ustalana indywidualnie ze sprzedającym.";
+  }
+  if (locale === "de") {
+    return price.descriptionLabel
+      ? `Der Preis beträgt ${price.descriptionLabel}.`
+      : "Der Preis wird individuell mit dem Anbieter abgestimmt.";
+  }
+  if (locale === "uk") {
+    return price.descriptionLabel
+      ? `Tsina stanovit ${price.descriptionLabel}.`
+      : "Tsina uzghodzhuietsia indyvidualno z prodavtsem.";
+  }
+  return price.descriptionLabel
+    ? `The price is ${price.descriptionLabel}.`
+    : "The price is agreed individually with the seller.";
+}
+
+function getTransportNarrativeSentence(
+  item: ContainerListingItem,
+  locale: AppLocale,
+): string | null {
+  const transportDetails = getTransportDetails(item, locale);
+  if (!transportDetails) {
+    return null;
+  }
+
+  if (locale === "pl") {
+    return `W zakresie logistyki dostępne są następujące opcje: ${transportDetails}.`;
+  }
+  if (locale === "de") {
+    return `Im Bereich Logistik sind folgende Optionen verfügbar: ${transportDetails}.`;
+  }
+  if (locale === "uk") {
+    return `Shchodo lohistyky dostupni taki optsii: ${transportDetails}.`;
+  }
+  return `The following logistics options are available: ${transportDetails}.`;
 }
 
 export function getContainerListingSeoHeading(
@@ -505,33 +818,32 @@ export function getContainerListingSeoNarrative(
   locale: AppLocale,
 ): string[] {
   const copy = getListingCopy(locale);
-  const displayLabel = getSeoDisplayLabel(item, locale);
   const location = getPrimaryLocation(item);
-  const conditionLabel = getConditionLabel(locale, item.container.condition);
-  const price = getListingSeoPrice(item, locale);
-  const locationLabel = location.label ?? (locale === "pl" ? "w podanej lokalizacji" : "in the specified location");
-  const transportDetails = getTransportDetails(item, locale);
+  const locationLabel = location.label;
 
   const firstParagraph = [
-    copy.narrativeLead(displayLabel, locationLabel),
-    copy.kindSentence(item.type),
-    copy.typeSentence(getTypeLabel(locale, item.container.type)),
-    `${copy.conditionLabel}: ${conditionLabel}.`,
-    copy.quantitySentence(Math.max(1, Math.trunc(item.quantity || 1))),
-    getAvailabilitySentence(item, locale),
+    getNarrativeLeadSentence(item, locale, locationLabel),
+    getConditionNarrativeSentence(item, locale),
   ].join(" ");
 
-  const secondParts = [
-    price.descriptionLabel
-      ? `${copy.priceLabel.charAt(0).toUpperCase()}${copy.priceLabel.slice(1)}: ${price.descriptionLabel}.`
-      : `${copy.priceLabel.charAt(0).toUpperCase()}${copy.priceLabel.slice(1)}: ${copy.noPriceLabel}.`,
-    transportDetails ? copy.transportSentence(transportDetails) : null,
-    item.companyName?.trim() ? copy.sellerSentence(item.companyName.trim()) : null,
+  const secondParagraph = [
+    getAvailabilityNarrativeSentence(item, locale),
+    getPriceNarrativeSentence(item, locale),
+    getFeatureSentence(item, locale),
+    getColorSentence(item, locale),
+    getTransportNarrativeSentence(item, locale),
+  ]
+    .filter((value): value is string => Boolean(value))
+    .join(" ");
+
+  const thirdParts = [
     copy.cscSentence,
     copy.contactCta,
   ].filter((value): value is string => Boolean(value));
 
-  return [firstParagraph, secondParts.join(" ")];
+  return [firstParagraph, secondParagraph, thirdParts.join(" ")].filter(
+    (value): value is string => Boolean(value.trim()),
+  );
 }
 
 function getPrimaryImageUrl(item: ContainerListingItem): string | null {
@@ -615,7 +927,7 @@ export function buildContainerListingStructuredData(input: {
   const name = getContainerListingSeoHeading(input.item, input.locale);
   const description = input.item.description?.trim()
     ? stripHtmlToPlainText(input.item.description).trim()
-    : "";
+    : getContainerListingSeoNarrative(input.item, input.locale).join(" ").trim();
 
   const product: Record<string, unknown> = {
     "@context": "https://schema.org",

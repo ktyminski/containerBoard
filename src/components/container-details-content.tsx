@@ -55,6 +55,7 @@ import {
 } from "@/lib/i18n";
 import {
   buildContainerListingStructuredData,
+  getContainerListingSeoNarrative,
 } from "@/lib/container-listing-seo";
 import { normalizeOptionalListingDescriptionHtml } from "@/lib/listing-description-html";
 import { getTurnstileSiteKey } from "@/lib/turnstile";
@@ -612,6 +613,7 @@ export async function ContainerDetailsContent({
   const quantityDisplay = getQuantityDisplay(listingItem.quantity);
   const locationItems = getLocationDisplayItems(listingItem, locale, moduleMessages);
   const locationMapPoints = getLocationMapPoints(listingItem, locale, moduleMessages);
+  const seoNarrative = getContainerListingSeoNarrative(listingItem, locale);
   const structuredData = buildContainerListingStructuredData({
     item: listingItem,
     locale,
@@ -957,6 +959,17 @@ export async function ContainerDetailsContent({
               className="mt-3 space-y-2 text-sm text-neutral-700 [&_p]:leading-6 [&_ul]:list-disc [&_ul]:pl-5"
               dangerouslySetInnerHTML={{ __html: sanitizedDescriptionHtml }}
             />
+          </section>
+        ) : seoNarrative.length > 0 ? (
+          <section className="mt-4 rounded-md border border-neutral-300 bg-white p-4">
+            <h2 className="text-sm font-semibold text-neutral-800">
+              {moduleMessages.details.descriptionTitle}
+            </h2>
+            <div className="mt-3 space-y-3 text-sm leading-6 text-neutral-700">
+              {seoNarrative.map((paragraph, index) => (
+                <p key={`${listingItem.id}-seo-fallback-description-${index}`}>{paragraph}</p>
+              ))}
+            </div>
           </section>
         ) : null}
 
