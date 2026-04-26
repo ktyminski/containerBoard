@@ -249,6 +249,9 @@ const MyContainerListingRow = memo(function MyContainerListingRow({
             <p>
               {messages.quantityLabel}: {item.quantity}
             </p>
+            <p>
+              {messages.contactRevealCountLabel}: {item.contactRevealCount}
+            </p>
           </div>
 
           <div className="mt-3 flex flex-wrap items-center justify-between gap-2">

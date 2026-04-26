@@ -5,6 +5,7 @@ import { cookies } from "next/headers";
 import { notFound } from "next/navigation";
 import { CONTAINER_CONDITION_COLOR_TOKENS } from "@/components/container-listings-shared";
 import { ContainerDetailsGallery } from "@/components/container-details-gallery";
+import { ContainerContactRevealCard } from "@/components/container-contact-reveal-card";
 import { ContainerDetailsRelatedListings } from "@/components/container-details-related-listings";
 import { ContainerDetailsScrollTop } from "@/components/container-details-scroll-top";
 import { ContainerPhotoWithPlaceholder } from "@/components/container-photo-with-placeholder";
@@ -601,6 +602,11 @@ export async function ContainerDetailsContent({
     listingItem.priceNegotiable === true ||
     listingItem.pricing?.original.negotiable === true;
   const containerColors = listingItem.containerColors ?? [];
+  const contactRevealCount =
+    typeof listing.contactRevealCount === "number" &&
+    Number.isFinite(listing.contactRevealCount)
+      ? Math.max(0, Math.trunc(listing.contactRevealCount))
+      : 0;
 
   return (
     <div className="grid gap-4">
@@ -1020,31 +1026,23 @@ export async function ContainerDetailsContent({
           />
         </section>
 
-        <section className="mt-4 rounded-md border border-neutral-300 bg-white p-4 text-sm text-neutral-700">
-          <h2 className="text-sm font-semibold text-neutral-800">
-            {moduleMessages.details.contactTitle}
-          </h2>
-          <p className="mt-3">
-            {moduleMessages.details.emailLabel}:{" "}
-            <a
-              className="text-sky-700 hover:text-sky-600"
-              href={`mailto:${listing.contactEmail}`}
-            >
-              {listing.contactEmail}
-            </a>
-          </p>
-          {listing.contactPhone ? (
-            <p>
-              {moduleMessages.details.phoneLabel}:{" "}
-              <a
-                className="text-sky-700 hover:text-sky-600"
-                href={`tel:${listing.contactPhone.replace(/\s+/g, "")}`}
-              >
-                {listing.contactPhone}
-              </a>
-            </p>
-          ) : null}
-        </section>
+        <ContainerContactRevealCard
+          listingId={listing._id.toHexString()}
+          contactEmail={listing.contactEmail}
+          contactPhone={listing.contactPhone}
+          isOwnerOrAdmin={isOwner || isAdmin}
+          initialRevealCount={contactRevealCount}
+          labels={{
+            title: moduleMessages.details.contactTitle,
+            email: moduleMessages.details.emailLabel,
+            phone: moduleMessages.details.phoneLabel,
+            hiddenTitle: moduleMessages.details.contactHiddenTitle,
+            hiddenHint: moduleMessages.details.contactHiddenHint,
+            revealButton: moduleMessages.details.contactRevealButton,
+            loading: moduleMessages.details.contactRevealLoading,
+            ownerStatsLabel: moduleMessages.details.contactRevealCountLabel,
+          }}
+        />
 
         {additionalRealImages.length > 0 ? (
           <section className="mt-4 rounded-md border border-neutral-300 bg-white p-4">

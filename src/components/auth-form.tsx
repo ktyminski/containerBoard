@@ -249,7 +249,7 @@ export function AuthForm({
               })}
             />
             {errors.name?.message ? (
-              <p className="mt-1 text-xs text-red-300">{errors.name.message}</p>
+              <p className="mt-1 text-xs text-red-400">{errors.name.message}</p>
             ) : null}
           </>
         ) : null}
@@ -267,7 +267,7 @@ export function AuthForm({
           })}
         />
         {errors.email?.message ? (
-          <p className="mt-1 text-xs text-red-300">{errors.email.message}</p>
+          <p className="mt-1 text-xs text-red-400">{errors.email.message}</p>
         ) : null}
 
         <input
@@ -281,7 +281,7 @@ export function AuthForm({
           })}
         />
         {errors.password?.message ? (
-          <p className="mt-1 text-xs text-red-300">{errors.password.message}</p>
+          <p className="mt-1 text-xs text-red-400">{errors.password.message}</p>
         ) : null}
         {mode === "login" ? (
           <div className="mt-2 text-right">
@@ -323,7 +323,7 @@ export function AuthForm({
           </label>
         ) : null}
         {mode === "register" && errors.legalConsent?.message ? (
-          <p className="mt-1 text-xs text-red-300">{errors.legalConsent.message}</p>
+          <p className="mt-1 text-xs text-red-400">{errors.legalConsent.message}</p>
         ) : null}
 
         {turnstileSiteKey ? (
@@ -351,8 +351,30 @@ export function AuthForm({
 
       <a
         href={`/api/auth/google/start?next=${encodeURIComponent(withLang(next, locale))}`}
-        className="mt-3 block w-full rounded-md border border-neutral-700 bg-neutral-950 px-3 py-2 text-center text-sm text-neutral-200 hover:border-neutral-500"
+        className="mt-3 inline-flex w-full items-center justify-center gap-2 rounded-md border border-neutral-700 bg-neutral-950 px-3 py-2 text-center text-sm text-neutral-200 hover:border-neutral-500"
       >
+        <svg
+          viewBox="0 0 24 24"
+          aria-hidden="true"
+          className="h-4 w-4 shrink-0"
+        >
+          <path
+            fill="#EA4335"
+            d="M12 10.2v3.9h5.4c-.2 1.3-.8 2.4-1.7 3.2l3 2.3c1.8-1.7 2.8-4.1 2.8-6.9 0-.7-.1-1.4-.2-2H12Z"
+          />
+          <path
+            fill="#34A853"
+            d="M12 21c2.6 0 4.8-.9 6.5-2.4l-3-2.3c-.8.6-2 1-3.5 1-2.7 0-5-1.8-5.8-4.3l-3.1 2.4C4.8 18.8 8.1 21 12 21Z"
+          />
+          <path
+            fill="#4A90E2"
+            d="M6.2 13c-.2-.6-.3-1.3-.3-2s.1-1.4.3-2L3.1 6.6C2.4 8 2 9.5 2 11s.4 3 1.1 4.4L6.2 13Z"
+          />
+          <path
+            fill="#FBBC05"
+            d="M12 4.7c1.4 0 2.7.5 3.7 1.5l2.8-2.8C16.8 1.8 14.6 1 12 1 8.1 1 4.8 3.2 3.1 6.6L6.2 9c.8-2.5 3.1-4.3 5.8-4.3Z"
+          />
+        </svg>
         {messages.continueWithGoogle}
       </a>
 
