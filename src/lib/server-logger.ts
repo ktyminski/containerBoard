@@ -13,6 +13,10 @@ const RETENTION_DAYS = 14;
 let ensureLogDirectoryPromise: Promise<void> | null = null;
 let cleanupDayStamp = "";
 
+function isVercelRuntime(): boolean {
+  return process.env.VERCEL === "1" || Boolean(process.env.VERCEL_ENV);
+}
+
 function getDayStamp(date: Date): string {
   return date.toISOString().slice(0, 10);
 }
@@ -180,6 +184,16 @@ async function writeLog(level: LogLevel, message: string, context?: LogContext):
   const normalizedContext = normalizeContext(context);
   if (normalizedContext) {
     entry.context = normalizedContext;
+  }
+
+  if (isVercelRuntime()) {
+    const serializedEntry = JSON.stringify(entry);
+    if (level === "error") {
+      console.error(serializedEntry);
+    } else {
+      console.warn(serializedEntry);
+    }
+    return;
   }
 
   try {

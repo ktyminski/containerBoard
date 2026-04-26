@@ -13,6 +13,7 @@ import { enforceRateLimitOrResponse } from "@/lib/request-rate-limit";
 import { sendContainerInquiryEmail } from "@/lib/mailer";
 import { getAbsoluteUrl } from "@/lib/seo";
 import { logError } from "@/lib/server-logger";
+import { CONTACT_ACTIVITY_TYPE, recordContactActivity } from "@/lib/contact-activity";
 import { getRequestIp, isTurnstileEnabled, verifyTurnstileToken } from "@/lib/turnstile";
 
 export const runtime = "nodejs";
@@ -140,6 +141,38 @@ export async function POST(request: NextRequest, context: RouteContext) {
         listingId: listingId.toHexString(),
         error: sendResult.error,
         status: sendResult.status,
+      });
+    }
+
+    try {
+      await recordContactActivity({
+        type: CONTACT_ACTIVITY_TYPE.INQUIRY_SENT,
+        listingId,
+        listingType: listing.type,
+        listingSummary: summaryLine,
+        listingCompanyName: listing.companyName,
+        actorUserId: currentUser?._id,
+        actorIsGuest: isGuest,
+        actorName: inquiry.buyerName.trim(),
+        actorEmail: inquiry.buyerEmail.trim(),
+        actorPhone: buyerPhone,
+        actorAccountName: currentUser?.name?.trim() || undefined,
+        actorAccountEmail: currentUser?.email?.trim() || undefined,
+        actorIp: getRequestIp(request.headers),
+        actorUserAgent: request.headers.get("user-agent")?.trim() || undefined,
+        recipientUserId: listing.createdByUserId,
+        recipientCompanyName: listing.companyName,
+        recipientEmail: listing.contactEmail,
+        recipientPhone: listing.contactPhone?.trim() || undefined,
+        inquiryMessage,
+        requestedQuantity: inquiry.requestedQuantity,
+        offeredPrice,
+      });
+    } catch (activityError) {
+      logError("Failed to record contact activity for inquiry", {
+        route: "/api/containers/[id]/inquiry",
+        listingId: listingId.toHexString(),
+        error: activityError,
       });
     }
 

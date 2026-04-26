@@ -5,7 +5,10 @@ import {
   ensureContainerListingsIndexes,
   getContainerListingsCollection,
 } from "@/lib/container-listings";
+import { CONTACT_ACTIVITY_TYPE, recordContactActivity } from "@/lib/contact-activity";
 import { enforceRateLimitOrResponse } from "@/lib/request-rate-limit";
+import { logError } from "@/lib/server-logger";
+import { getRequestIp } from "@/lib/turnstile";
 import { USER_ROLE } from "@/lib/user-roles";
 
 export const runtime = "nodejs";
@@ -41,6 +44,12 @@ export async function POST(request: NextRequest, context: RouteContext) {
     {
       projection: {
         _id: 1,
+        type: 1,
+        companyName: 1,
+        locationCity: 1,
+        locationCountry: 1,
+        contactEmail: 1,
+        contactPhone: 1,
         createdByUserId: 1,
         contactRevealCount: 1,
       },
@@ -80,6 +89,41 @@ export async function POST(request: NextRequest, context: RouteContext) {
       },
     },
   );
+
+  try {
+    await recordContactActivity({
+      type: CONTACT_ACTIVITY_TYPE.CONTACT_REVEALED,
+      listingId,
+      listingType: listing.type,
+      listingSummary: [
+        listing.companyName?.trim(),
+        listing.type,
+        [listing.locationCity?.trim(), listing.locationCountry?.trim()].filter(Boolean).join(", "),
+      ]
+        .filter(Boolean)
+        .join(" | "),
+      listingCompanyName: listing.companyName?.trim() || undefined,
+      actorUserId: currentUser?._id,
+      actorIsGuest: !currentUser?._id,
+      actorName: currentUser?.name?.trim() || undefined,
+      actorEmail: currentUser?.email?.trim() || undefined,
+      actorPhone: currentUser?.phone?.trim() || undefined,
+      actorAccountName: currentUser?.name?.trim() || undefined,
+      actorAccountEmail: currentUser?.email?.trim() || undefined,
+      actorIp: getRequestIp(request.headers),
+      actorUserAgent: request.headers.get("user-agent")?.trim() || undefined,
+      recipientUserId: listing.createdByUserId,
+      recipientCompanyName: listing.companyName?.trim() || undefined,
+      recipientEmail: listing.contactEmail?.trim() || undefined,
+      recipientPhone: listing.contactPhone?.trim() || undefined,
+    });
+  } catch (activityError) {
+    logError("Failed to record contact activity for reveal", {
+      route: "/api/containers/[id]/contact-reveal",
+      listingId: listingId.toHexString(),
+      error: activityError,
+    });
+  }
 
   return NextResponse.json({
     ok: true,

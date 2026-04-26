@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { AdminBulkImportPanel } from "@/components/admin-bulk-import-panel";
 import { AdminMailPreviewsPanel } from "@/components/admin-mail-previews-panel";
+import { AdminContactActivityTable } from "@/components/admin-contact-activity-table";
 import { AdminConciergeRequestsTable } from "@/components/admin-concierge-requests-table";
 import { AdminCompaniesTable } from "@/components/admin-companies-table";
 import { AdminContainersTable } from "@/components/admin-containers-table";
@@ -16,6 +17,7 @@ type AdminTabKey =
   | "users"
   | "companies"
   | "concierge"
+  | "contactActivity"
   | "mailPreviews";
 
 type AdminBulkImportCompanyOption = {
@@ -47,6 +49,7 @@ const ADMIN_TABS: AdminTabKey[] = [
   "users",
   "companies",
   "concierge",
+  "contactActivity",
   "mailPreviews",
 ];
 
@@ -80,6 +83,7 @@ export function AdminPanelTabs({
     users: messages.tabs.users,
     companies: messages.tabs.companies,
     concierge: messages.tabs.concierge,
+    contactActivity: "Logi kontaktu",
     mailPreviews: messages.tabs.mailPreviews,
   };
 
@@ -133,6 +137,9 @@ export function AdminPanelTabs({
       ) : null}
       {activeTab === "concierge" ? (
         <AdminConciergeRequestsTable locale={locale} messages={conciergeMessages} />
+      ) : null}
+      {activeTab === "contactActivity" ? (
+        <AdminContactActivityTable locale={locale} />
       ) : null}
       {activeTab === "mailPreviews" ? (
         <AdminMailPreviewsPanel
