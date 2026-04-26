@@ -6,7 +6,7 @@ import ukRaw from "../../translations/uk.json";
 export const SUPPORTED_LOCALES = ["pl", "en", "de", "uk"] as const;
 export const LOCALE_COOKIE_NAME = "containerboard_locale";
 export const LOCALE_HEADER_NAME = "x-containerboard-locale";
-const DEFAULT_LOCALE = "pl";
+const DEFAULT_LOCALE = "en";
 
 export type AppLocale = (typeof SUPPORTED_LOCALES)[number];
 export type AppMessages = typeof pl;
@@ -70,8 +70,28 @@ function normalizeLocaleToken(value?: string | null): AppLocale | null {
   return null;
 }
 
-export function resolveLocale(input?: string | null): AppLocale {
-  return normalizeLocaleToken(input) ?? DEFAULT_LOCALE;
+function normalizeCountryCode(value?: string | null): string | null {
+  const normalized = value?.trim().toUpperCase();
+  if (!normalized || !/^[A-Z]{2}$/.test(normalized)) {
+    return null;
+  }
+  return normalized;
+}
+
+export function getLocaleFromCountryCode(countryCode?: string | null): AppLocale | null {
+  const normalizedCountryCode = normalizeCountryCode(countryCode);
+  if (normalizedCountryCode === "PL") {
+    return "pl";
+  }
+
+  return null;
+}
+
+export function resolveLocale(
+  input?: string | null,
+  fallback: AppLocale = DEFAULT_LOCALE,
+): AppLocale {
+  return normalizeLocaleToken(input) ?? fallback;
 }
 
 export function getMessages(locale: AppLocale): AppMessages {
@@ -106,20 +126,34 @@ export function getLocaleFromRequest(input: {
   cookieLocale?: string;
   headerLocale?: string | null;
   acceptLanguage?: string | null;
+  countryCode?: string | null;
 }): AppLocale {
   const fromParams = getLocaleFromSearchParams(input.params);
   if (fromParams) {
     return fromParams;
   }
 
-  const fromHeader =
-    getLocaleFromHeaderValue(input.headerLocale) ??
-    getLocaleFromHeaderValue(input.acceptLanguage);
-  if (fromHeader) {
-    return fromHeader;
+  const fromCookie = normalizeLocaleToken(input.cookieLocale);
+  if (fromCookie) {
+    return fromCookie;
   }
 
-  return resolveLocale(input.cookieLocale);
+  const fromHeaderLocale = getLocaleFromHeaderValue(input.headerLocale);
+  if (fromHeaderLocale) {
+    return fromHeaderLocale;
+  }
+
+  const fromCountry = getLocaleFromCountryCode(input.countryCode);
+  if (fromCountry) {
+    return fromCountry;
+  }
+
+  const fromAcceptLanguage = getLocaleFromHeaderValue(input.acceptLanguage);
+  if (fromAcceptLanguage) {
+    return fromAcceptLanguage;
+  }
+
+  return DEFAULT_LOCALE;
 }
 
 export function getLocaleFromApiRequest(request: Request): AppLocale {

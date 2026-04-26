@@ -10,8 +10,12 @@ import {
 import { buildBlobPath, uploadBlobFromBuffer } from "@/lib/blob-storage";
 import { getCompaniesCollection } from "@/lib/companies";
 import { getEnv } from "@/lib/env";
-import { sendConciergeStockUploadNotificationEmail } from "@/lib/mailer";
+import {
+  sendConciergeStockUploadConfirmationEmail,
+  sendConciergeStockUploadNotificationEmail,
+} from "@/lib/mailer";
 import { enforceRateLimitOrResponse } from "@/lib/request-rate-limit";
+import { getAbsoluteUrl } from "@/lib/seo";
 import { logError } from "@/lib/server-logger";
 
 export const runtime = "nodejs";
@@ -194,23 +198,35 @@ export async function POST(request: NextRequest) {
     const requests = await getBulkConciergeRequestsCollection();
     await requests.insertOne(nextDocument);
 
-    const mailResult = await sendConciergeStockUploadNotificationEmail({
-      to: conciergeNotificationEmail,
-      companyName: nextDocument.companyName,
-      companySlug: nextDocument.companySlug,
-      userName: nextDocument.userName,
-      userEmail: nextDocument.userEmail,
-      contactEmail: nextDocument.contactEmail,
-      contactPhone: nextDocument.contactPhone,
-      fileName: nextDocument.stockFile.filename,
-      fileSizeBytes: nextDocument.stockFile.size,
-      fileContentType: nextDocument.stockFile.contentType,
-      fileUrl: nextDocument.stockFile.blobUrl,
-      note: nextDocument.note,
-      requestedAtIso: nextDocument.createdAt.toISOString(),
-    });
+    const adminFileDownloadUrl = getAbsoluteUrl(
+      `/api/admin/concierge-requests/${listingId.toHexString()}/file`,
+    );
 
-    if (mailResult.ok) {
+    const [adminMailResult, requesterMailResult] = await Promise.all([
+      sendConciergeStockUploadNotificationEmail({
+        to: conciergeNotificationEmail,
+        companyName: nextDocument.companyName,
+        companySlug: nextDocument.companySlug,
+        userName: nextDocument.userName,
+        userEmail: nextDocument.userEmail,
+        contactEmail: nextDocument.contactEmail,
+        contactPhone: nextDocument.contactPhone,
+        fileName: nextDocument.stockFile.filename,
+        fileSizeBytes: nextDocument.stockFile.size,
+        fileContentType: nextDocument.stockFile.contentType,
+        fileDownloadUrl: adminFileDownloadUrl,
+        note: nextDocument.note,
+        requestedAtIso: nextDocument.createdAt.toISOString(),
+      }),
+      sendConciergeStockUploadConfirmationEmail({
+        to: nextDocument.userEmail,
+        name: nextDocument.userName,
+        companyName: nextDocument.companyName,
+        fileName: nextDocument.stockFile.filename,
+      }),
+    ]);
+
+    if (adminMailResult.ok) {
       await requests.updateOne(
         { _id: listingId },
         {
@@ -224,7 +240,8 @@ export async function POST(request: NextRequest) {
         },
       );
     } else {
-      const notificationError = normalizeOptionalString(mailResult.error) ?? "Unknown mail error";
+      const notificationError =
+        normalizeOptionalString(adminMailResult.error) ?? "Unknown mail error";
       await requests.updateOne(
         { _id: listingId },
         {
@@ -237,8 +254,18 @@ export async function POST(request: NextRequest) {
       logError("Failed to send concierge notification email", {
         route: "/api/containers/bulk/concierge",
         requestId: listingId.toHexString(),
-        error: mailResult.error,
-        status: mailResult.status,
+        error: adminMailResult.error,
+        status: adminMailResult.status,
+      });
+    }
+
+    if (!requesterMailResult.ok) {
+      logError("Failed to send concierge requester confirmation email", {
+        route: "/api/containers/bulk/concierge",
+        requestId: listingId.toHexString(),
+        error: requesterMailResult.error,
+        status: requesterMailResult.status,
+        requesterEmail: nextDocument.userEmail,
       });
     }
 
@@ -247,8 +274,9 @@ export async function POST(request: NextRequest) {
         id: listingId.toHexString(),
         filename: nextDocument.stockFile.filename,
         createdAt: nextDocument.createdAt.toISOString(),
-        notificationSent: mailResult.ok,
-        ...(mailResult.ok
+        notificationSent: adminMailResult.ok,
+        requesterConfirmationSent: requesterMailResult.ok,
+        ...(adminMailResult.ok && requesterMailResult.ok
           ? {}
           : {
               warning: messages.notificationWarning,

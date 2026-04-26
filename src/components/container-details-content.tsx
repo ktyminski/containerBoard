@@ -555,11 +555,8 @@ export async function ContainerDetailsContent({
         }),
       )
     : false;
-  const isPublic = listing.status === LISTING_STATUS.ACTIVE;
-
-  if (!isPublic && !isOwner && !isAdmin) {
-    notFound();
-  }
+  const isPublic = listingItem.status === LISTING_STATUS.ACTIVE;
+  const showInactiveNotice = !isPublic;
 
   const galleryTitle = getContainerShortDetailTitleLocalized(
     listingMessages,
@@ -616,15 +613,17 @@ export async function ContainerDetailsContent({
             label={moduleMessages.shared.backToList}
             className="inline-flex h-10 min-w-0 flex-1 items-center justify-center overflow-hidden whitespace-nowrap rounded-md border border-neutral-300 bg-transparent px-3 py-2 text-sm font-medium text-neutral-900 hover:bg-neutral-100/80"
           />
-          <ContainerInquiryModalTrigger
-            listingId={listing._id.toHexString()}
-            isPriceNegotiable={isPriceNegotiable}
-            isLoggedIn={isLoggedIn}
-            initialIsFavorite={initialIsFavorite}
-            turnstileSiteKey={turnstileSiteKey}
-            initialInquiryValues={inquiryInitialValues}
-            className="min-w-0 flex-1 flex-nowrap [&>button:nth-child(1)]:hidden [&>button:nth-child(2)]:hidden [&>button:nth-child(4)]:hidden [&>button:nth-child(3)]:h-10 [&>button:nth-child(3)]:w-full [&>button:nth-child(3)]:min-w-0 [&>button:nth-child(3)]:justify-center [&>button:nth-child(3)]:overflow-hidden [&>button:nth-child(3)]:whitespace-nowrap"
-          />
+          {isPublic ? (
+            <ContainerInquiryModalTrigger
+              listingId={listing._id.toHexString()}
+              isPriceNegotiable={isPriceNegotiable}
+              isLoggedIn={isLoggedIn}
+              initialIsFavorite={initialIsFavorite}
+              turnstileSiteKey={turnstileSiteKey}
+              initialInquiryValues={inquiryInitialValues}
+              className="min-w-0 flex-1 flex-nowrap [&>button:nth-child(1)]:hidden [&>button:nth-child(2)]:hidden [&>button:nth-child(4)]:hidden [&>button:nth-child(3)]:h-10 [&>button:nth-child(3)]:w-full [&>button:nth-child(3)]:min-w-0 [&>button:nth-child(3)]:justify-center [&>button:nth-child(3)]:overflow-hidden [&>button:nth-child(3)]:whitespace-nowrap"
+            />
+          ) : null}
         </div>
       </div>
 
@@ -636,17 +635,28 @@ export async function ContainerDetailsContent({
           className="rounded-md border border-neutral-300 bg-white px-3 py-2 text-sm text-neutral-700 hover:bg-neutral-100"
         />
         <div className="ml-auto flex flex-wrap items-center justify-end gap-2">
-          <ContainerInquiryModalTrigger
-            listingId={listing._id.toHexString()}
-            isPriceNegotiable={isPriceNegotiable}
-            isLoggedIn={isLoggedIn}
-            initialIsFavorite={initialIsFavorite}
-            turnstileSiteKey={turnstileSiteKey}
-            initialInquiryValues={inquiryInitialValues}
-            className="[&>button:nth-child(1)]:hidden [&>button:nth-child(2)]:hidden"
-          />
+          {isPublic ? (
+            <ContainerInquiryModalTrigger
+              listingId={listing._id.toHexString()}
+              isPriceNegotiable={isPriceNegotiable}
+              isLoggedIn={isLoggedIn}
+              initialIsFavorite={initialIsFavorite}
+              turnstileSiteKey={turnstileSiteKey}
+              initialInquiryValues={inquiryInitialValues}
+              className="[&>button:nth-child(1)]:hidden [&>button:nth-child(2)]:hidden"
+            />
+          ) : null}
         </div>
       </div>
+
+      {showInactiveNotice ? (
+        <section className="rounded-md border border-amber-300 bg-amber-50 px-4 py-3 text-sm text-amber-900 shadow-sm">
+          <p className="font-semibold">{moduleMessages.details.inactiveListingNoticeTitle}</p>
+          <p className="mt-1 text-amber-800">
+            {moduleMessages.details.inactiveListingNoticeBody}
+          </p>
+        </section>
+      ) : null}
 
       <article className="rounded-md border border-neutral-300 bg-neutral-50/95 p-5 shadow-sm">
         <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_320px] lg:items-stretch">
@@ -811,7 +821,7 @@ export async function ContainerDetailsContent({
                   {priceDisplay.metaLine}
                 </p>
               ) : null}
-              {isPriceNegotiable ? (
+              {isPublic && isPriceNegotiable ? (
                 <div className="mt-3 sm:hidden">
                   <ContainerInquiryModalTrigger
                     listingId={listing._id.toHexString()}
@@ -1059,6 +1069,7 @@ export async function ContainerDetailsContent({
         <ContainerInquiryModalTrigger
           listingId={listing._id.toHexString()}
           isPriceNegotiable={isPriceNegotiable}
+          allowInquiryActions={isPublic}
           isLoggedIn={isLoggedIn}
           initialIsFavorite={initialIsFavorite}
           turnstileSiteKey={turnstileSiteKey}

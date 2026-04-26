@@ -38,7 +38,7 @@ export default async function ContactPage({ searchParams }: ContactPageProps) {
   });
   const messages = getMessages(locale);
   const page = messages.infoPages.contact;
-  const contactEmail = "hello@containerboard.pl";
+  const contactEmail = "hello@containerboard.eu";
   const contactPhone = process.env.CONTACT_PHONE?.trim() || "+48 514 443 548 (Polski | English)";
   const contactPhoneHref = contactPhone.replace(/[^\d+]/g, "");
 

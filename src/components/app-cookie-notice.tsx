@@ -76,7 +76,7 @@ export function AppCookieNotice({ locale, messages, isLoggedIn }: AppCookieNotic
         </p>
         <button
           type="button"
-          className="rounded-md bg-sky-500 px-3 py-1.5 text-xs font-medium text-neutral-950 hover:bg-sky-400"
+          className="rounded-md border border-neutral-600 bg-neutral-800 px-3 py-1.5 text-xs font-medium text-neutral-200 transition hover:border-neutral-500 hover:bg-neutral-700"
           onClick={() => {
             try {
               window.localStorage.setItem(COOKIE_NOTICE_STORAGE_KEY, "1");

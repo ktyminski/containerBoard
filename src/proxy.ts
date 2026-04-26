@@ -1,8 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import {
+  getLocaleFromRequest,
   LOCALE_COOKIE_NAME,
   LOCALE_HEADER_NAME,
-  resolveLocale,
 } from "@/lib/i18n";
 
 const MUTATING_METHODS = new Set(["POST", "PUT", "PATCH", "DELETE"]);
@@ -154,11 +154,12 @@ function applyLocaleHeaders(request: NextRequest): {
   locale: string;
   response: NextResponse;
 } {
-  const locale = resolveLocale(
-    request.cookies.get(LOCALE_COOKIE_NAME)?.value ??
-      request.headers.get(LOCALE_HEADER_NAME) ??
-      request.headers.get("accept-language"),
-  );
+  const locale = getLocaleFromRequest({
+    cookieLocale: request.cookies.get(LOCALE_COOKIE_NAME)?.value,
+    headerLocale: request.headers.get(LOCALE_HEADER_NAME),
+    acceptLanguage: request.headers.get("accept-language"),
+    countryCode: request.headers.get("x-vercel-ip-country"),
+  });
 
   const requestHeaders = new Headers(request.headers);
   requestHeaders.set(LOCALE_HEADER_NAME, locale);

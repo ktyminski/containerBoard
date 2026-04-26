@@ -88,7 +88,7 @@ export async function searchGeocode(input: {
   const response = await fetch(url, {
     headers: {
       "Accept-Language": input.lang ?? "pl",
-      "User-Agent": "ContainerBoard/1.0 (contact: support@containerboard.local)",
+      "User-Agent": "ContainerBoard/1.0 (contact: hello@containerboard.eu)",
     },
     cache: "no-store",
   });

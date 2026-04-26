@@ -1,9 +1,8 @@
 import { getEnv } from "@/lib/env";
 import {
   buildConciergeStockUploadMail,
+  buildConciergeStockUploadConfirmationMail,
   buildContainerInquiryMail,
-  buildClaimDecisionMail,
-  buildClaimSubmittedMail,
   buildEmailVerificationMail,
   buildListingExpiryReminderMail,
   buildOfferPublishedMail,
@@ -31,8 +30,8 @@ type SendMailPayload = {
   attachments?: SendMailAttachment[];
 };
 
-const DEFAULT_PROD_MAIL_FROM = "no-reply@containerboard.pl";
-const DEFAULT_PROD_MAIL_REPLY_TO = "support@containerboard.pl";
+const DEFAULT_PROD_MAIL_FROM = "hello@containerboard.eu";
+const DEFAULT_PROD_MAIL_REPLY_TO = "hello@containerboard.eu";
 const DEFAULT_DEV_MAIL_FROM = "onboarding@resend.dev";
 const DEFAULT_DEV_MAIL_REPLY_TO = "onboarding@resend.dev";
 
@@ -154,56 +153,6 @@ export async function sendPasswordResetEmail(input: {
   });
 }
 
-export async function sendClaimSubmittedEmail(input: {
-  to: string;
-  companyName: string;
-  name?: string;
-}): Promise<SendMailResult> {
-  const template = buildClaimSubmittedMail(input.companyName, input.name);
-  return sendMail({
-    to: input.to,
-    subject: template.subject,
-    text: template.text,
-    html: template.html,
-  });
-}
-
-export async function sendClaimApprovedEmail(input: {
-  to: string;
-  companyName: string;
-  name?: string;
-}): Promise<SendMailResult> {
-  const template = buildClaimDecisionMail({
-    approved: true,
-    companyName: input.companyName,
-    name: input.name,
-  });
-  return sendMail({
-    to: input.to,
-    subject: template.subject,
-    text: template.text,
-    html: template.html,
-  });
-}
-
-export async function sendClaimRejectedEmail(input: {
-  to: string;
-  companyName: string;
-  name?: string;
-}): Promise<SendMailResult> {
-  const template = buildClaimDecisionMail({
-    approved: false,
-    companyName: input.companyName,
-    name: input.name,
-  });
-  return sendMail({
-    to: input.to,
-    subject: template.subject,
-    text: template.text,
-    html: template.html,
-  });
-}
-
 export async function sendOfferPublishedEmail(input: {
   to: string;
   name?: string;
@@ -231,6 +180,7 @@ export async function sendContainerInquiryEmail(input: {
   summaryLine: string;
   companyName: string;
   listingQuantity: number;
+  listingUrl?: string;
   buyerName: string;
   buyerEmail: string;
   buyerPhone?: string;
@@ -243,6 +193,7 @@ export async function sendContainerInquiryEmail(input: {
     summaryLine: input.summaryLine,
     companyName: input.companyName,
     listingQuantity: input.listingQuantity,
+    listingUrl: input.listingUrl,
     buyerName: input.buyerName,
     buyerEmail: input.buyerEmail,
     buyerPhone: input.buyerPhone,
@@ -270,7 +221,7 @@ export async function sendConciergeStockUploadNotificationEmail(input: {
   fileName: string;
   fileSizeBytes: number;
   fileContentType: string;
-  fileUrl: string;
+  fileDownloadUrl: string;
   note?: string;
   requestedAtIso: string;
 }): Promise<SendMailResult> {
@@ -284,9 +235,29 @@ export async function sendConciergeStockUploadNotificationEmail(input: {
     fileName: input.fileName,
     fileSizeBytes: input.fileSizeBytes,
     fileContentType: input.fileContentType,
-    fileUrl: input.fileUrl,
+    fileDownloadUrl: input.fileDownloadUrl,
     note: input.note,
     requestedAtIso: input.requestedAtIso,
+  });
+
+  return sendMail({
+    to: input.to,
+    subject: template.subject,
+    text: template.text,
+    html: template.html,
+  });
+}
+
+export async function sendConciergeStockUploadConfirmationEmail(input: {
+  to: string;
+  name?: string;
+  companyName: string;
+  fileName: string;
+}): Promise<SendMailResult> {
+  const template = buildConciergeStockUploadConfirmationMail({
+    name: input.name,
+    companyName: input.companyName,
+    fileName: input.fileName,
   });
 
   return sendMail({

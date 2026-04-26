@@ -572,7 +572,8 @@
       "users": "Users",
       "containers": "Containers",
       "concierge": "Concierge",
-      "bulkImport": "Bulk Import"
+      "bulkImport": "Bulk Import",
+      "mailPreviews": "Email previews"
     }
   },
   "adminUsers": {
@@ -625,26 +626,6 @@
     "removeAssignment": "Remove company assignment",
     "confirmRemoveTitle": "Confirm assignment removal",
     "confirmRemoveText": "Are you sure you want to remove company \"{company}\" from user \"{user}\"?",
-    "cancel": "Cancel",
-    "confirm": "Confirm",
-    "unknownError": "Unknown error"
-  },
-  "adminCompanyClaims": {
-    "loading": "Loading claims...",
-    "title": "Company ownership claims",
-    "refresh": "Refresh",
-    "empty": "No pending claims.",
-    "company": "Company",
-    "requester": "Requester",
-    "role": "Role",
-    "created": "Requested at",
-    "actions": "Decision",
-    "approve": "Approve",
-    "reject": "Reject",
-    "failedLoad": "Failed to load claims ({status})",
-    "failedUpdate": "Failed to save decision ({status})",
-    "confirmApproveTitle": "Confirm approval",
-    "confirmApproveText": "Are you sure you want to approve company \"{company}\" for user \"{user}\"?",
     "cancel": "Cancel",
     "confirm": "Confirm",
     "unknownError": "Unknown error"
@@ -1462,8 +1443,8 @@
       {
         "title": "1. General information",
         "items": [
-          "This Privacy Policy explains how personal data of users of the ContainerBoard platform available at containerboard.pl is processed.",
-          "The data controller is ContainerBoard Karol Tyminski 5842785961, registered in Gdansk, Andrzeja Struga 4, email: hello@containerboard.pl.",
+          "This Privacy Policy explains how personal data of users of the ContainerBoard platform available at containerboard.eu is processed.",
+          "The data controller is ContainerBoard Karol Tyminski 5842785961, registered in Gdansk, Andrzeja Struga 4, email: hello@containerboard.eu.",
           "We care about user privacy and the security of processed data."
         ]
       },
@@ -1572,7 +1553,7 @@
       {
         "title": "1. General provisions",
         "items": [
-          "These Terms define the rules for using the ContainerBoard platform available at containerboard.pl.",
+          "These Terms define the rules for using the ContainerBoard platform available at containerboard.eu.",
           "The platform is operated by ContainerBoard Karol Tyminski 5842785961, registered in Gdansk, Andrzeja Struga 4.",
           "ContainerBoard allows users to browse container market company profiles, publish and review offers, and communicate around listings.",
           "Using the platform means accepting these Terms."
@@ -1640,7 +1621,7 @@
         "items": [
           "These Terms are governed by Polish law.",
           "Any disputes will be resolved by the competent court.",
-          "Operator contact: hello@containerboard.pl."
+          "Operator contact: hello@containerboard.eu."
         ]
       }
     ],
@@ -1648,8 +1629,8 @@
       {
         "title": "1. General information",
         "items": [
-          "This Cookie Policy explains how cookies are used on the ContainerBoard platform available at containerboard.pl.",
-          "The data administrator is ContainerBoard Karol Tyminski 5842785961, email: hello@containerboard.pl.",
+          "This Cookie Policy explains how cookies are used on the ContainerBoard platform available at containerboard.eu.",
+          "The data administrator is ContainerBoard Karol Tyminski 5842785961, email: hello@containerboard.eu.",
           "The platform uses only essential cookies required for proper operation."
         ]
       },
@@ -1866,22 +1847,7 @@
     "coordinatesLabel": "Coordinates",
     "backToMap": "Back to list",
     "showMoreBranches": "Show more",
-    "loadMoreOffers": "Load more",
-    "ownershipClaim": {
-      "action": "This is my company",
-      "statusSubmitting": "Submitting...",
-      "statusSuccess": "Claim submitted",
-      "toastSubmitted": "Company ownership claim has been submitted.",
-      "toastError": "Failed to submit claim.",
-      "toastUnauthorized": "Log in to submit company ownership claim.",
-      "unauthorizedText": "You need to be logged in to submit ownership claim.",
-      "loginCta": "Log in",
-      "dialogTitle": "Claim company?",
-      "dialogConfirmText": "We will send a request to assign this company to your account.",
-      "dialogLimitText": "You can submit only one claim for this company every 24 hours.",
-      "cancel": "Cancel",
-      "confirm": "Submit"
-    }
+    "loadMoreOffers": "Load more"
   },
   "seoLandingIndexes": {
     "companies": {
@@ -2236,7 +2202,9 @@
       "emailLabel": "Email",
       "phoneLabel": "Phone",
       "galleryTitle": "Gallery",
-      "expiresLabel": "Expires"
+      "expiresLabel": "Expires",
+      "inactiveListingNoticeTitle": "This listing is no longer active.",
+      "inactiveListingNoticeBody": "It is no longer shown in search results, but anyone with a direct link can still view it."
     },
     "form": {
       "companyNameRequired": "Enter company name",
@@ -2578,21 +2546,25 @@
         "label": "Password reset",
         "description": "User requested a password reset"
       },
-      "claimSubmitted": {
-        "label": "Claim submitted",
-        "description": "User submitted a company ownership claim"
-      },
-      "claimApproved": {
-        "label": "Claim approved",
-        "description": "Admin approved a company ownership claim"
-      },
-      "claimRejected": {
-        "label": "Claim rejected",
-        "description": "Admin rejected a company ownership claim"
-      },
       "containerInquiry": {
         "label": "Container inquiry",
         "description": "Inquiry for a container listing (with optional price)"
+      },
+      "conciergeStockUpload": {
+        "label": "Stock upload request",
+        "description": "Notification about a bulk upload file with full contact details"
+      },
+      "conciergeStockUploadConfirmation": {
+        "label": "Stock upload confirmation",
+        "description": "Confirmation sent to the user after a stock upload request is registered"
+      },
+      "listingExpiryReminder7d": {
+        "label": "Listing expiry reminder 7d",
+        "description": "First reminder sent 7 days before the listing expires"
+      },
+      "listingExpiryReminder2d": {
+        "label": "Listing expiry reminder 2d",
+        "description": "Final reminder sent 2 days before the listing expires"
       }
     }
   },

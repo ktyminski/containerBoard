@@ -72,7 +72,7 @@ export function CompanyProfileListings({
   const locale = useMemo(
     () =>
       resolveLocale(
-        typeof document === "undefined" ? "pl" : document.documentElement.lang,
+        typeof document === "undefined" ? undefined : document.documentElement.lang,
       ),
     [],
   );

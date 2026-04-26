@@ -61,7 +61,7 @@ export async function GET(request: NextRequest) {
     const response = await fetch(url, {
       headers: {
         "Accept-Language": lang ?? "pl",
-        "User-Agent": "ContainerBoard/1.0 (contact: support@containerboard.local)",
+        "User-Agent": "ContainerBoard/1.0 (contact: hello@containerboard.eu)",
       },
       cache: "no-store",
     });

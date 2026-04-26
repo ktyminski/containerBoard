@@ -2,13 +2,21 @@
 
 import { useState } from "react";
 import { AdminBulkImportPanel } from "@/components/admin-bulk-import-panel";
+import { AdminMailPreviewsPanel } from "@/components/admin-mail-previews-panel";
 import { AdminConciergeRequestsTable } from "@/components/admin-concierge-requests-table";
 import { AdminCompaniesTable } from "@/components/admin-companies-table";
 import { AdminContainersTable } from "@/components/admin-containers-table";
 import { AdminUsersTable } from "@/components/admin-users-table";
 import type { AppLocale, AppMessages } from "@/lib/i18n";
+import type { MailPreviewCase } from "@/lib/mail-preview-cases";
 
-type AdminTabKey = "containers" | "bulkImport" | "users" | "companies" | "concierge";
+type AdminTabKey =
+  | "containers"
+  | "bulkImport"
+  | "users"
+  | "companies"
+  | "concierge"
+  | "mailPreviews";
 
 type AdminBulkImportCompanyOption = {
   id: string;
@@ -27,10 +35,20 @@ type AdminPanelTabsProps = {
   companiesMessages: AppMessages["adminCompanies"];
   companyStatusMessages: AppMessages["companyStatus"];
   roleMessages: AppMessages["roles"];
+  mailPreviewMessages: AppMessages["adminMailPreviews"];
+  mailPreviewCases: MailPreviewCase[];
+  initialMailPreviewTemplate?: string;
   bulkImportCompanies: AdminBulkImportCompanyOption[];
 };
 
-const ADMIN_TABS: AdminTabKey[] = ["containers", "bulkImport", "users", "companies", "concierge"];
+const ADMIN_TABS: AdminTabKey[] = [
+  "containers",
+  "bulkImport",
+  "users",
+  "companies",
+  "concierge",
+  "mailPreviews",
+];
 
 function resolveAdminTab(value?: string): AdminTabKey {
   return ADMIN_TABS.includes(value as AdminTabKey)
@@ -50,6 +68,9 @@ export function AdminPanelTabs({
   companiesMessages,
   companyStatusMessages,
   roleMessages,
+  mailPreviewMessages,
+  mailPreviewCases,
+  initialMailPreviewTemplate,
   bulkImportCompanies,
 }: AdminPanelTabsProps) {
   const [activeTab, setActiveTab] = useState<AdminTabKey>(resolveAdminTab(initialTab));
@@ -59,6 +80,7 @@ export function AdminPanelTabs({
     users: messages.tabs.users,
     companies: messages.tabs.companies,
     concierge: messages.tabs.concierge,
+    mailPreviews: messages.tabs.mailPreviews,
   };
 
   return (
@@ -111,6 +133,13 @@ export function AdminPanelTabs({
       ) : null}
       {activeTab === "concierge" ? (
         <AdminConciergeRequestsTable locale={locale} messages={conciergeMessages} />
+      ) : null}
+      {activeTab === "mailPreviews" ? (
+        <AdminMailPreviewsPanel
+          messages={mailPreviewMessages}
+          previewCases={mailPreviewCases}
+          initialTemplateId={initialMailPreviewTemplate}
+        />
       ) : null}
     </section>
   );

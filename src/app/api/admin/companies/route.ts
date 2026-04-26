@@ -9,7 +9,6 @@ import {
   normalizeCompanyVerificationStatus,
   type CompanyVerificationStatus,
 } from "@/lib/company-verification";
-import { getCompanyOwnershipClaimsCollection } from "@/lib/company-ownership-claims";
 import {
   ensureCompaniesIndexes,
   getCompaniesCollection,
@@ -391,10 +390,9 @@ export async function DELETE(request: NextRequest) {
 
     const companyId = new ObjectId(parsed.data.companyId);
     await ensureCompaniesIndexes();
-    const [companies, users, claims] = await Promise.all([
+    const [companies, users] = await Promise.all([
       getCompaniesCollection(),
       getUsersCollection(),
-      getCompanyOwnershipClaimsCollection(),
     ]);
 
     const company = await companies.findOne(
@@ -419,9 +417,7 @@ export async function DELETE(request: NextRequest) {
       return NextResponse.json({ error: "Company not found" }, { status: 404 });
     }
 
-    const cleanupOperations: Promise<unknown>[] = [
-      claims.deleteMany({ companyId }),
-    ];
+    const cleanupOperations: Promise<unknown>[] = [];
 
     if (company.createdByUserId) {
       cleanupOperations.push(

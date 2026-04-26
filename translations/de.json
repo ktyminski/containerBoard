@@ -572,7 +572,8 @@
       "users": "Benutzer",
       "containers": "Container",
       "concierge": "Concierge",
-      "bulkImport": "Bulk-Import"
+      "bulkImport": "Bulk-Import",
+      "mailPreviews": "E-Mail-Vorschau"
     }
   },
   "adminUsers": {
@@ -625,26 +626,6 @@
     "removeAssignment": "Firmenzuordnung entfernen",
     "confirmRemoveTitle": "Bestätigen Sie das Entfernen der Zuweisung",
     "confirmRemoveText": "Sind Sie sicher, dass Sie das Unternehmen â€ž{company}â€œ vom Benutzer â€ž{user}â€œ entfernen möchten?",
-    "cancel": "Stornieren",
-    "confirm": "Bestätigen",
-    "unknownError": "Unbekannter Fehler"
-  },
-  "adminCompanyClaims": {
-    "loading": "Ansprüche werden geladen...",
-    "title": "Eigentumsansprüche des Unternehmens",
-    "refresh": "Aktualisieren",
-    "empty": "Keine ausstehenden Ansprüche.",
-    "company": "Unternehmen",
-    "requester": "Anforderer",
-    "role": "Rolle",
-    "created": "Angefordert unter",
-    "actions": "Entscheidung",
-    "approve": "Genehmigen",
-    "reject": "Ablehnen",
-    "failedLoad": "Ansprüche konnten nicht geladen werden ({status})",
-    "failedUpdate": "Entscheidung konnte nicht gespeichert werden ({status})",
-    "confirmApproveTitle": "Bestätigen Sie die Genehmigung",
-    "confirmApproveText": "Sind Sie sicher, dass Sie das Unternehmen â€ž{company}â€œ für den Benutzer â€ž{user}â€œ genehmigen möchten?",
     "cancel": "Stornieren",
     "confirm": "Bestätigen",
     "unknownError": "Unbekannter Fehler"
@@ -1462,8 +1443,8 @@
       {
         "title": "1. Allgemeine Informationen",
         "items": [
-          "Diese Datenschutzerklarung beschreibt die Verarbeitung personenbezogener Daten der Nutzer der Plattform ContainerBoard unter containerboard.pl.",
-          "Verantwortlicher ist ContainerBoard Karol Tyminski 5842785961 mit Sitz in Gdansk, Andrzeja Struga 4, E-Mail: hello@containerboard.pl.",
+          "Diese Datenschutzerklarung beschreibt die Verarbeitung personenbezogener Daten der Nutzer der Plattform ContainerBoard unter containerboard.eu.",
+          "Verantwortlicher ist ContainerBoard Karol Tyminski 5842785961 mit Sitz in Gdansk, Andrzeja Struga 4, E-Mail: hello@containerboard.eu.",
           "Wir achten auf den Schutz der Privatsphare unserer Nutzer und die Sicherheit der verarbeiteten Daten."
         ]
       },
@@ -1572,7 +1553,7 @@
       {
         "title": "1. Allgemeine Bestimmungen",
         "items": [
-          "Diese Nutzungsbedingungen regeln die Nutzung der Plattform ContainerBoard unter containerboard.pl.",
+          "Diese Nutzungsbedingungen regeln die Nutzung der Plattform ContainerBoard unter containerboard.eu.",
           "Betreiber der Plattform ist ContainerBoard Karol Tyminski 5842785961 mit Sitz in Gdansk, Andrzeja Struga 4.",
           "ContainerBoard ermoglicht das Durchsuchen von Unternehmensprofilen aus dem Containermarkt, das Veroffentlichen und Anzeigen von Angeboten sowie die Kommunikation rund um Inserate.",
           "Mit der Nutzung der Plattform akzeptieren Sie diese Nutzungsbedingungen."
@@ -1640,7 +1621,7 @@
         "items": [
           "Es gilt polnisches Recht.",
           "Etwaige Streitigkeiten werden vor dem zustandigen Gericht entschieden.",
-          "Kontakt zum Betreiber: hello@containerboard.pl."
+          "Kontakt zum Betreiber: hello@containerboard.eu."
         ]
       }
     ],
@@ -1648,8 +1629,8 @@
       {
         "title": "1. Allgemeine Informationen",
         "items": [
-          "Diese Cookie-Richtlinie beschreibt die Nutzung von Cookies auf der Plattform ContainerBoard unter containerboard.pl.",
-          "Verantwortlicher ist ContainerBoard Karol Tyminski 5842785961, E-Mail: hello@containerboard.pl.",
+          "Diese Cookie-Richtlinie beschreibt die Nutzung von Cookies auf der Plattform ContainerBoard unter containerboard.eu.",
+          "Verantwortlicher ist ContainerBoard Karol Tyminski 5842785961, E-Mail: hello@containerboard.eu.",
           "Die Plattform verwendet ausschliesslich notwendige Cookies, die fur den ordnungsgemassen Betrieb erforderlich sind."
         ]
       },
@@ -1866,22 +1847,7 @@
     "coordinatesLabel": "Koordinaten",
     "backToMap": "Zurück zur Liste",
     "showMoreBranches": "Mehr anzeigen",
-    "loadMoreOffers": "Mehr laden",
-    "ownershipClaim": {
-      "action": "Das ist meine Firma",
-      "statusSubmitting": "Einreichen...",
-      "statusSuccess": "Anspruch eingereicht",
-      "toastSubmitted": "Der Eigentumsanspruch des Unternehmens wurde eingereicht.",
-      "toastError": "Anspruch konnte nicht eingereicht werden.",
-      "toastUnauthorized": "Melden Sie sich an, um den Eigentumsanspruch des Unternehmens einzureichen.",
-      "unauthorizedText": "Sie müssen angemeldet sein, um einen Eigentumsanspruch einzureichen.",
-      "loginCta": "Einloggen",
-      "dialogTitle": "Firma beanspruchen?",
-      "dialogConfirmText": "Wir senden Ihnen eine Anfrage, um dieses Unternehmen Ihrem Konto zuzuordnen.",
-      "dialogLimitText": "Sie können alle 24 Stunden nur einen Anspruch für dieses Unternehmen einreichen.",
-      "cancel": "Stornieren",
-      "confirm": "Einreichen"
-    }
+    "loadMoreOffers": "Mehr laden"
   },
   "seoLandingIndexes": {
     "companies": {
@@ -2236,7 +2202,9 @@
       "emailLabel": "E-Mail",
       "phoneLabel": "Telefon",
       "galleryTitle": "Galerie",
-      "expiresLabel": "Läuft ab"
+      "expiresLabel": "Läuft ab",
+      "inactiveListingNoticeTitle": "Dieses Inserat ist nicht mehr aktiv.",
+      "inactiveListingNoticeBody": "Es wird nicht mehr in den Suchergebnissen angezeigt, kann aber weiterhin über einen direkten Link aufgerufen werden."
     },
     "form": {
       "companyNameRequired": "Geben Sie den Firmennamen ein",
@@ -2578,21 +2546,25 @@
         "label": "Passwort zurücksetzen",
         "description": "Benutzer hat ein Zurücksetzen des Passworts angefordert"
       },
-      "claimSubmitted": {
-        "label": "Anspruch eingereicht",
-        "description": "Benutzer hat einen Eigentumsanspruch auf ein Unternehmen eingereicht"
-      },
-      "claimApproved": {
-        "label": "Anspruch genehmigt",
-        "description": "Admin hat einen Eigentumsanspruch auf ein Unternehmen genehmigt"
-      },
-      "claimRejected": {
-        "label": "Anspruch abgelehnt",
-        "description": "Admin hat einen Eigentumsanspruch auf ein Unternehmen abgelehnt"
-      },
       "containerInquiry": {
         "label": "Containeranfrage",
         "description": "Anfrage zu einer Containeranzeige (optional mit Preis)"
+      },
+      "conciergeStockUpload": {
+        "label": "Stock upload request",
+        "description": "Benachrichtigung ueber eine Bulk-Upload-Datei mit allen Kontaktdaten"
+      },
+      "conciergeStockUploadConfirmation": {
+        "label": "Stock upload confirmation",
+        "description": "Bestaetigung an den Benutzer nach erfolgreicher Registrierung der Stock-Upload-Anfrage"
+      },
+      "listingExpiryReminder7d": {
+        "label": "Listing expiry reminder 7d",
+        "description": "Erste Erinnerung 7 Tage vor dem Ablauf des Inserats"
+      },
+      "listingExpiryReminder2d": {
+        "label": "Listing expiry reminder 2d",
+        "description": "Letzte Erinnerung 2 Tage vor dem Ablauf des Inserats"
       }
     }
   },

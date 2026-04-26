@@ -93,7 +93,7 @@ function withLocaleApiHeaders(
     }
   }
 
-  const locale = resolveLocale(document.documentElement.lang || "pl");
+  const locale = resolveLocale(document.documentElement.lang);
   headers.set(LOCALE_HEADER_NAME, locale);
   if (!headers.has("accept-language")) {
     headers.set("accept-language", locale);

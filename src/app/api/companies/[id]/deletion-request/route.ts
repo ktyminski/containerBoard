@@ -3,7 +3,6 @@ import { NextRequest, NextResponse } from "next/server";
 import { enforceAuthenticatedRateLimitOrResponse } from "@/lib/app-rate-limit";
 import { getCurrentUserFromRequest } from "@/lib/auth-user";
 import { safeDeleteBlobUrls } from "@/lib/blob-storage";
-import { getCompanyOwnershipClaimsCollection } from "@/lib/company-ownership-claims";
 import {
   ensureCompaniesIndexes,
   getCompaniesCollection,
@@ -115,10 +114,9 @@ export async function DELETE(request: NextRequest, context: RouteContext) {
 
     await ensureCompaniesIndexes();
     const companyId = new ObjectId(id);
-    const [companies, users, claims, listings, favorites, inquiries] = await Promise.all([
+    const [companies, users, listings, favorites, inquiries] = await Promise.all([
       getCompaniesCollection(),
       getUsersCollection(),
-      getCompanyOwnershipClaimsCollection(),
       getContainerListingsCollection(),
       getContainerListingFavoritesCollection(),
       getContainerInquiriesCollection(),
@@ -172,7 +170,7 @@ export async function DELETE(request: NextRequest, context: RouteContext) {
       return NextResponse.json({ error: "Company not found" }, { status: 404 });
     }
 
-    const cleanupOperations: Promise<unknown>[] = [claims.deleteMany({ companyId })];
+    const cleanupOperations: Promise<unknown>[] = [];
 
     if (relatedListingsFilter) {
       cleanupOperations.push(listings.deleteMany(relatedListingsFilter));

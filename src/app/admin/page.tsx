@@ -11,6 +11,7 @@ import {
   LOCALE_COOKIE_NAME,
   withLang,
 } from "@/lib/i18n";
+import { getMailPreviewCases } from "@/lib/mail-preview-cases";
 
 type AdminPageProps = {
   searchParams: Promise<Record<string, string | string[] | undefined>>;
@@ -24,6 +25,7 @@ export default async function AdminPage({ searchParams }: AdminPageProps) {
     cookieLocale: cookieStore.get(LOCALE_COOKIE_NAME)?.value,
   });
   const tabParam = Array.isArray(params.tab) ? params.tab[0] : params.tab;
+  const templateParam = Array.isArray(params.template) ? params.template[0] : params.template;
   const messages = getMessages(locale);
 
   const token = cookieStore.get(SESSION_COOKIE_NAME)?.value;
@@ -42,6 +44,7 @@ export default async function AdminPage({ searchParams }: AdminPageProps) {
   }
 
   const companies = await getCompaniesCollection();
+  const mailPreviewCases = getMailPreviewCases(messages.adminMailPreviews.cases);
   const adminBulkImportCompanies = await companies
     .find(
       {
@@ -73,6 +76,9 @@ export default async function AdminPage({ searchParams }: AdminPageProps) {
         companiesMessages={messages.adminCompanies}
         companyStatusMessages={messages.companyStatus}
         roleMessages={messages.roles}
+        mailPreviewMessages={messages.adminMailPreviews}
+        mailPreviewCases={mailPreviewCases}
+        initialMailPreviewTemplate={templateParam}
         bulkImportCompanies={adminBulkImportCompanies.map((company) => ({
           id: company._id.toHexString(),
           name: company.name,

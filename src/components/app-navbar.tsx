@@ -17,7 +17,7 @@ export async function AppNavbar({ locale, messages }: AppNavbarProps) {
         <div className="flex min-w-0 items-center gap-3 whitespace-nowrap">
           <Link
             href={withLang("/list", locale)}
-            className="text-[15px] font-semibold tracking-[0.06em] drop-shadow-[0_1px_8px_rgba(3,169,244,0.22)] sm:hidden"
+            className="inline-flex h-9 items-center text-[15px] font-semibold leading-none tracking-[0.06em] drop-shadow-[0_1px_8px_rgba(3,169,244,0.22)] sm:hidden"
             aria-label="ContainerBoard"
           >
             <span className="text-[#e2efff]">Container</span>
@@ -25,7 +25,7 @@ export async function AppNavbar({ locale, messages }: AppNavbarProps) {
           </Link>
           <Link
             href={withLang("/", locale)}
-            className="hidden text-[15px] font-semibold tracking-[0.06em] drop-shadow-[0_1px_8px_rgba(3,169,244,0.22)] sm:inline"
+            className="hidden h-9 items-center text-[15px] font-semibold leading-none tracking-[0.06em] drop-shadow-[0_1px_8px_rgba(3,169,244,0.22)] sm:inline-flex"
             aria-label="ContainerBoard"
           >
             <span className="text-[#e2efff]">Container</span>

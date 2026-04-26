@@ -5,8 +5,9 @@ export type MailTemplateContent = {
 };
 
 const BRAND_NAME = "ContainerBoard";
-const BRAND_WEBSITE_URL = "https://containerboard.pl";
-const BRAND_SUPPORT_EMAIL = "support@containerboard.pl";
+const BRAND_WEBSITE_URL = "https://containerboard.eu";
+const BRAND_SUPPORT_EMAIL = "hello@containerboard.eu";
+const BRAND_SUBTITLE = "Buy, sell & connect - container market";
 
 const MAIL_COLORS = {
   pageBackground: "#edf2f7",
@@ -19,6 +20,8 @@ const MAIL_COLORS = {
   muted: "#6a7b8c",
   link: "#0b67b2",
   buttonBackground: "#0b67b2",
+  brandContainer: "#e2efff",
+  brandBoard: "#38bdf8",
 };
 
 function escapeHtml(value: string): string {
@@ -46,6 +49,10 @@ function htmlButton(url: string, label: string): string {
   const safeUrl = escapeHtml(url);
   const safeLabel = escapeHtml(label);
   return `<table role="presentation" cellpadding="0" cellspacing="0" border="0" style="Margin:0 0 16px 0;"><tr><td bgcolor="${MAIL_COLORS.buttonBackground}" style="background-color:${MAIL_COLORS.buttonBackground};border-radius:6px;"><a href="${safeUrl}" style="display:inline-block;padding:11px 18px;font-family:Arial,Helvetica,sans-serif;font-size:14px;font-weight:700;line-height:18px;color:#ffffff;text-decoration:none;">${safeLabel}</a></td></tr></table>`;
+}
+
+function renderBrandNameHtml(): string {
+  return `<span style="color:${MAIL_COLORS.brandContainer};">Container</span><span style="color:${MAIL_COLORS.brandBoard};">Board</span>`;
 }
 
 function renderTextLayout(input: {
@@ -97,8 +104,8 @@ function renderHtmlLayout(input: {
           <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="max-width:600px;background-color:${MAIL_COLORS.cardBackground};border:1px solid ${MAIL_COLORS.cardBorder};">
             <tr>
               <td bgcolor="${MAIL_COLORS.headerBackground}" style="background-color:${MAIL_COLORS.headerBackground};border-top:5px solid ${MAIL_COLORS.headerAccent};padding:16px 22px;font-family:Arial,Helvetica,sans-serif;">
-                <div style="font-size:21px;line-height:24px;color:#ffffff;font-weight:700;">${BRAND_NAME}</div>
-                <div style="Margin-top:6px;font-size:13px;line-height:18px;color:#d6e7f5;">Container marketplace</div>
+                <div style="font-size:21px;line-height:24px;color:#ffffff;font-weight:700;">${renderBrandNameHtml()}</div>
+                <div style="Margin-top:6px;font-size:13px;line-height:18px;color:#d6e7f5;">${escapeHtml(BRAND_SUBTITLE)}</div>
               </td>
             </tr>
             <tr>
@@ -224,71 +231,6 @@ export function buildPasswordResetMail(input: {
   };
 }
 
-export function buildClaimSubmittedMail(
-  companyName: string,
-  name?: string,
-): MailTemplateContent {
-  const intro = greeting(name);
-  const subject = "Your company claim has been received";
-
-  return {
-    subject,
-    text: renderTextLayout({
-      intro,
-      sections: [
-        `Your claim for "${companyName}" has been recorded and is waiting for review.`,
-        "We will notify you by email once a decision has been made.",
-      ],
-    }),
-    html: renderHtmlLayout({
-      preheader: "Your company claim is now waiting for review.",
-      title: subject,
-      intro,
-      contentHtml:
-        htmlParagraphRaw(
-          `Your claim for "<strong>${escapeHtml(companyName)}</strong>" has been recorded and is waiting for review.`,
-        ) + htmlParagraph("We will notify you by email once a decision has been made."),
-    }),
-  };
-}
-
-export function buildClaimDecisionMail(input: {
-  approved: boolean;
-  companyName: string;
-  name?: string;
-}): MailTemplateContent {
-  const intro = greeting(input.name);
-  const decisionLabel = input.approved ? "approved" : "rejected";
-  const subject = input.approved
-    ? "Your company claim has been approved"
-    : "Your company claim has been rejected";
-  const followUp = input.approved
-    ? "You can now manage this company profile as its owner."
-    : "If you need help, please contact support.";
-
-  return {
-    subject,
-    text: renderTextLayout({
-      intro,
-      sections: [
-        `Your claim for "${input.companyName}" has been ${decisionLabel}.`,
-        followUp,
-      ],
-    }),
-    html: renderHtmlLayout({
-      preheader: input.approved
-        ? "Your company claim has been approved."
-        : "Your company claim has been rejected.",
-      title: subject,
-      intro,
-      contentHtml:
-        htmlParagraphRaw(
-          `Your claim for "<strong>${escapeHtml(input.companyName)}</strong>" has been <strong>${decisionLabel}</strong>.`,
-        ) + htmlParagraph(followUp),
-    }),
-  };
-}
-
 export function buildOfferPublishedMail(input: {
   name?: string;
   offerTitle: string;
@@ -324,6 +266,7 @@ export function buildContainerInquiryMail(input: {
   summaryLine: string;
   companyName: string;
   listingQuantity: number;
+  listingUrl?: string;
   buyerName: string;
   buyerEmail: string;
   buyerPhone?: string;
@@ -336,6 +279,7 @@ export function buildContainerInquiryMail(input: {
     `Container: ${input.summaryLine}`,
     `Company/listing: ${input.companyName}`,
     `Quantity in listing: ${input.listingQuantity}`,
+    input.listingUrl ? `Listing URL: ${input.listingUrl}` : "",
     "Buyer details:",
     `Full name: ${input.buyerName}`,
     `Email: ${input.buyerEmail}`,
@@ -349,6 +293,9 @@ export function buildContainerInquiryMail(input: {
     `<strong>Container:</strong> ${escapeHtml(input.summaryLine)}<br/>`,
     `<strong>Company/listing:</strong> ${escapeHtml(input.companyName)}<br/>`,
     `<strong>Quantity in listing:</strong> ${input.listingQuantity}`,
+    input.listingUrl
+      ? `<br/><strong>Listing URL:</strong> <a href="${escapeHtml(input.listingUrl)}" style="color:${MAIL_COLORS.link};text-decoration:underline;word-break:break-all;">${escapeHtml(input.listingUrl)}</a>`
+      : "",
     "<br/><br/><strong>Buyer details:</strong><br/>",
     `<strong>Full name:</strong> ${escapeHtml(input.buyerName)}<br/>`,
     `<strong>Email:</strong> ${escapeHtml(input.buyerEmail)}<br/>`,
@@ -387,14 +334,14 @@ export function buildConciergeStockUploadMail(input: {
   fileName: string;
   fileSizeBytes: number;
   fileContentType: string;
-  fileUrl: string;
+  fileDownloadUrl: string;
   note?: string;
   requestedAtIso: string;
 }): MailTemplateContent {
-  const subject = `New concierge stock upload - ${input.companyName}`;
+  const subject = `Upload stock request registered - ${input.companyName}`;
 
   const textSections = [
-    "A new concierge bulk upload request has been submitted.",
+    "A new bulk upload request has been submitted.",
     `Company: ${input.companyName}`,
     input.companySlug ? `Company slug: ${input.companySlug}` : "",
     `User: ${input.userName} (${input.userEmail})`,
@@ -403,13 +350,13 @@ export function buildConciergeStockUploadMail(input: {
     `File: ${input.fileName}`,
     `File type: ${input.fileContentType}`,
     `File size: ${input.fileSizeBytes} B`,
-    `File URL: ${input.fileUrl}`,
+    `Admin download: ${input.fileDownloadUrl}`,
     `Submitted at: ${input.requestedAtIso}`,
     input.note ? `Note: ${input.note}` : "",
   ].filter((line) => line.trim().length > 0);
 
   const htmlLines = [
-    "<strong>A new concierge bulk upload request has been submitted</strong><br/>",
+    "<strong>A new bulk upload request has been submitted</strong><br/>",
     `<strong>Company:</strong> ${escapeHtml(input.companyName)}<br/>`,
     input.companySlug ? `<strong>Company slug:</strong> ${escapeHtml(input.companySlug)}<br/>` : "",
     `<strong>User:</strong> ${escapeHtml(input.userName)} (${escapeHtml(input.userEmail)})<br/>`,
@@ -419,7 +366,7 @@ export function buildConciergeStockUploadMail(input: {
     `<strong>File type:</strong> ${escapeHtml(input.fileContentType)}<br/>`,
     `<strong>File size:</strong> ${input.fileSizeBytes} B<br/>`,
     `<strong>Submitted at:</strong> ${escapeHtml(input.requestedAtIso)}<br/>`,
-    `<strong>File URL:</strong> <a href="${escapeHtml(input.fileUrl)}" style="color:${MAIL_COLORS.link};text-decoration:underline;word-break:break-all;">${escapeHtml(input.fileUrl)}</a><br/>`,
+    `<strong>Admin download:</strong> <a href="${escapeHtml(input.fileDownloadUrl)}" style="color:${MAIL_COLORS.link};text-decoration:underline;word-break:break-all;">${escapeHtml(input.fileDownloadUrl)}</a><br/>`,
     input.note
       ? `<br/><strong>Note:</strong><br/>${escapeHtml(input.note).replaceAll("\n", "<br/>")}`
       : "",
@@ -431,9 +378,43 @@ export function buildConciergeStockUploadMail(input: {
     subject,
     text: renderTextLayout({ sections: textSections }),
     html: renderHtmlLayout({
-      preheader: "A new concierge upload request is ready for review.",
+      preheader: "A new bulk upload request is ready for review.",
       title: subject,
       contentHtml: htmlParagraphRaw(htmlLines),
+    }),
+  };
+}
+
+export function buildConciergeStockUploadConfirmationMail(input: {
+  name?: string;
+  companyName: string;
+  fileName: string;
+}): MailTemplateContent {
+  const intro = greeting(input.name);
+  const subject = "We received your stock upload request";
+
+  return {
+    subject,
+    text: renderTextLayout({
+      intro,
+      sections: [
+        `We received your stock upload request for ${input.companyName}.`,
+        `Attached file: ${input.fileName}.`,
+        "Our team is already working on it.",
+        "If we need any additional details, we will contact you by email.",
+      ],
+    }),
+    html: renderHtmlLayout({
+      preheader: "Your stock upload request has been received.",
+      title: subject,
+      intro,
+      contentHtml:
+        htmlParagraphRaw(
+          `We received your stock upload request for <strong>${escapeHtml(input.companyName)}</strong>.`,
+        ) +
+        htmlParagraphRaw(`Attached file: <strong>${escapeHtml(input.fileName)}</strong>.`) +
+        htmlParagraph("Our team is already working on it.") +
+        htmlParagraph("If we need any additional details, we will contact you by email."),
     }),
   };
 }

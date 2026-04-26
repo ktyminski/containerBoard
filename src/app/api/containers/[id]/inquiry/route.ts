@@ -11,6 +11,7 @@ import {
 import { getContainerShortLabel, LISTING_STATUS } from "@/lib/container-listing-types";
 import { enforceRateLimitOrResponse } from "@/lib/request-rate-limit";
 import { sendContainerInquiryEmail } from "@/lib/mailer";
+import { getAbsoluteUrl } from "@/lib/seo";
 import { logError } from "@/lib/server-logger";
 import { getRequestIp, isTurnstileEnabled, verifyTurnstileToken } from "@/lib/turnstile";
 
@@ -118,12 +119,14 @@ export async function POST(request: NextRequest, context: RouteContext) {
     const listingItem = mapContainerListingToItem(listing);
     const containerLabel = getContainerShortLabel(listingItem.container);
     const summaryLine = `${containerLabel} | ${listing.type} | ${listing.locationCity}, ${listing.locationCountry}`;
+    const listingUrl = getAbsoluteUrl(`/containers/${listingId.toHexString()}`);
     const sendResult = await sendContainerInquiryEmail({
       to: listing.contactEmail,
       containerLabel,
       summaryLine,
       companyName: listing.companyName,
       listingQuantity: listing.quantity,
+      listingUrl,
       buyerName: inquiry.buyerName,
       buyerEmail: inquiry.buyerEmail,
       buyerPhone,

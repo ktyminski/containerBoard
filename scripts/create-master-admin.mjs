@@ -8,7 +8,7 @@ if (!mongoUri || !mongoDb) {
   throw new Error("Missing MONGODB_URI or MONGODB_DB in environment");
 }
 
-const email = process.env.MASTER_ADMIN_EMAIL || "master.admin@containerboard.local";
+const email = process.env.MASTER_ADMIN_EMAIL || "hello@containerboard.eu";
 const password = process.env.MASTER_ADMIN_PASSWORD || "Admin123!ChangeMe";
 const name = process.env.MASTER_ADMIN_NAME || "Master Admin";
 
@@ -53,4 +53,3 @@ run().catch((error) => {
   console.error("Failed to create master admin:", error);
   process.exit(1);
 });
-

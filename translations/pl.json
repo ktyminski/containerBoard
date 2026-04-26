@@ -572,7 +572,8 @@
       "users": "Uzytkownicy",
       "containers": "Kontenery",
       "concierge": "Concierge",
-      "bulkImport": "Multi Import"
+      "bulkImport": "Multi Import",
+      "mailPreviews": "Podglad maili"
     }
   },
   "adminUsers": {
@@ -820,26 +821,6 @@
     "unknownError": "Nieznany błąd",
     "noRoute": "Brak",
     "unknownUser": "Nieznany użytkownik"
-  },
-  "adminCompanyClaims": {
-    "loading": "Ładowanie zgłoszeń...",
-    "title": "Zgłoszenia przejęcia firm",
-    "refresh": "Odśwież",
-    "empty": "Brak oczekujących zgłoszeń.",
-    "company": "Firma",
-    "requester": "Wnioskujacy",
-    "role": "Rola",
-    "created": "Data zgłoszenia",
-    "actions": "Decyzja",
-    "approve": "Akceptuj",
-    "reject": "Odrzuc",
-    "failedLoad": "Nie udało się załadować zgłoszeń ({status})",
-    "failedUpdate": "Nie udało się zapisać decyzji ({status})",
-    "confirmApproveTitle": "Potwierdź akceptację",
-    "confirmApproveText": "Czy na pewno chcesz zaakceptować przejęcie firmy \"{company}\" przez użytkownika \"{user}\"?",
-    "cancel": "Anuluj",
-    "confirm": "Potwierdzam",
-    "unknownError": "Nieznany błąd"
   },
   "companyCreate": {
     "title": "Dodaj firmę",
@@ -1462,8 +1443,8 @@
       {
         "title": "1. Informacje ogolne",
         "items": [
-          "Niniejsza Polityka prywatnosci okresla zasady przetwarzania danych osobowych uzytkownikow platformy ContainerBoard dostepnej pod adresem containerboard.pl.",
-          "Administratorem danych osobowych jest ContainerBoard Karol Tymiński 5842785961, z siedzibą w Gdańsku, Andrzeja Struga 4, e-mail: hello@containerboard.pl.",
+          "Niniejsza Polityka prywatnosci okresla zasady przetwarzania danych osobowych uzytkownikow platformy ContainerBoard dostepnej pod adresem containerboard.eu.",
+          "Administratorem danych osobowych jest ContainerBoard Karol Tymiński 5842785961, z siedzibą w Gdańsku, Andrzeja Struga 4, e-mail: hello@containerboard.eu.",
           "Dbamy o ochrone prywatnosci uzytkownikow oraz bezpieczenstwo przetwarzanych danych."
         ]
       },
@@ -1572,7 +1553,7 @@
       {
         "title": "1. Postanowienia ogolne",
         "items": [
-          "Niniejszy regulamin okresla zasady korzystania z platformy internetowej ContainerBoard dostepnej pod adresem containerboard.pl.",
+          "Niniejszy regulamin okresla zasady korzystania z platformy internetowej ContainerBoard dostepnej pod adresem containerboard.eu.",
           "Operatorem platformy jest ContainerBoard Karol Tymiński 5842785961, z siedzibą w Gdańsku, Andrzeja Struga 4.",
           "Platforma ContainerBoard umożliwia użytkownikom przeglądanie profili firm z branży kontenerowej, publikowanie oraz przeglądanie ofert, a także prowadzenie komunikacji wokół ogłoszeń.",
           "Korzystanie z platformy oznacza akceptacje niniejszego regulaminu."
@@ -1640,7 +1621,7 @@
         "items": [
           "Regulamin podlega prawu polskiemu.",
           "Wszelkie spory beda rozstrzygane przez wlasciwy sad.",
-          "Kontakt z Operatorem: hello@containerboard.pl."
+          "Kontakt z Operatorem: hello@containerboard.eu."
         ]
       }
     ],
@@ -1648,8 +1629,8 @@
       {
         "title": "1. Informacje ogolne",
         "items": [
-          "Niniejsza Polityka cookies okresla zasady wykorzystywania plikow cookies na platformie ContainerBoard dostepnej pod adresem containerboard.pl.",
-          "Administratorem danych jest ContainerBoard Karol Tymiński 5842785961, e-mail: hello@containerboard.pl.",
+          "Niniejsza Polityka cookies okresla zasady wykorzystywania plikow cookies na platformie ContainerBoard dostepnej pod adresem containerboard.eu.",
+          "Administratorem danych jest ContainerBoard Karol Tymiński 5842785961, e-mail: hello@containerboard.eu.",
           "Platforma wykorzystuje wylacznie niezbedne pliki cookies, wymagane do jej prawidlowego dzialania."
         ]
       },
@@ -1866,22 +1847,7 @@
     "coordinatesLabel": "Wspolrzedne",
     "backToMap": "Powrót do listy",
     "showMoreBranches": "Pokaż więcej",
-    "loadMoreOffers": "Wczytaj więcej",
-    "ownershipClaim": {
-      "action": "To moja firma",
-      "statusSubmitting": "Wysyłanie...",
-      "statusSuccess": "Wniosek wysłany",
-      "toastSubmitted": "Wniosek o przejęcie firmy został wysłany.",
-      "toastError": "Nie udało się wysłać wniosku.",
-      "toastUnauthorized": "Zaloguj się, aby zgłosić przejęcie firmy.",
-      "unauthorizedText": "Aby zgłosić przejęcie firmy, musisz być zalogowany.",
-      "loginCta": "Zaloguj się",
-      "dialogTitle": "Przejąć firmę?",
-      "dialogConfirmText": "Wyślemy prośbę o przypisanie firmy do Twojego konta.",
-      "dialogLimitText": "Możesz zgłosić tylko jedną prośbę dla tej firmy na 24 godziny.",
-      "cancel": "Anuluj",
-      "confirm": "Wyślij"
-    }
+    "loadMoreOffers": "Wczytaj więcej"
   },
   "seoLandingIndexes": {
     "companies": {
@@ -2236,7 +2202,9 @@
       "emailLabel": "Email",
       "phoneLabel": "Telefon",
       "galleryTitle": "Galeria",
-      "expiresLabel": "Wygasa"
+      "expiresLabel": "Wygasa",
+      "inactiveListingNoticeTitle": "To ogłoszenie nie jest już aktywne.",
+      "inactiveListingNoticeBody": "Nie wyświetlamy go już w wynikach wyszukiwania, ale każda osoba z bezpośrednim linkiem nadal może je zobaczyć."
     },
     "form": {
       "companyNameRequired": "Podaj nazwe firmy",
@@ -2578,21 +2546,25 @@
         "label": "Password reset",
         "description": "Użytkownik zgłosił reset hasła"
       },
-      "claimSubmitted": {
-        "label": "Claim submitted",
-        "description": "Użytkownik wysłał zgłoszenie przejęcia firmy"
-      },
-      "claimApproved": {
-        "label": "Claim approved",
-        "description": "Admin zaakceptował zgłoszenie przejęcia firmy"
-      },
-      "claimRejected": {
-        "label": "Claim rejected",
-        "description": "Admin odrzucił zgłoszenie przejęcia firmy"
-      },
       "containerInquiry": {
         "label": "Container inquiry",
         "description": "Zapytanie do ogłoszenia kontenerowego (z opcjonalną ceną)"
+      },
+      "conciergeStockUpload": {
+        "label": "Stock upload request",
+        "description": "Powiadomienie o pliku do bulk uploadu z kompletem danych kontaktowych"
+      },
+      "conciergeStockUploadConfirmation": {
+        "label": "Stock upload confirmation",
+        "description": "Potwierdzenie wysylane do uzytkownika po zapisaniu requestu stock upload"
+      },
+      "listingExpiryReminder7d": {
+        "label": "Listing expiry reminder 7d",
+        "description": "Pierwsze przypomnienie o wygasaniu ogloszenia na 7 dni przed terminem"
+      },
+      "listingExpiryReminder2d": {
+        "label": "Listing expiry reminder 2d",
+        "description": "Finalne przypomnienie o wygasaniu ogloszenia na 2 dni przed terminem"
       }
     }
   },

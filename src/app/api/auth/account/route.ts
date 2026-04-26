@@ -11,10 +11,6 @@ import {
 import { enforceAuthenticatedRateLimitOrResponse } from "@/lib/app-rate-limit";
 import { getCurrentUserFromRequest } from "@/lib/auth-user";
 import { getEmailVerificationTokensCollection } from "@/lib/email-verification";
-import {
-  ensureCompanyOwnershipClaimsIndexes,
-  getCompanyOwnershipClaimsCollection,
-} from "@/lib/company-ownership-claims";
 import { ensureCompaniesIndexes, getCompaniesCollection } from "@/lib/companies";
 import {
   getUsersCollection,
@@ -308,12 +304,9 @@ export async function DELETE(request: NextRequest) {
     }
 
     await ensureCompaniesIndexes();
-    await ensureCompanyOwnershipClaimsIndexes();
-
-    const [users, companies, claims, verificationTokens] = await Promise.all([
+    const [users, companies, verificationTokens] = await Promise.all([
       getUsersCollection(),
       getCompaniesCollection(),
-      getCompanyOwnershipClaimsCollection(),
       getEmailVerificationTokensCollection(),
     ]);
 
@@ -326,7 +319,6 @@ export async function DELETE(request: NextRequest) {
           $set: { updatedAt: now },
         },
       ),
-      claims.deleteMany({ userId: user._id }),
       verificationTokens.deleteMany({ userId: user._id }),
     ]);
 

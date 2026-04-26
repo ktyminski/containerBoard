@@ -1,9 +1,10 @@
 import {
+  buildConciergeStockUploadMail,
+  buildConciergeStockUploadConfirmationMail,
   buildContainerInquiryMail,
   type MailTemplateContent,
-  buildClaimDecisionMail,
-  buildClaimSubmittedMail,
   buildEmailVerificationMail,
+  buildListingExpiryReminderMail,
   buildPasswordResetMail,
   buildWelcomeMail,
 } from "@/lib/mail-templates";
@@ -18,8 +19,8 @@ export type MailPreviewCase = {
 };
 
 export function getMailPreviewCases(messages: AppMessages["adminMailPreviews"]["cases"]): MailPreviewCase[] {
-  const verificationUrl = "https://containerboard.pl/api/auth/verify-email?token=preview-token-123";
-  const resetUrl = "https://containerboard.pl/reset-password?token=reset-preview-token-123";
+  const verificationUrl = "https://containerboard.eu/api/auth/verify-email?token=preview-token-123";
+  const resetUrl = "https://containerboard.eu/reset-password?token=reset-preview-token-123";
 
   return [
     {
@@ -50,50 +51,84 @@ export function getMailPreviewCases(messages: AppMessages["adminMailPreviews"]["
       }),
     },
     {
-      id: "claim-submitted",
-      label: messages.claimSubmitted.label,
-      description: messages.claimSubmitted.description,
-      mockedRecipient: "pawel.maj@example.com",
-      content: buildClaimSubmittedMail("Mazovia Express Sp. z o.o.", "Pawel Maj"),
-    },
-    {
-      id: "claim-approved",
-      label: messages.claimApproved.label,
-      description: messages.claimApproved.description,
-      mockedRecipient: "pawel.maj@example.com",
-      content: buildClaimDecisionMail({
-        approved: true,
-        companyName: "Mazovia Express Sp. z o.o.",
-        name: "Pawel Maj",
-      }),
-    },
-    {
-      id: "claim-rejected",
-      label: messages.claimRejected.label,
-      description: messages.claimRejected.description,
-      mockedRecipient: "kamil.nowicki@example.com",
-      content: buildClaimDecisionMail({
-        approved: false,
-        companyName: "Baltic Freight Hub",
-        name: "Kamil Nowicki",
-      }),
-    },
-    {
       id: "container-inquiry",
       label: messages.containerInquiry.label,
       description: messages.containerInquiry.description,
       mockedRecipient: "sprzedaz@example.com",
       content: buildContainerInquiryMail({
         containerLabel: "40' HC",
-        summaryLine: "40' HC | sell | Gdańsk, Polska",
+        summaryLine: "40' HC | sell | Gdansk, Poland",
         companyName: "Baltic Containers",
         listingQuantity: 8,
+        listingUrl: "https://containerboard.eu/containers/67f1b4d6f1b7f3d0fcb12a34",
         buyerName: "Jan Kowalski",
         buyerEmail: "jan.kowalski@example.com",
         buyerPhone: "+48 600 700 800",
-        inquiryMessage: "Proszę o kontakt i warunki dostawy.",
+        inquiryMessage: "Prosze o kontakt i warunki dostawy.",
         requestedQuantity: 3,
         offeredPrice: "12000 EUR",
+      }),
+    },
+    {
+      id: "concierge-stock-upload",
+      label: messages.conciergeStockUpload.label,
+      description: messages.conciergeStockUpload.description,
+      mockedRecipient: "concierge@containerboard.eu",
+      content: buildConciergeStockUploadMail({
+        companyName: "Baltic Containers",
+        companySlug: "baltic-containers",
+        userName: "Jan Kowalski",
+        userEmail: "jan.kowalski@example.com",
+        contactEmail: "sprzedaz@balticcontainers.eu",
+        contactPhone: "+48 600 700 800",
+        fileName: "stock-marzec-2026.xlsx",
+        fileSizeBytes: 482731,
+        fileContentType:
+          "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        fileDownloadUrl: "https://containerboard.eu/api/admin/concierge-requests/preview/file",
+        note: "W pliku sa tylko stany dostepne od reki.\nPotrzebujemy publikacji jeszcze dzis.",
+        requestedAtIso: "2026-03-18T09:42:00.000Z",
+      }),
+    },
+    {
+      id: "concierge-stock-upload-confirmation",
+      label: messages.conciergeStockUploadConfirmation.label,
+      description: messages.conciergeStockUploadConfirmation.description,
+      mockedRecipient: "jan.kowalski@example.com",
+      content: buildConciergeStockUploadConfirmationMail({
+        name: "Jan Kowalski",
+        companyName: "Baltic Containers",
+        fileName: "stock-marzec-2026.xlsx",
+      }),
+    },
+    {
+      id: "listing-expiry-reminder-7d",
+      label: messages.listingExpiryReminder7d.label,
+      description: messages.listingExpiryReminder7d.description,
+      mockedRecipient: "anna.nowak@example.com",
+      content: buildListingExpiryReminderMail({
+        name: "Anna Nowak",
+        companyName: "Baltic Containers",
+        quantity: 14,
+        expiresAtIso: "2026-04-02T10:00:00.000Z",
+        reminderDays: 7,
+        manageUrl: "https://containerboard.eu/containers/mine",
+        editUrl: "https://containerboard.eu/containers/67f1b4d6f1b7f3d0fcb12a34/edit",
+      }),
+    },
+    {
+      id: "listing-expiry-reminder-2d",
+      label: messages.listingExpiryReminder2d.label,
+      description: messages.listingExpiryReminder2d.description,
+      mockedRecipient: "anna.nowak@example.com",
+      content: buildListingExpiryReminderMail({
+        name: "Anna Nowak",
+        companyName: "Baltic Containers",
+        quantity: 4,
+        expiresAtIso: "2026-03-28T10:00:00.000Z",
+        reminderDays: 2,
+        manageUrl: "https://containerboard.eu/containers/mine",
+        editUrl: "https://containerboard.eu/containers/67f1b4d6f1b7f3d0fcb12a35/edit",
       }),
     },
   ];

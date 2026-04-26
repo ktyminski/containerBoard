@@ -11,7 +11,7 @@ import { logError } from "@/lib/server-logger";
 import { getUsersCollection } from "@/lib/users";
 
 const DAY_IN_MS = 24 * 60 * 60 * 1000;
-const DEFAULT_BASE_URL = "https://containerboard.pl";
+const DEFAULT_BASE_URL = "https://containerboard.eu";
 const DEFAULT_LIMIT = 1000;
 
 type ReminderStage = "first" | "final";

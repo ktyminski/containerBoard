@@ -13,6 +13,7 @@ type InquiryIntent = "offer" | "negotiate";
 type ContainerInquiryModalTriggerProps = {
   listingId: string;
   isPriceNegotiable: boolean;
+  allowInquiryActions?: boolean;
   isLoggedIn: boolean;
   initialIsFavorite: boolean;
   turnstileSiteKey?: string | null;
@@ -119,6 +120,7 @@ async function copyTextToClipboard(value: string): Promise<boolean> {
 export function ContainerInquiryModalTrigger({
   listingId,
   isPriceNegotiable,
+  allowInquiryActions = true,
   isLoggedIn,
   initialIsFavorite,
   turnstileSiteKey,
@@ -126,7 +128,7 @@ export function ContainerInquiryModalTrigger({
   className,
 }: ContainerInquiryModalTriggerProps) {
   const locale = resolveLocale(
-    typeof document === "undefined" ? "pl" : document.documentElement.lang || "pl",
+    typeof document === "undefined" ? undefined : document.documentElement.lang,
   );
   const messages = getMessages(locale).inquiryForm;
   const toast = useToast();
@@ -316,17 +318,19 @@ export function ContainerInquiryModalTrigger({
             />
           </svg>
         </button>
-        <button
-          type="button"
-          onClick={() => openForIntent("offer")}
-          className="inline-flex items-center gap-2 rounded-md border border-sky-700 bg-sky-700 px-3 py-2 text-sm font-medium text-white hover:bg-sky-600"
-        >
-          <span className="truncate">{messages.requestOffer}</span>
-          <svg aria-hidden="true" viewBox="0 0 20 20" className="h-4 w-4 shrink-0">
-            <path d="M3 10h10.5m0 0-3.75-3.75M13.5 10l-3.75 3.75" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
-          </svg>
-        </button>
-        {isPriceNegotiable ? (
+        {allowInquiryActions ? (
+          <button
+            type="button"
+            onClick={() => openForIntent("offer")}
+            className="inline-flex items-center gap-2 rounded-md border border-sky-700 bg-sky-700 px-3 py-2 text-sm font-medium text-white hover:bg-sky-600"
+          >
+            <span className="truncate">{messages.requestOffer}</span>
+            <svg aria-hidden="true" viewBox="0 0 20 20" className="h-4 w-4 shrink-0">
+              <path d="M3 10h10.5m0 0-3.75-3.75M13.5 10l-3.75 3.75" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+            </svg>
+          </button>
+        ) : null}
+        {allowInquiryActions && isPriceNegotiable ? (
           <button
             type="button"
             onClick={() => openForIntent("negotiate")}

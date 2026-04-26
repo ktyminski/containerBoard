@@ -629,26 +629,6 @@
     "confirm": "Pidtverdzhuiu",
     "unknownError": "Nevidoma pomylka"
   },
-  "adminCompanyClaims": {
-    "loading": "Zavantazhennia zaiavok...",
-    "title": "Zaiavky na peredachu kompanii",
-    "refresh": "Onovyty",
-    "empty": "Nemaie ochikuiuchykh zaiavok.",
-    "company": "Kompaniia",
-    "requester": "Zaiavnyk",
-    "role": "Rol",
-    "created": "Data zaiavky",
-    "actions": "Rishennia",
-    "approve": "Skhvalyty",
-    "reject": "Vidkhylyty",
-    "failedLoad": "Ne vdalosia zavantazhyty zaiavky ({status})",
-    "failedUpdate": "Ne vdalosia zberehty rishennia ({status})",
-    "confirmApproveTitle": "Pidtverdyt skhvalennia",
-    "confirmApproveText": "Vy diisno khochete skhvalyty peredachu kompanii \"{company}\" korystuvachu \"{user}\"?",
-    "cancel": "Skasuvaty",
-    "confirm": "Pidtverdzhuiu",
-    "unknownError": "Nevidoma pomylka"
-  },
   "adminCompanies": {
     "loading": "Zavantazhennia kompanii...",
     "title": "Kompanii",
@@ -1462,8 +1442,8 @@
       {
         "title": "1. Zahalna informatsiia",
         "items": [
-          "Tsia polityka pryvatnosti opysuie obrobku personalnykh danykh korystuvachiv platformy ContainerBoard, dostupnoi za adresoiu containerboard.pl.",
-          "Volodiltsem danykh ye ContainerBoard Karol Tyminski 5842785961, z adresoiu v Gdansku, Andrzeja Struga 4, email: hello@containerboard.pl.",
+          "Tsia polityka pryvatnosti opysuie obrobku personalnykh danykh korystuvachiv platformy ContainerBoard, dostupnoi za adresoiu containerboard.eu.",
+          "Volodiltsem danykh ye ContainerBoard Karol Tyminski 5842785961, z adresoiu v Gdansku, Andrzeja Struga 4, email: hello@containerboard.eu.",
           "My dbaiemo pro pryvatnist korystuvachiv ta bezpeku obrobliuvanykh danykh."
         ]
       },
@@ -1572,7 +1552,7 @@
       {
         "title": "1. Zahalni polozhennia",
         "items": [
-          "Tsii umovy vykorystannia rehuliuiut korystuvannia platformoiu ContainerBoard za adresoiu containerboard.pl.",
+          "Tsii umovy vykorystannia rehuliuiut korystuvannia platformoiu ContainerBoard za adresoiu containerboard.eu.",
           "Operatorom platformy ye ContainerBoard Karol Tyminski 5842785961, z adresoiu v Gdansku, Andrzeja Struga 4.",
           "ContainerBoard dozvoliaie perehliadaty profili kompanii rynku konteineriv, publikuvaty ta perehliadaty propozytsii, a takozh komunikuvaty navkolo oholoshen.",
           "Korystuvannia platformoiu oznachaie pryiniattia tsykh umov."
@@ -1640,7 +1620,7 @@
         "items": [
           "Do tsykh umov zastosovuietsia polske pravo.",
           "Usi spory vyrishuiutsia kompetentnym sudom.",
-          "Kontakt z operatorom: hello@containerboard.pl."
+          "Kontakt z operatorom: hello@containerboard.eu."
         ]
       }
     ],
@@ -1648,8 +1628,8 @@
       {
         "title": "1. Zahalna informatsiia",
         "items": [
-          "Tsia polityka cookies opysuie vykorystannia cookies na platformi ContainerBoard za adresoiu containerboard.pl.",
-          "Administratorem danykh ye ContainerBoard Karol Tyminski 5842785961, email: hello@containerboard.pl.",
+          "Tsia polityka cookies opysuie vykorystannia cookies na platformi ContainerBoard za adresoiu containerboard.eu.",
+          "Administratorem danykh ye ContainerBoard Karol Tyminski 5842785961, email: hello@containerboard.eu.",
           "Platforma vykorystovuie lyshe neobkhidni cookies, potribni dlia nalezhnoi roboty."
         ]
       },
@@ -1866,22 +1846,7 @@
     "coordinatesLabel": "Koordynaty",
     "backToMap": "Nazad do spysku",
     "showMoreBranches": "Pokazaty bilshe",
-    "loadMoreOffers": "Pokazaty bilshe",
-    "ownershipClaim": {
-      "action": "Tse moia kompaniia",
-      "statusSubmitting": "Nadsylaetsia...",
-      "statusSuccess": "Zaiavku nadislano",
-      "toastSubmitted": "Zaiavku na peredachu vlasnosti kompanii nadislano.",
-      "toastError": "Ne vdalosia nadislaty zaiavku.",
-      "toastUnauthorized": "Uviydit, shchob podaty zaiavku na kompaniiu.",
-      "unauthorizedText": "Shchob podaty zaiavku na kompaniiu, potribno uviyty.",
-      "loginCta": "Uviyty",
-      "dialogTitle": "Peredaty kompaniiu?",
-      "dialogConfirmText": "My nadislemo zapyt na pryviazku tsiiei kompanii do vashoho akaunta.",
-      "dialogLimitText": "Mozhna podaty lyshe odyn zapyt dlia tsiiei kompanii raz na 24 hodyny.",
-      "cancel": "Skasuvaty",
-      "confirm": "Nadislaty"
-    }
+    "loadMoreOffers": "Pokazaty bilshe"
   },
   "seoLandingIndexes": {
     "companies": {
@@ -2236,7 +2201,9 @@
       "emailLabel": "Email",
       "phoneLabel": "Телефон",
       "galleryTitle": "Галерея",
-      "expiresLabel": "Діє до"
+      "expiresLabel": "Діє до",
+      "inactiveListingNoticeTitle": "Це оголошення вже неактивне.",
+      "inactiveListingNoticeBody": "Воно більше не показується в результатах пошуку, але будь-хто з прямим посиланням усе ще може його переглянути."
     },
     "form": {
       "companyNameRequired": "Введіть назву компанії",
@@ -2578,21 +2545,25 @@
         "label": "Скидання пароля",
         "description": "Користувач запросив скидання пароля"
       },
-      "claimSubmitted": {
-        "label": "Заявку подано",
-        "description": "Користувач подав заявку на право власності на компанію"
-      },
-      "claimApproved": {
-        "label": "Заявку схвалено",
-        "description": "Адміністратор схвалив заявку на право власності на компанію"
-      },
-      "claimRejected": {
-        "label": "Заявку відхилено",
-        "description": "Адміністратор відхилив заявку на право власності на компанію"
-      },
       "containerInquiry": {
-        "label": "Запит щодо контейнера",
-        "description": "Запит щодо оголошення про контейнер (за бажанням із ціною)"
+        "label": "Container inquiry",
+        "description": "Inquiry for a container listing (with optional price)"
+      },
+      "conciergeStockUpload": {
+        "label": "Stock upload request",
+        "description": "Notification about a bulk upload file with full contact details"
+      },
+      "conciergeStockUploadConfirmation": {
+        "label": "Stock upload confirmation",
+        "description": "Confirmation sent to the user after a stock upload request is registered"
+      },
+      "listingExpiryReminder7d": {
+        "label": "Listing expiry reminder 7d",
+        "description": "First reminder sent 7 days before the listing expires"
+      },
+      "listingExpiryReminder2d": {
+        "label": "Listing expiry reminder 2d",
+        "description": "Final reminder sent 2 days before the listing expires"
       }
     }
   },

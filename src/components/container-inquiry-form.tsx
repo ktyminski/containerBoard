@@ -48,7 +48,7 @@ export function ContainerInquiryForm({
   turnstileSiteKey = null,
 }: ContainerInquiryFormProps) {
   const locale = resolveLocale(
-    typeof document === "undefined" ? "pl" : document.documentElement.lang || "pl",
+    typeof document === "undefined" ? undefined : document.documentElement.lang,
   );
   const messages = getMessages(locale).inquiryForm;
   const toast = useToast();
