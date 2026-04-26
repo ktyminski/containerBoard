@@ -535,6 +535,19 @@ export async function ContainerDetailsContent({
   const listingMessages = messages.containerListings;
   const token = cookieStore.get(SESSION_COOKIE_NAME)?.value;
   const currentUser = token ? await getCurrentUserFromToken(token) : null;
+  const inquiryOwnedCompany = currentUser?._id
+    ? await companies.findOne(
+        { createdByUserId: currentUser._id },
+        {
+          projection: {
+            name: 1,
+            email: 1,
+            phone: 1,
+          },
+          sort: { updatedAt: -1 },
+        },
+      )
+    : null;
   const isOwner = currentUser?._id
     ? currentUser._id.toHexString() === listing.createdByUserId.toHexString()
     : false;
@@ -543,9 +556,18 @@ export async function ContainerDetailsContent({
   const turnstileSiteKey = !isLoggedIn ? getTurnstileSiteKey() : null;
   const inquiryInitialValues = isLoggedIn
     ? {
-        buyerName: currentUser?.name ?? "",
-        buyerEmail: currentUser?.email ?? "",
-        buyerPhone: currentUser?.phone ?? "",
+        buyerName:
+          inquiryOwnedCompany?.name?.trim() ||
+          currentUser?.name?.trim() ||
+          "",
+        buyerEmail:
+          inquiryOwnedCompany?.email?.trim() ||
+          currentUser?.email?.trim() ||
+          "",
+        buyerPhone:
+          inquiryOwnedCompany?.phone?.trim() ||
+          currentUser?.phone?.trim() ||
+          "",
       }
     : undefined;
   const initialIsFavorite = isLoggedIn
