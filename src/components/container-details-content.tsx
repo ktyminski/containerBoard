@@ -53,6 +53,9 @@ import {
   resolveLocale,
   type AppLocale,
 } from "@/lib/i18n";
+import {
+  buildContainerListingStructuredData,
+} from "@/lib/container-listing-seo";
 import { normalizeOptionalListingDescriptionHtml } from "@/lib/listing-description-html";
 import { getTurnstileSiteKey } from "@/lib/turnstile";
 import { USER_ROLE } from "@/lib/user-roles";
@@ -609,6 +612,11 @@ export async function ContainerDetailsContent({
   const quantityDisplay = getQuantityDisplay(listingItem.quantity);
   const locationItems = getLocationDisplayItems(listingItem, locale, moduleMessages);
   const locationMapPoints = getLocationMapPoints(listingItem, locale, moduleMessages);
+  const structuredData = buildContainerListingStructuredData({
+    item: listingItem,
+    locale,
+    path: `/containers/${listing._id.toHexString()}`,
+  });
   const freeTransportDistanceKmForMap =
     listingItem.logisticsTransportIncluded &&
     typeof listingItem.logisticsTransportFreeDistanceKm === "number" &&
@@ -632,6 +640,12 @@ export async function ContainerDetailsContent({
 
   return (
     <div className="grid gap-4">
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{
+          __html: JSON.stringify(structuredData),
+        }}
+      />
       <ContainerDetailsScrollTop listingId={listing._id.toHexString()} />
       <div className="sticky top-0 z-20 -mx-4 -mt-6 px-4 pb-1 pt-6 sm:hidden">
         <div className="flex min-w-0 items-center gap-2 rounded-md border border-neutral-200 bg-white/95 p-2 shadow-sm backdrop-blur">
@@ -939,12 +953,10 @@ export async function ContainerDetailsContent({
             <h2 className="text-sm font-semibold text-neutral-800">
               {moduleMessages.details.descriptionTitle}
             </h2>
-            {sanitizedDescriptionHtml ? (
-              <div
-                className="mt-3 space-y-2 text-sm text-neutral-700 [&_p]:leading-6 [&_ul]:list-disc [&_ul]:pl-5"
-                dangerouslySetInnerHTML={{ __html: sanitizedDescriptionHtml }}
-              />
-            ) : null}
+            <div
+              className="mt-3 space-y-2 text-sm text-neutral-700 [&_p]:leading-6 [&_ul]:list-disc [&_ul]:pl-5"
+              dangerouslySetInnerHTML={{ __html: sanitizedDescriptionHtml }}
+            />
           </section>
         ) : null}
 

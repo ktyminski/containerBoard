@@ -1,5 +1,7 @@
 import type { Metadata } from "next";
+import { unstable_cache } from "next/cache";
 import Link from "next/link";
+import Image from "next/image";
 import { cookies } from "next/headers";
 import { ContainerPhotoWithPlaceholder } from "@/components/container-photo-with-placeholder";
 import { SESSION_COOKIE_NAME } from "@/lib/auth-session";
@@ -23,6 +25,7 @@ import {
   resolveLocale,
   withLang,
 } from "@/lib/i18n";
+import { buildPageMetadata } from "@/lib/seo";
 import { logError } from "@/lib/server-logger";
 
 export async function generateMetadata(): Promise<Metadata> {
@@ -30,29 +33,45 @@ export async function generateMetadata(): Promise<Metadata> {
   const locale = resolveLocale(cookieStore.get(LOCALE_COOKIE_NAME)?.value);
   const landing = getMessages(locale).landingPage;
 
-  return {
+  return buildPageMetadata({
+    path: "/",
+    locale,
     title: landing.metaTitle,
     description: landing.metaDescription,
-  };
+    imagePath: "/photos/background.webp",
+  });
 }
+
+const getCachedLatestListings = unstable_cache(
+  async (limit: number): Promise<ContainerListingItem[]> => {
+    try {
+      await ensureContainerListingsIndexes();
+      await expireContainerListingsIfNeeded();
+
+      const now = new Date();
+      const listings = await getContainerListingsCollection();
+      const filter = {
+        ...buildContainerListingsFilter({
+          includeOnlyPublic: true,
+          now,
+        }),
+        type: { $in: ["sell", "rent"] as const },
+      };
+
+      const rows = await listings.find(filter).sort({ createdAt: -1 }).limit(limit).toArray();
+      return rows.map(mapContainerListingToItem);
+    } catch (error) {
+      logError("Failed to load latest listings on landing page", { error });
+      return [];
+    }
+  },
+  ["landing-latest-listings"],
+  { revalidate: 300 },
+);
 
 async function getLatestListings(limit = 6): Promise<ContainerListingItem[]> {
   try {
-    await ensureContainerListingsIndexes();
-    await expireContainerListingsIfNeeded();
-
-    const now = new Date();
-    const listings = await getContainerListingsCollection();
-    const filter = {
-      ...buildContainerListingsFilter({
-        includeOnlyPublic: true,
-        now,
-      }),
-      type: { $in: ["sell", "rent"] as const },
-    };
-
-    const rows = await listings.find(filter).sort({ createdAt: -1 }).limit(limit).toArray();
-    return rows.map(mapContainerListingToItem);
+    return await getCachedLatestListings(limit);
   } catch (error) {
     logError("Failed to load latest listings on landing page", { error });
     return [];
@@ -128,11 +147,17 @@ export default async function LandingPage() {
   return (
     <main className="w-full bg-neutral-200 text-[#10233f]">
       <section className="relative overflow-hidden border-b border-neutral-300">
-        <div
-          className="absolute inset-0 bg-cover bg-center opacity-55"
-          style={{ backgroundImage: "url('/photos/background.webp')" }}
-          aria-hidden="true"
-        />
+        <div className="absolute inset-0 opacity-55" aria-hidden="true">
+          <Image
+            src="/photos/background.webp"
+            alt=""
+            fill
+            priority
+            fetchPriority="high"
+            className="object-cover object-center"
+            sizes="100vw"
+          />
+        </div>
         <div className="absolute inset-0 bg-[#061933]/88" aria-hidden="true" />
 
         <div className="relative mx-auto grid min-h-[calc(100vh-4rem)] w-full max-w-6xl content-center gap-6 px-4 py-12 supports-[height:100svh]:min-h-[calc(100svh-4rem)] sm:min-h-[34rem] sm:px-6 lg:grid-cols-[minmax(0,1.15fr)_minmax(18rem,0.8fr)] lg:content-normal lg:items-center lg:gap-8 lg:py-20">
@@ -290,7 +315,7 @@ export default async function LandingPage() {
                               ? "object-cover"
                               : "object-contain p-1"
                           }
-                          sizes="96px"
+                          sizes="(max-width: 640px) 96px, 112px"
                         />
                       </div>
 

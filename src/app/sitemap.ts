@@ -2,9 +2,16 @@ import type { MetadataRoute } from "next";
 import { getContainerListingsCollection } from "@/lib/container-listings";
 import { LISTING_STATUS } from "@/lib/container-listing-types";
 import {
+  CONTAINER_BUY_SEO_HUB_PATH,
+  CONTAINER_RENT_SEO_HUB_PATH,
   CONTAINER_SALE_SEO_HUB_PATH,
   CONTAINER_SEO_CITIES,
   CONTAINER_SEO_COUNTRIES,
+  getContainerSeoCountryPath,
+  getContainerSeoCityPath,
+  getSeoContainerKindCityCount,
+  getSeoContainerKindCountryCount,
+  getSeoContainerKindTotalCount,
   getContainerSaleCountryPath,
   getContainerSaleCityPath,
   getSeoContainerCityCount,
@@ -15,7 +22,6 @@ import { getAbsoluteUrl, getLanguageAlternates } from "@/lib/seo";
 const STATIC_PATHS = [
   "/",
   "/list",
-  CONTAINER_SALE_SEO_HUB_PATH,
   "/containers/new",
   "/about",
   "/contact",
@@ -113,5 +119,124 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       };
     });
 
-  return [...staticEntries, ...listingEntries, ...cityEntries, ...countryEntries];
+  const [saleHubTotal, rentHubTotal, buyHubTotal] = await Promise.all([
+    getSeoContainerKindTotalCount("sell"),
+    getSeoContainerKindTotalCount("rent"),
+    getSeoContainerKindTotalCount("buy"),
+  ]);
+
+  const hubEntries: MetadataRoute.Sitemap = [
+    { path: CONTAINER_SALE_SEO_HUB_PATH, total: saleHubTotal },
+    { path: CONTAINER_RENT_SEO_HUB_PATH, total: rentHubTotal },
+    { path: CONTAINER_BUY_SEO_HUB_PATH, total: buyHubTotal },
+  ]
+    .filter((entry) => entry.total >= 3)
+    .map((entry) => ({
+      url: getAbsoluteUrl(entry.path),
+      lastModified: now,
+      changeFrequency: "daily" as const,
+      priority: 0.8,
+      alternates: {
+        languages: getLanguageAlternates(entry.path),
+      },
+    }));
+
+  const [rentCityCounts, rentCountryCounts, buyCityCounts, buyCountryCounts] = await Promise.all([
+    Promise.all(
+      CONTAINER_SEO_CITIES.map(async (city) => ({
+        city,
+        total: await getSeoContainerKindCityCount("rent", city),
+      })),
+    ),
+    Promise.all(
+      CONTAINER_SEO_COUNTRIES.map(async (country) => ({
+        country,
+        total: await getSeoContainerKindCountryCount("rent", country),
+      })),
+    ),
+    Promise.all(
+      CONTAINER_SEO_CITIES.map(async (city) => ({
+        city,
+        total: await getSeoContainerKindCityCount("buy", city),
+      })),
+    ),
+    Promise.all(
+      CONTAINER_SEO_COUNTRIES.map(async (country) => ({
+        country,
+        total: await getSeoContainerKindCountryCount("buy", country),
+      })),
+    ),
+  ]);
+
+  const rentCityEntries: MetadataRoute.Sitemap = rentCityCounts
+    .filter((entry) => entry.total >= 3)
+    .map(({ city }) => {
+      const path = getContainerSeoCityPath(city.slug, "rent");
+      return {
+        url: getAbsoluteUrl(path),
+        lastModified: now,
+        changeFrequency: "daily",
+        priority: 0.8,
+        alternates: {
+          languages: getLanguageAlternates(path),
+        },
+      };
+    });
+
+  const rentCountryEntries: MetadataRoute.Sitemap = rentCountryCounts
+    .filter((entry) => entry.total >= 3)
+    .map(({ country }) => {
+      const path = getContainerSeoCountryPath(country.slug, "rent");
+      return {
+        url: getAbsoluteUrl(path),
+        lastModified: now,
+        changeFrequency: "daily",
+        priority: 0.8,
+        alternates: {
+          languages: getLanguageAlternates(path),
+        },
+      };
+    });
+
+  const buyCityEntries: MetadataRoute.Sitemap = buyCityCounts
+    .filter((entry) => entry.total >= 3)
+    .map(({ city }) => {
+      const path = getContainerSeoCityPath(city.slug, "buy");
+      return {
+        url: getAbsoluteUrl(path),
+        lastModified: now,
+        changeFrequency: "daily",
+        priority: 0.8,
+        alternates: {
+          languages: getLanguageAlternates(path),
+        },
+      };
+    });
+
+  const buyCountryEntries: MetadataRoute.Sitemap = buyCountryCounts
+    .filter((entry) => entry.total >= 3)
+    .map(({ country }) => {
+      const path = getContainerSeoCountryPath(country.slug, "buy");
+      return {
+        url: getAbsoluteUrl(path),
+        lastModified: now,
+        changeFrequency: "daily",
+        priority: 0.8,
+        alternates: {
+          languages: getLanguageAlternates(path),
+        },
+      };
+    });
+
+  return [
+    ...staticEntries,
+    ...hubEntries,
+    ...listingEntries,
+    ...cityEntries,
+    ...countryEntries,
+    ...rentCityEntries,
+    ...rentCountryEntries,
+    ...buyCityEntries,
+    ...buyCountryEntries,
+  ];
 }

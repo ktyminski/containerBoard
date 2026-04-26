@@ -13,8 +13,12 @@ import { getCountryNamesForCode } from "@/lib/country-flags";
 import { type AppLocale, getMessages } from "@/lib/i18n";
 import { buildPageMetadata } from "@/lib/seo";
 import { SEO_CITIES } from "@/lib/seo-landings";
+import type { ListingType } from "@/lib/container-listing-types";
 
 export const CONTAINER_SALE_SEO_HUB_PATH = "/kontenery/na-sprzedaz";
+export const CONTAINER_RENT_SEO_HUB_PATH = "/kontenery/wynajem";
+export const CONTAINER_BUY_SEO_HUB_PATH = "/kontenery/kupno";
+export type ContainerSeoKind = ListingType;
 
 export type ContainerSeoCity = {
   slug: string;
@@ -227,12 +231,191 @@ function getSeoCopy(locale: AppLocale) {
   return SEO_COPY[locale];
 }
 
-function buildCityPath(citySlug: string) {
-  return `${CONTAINER_SALE_SEO_HUB_PATH}/miasta/${citySlug}`;
+function getSeoHubPath(kind: ContainerSeoKind): string {
+  if (kind === "rent") {
+    return CONTAINER_RENT_SEO_HUB_PATH;
+  }
+  if (kind === "buy") {
+    return CONTAINER_BUY_SEO_HUB_PATH;
+  }
+  return CONTAINER_SALE_SEO_HUB_PATH;
 }
 
-function buildCountryPath(countrySlug: string) {
-  return `${CONTAINER_SALE_SEO_HUB_PATH}/kraje/${countrySlug}`;
+function getSeoCopyForKind(locale: AppLocale, kind: ContainerSeoKind) {
+  const saleCopy = getSeoCopy(locale);
+  if (kind === "sell") {
+    return saleCopy;
+  }
+
+  if (locale === "pl") {
+    if (kind === "rent") {
+      return {
+        ...saleCopy,
+        hubTitle: "Kontenery na wynajem",
+        hubDescription:
+          "Przeglądaj strony SEO dla największych miast w Polsce i krajów Europy, aby szybciej znaleźć kontenery na wynajem w konkretnej lokalizacji.",
+        hubHeading: "Kontenery na wynajem w miastach i krajach Europy",
+        hubLead:
+          "Wejdź w wybraną lokalizację, zobacz aktywne oferty wynajmu i przejdź do pełnej listy, aby dalej filtrować wyniki po typie kontenera, cenie i stanie.",
+        cityTitle: (name: string) => `Kontenery na wynajem ${name}`,
+        cityDescription: (name: string) =>
+          `Aktualne oferty kontenerów na wynajem w lokalizacji ${name}. Sprawdź dostępne ogłoszenia i przejdź do pełnej listy ofert.`,
+        countryTitle: (name: string) => `Kontenery na wynajem ${name}`,
+        countryDescription: (name: string) =>
+          `Aktualne oferty kontenerów na wynajem w kraju ${name}. Zobacz dostępne ogłoszenia i przejdź do szczegółów wybranych ofert.`,
+        cityHeading: (name: string) => `Kontenery na wynajem ${name}`,
+        countryHeading: (name: string) => `Kontenery na wynajem ${name}`,
+        cityLead: (name: string) =>
+          `Poniżej znajdziesz najnowsze oferty wynajmu kontenerów dostępne w obszarze ${name}.`,
+        countryLead: (name: string) =>
+          `Poniżej znajdziesz aktywne oferty wynajmu kontenerów dostępne w kraju ${name}.`,
+      };
+    }
+
+    return {
+      ...saleCopy,
+      hubTitle: "Kupno kontenerów",
+      hubDescription:
+        "Przeglądaj strony SEO dla największych miast w Polsce i krajów Europy, aby szybciej znaleźć ogłoszenia kupna kontenerów w konkretnej lokalizacji.",
+      hubHeading: "Kupno kontenerów w miastach i krajach Europy",
+      hubLead:
+        "Wejdź w wybraną lokalizację, zobacz aktywne ogłoszenia zakupu i przejdź do pełnej listy, aby dalej filtrować wyniki po typie kontenera, cenie i stanie.",
+      cityTitle: (name: string) => `Kupno kontenerów ${name}`,
+      cityDescription: (name: string) =>
+        `Aktualne ogłoszenia kupna kontenerów w lokalizacji ${name}. Sprawdź dostępne wpisy i przejdź do pełnej listy ogłoszeń.`,
+      countryTitle: (name: string) => `Kupno kontenerów ${name}`,
+      countryDescription: (name: string) =>
+        `Aktualne ogłoszenia kupna kontenerów w kraju ${name}. Zobacz dostępne wpisy i przejdź do szczegółów wybranych ogłoszeń.`,
+      cityHeading: (name: string) => `Kupno kontenerów ${name}`,
+      countryHeading: (name: string) => `Kupno kontenerów ${name}`,
+      cityLead: (name: string) =>
+        `Poniżej znajdziesz najnowsze ogłoszenia zakupu kontenerów dostępne w obszarze ${name}.`,
+      countryLead: (name: string) =>
+        `Poniżej znajdziesz aktywne ogłoszenia zakupu kontenerów dostępne w kraju ${name}.`,
+      emptyText:
+        "Ta strona zostaje jako landing pod wyszukiwarkę, ale aktualnie nie ma tu aktywnych ogłoszeń kupna. Przejdź do pełnej listy i sprawdź inne lokalizacje.",
+    };
+  }
+
+  if (kind === "rent") {
+    return {
+      ...saleCopy,
+      hubTitle: locale === "de" ? "Container zur Miete" : locale === "uk" ? "Konteinery v orendu" : "Containers for rent",
+      hubDescription:
+        locale === "de"
+          ? "Durchsuchen Sie SEO-Landingpages für polnische Städte und europäische Länder, um Container zur Miete nach Standort zu finden."
+          : locale === "uk"
+            ? "Perehliadaite SEO-storinky dlia mist Polshchi ta krain Yevropy, shchob znakhodyty konteinery v orendu za lokaciieiu."
+            : "Browse SEO landing pages for Polish cities and European countries to find containers for rent in a specific location.",
+      hubHeading:
+        locale === "de"
+          ? "Container zur Miete nach Städten und Ländern Europas"
+          : locale === "uk"
+            ? "Konteinery v orendu u mistakh ta krainakh Yevropy"
+            : "Containers for rent in cities and European countries",
+      hubLead:
+        locale === "de"
+          ? "Wählen Sie einen Standort, prüfen Sie aktive Mietangebote und wechseln Sie zur vollständigen Liste, um weiter nach Containertyp, Preis und Zustand zu filtern."
+          : locale === "uk"
+            ? "Obyrait lokatsiiu, perehliadaite aktyvni propozytsii orendy ta perekhodte do povnoho spysku dlia podalshoho filtru."
+            : "Open a selected location, review active rental listings, and jump to the full board to keep filtering by container type, price, and condition.",
+      cityTitle: (name: string) =>
+        locale === "de" ? `Container zur Miete ${name}` : locale === "uk" ? `Konteinery v orendu ${name}` : `Containers for rent ${name}`,
+      cityDescription: (name: string) =>
+        locale === "de"
+          ? `Aktuelle Container-Mietangebote in ${name}. Prüfen Sie verfügbare Einträge und öffnen Sie die vollständige Liste für weitere Filter.`
+          : locale === "uk"
+            ? `Aktualni propozytsii orendy konteineriv u ${name}. Perehliadte dostupni propozytsii ta vidkryite povnyi spysok dlia dodatkovoho filtru.`
+            : `Current container rental listings in ${name}. Review available offers and open the full listings board for more filters.`,
+      countryTitle: (name: string) =>
+        locale === "de" ? `Container zur Miete ${name}` : locale === "uk" ? `Konteinery v orendu ${name}` : `Containers for rent ${name}`,
+      countryDescription: (name: string) =>
+        locale === "de"
+          ? `Aktuelle Container-Mietangebote in ${name}. Prüfen Sie verfügbare Einträge und öffnen Sie die vollständige Liste für weitere Filter.`
+          : locale === "uk"
+            ? `Aktualni propozytsii orendy konteineriv u ${name}. Perehliadte dostupni propozytsii ta vidkryite povnyi spysok dlia dodatkovoho filtru.`
+            : `Current container rental listings in ${name}. Review available offers and open the full listings board for more filters.`,
+      cityHeading: (name: string) =>
+        locale === "de" ? `Container zur Miete ${name}` : locale === "uk" ? `Konteinery v orendu ${name}` : `Containers for rent ${name}`,
+      countryHeading: (name: string) =>
+        locale === "de" ? `Container zur Miete ${name}` : locale === "uk" ? `Konteinery v orendu ${name}` : `Containers for rent ${name}`,
+      cityLead: (name: string) =>
+        locale === "de"
+          ? `Unten finden Sie die neuesten Mietangebote für Container im Raum ${name}.`
+          : locale === "uk"
+            ? `Nyzhche zibrani ostanni aktyvni propozytsii orendy konteineriv u rayoni ${name}.`
+            : `Below you will find the latest container rental listings available around ${name}.`,
+      countryLead: (name: string) =>
+        locale === "de"
+          ? `Unten finden Sie aktive Mietangebote für Container in ${name}.`
+          : locale === "uk"
+            ? `Nyzhche zibrani aktyvni propozytsii orendy konteineriv u kraini ${name}.`
+            : `Below you will find active container rental listings available in ${name}.`,
+    };
+  }
+
+  return {
+    ...saleCopy,
+    hubTitle: locale === "de" ? "Container gesucht" : locale === "uk" ? "Kupivlia konteineriv" : "Containers wanted",
+    hubDescription:
+      locale === "de"
+        ? "Durchsuchen Sie SEO-Landingpages für polnische Städte und europäische Länder, um Suchanzeigen für Container nach Standort zu finden."
+        : locale === "uk"
+          ? "Perehliadaite SEO-storinky dlia mist Polshchi ta krain Yevropy, shchob znakhodyty oholoshennia pro kupivliu konteineriv za lokaciieiu."
+          : "Browse SEO landing pages for Polish cities and European countries to find container wanted listings in a specific location.",
+    hubHeading:
+      locale === "de"
+        ? "Container gesucht nach Städten und Ländern Europas"
+        : locale === "uk"
+          ? "Kupivlia konteineriv u mistakh ta krainakh Yevropy"
+          : "Containers wanted in cities and European countries",
+    hubLead:
+      locale === "de"
+        ? "Wählen Sie einen Standort, prüfen Sie aktive Gesuche und wechseln Sie zur vollständigen Liste, um weiter nach Containertyp, Preis und Zustand zu filtern."
+        : locale === "uk"
+          ? "Obyrait lokatsiiu, perehliadaite aktyvni oholoshennia pro kupivliu ta perekhodte do povnoho spysku dlia podalshoho filtru."
+          : "Open a selected location, review active wanted listings, and jump to the full board to keep filtering by container type, price, and condition.",
+    cityTitle: (name: string) =>
+      locale === "de" ? `Container gesucht ${name}` : locale === "uk" ? `Kupivlia konteineriv ${name}` : `Containers wanted ${name}`,
+    cityDescription: (name: string) =>
+      locale === "de"
+        ? `Aktuelle Suchanzeigen für Container in ${name}. Prüfen Sie verfügbare Einträge und öffnen Sie die vollständige Liste für weitere Filter.`
+        : locale === "uk"
+          ? `Aktualni oholoshennia pro kupivliu konteineriv u ${name}. Perehliadte dostupni wpisy ta vidkryite povnyi spysok dlia dodatkovoho filtru.`
+          : `Current container wanted listings in ${name}. Review available posts and open the full listings board for more filters.`,
+    countryTitle: (name: string) =>
+      locale === "de" ? `Container gesucht ${name}` : locale === "uk" ? `Kupivlia konteineriv ${name}` : `Containers wanted ${name}`,
+    countryDescription: (name: string) =>
+      locale === "de"
+        ? `Aktuelle Suchanzeigen für Container in ${name}. Prüfen Sie verfügbare Einträge und öffnen Sie die vollständige Liste für weitere Filter.`
+        : locale === "uk"
+          ? `Aktualni oholoshennia pro kupivliu konteineriv u ${name}. Perehliadte dostupni wpisy ta vidkryite povnyi spysok dlia dodatkovoho filtru.`
+          : `Current container wanted listings in ${name}. Review available posts and open the full listings board for more filters.`,
+    cityHeading: (name: string) =>
+      locale === "de" ? `Container gesucht ${name}` : locale === "uk" ? `Kupivlia konteineriv ${name}` : `Containers wanted ${name}`,
+    countryHeading: (name: string) =>
+      locale === "de" ? `Container gesucht ${name}` : locale === "uk" ? `Kupivlia konteineriv ${name}` : `Containers wanted ${name}`,
+    cityLead: (name: string) =>
+      locale === "de"
+        ? `Unten finden Sie die neuesten Container-Gesuche im Raum ${name}.`
+        : locale === "uk"
+          ? `Nyzhche zibrani ostanni aktyvni oholoshennia pro kupivliu konteineriv u rayoni ${name}.`
+          : `Below you will find the latest container wanted listings available around ${name}.`,
+    countryLead: (name: string) =>
+      locale === "de"
+        ? `Unten finden Sie aktive Container-Gesuche in ${name}.`
+        : locale === "uk"
+          ? `Nyzhche zibrani aktyvni oholoshennia pro kupivliu konteineriv u kraini ${name}.`
+          : `Below you will find active container wanted listings available in ${name}.`,
+  };
+}
+
+function buildCityPath(citySlug: string, kind: ContainerSeoKind = "sell") {
+  return `${getSeoHubPath(kind)}/miasta/${citySlug}`;
+}
+
+function buildCountryPath(countrySlug: string, kind: ContainerSeoKind = "sell") {
+  return `${getSeoHubPath(kind)}/kraje/${countrySlug}`;
 }
 
 function appendAndCondition(
@@ -246,9 +429,13 @@ function appendAndCondition(
   };
 }
 
-function buildCountrySeoFilter(country: ContainerSeoCountry, now: Date) {
+function buildCountrySeoFilter(
+  country: ContainerSeoCountry,
+  now: Date,
+  kind: ContainerSeoKind = "sell",
+) {
   const baseFilter = buildContainerListingsFilter({
-    type: "sell",
+    type: kind,
     includeOnlyPublic: true,
     now,
     countryCode: country.countryCode,
@@ -290,14 +477,15 @@ export function getContainerSeoCountryBySlug(slug: string) {
   return COUNTRY_BY_SLUG.get(slug);
 }
 
-export function getContainerSaleSeoHubMetadata(locale: AppLocale) {
-  const copy = getSeoCopy(locale);
-  return buildPageMetadata({
-    path: CONTAINER_SALE_SEO_HUB_PATH,
-    locale,
-    title: copy.hubTitle,
-    description: copy.hubDescription,
-  });
+export function getContainerSeoHubPath(kind: ContainerSeoKind = "sell") {
+  return getSeoHubPath(kind);
+}
+
+export function getContainerSaleSeoHubMetadata(
+  locale: AppLocale,
+  hasResults = true,
+) {
+  return getContainerSeoHubMetadata(locale, "sell", hasResults);
 }
 
 export function getContainerSaleCityMetadata(input: {
@@ -305,10 +493,10 @@ export function getContainerSaleCityMetadata(input: {
   city: ContainerSeoCity;
   hasResults: boolean;
 }) {
-  const copy = getSeoCopy(input.locale);
+  const copy = getSeoCopyForKind(input.locale, "sell");
   return {
     ...buildPageMetadata({
-      path: buildCityPath(input.city.slug),
+      path: buildCityPath(input.city.slug, "sell"),
       locale: input.locale,
       title: copy.cityTitle(input.city.name),
       description: copy.cityDescription(input.city.name),
@@ -322,10 +510,10 @@ export function getContainerSaleCountryMetadata(input: {
   country: ContainerSeoCountry;
   hasResults: boolean;
 }) {
-  const copy = getSeoCopy(input.locale);
+  const copy = getSeoCopyForKind(input.locale, "sell");
   return {
     ...buildPageMetadata({
-      path: buildCountryPath(input.country.slug),
+      path: buildCountryPath(input.country.slug, "sell"),
       locale: input.locale,
       title: copy.countryTitle(input.country.name),
       description: copy.countryDescription(input.country.name),
@@ -338,13 +526,21 @@ export async function getSeoContainerListingsByCity(
   city: ContainerSeoCity,
   limit = 12,
 ): Promise<ContainerSeoListingsResult> {
+  return getSeoContainerListingsByKindAndCity("sell", city, limit);
+}
+
+export async function getSeoContainerListingsByKindAndCity(
+  kind: ContainerSeoKind,
+  city: ContainerSeoCity,
+  limit = 12,
+): Promise<ContainerSeoListingsResult> {
   await ensureContainerListingsIndexes();
   await expireContainerListingsIfNeeded();
 
   const now = new Date();
   const listings = await getContainerListingsCollection();
   const filter = buildContainerListingsFilter({
-    type: "sell",
+    type: kind,
     includeOnlyPublic: true,
     now,
     locationLat: city.lat,
@@ -367,12 +563,20 @@ export async function getSeoContainerListingsByCountry(
   country: ContainerSeoCountry,
   limit = 12,
 ): Promise<ContainerSeoListingsResult> {
+  return getSeoContainerListingsByKindAndCountry("sell", country, limit);
+}
+
+export async function getSeoContainerListingsByKindAndCountry(
+  kind: ContainerSeoKind,
+  country: ContainerSeoCountry,
+  limit = 12,
+): Promise<ContainerSeoListingsResult> {
   await ensureContainerListingsIndexes();
   await expireContainerListingsIfNeeded();
 
   const now = new Date();
   const listings = await getContainerListingsCollection();
-  const filter = buildCountrySeoFilter(country, now);
+  const filter = buildCountrySeoFilter(country, now, kind);
 
   const [rows, total] = await Promise.all([
     listings.find(filter).sort({ createdAt: -1 }).limit(limit).toArray(),
@@ -390,21 +594,128 @@ export async function getSeoContainerCityCount(city: ContainerSeoCity): Promise<
   return result.total;
 }
 
+export async function getSeoContainerKindCityCount(
+  kind: ContainerSeoKind,
+  city: ContainerSeoCity,
+): Promise<number> {
+  const result = await getSeoContainerListingsByKindAndCity(kind, city, 1);
+  return result.total;
+}
+
 export async function getSeoContainerCountryCount(country: ContainerSeoCountry): Promise<number> {
   const result = await getSeoContainerListingsByCountry(country, 1);
   return result.total;
 }
 
+export async function getSeoContainerKindCountryCount(
+  kind: ContainerSeoKind,
+  country: ContainerSeoCountry,
+): Promise<number> {
+  const result = await getSeoContainerListingsByKindAndCountry(kind, country, 1);
+  return result.total;
+}
+
 export function getContainerSaleSeoHubCopy(locale: AppLocale) {
-  return getSeoCopy(locale);
+  return getSeoCopyForKind(locale, "sell");
 }
 
 export function getContainerSaleCityPath(citySlug: string) {
-  return buildCityPath(citySlug);
+  return buildCityPath(citySlug, "sell");
 }
 
 export function getContainerSaleCountryPath(countrySlug: string) {
-  return buildCountryPath(countrySlug);
+  return buildCountryPath(countrySlug, "sell");
+}
+
+export function getContainerSeoHubCopy(
+  locale: AppLocale,
+  kind: ContainerSeoKind = "sell",
+) {
+  return getSeoCopyForKind(locale, kind);
+}
+
+export function getContainerSeoCityPath(
+  citySlug: string,
+  kind: ContainerSeoKind = "sell",
+) {
+  return buildCityPath(citySlug, kind);
+}
+
+export function getContainerSeoCountryPath(
+  countrySlug: string,
+  kind: ContainerSeoKind = "sell",
+) {
+  return buildCountryPath(countrySlug, kind);
+}
+
+export function getContainerSeoHubMetadata(
+  locale: AppLocale,
+  kind: ContainerSeoKind = "sell",
+  hasResults = true,
+) {
+  const copy = getSeoCopyForKind(locale, kind);
+  return {
+    ...buildPageMetadata({
+      path: getSeoHubPath(kind),
+      locale,
+      title: copy.hubTitle,
+      description: copy.hubDescription,
+    }),
+    robots: hasResults ? undefined : { index: false, follow: true },
+  };
+}
+
+export async function getSeoContainerKindTotalCount(
+  kind: ContainerSeoKind,
+): Promise<number> {
+  await ensureContainerListingsIndexes();
+  await expireContainerListingsIfNeeded();
+
+  const now = new Date();
+  const listings = await getContainerListingsCollection();
+  const filter = buildContainerListingsFilter({
+    type: kind,
+    includeOnlyPublic: true,
+    now,
+  });
+
+  return listings.countDocuments(filter);
+}
+
+export function getContainerSeoCityMetadata(input: {
+  locale: AppLocale;
+  kind: ContainerSeoKind;
+  city: ContainerSeoCity;
+  hasResults: boolean;
+}) {
+  const copy = getSeoCopyForKind(input.locale, input.kind);
+  return {
+    ...buildPageMetadata({
+      path: buildCityPath(input.city.slug, input.kind),
+      locale: input.locale,
+      title: copy.cityTitle(input.city.name),
+      description: copy.cityDescription(input.city.name),
+    }),
+    robots: input.hasResults ? undefined : { index: false, follow: true },
+  };
+}
+
+export function getContainerSeoCountryMetadata(input: {
+  locale: AppLocale;
+  kind: ContainerSeoKind;
+  country: ContainerSeoCountry;
+  hasResults: boolean;
+}) {
+  const copy = getSeoCopyForKind(input.locale, input.kind);
+  return {
+    ...buildPageMetadata({
+      path: buildCountryPath(input.country.slug, input.kind),
+      locale: input.locale,
+      title: copy.countryTitle(input.country.name),
+      description: copy.countryDescription(input.country.name),
+    }),
+    robots: input.hasResults ? undefined : { index: false, follow: true },
+  };
 }
 
 export function getContainerSeoListingSummary(
