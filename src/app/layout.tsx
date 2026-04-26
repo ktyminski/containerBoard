@@ -31,10 +31,10 @@ export const metadata: Metadata = {
   },
   icons: {
     icon: [
-      { url: "/favicon.svg?v=8", type: "image/svg+xml" },
-      { url: "/favicon.ico?v=8", sizes: "any" },
+      { url: "/favicon.svg?v=9", type: "image/svg+xml" },
+      { url: "/favicon.ico?v=9", sizes: "any" },
     ],
-    shortcut: [{ url: "/favicon.ico?v=8" }],
+    shortcut: [{ url: "/favicon.ico?v=9" }],
   },
   openGraph: {
     siteName: SITE_NAME,
