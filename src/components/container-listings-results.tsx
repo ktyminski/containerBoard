@@ -86,6 +86,7 @@ type ContainerListingResultCardProps = {
 };
 
 const DAY_IN_MS = 24 * 60 * 60 * 1000;
+const MAX_LOGISTICS_TOOLTIP_LENGTH = 120;
 function getDaysLabel(
   messages: ContainerListingsMessages,
   locale: AppLocale,
@@ -145,6 +146,18 @@ function getAvailableFromLabel(
 
   const dateLabel = availableFrom.toLocaleDateString(locale);
   return item.availableFromApproximate ? `~${dateLabel}` : dateLabel;
+}
+
+function truncateTooltipText(
+  value: string,
+  maxLength = MAX_LOGISTICS_TOOLTIP_LENGTH,
+): string {
+  const normalizedValue = value.trim();
+  if (normalizedValue.length <= maxLength) {
+    return normalizedValue;
+  }
+
+  return `${normalizedValue.slice(0, maxLength).trimEnd()}...`;
 }
 
 function formatVatRateLabel(locale: AppLocale, vatRate: number | null): string | null {
@@ -506,6 +519,117 @@ function getAllLocationLabels(
   return labels.length > 0 ? labels : [messages.utils.noLocation];
 }
 
+function getContainerColorBadgeLabel(color: {
+  ral: string;
+  rgb: { r: number; g: number; b: number };
+}): string {
+  return `${color.ral} (RGB ${color.rgb.r}, ${color.rgb.g}, ${color.rgb.b})`;
+}
+
+function getRalColorCode(value: string): string {
+  const normalized = value
+    .trim()
+    .replace(/^RAL[\s-]*/i, "")
+    .trim();
+  return normalized.length > 0 ? normalized : value.trim();
+}
+
+function getRalTileTextClass(color: {
+  r: number;
+  g: number;
+  b: number;
+}): string {
+  const luminance = (color.r * 299 + color.g * 587 + color.b * 114) / 1000;
+  return luminance > 160 ? "text-neutral-900" : "text-white";
+}
+
+function ContainerColorsInlineSummary({
+  messages,
+  colors,
+  itemId,
+}: {
+  messages: ContainerListingsMessages;
+  colors: Array<{
+    ral: string;
+    rgb: { r: number; g: number; b: number };
+  }>;
+  itemId: string;
+}) {
+  if (colors.length === 0) {
+    return null;
+  }
+
+  const previewColors = colors.slice(0, 3);
+  const additionalCount = Math.max(colors.length - previewColors.length, 0);
+  const tooltipColumns = Math.min(colors.length, 5);
+  const tooltipContentWidthRem =
+    tooltipColumns * 4 + (tooltipColumns - 1) * 0.625;
+
+  return (
+    <div
+      className="group relative inline-flex items-center gap-2"
+      tabIndex={0}
+      aria-label={`${messages.results.ralColorsAria}: ${colors.map((color) => color.ral).join(", ")}`}
+    >
+      <span className="text-sm text-neutral-700">{messages.results.colorLabel}</span>
+      <div className="inline-flex items-center gap-1">
+        {previewColors.map((color, index) => (
+          <span
+            key={`${itemId}-preview-${color.ral}-${index}`}
+            className="h-3.5 w-3.5 rounded-[3px] border border-neutral-300"
+            style={{
+              backgroundColor: `rgb(${color.rgb.r}, ${color.rgb.g}, ${color.rgb.b})`,
+            }}
+            aria-label={getContainerColorBadgeLabel(color)}
+            title={color.ral}
+          />
+        ))}
+        {additionalCount > 0 ? (
+          <span className="text-xs font-medium text-neutral-600">
+            + {additionalCount}
+          </span>
+        ) : null}
+      </div>
+      <div className="pointer-events-none absolute bottom-full right-0 z-30 mb-2 w-fit translate-y-1 rounded-md border border-neutral-700 bg-neutral-900 p-2.5 opacity-0 shadow-xl transition duration-150 group-hover:delay-300 group-hover:translate-y-0 group-hover:opacity-100 group-focus-within:delay-300 group-focus-within:translate-y-0 group-focus-within:opacity-100">
+        <div
+          className="flex flex-wrap gap-2.5"
+          style={{
+            width: `${tooltipContentWidthRem}rem`,
+          }}
+        >
+          {colors.map((color, index) => {
+            const textClass = getRalTileTextClass(color.rgb);
+            return (
+              <span
+                key={`${itemId}-tooltip-${color.ral}-${index}`}
+                className={`relative inline-flex h-16 w-16 rounded-md border border-neutral-800/50 shadow-sm ${textClass}`}
+                style={{
+                  backgroundColor: `rgb(${color.rgb.r}, ${color.rgb.g}, ${color.rgb.b})`,
+                }}
+                aria-label={getContainerColorBadgeLabel(color)}
+                title={getContainerColorBadgeLabel(color)}
+              >
+                <span className="absolute bottom-1 right-1 inline-flex flex-col items-end leading-none">
+                  <span className="text-[9px] font-semibold uppercase tracking-[0.01em]">
+                    RAL
+                  </span>
+                  <span className="max-w-[56px] truncate text-right text-[13px] font-bold">
+                    {getRalColorCode(color.ral)}
+                  </span>
+                </span>
+              </span>
+            );
+          })}
+        </div>
+        <span
+          aria-hidden="true"
+          className="absolute -bottom-1 left-3 h-2 w-2 rotate-45 border-b border-r border-neutral-700 bg-neutral-900"
+        />
+      </div>
+    </div>
+  );
+}
+
 function CscInfoBadge({
   item,
   messages,
@@ -646,6 +770,41 @@ function getTransportSummaryLabel(
   return messages.results.transportAvailableLabel;
 }
 
+function getLogisticsSummaryLabels(
+  messages: ContainerListingsMessages,
+  item: ContainerListingItem,
+): string[] {
+  const labels: string[] = [];
+
+  if (item.logisticsTransportAvailable) {
+    if (item.logisticsTransportIncluded) {
+      const distanceKm =
+        typeof item.logisticsTransportFreeDistanceKm === "number" &&
+        Number.isFinite(item.logisticsTransportFreeDistanceKm) &&
+        item.logisticsTransportFreeDistanceKm > 0
+          ? Math.trunc(item.logisticsTransportFreeDistanceKm)
+          : null;
+      labels.push(
+        distanceKm
+          ? `${messages.results.freeTransportLabel} ${distanceKm} km`
+          : messages.results.freeTransportLabel,
+      );
+    } else {
+      labels.push(messages.results.transportAvailableLabel);
+    }
+  }
+
+  if (item.logisticsUnloadingAvailable) {
+    labels.push(
+      item.logisticsUnloadingIncluded
+        ? messages.results.freeUnloadingLabel
+        : messages.results.unloadingAvailableLabel,
+    );
+  }
+
+  return labels;
+}
+
 const ContainerListingResultCard = memo(function ContainerListingResultCard({
   locale,
   messages,
@@ -676,7 +835,13 @@ const ContainerListingResultCard = memo(function ContainerListingResultCard({
   const availableFromLabel = getAvailableFromLabel(messages, locale, item);
   const fallbackTitle = getContainerShortLabelLocalized(messages, item.container);
   const transportSummaryLabel = getTransportSummaryLabel(messages, item);
-  const shouldShowTransportSummaryOnDesktop = item.logisticsTransportAvailable;
+  const logisticsSummaryLabels = getLogisticsSummaryLabels(messages, item);
+  const logisticsComment = item.logisticsComment?.trim();
+  const logisticsTooltipText =
+    logisticsComment && logisticsComment.length > 0
+      ? truncateTooltipText(logisticsComment)
+      : messages.results.contactForDetails;
+  const showLogisticsTooltip = logisticsSummaryLabels.length > 0;
   const detailsHref =
     detailsQueryString && detailsQueryString.length > 0
       ? `${detailsHrefPrefix}/${item.id}?${detailsQueryString}`
@@ -693,6 +858,7 @@ const ContainerListingResultCard = memo(function ContainerListingResultCard({
     .map((part) => part.trim())
     .filter((part) => part.length > 0 && part !== messages.results.negotiable)
     .join(" | ");
+  const containerColors = item.containerColors ?? [];
 
   return (
     <li className="w-full rounded-md border border-neutral-200 bg-white p-1.5 shadow-sm transition-colors duration-150 hover:border-sky-100 hover:bg-sky-50/60 sm:p-4">
@@ -819,12 +985,49 @@ const ContainerListingResultCard = memo(function ContainerListingResultCard({
 
           <div className="mt-2 flex items-center gap-2 overflow-hidden text-[12px] text-neutral-500 sm:mt-3 sm:flex-wrap sm:overflow-visible sm:text-xs">
             <p
-              className={`min-w-0 truncate text-neutral-600 ${
-                shouldShowTransportSummaryOnDesktop ? "sm:block" : "sm:hidden"
-              }`}
+              className="min-w-0 truncate text-neutral-600 sm:hidden"
             >
               {transportSummaryLabel}
             </p>
+            <div
+              className={`group relative hidden flex-wrap items-center gap-x-1 gap-y-1 sm:flex ${
+                showLogisticsTooltip ? "cursor-help" : ""
+              }`}
+              {...(showLogisticsTooltip
+                ? {
+                    tabIndex: 0,
+                    "aria-label": messages.results.logisticsCommentAria,
+                  }
+                : {})}
+            >
+              {logisticsSummaryLabels.map((label, index) => {
+                const isFreeLabel =
+                  label === messages.results.freeUnloadingLabel ||
+                  label === messages.results.freeTransportLabel ||
+                  label.startsWith(`${messages.results.freeTransportLabel} `);
+                return (
+                  <span
+                    key={`${item.id}-${label}`}
+                    className={isFreeLabel ? "font-medium text-neutral-700" : undefined}
+                  >
+                    {label}
+                    {index < logisticsSummaryLabels.length - 1 ? "," : ""}
+                  </span>
+                );
+              })}
+              {showLogisticsTooltip ? (
+                <div className="pointer-events-none absolute bottom-full left-0 z-30 mb-2 w-72 max-w-[85vw] translate-y-1 rounded-md border border-neutral-700 bg-neutral-900 px-2.5 py-2 text-left text-xs leading-5 text-neutral-100 opacity-0 shadow-xl transition duration-150 group-hover:delay-500 group-hover:translate-y-0 group-hover:opacity-100 group-focus-within:delay-500 group-focus-within:translate-y-0 group-focus-within:opacity-100">
+                  <p className="mb-1 font-medium text-neutral-200">
+                    {messages.results.sellerCommentLabel}
+                  </p>
+                  <p>{logisticsTooltipText}</p>
+                  <span
+                    aria-hidden="true"
+                    className="absolute -bottom-1 left-3 h-2 w-2 rotate-45 border-b border-r border-neutral-700 bg-neutral-900"
+                  />
+                </div>
+              ) : null}
+            </div>
             <p className="ml-auto hidden text-right text-sm text-neutral-700 sm:block">
               {messages.results.availableFromLabel}:{" "}
               <span className="font-medium text-neutral-900">
@@ -834,11 +1037,27 @@ const ContainerListingResultCard = memo(function ContainerListingResultCard({
           </div>
 
           <div className="mt-auto pt-3 flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
-            <div className="flex flex-wrap items-center gap-3">
+            <div className="flex flex-wrap items-center gap-3 sm:hidden">
               <p className="text-[12px] text-neutral-700 sm:text-sm">
                 {messages.results.quantityLabel}: <span className="font-medium text-neutral-900">{item.quantity}</span>
               </p>
             </div>
+            {item.quantity > 1 || containerColors.length > 0 ? (
+              <div className="hidden flex-wrap items-center gap-3 sm:flex">
+                {item.quantity > 1 ? (
+                  <p className="text-sm text-neutral-700">
+                    {messages.results.quantityLabel}: <span className="font-medium text-neutral-900">{item.quantity}</span>
+                  </p>
+                ) : null}
+                <ContainerColorsInlineSummary
+                  messages={messages}
+                  colors={containerColors}
+                  itemId={item.id}
+                />
+              </div>
+            ) : (
+              <span className="hidden sm:inline" />
+            )}
             <p className="min-h-[3.2rem] text-center sm:hidden">
               <span
                 className={`text-[17px] font-semibold ${

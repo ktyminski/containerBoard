@@ -20,6 +20,31 @@ type CountryGeocodeQuery = {
   query: string;
 };
 
+function getLocalityPriority(address?: NominatimAddress): number {
+  if (address?.city?.trim()) {
+    return 7;
+  }
+  if (address?.town?.trim()) {
+    return 6;
+  }
+  if (address?.village?.trim()) {
+    return 5;
+  }
+  if (address?.administrative?.trim()) {
+    return 4;
+  }
+  if (address?.municipality?.trim()) {
+    return 3;
+  }
+  if (address?.city_district?.trim()) {
+    return 2;
+  }
+  if (address?.county?.trim()) {
+    return 1;
+  }
+  return 0;
+}
+
 function getCountrySearchName(code: string): string {
   if (typeof Intl.DisplayNames !== "function") {
     return code;
@@ -98,7 +123,17 @@ export async function searchGeocode(input: {
   }
 
   const rows = (await response.json()) as NominatimResult[];
-  return rows
+  const sortedRows = countryQuery
+    ? rows
+    : [...rows].sort((left, right) => {
+        const priorityDifference =
+          getLocalityPriority(right.address) - getLocalityPriority(left.address);
+        if (priorityDifference !== 0) {
+          return priorityDifference;
+        }
+        return 0;
+      });
+  return sortedRows
     .map((row) => {
       const lat = Number(row.lat);
       const lng = Number(row.lon);

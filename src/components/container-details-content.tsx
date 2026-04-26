@@ -635,16 +635,22 @@ export async function ContainerDetailsContent({
           className="rounded-md border border-neutral-300 bg-white px-3 py-2 text-sm text-neutral-700 hover:bg-neutral-100"
         />
         <div className="ml-auto flex flex-wrap items-center justify-end gap-2">
-          {isPublic ? (
-            <ContainerInquiryModalTrigger
-              listingId={listing._id.toHexString()}
-              isPriceNegotiable={isPriceNegotiable}
-              isLoggedIn={isLoggedIn}
-              initialIsFavorite={initialIsFavorite}
-              turnstileSiteKey={turnstileSiteKey}
-              initialInquiryValues={inquiryInitialValues}
-              className="[&>button:nth-child(1)]:hidden [&>button:nth-child(2)]:hidden"
-            />
+          <ContainerInquiryModalTrigger
+            listingId={listing._id.toHexString()}
+            isPriceNegotiable={isPriceNegotiable}
+            allowInquiryActions={isPublic}
+            isLoggedIn={isLoggedIn}
+            initialIsFavorite={initialIsFavorite}
+            turnstileSiteKey={turnstileSiteKey}
+            initialInquiryValues={inquiryInitialValues}
+          />
+          {isOwner || isAdmin ? (
+            <Link
+              href={`/containers/${listing._id.toHexString()}/edit`}
+              className="rounded-md border border-neutral-300 bg-white px-3 py-2 text-sm text-neutral-700 hover:bg-neutral-100"
+            >
+              {moduleMessages.details.editContainer}
+            </Link>
           ) : null}
         </div>
       </div>
@@ -1065,7 +1071,7 @@ export async function ContainerDetailsContent({
           </p>
         </div>
       </article>
-      <div className="flex flex-wrap items-center justify-end gap-2">
+      <div className="flex flex-wrap items-center justify-end gap-2 sm:hidden">
         <ContainerInquiryModalTrigger
           listingId={listing._id.toHexString()}
           isPriceNegotiable={isPriceNegotiable}

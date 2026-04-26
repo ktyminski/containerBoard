@@ -14,6 +14,7 @@ export type NominatimAddress = {
   village?: string;
   town?: string;
   city?: string;
+  administrative?: string;
   municipality?: string;
   city_district?: string;
   county?: string;
@@ -87,6 +88,7 @@ export function buildGeocodeAddressParts(
       address?.city,
       address?.town,
       address?.village,
+      address?.administrative,
       address?.municipality,
       address?.city_district,
       address?.county,
