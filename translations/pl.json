@@ -2456,9 +2456,9 @@
       "bulkNoCompanyConcierge": "Wyślij nam plik w dowolnym formacie i zrobimy to za Ciebie.",
       "createCompanyProfile": "Załóż profil firmy",
       "deleting": "Usuwanie...",
-      "bulkSelfDescriptionIntro": "Pobierz szablon Excel, uzupe?nij rekordy i wgraj plik XLSX lub XLS. W arkuszu S?ownik masz wszystkie dozwolone warto?ci. ???te kolumny s? wymagane, a lokalizacja to jedno pole tekstowe. Maksymalnie 250 rekord?w na import. Multiimport tworzy tylko oferty sprzeda?y.",
-      "bulkSupportLine": "W przypadku problem?w skontaktuj si? z nami, ch?tnie pomo?emy.",
-      "bulkPhotosSupportLine": "Je?li chcesz, ?eby?my zaj?li si? r?wnie? wprowadzeniem zdj??, wy?lij nam plik ZIP ze zdj?ciami."
+      "bulkSelfDescriptionIntro": "Pobierz szablon Excel, uzupełnij rekordy i wgraj plik XLSX lub XLS. W arkuszu Słownik masz wszystkie dozwolone wartości. Żółte kolumny są wymagane, a lokalizacja to jedno pole tekstowe. Maksymalnie 250 rekordów na import. Multiimport tworzy tylko oferty sprzedaży.",
+      "bulkSupportLine": "W przypadku problemów skontaktuj się z nami, chętnie pomożemy.",
+      "bulkPhotosSupportLine": "Jeśli chcesz, żebyśmy zajęli się również wprowadzeniem zdjęć, wyślij nam plik ZIP ze zdjęciami."
     },
     "bulkApi": {
       "onlySell": "Bulk import obsługuje tylko oferty typu sell",
