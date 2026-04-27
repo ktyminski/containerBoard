@@ -639,6 +639,28 @@ export async function ContainerDetailsContent({
     Number.isFinite(listing.contactRevealCount)
       ? Math.max(0, Math.trunc(listing.contactRevealCount))
       : 0;
+  const descriptionSection = sanitizedDescriptionHtml ? (
+    <section className="rounded-md border border-neutral-300 bg-white p-4">
+      <h2 className="text-sm font-semibold text-neutral-800">
+        {moduleMessages.details.descriptionTitle}
+      </h2>
+      <div
+        className="mt-3 space-y-2 text-sm text-neutral-700 [&_p]:leading-6 [&_ul]:list-disc [&_ul]:pl-5"
+        dangerouslySetInnerHTML={{ __html: sanitizedDescriptionHtml }}
+      />
+    </section>
+  ) : seoNarrative.length > 0 ? (
+    <section className="rounded-md border border-neutral-300 bg-white p-4">
+      <h2 className="text-sm font-semibold text-neutral-800">
+        {moduleMessages.details.descriptionTitle}
+      </h2>
+      <div className="mt-3 space-y-3 text-sm leading-6 text-neutral-700">
+        {seoNarrative.map((paragraph, index) => (
+          <p key={`${listingItem.id}-seo-fallback-description-${index}`}>{paragraph}</p>
+        ))}
+      </div>
+    </section>
+  ) : null;
 
   return (
     <div className="grid gap-4">
@@ -950,28 +972,7 @@ export async function ContainerDetailsContent({
           </section>
         ) : null}
 
-        {sanitizedDescriptionHtml ? (
-          <section className="mt-4 rounded-md border border-neutral-300 bg-white p-4">
-            <h2 className="text-sm font-semibold text-neutral-800">
-              {moduleMessages.details.descriptionTitle}
-            </h2>
-            <div
-              className="mt-3 space-y-2 text-sm text-neutral-700 [&_p]:leading-6 [&_ul]:list-disc [&_ul]:pl-5"
-              dangerouslySetInnerHTML={{ __html: sanitizedDescriptionHtml }}
-            />
-          </section>
-        ) : seoNarrative.length > 0 ? (
-          <section className="mt-4 rounded-md border border-neutral-300 bg-white p-4">
-            <h2 className="text-sm font-semibold text-neutral-800">
-              {moduleMessages.details.descriptionTitle}
-            </h2>
-            <div className="mt-3 space-y-3 text-sm leading-6 text-neutral-700">
-              {seoNarrative.map((paragraph, index) => (
-                <p key={`${listingItem.id}-seo-fallback-description-${index}`}>{paragraph}</p>
-              ))}
-            </div>
-          </section>
-        ) : null}
+        {descriptionSection ? <div className="mt-4 hidden lg:block">{descriptionSection}</div> : null}
 
         <section className="mt-4 rounded-md border border-neutral-300 bg-white p-4">
           <h2 className="text-sm font-semibold text-neutral-800">
@@ -1072,6 +1073,8 @@ export async function ContainerDetailsContent({
             messages={moduleMessages.shared}
           />
         </section>
+
+        {descriptionSection ? <div className="mt-4 lg:hidden">{descriptionSection}</div> : null}
 
         <ContainerContactRevealCard
           listingId={listing._id.toHexString()}

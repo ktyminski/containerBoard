@@ -29,13 +29,6 @@ export const metadata: Metadata = {
     default: SITE_NAME,
     template: `%s | ${SITE_NAME}`,
   },
-  icons: {
-    icon: [
-      { url: "/favicon.svg?v=9", type: "image/svg+xml" },
-      { url: "/favicon.ico?v=9", sizes: "any" },
-    ],
-    shortcut: [{ url: "/favicon.ico?v=9" }],
-  },
   openGraph: {
     siteName: SITE_NAME,
     type: "website",

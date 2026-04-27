@@ -1,9 +1,10 @@
 import type { Metadata } from "next";
 import { cookies } from "next/headers";
-import { FacebookIcon, InstagramIcon, LinkedInIcon } from "@/components/social-icons";
+import { FacebookIcon, LinkedInIcon } from "@/components/social-icons";
 import { StaticPageFrame } from "@/components/static-page-frame";
 import { getLocaleFromRequest, getMessages, LOCALE_COOKIE_NAME } from "@/lib/i18n";
 import { buildPageMetadata } from "@/lib/seo";
+import { SITE_FACEBOOK_URL, SITE_LINKEDIN_URL } from "@/lib/site-links";
 
 type ContactPageProps = {
   searchParams: Promise<Record<string, string | string[] | undefined>>;
@@ -76,7 +77,7 @@ export default async function ContactPage({ searchParams }: ContactPageProps) {
         </div>
         <div className="flex items-center gap-2 text-neutral-300">
           <a
-            href="https://www.linkedin.com/"
+            href={SITE_LINKEDIN_URL}
             target="_blank"
             rel="noreferrer noopener"
             aria-label={messages.footer.linkedinAria}
@@ -85,22 +86,13 @@ export default async function ContactPage({ searchParams }: ContactPageProps) {
             <LinkedInIcon />
           </a>
           <a
-            href="https://www.facebook.com/"
+            href={SITE_FACEBOOK_URL}
             target="_blank"
             rel="noreferrer noopener"
             aria-label={messages.footer.facebookAria}
             className="rounded-md border border-neutral-700 p-2.5 transition hover:border-neutral-500 hover:text-neutral-100"
           >
             <FacebookIcon />
-          </a>
-          <a
-            href="https://www.instagram.com/"
-            target="_blank"
-            rel="noreferrer noopener"
-            aria-label={messages.footer.instagramAria}
-            className="rounded-md border border-neutral-700 p-2.5 transition hover:border-neutral-500 hover:text-neutral-100"
-          >
-            <InstagramIcon />
           </a>
         </div>
       </div>

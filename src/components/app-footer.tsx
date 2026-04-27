@@ -1,8 +1,9 @@
 "use client";
 
 import Link from "next/link";
-import { FacebookIcon, InstagramIcon, LinkedInIcon } from "@/components/social-icons";
+import { FacebookIcon, LinkedInIcon } from "@/components/social-icons";
 import { withLang, type AppLocale, type AppMessages } from "@/lib/i18n";
+import { SITE_FACEBOOK_URL, SITE_LINKEDIN_URL } from "@/lib/site-links";
 
 type AppFooterProps = {
   locale: AppLocale;
@@ -57,7 +58,7 @@ export function AppFooter({ locale, messages }: AppFooterProps) {
         <div className="mt-6 h-px w-full max-w-3xl bg-[#1f4f86]" />
         <div className="mt-4 flex items-center gap-2 text-[#bcd6f3]">
           <a
-            href="https://www.linkedin.com/"
+            href={SITE_LINKEDIN_URL}
             target="_blank"
             rel="noreferrer noopener"
             aria-label={messages.linkedinAria}
@@ -66,22 +67,13 @@ export function AppFooter({ locale, messages }: AppFooterProps) {
             <LinkedInIcon />
           </a>
           <a
-            href="https://www.facebook.com/"
+            href={SITE_FACEBOOK_URL}
             target="_blank"
             rel="noreferrer noopener"
             aria-label={messages.facebookAria}
             className="rounded-md border border-[#2f639a] bg-[#082650]/70 p-2.5 transition hover:border-[#67c7ff] hover:text-[#e2efff]"
           >
             <FacebookIcon />
-          </a>
-          <a
-            href="https://www.instagram.com/"
-            target="_blank"
-            rel="noreferrer noopener"
-            aria-label={messages.instagramAria}
-            className="rounded-md border border-[#2f639a] bg-[#082650]/70 p-2.5 transition hover:border-[#67c7ff] hover:text-[#e2efff]"
-          >
-            <InstagramIcon />
           </a>
         </div>
         <p className="mt-4 text-left text-[11px] tracking-wide text-[#8fb4dd]">

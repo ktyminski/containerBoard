@@ -308,6 +308,42 @@ function getPrimaryLocation(item: ContainerListingItem): {
   return { city: null, country: null, label: null };
 }
 
+function getAllLocationLabels(item: ContainerListingItem): string[] {
+  const labels: string[] = [];
+  const seen = new Set<string>();
+
+  const appendLocation = (input: {
+    city?: string | null;
+    country?: string | null;
+  }) => {
+    const city = input.city?.trim() || "";
+    const country = input.country?.trim() || "";
+    const label = city && country ? `${city}, ${country}` : city || country;
+    const normalized = label.trim().toLowerCase();
+    if (!normalized || seen.has(normalized)) {
+      return;
+    }
+    seen.add(normalized);
+    labels.push(label.trim());
+  };
+
+  for (const location of item.locations ?? []) {
+    appendLocation({
+      city: location.locationAddressParts?.city ?? location.locationCity,
+      country: location.locationAddressParts?.country ?? location.locationCountry,
+    });
+  }
+
+  if (labels.length === 0) {
+    appendLocation({
+      city: item.locationAddressParts?.city ?? item.locationCity,
+      country: item.locationAddressParts?.country ?? item.locationCountry,
+    });
+  }
+
+  return labels;
+}
+
 function getSeoDisplayLabel(item: ContainerListingItem, locale: AppLocale): string {
   const copy = getListingCopy(locale);
   const sizeLabel = getContainerSeoSizeLabel(item);
@@ -518,31 +554,35 @@ function getNarrativeSubject(item: ContainerListingItem, locale: AppLocale): str
   return `${sizeLabel} ${typeLabel} ${copy.shippingContainer}`;
 }
 
-function getNarrativeLocationPhrase(
-  locationLabel: string | null,
-  locale: AppLocale,
-): string {
+function getNarrativeLocationPhrase(item: ContainerListingItem, locale: AppLocale): string {
+  const locationLabels = getAllLocationLabels(item);
+
   if (locale === "pl") {
-    return locationLabel
-      ? `w lokalizacji ${locationLabel}`
+    return locationLabels.length > 0
+      ? `w lokalizacjach ${joinNaturalLanguage(locationLabels, locale)}`
       : "w podanej lokalizacji";
   }
   if (locale === "de") {
-    return locationLabel ? `am Standort ${locationLabel}` : "am angegebenen Standort";
+    return locationLabels.length > 0
+      ? `an den Standorten ${joinNaturalLanguage(locationLabels, locale)}`
+      : "am angegebenen Standort";
   }
   if (locale === "uk") {
-    return locationLabel ? `u lokatsii ${locationLabel}` : "u vkazanii lokatsii";
+    return locationLabels.length > 0
+      ? `u lokatsiiakh ${joinNaturalLanguage(locationLabels, locale)}`
+      : "u vkazanii lokatsii";
   }
-  return locationLabel ? `in ${locationLabel}` : "in the selected location";
+  return locationLabels.length > 0
+    ? `in locations ${joinNaturalLanguage(locationLabels, locale)}`
+    : "in the selected location";
 }
 
 function getNarrativeLeadSentence(
   item: ContainerListingItem,
   locale: AppLocale,
-  locationLabel: string | null,
 ): string {
   const subject = getNarrativeSubject(item, locale);
-  const locationPhrase = getNarrativeLocationPhrase(locationLabel, locale);
+  const locationPhrase = getNarrativeLocationPhrase(item, locale);
 
   if (locale === "pl") {
     if (item.type === "rent") {
@@ -792,11 +832,11 @@ export function getContainerListingSeoDescription(
 ): string {
   const copy = getListingCopy(locale);
   const displayLabel = getSeoDisplayLabel(item, locale);
-  const location = getPrimaryLocation(item);
+  const locationLabels = getAllLocationLabels(item);
   const conditionLabel = getConditionLabel(locale, item.container.condition);
   const price = getListingSeoPrice(item, locale);
-  const locationPart = location.label
-    ? `${copy.locationPrefix} ${location.city ?? location.label}`
+  const locationPart = locationLabels.length > 0
+    ? `${copy.locationPrefix} ${joinNaturalLanguage(locationLabels, locale)}`
     : locale === "pl"
       ? "w wybranej lokalizacji"
       : "in the selected location";
@@ -818,11 +858,8 @@ export function getContainerListingSeoNarrative(
   locale: AppLocale,
 ): string[] {
   const copy = getListingCopy(locale);
-  const location = getPrimaryLocation(item);
-  const locationLabel = location.label;
-
   const firstParagraph = [
-    getNarrativeLeadSentence(item, locale, locationLabel),
+    getNarrativeLeadSentence(item, locale),
     getConditionNarrativeSentence(item, locale),
   ].join(" ");
 
