@@ -78,7 +78,7 @@ export const runtime = "nodejs";
 const MAX_POPUP_DETAILS_IDS = 80;
 const MAX_MAP_POINTS = 50_000;
 const MAX_LOCAL_FAVORITE_IDS = 2_000;
-const MAX_LISTING_PHOTO_COUNT = 4;
+const MAX_LISTING_PHOTO_COUNT = 6;
 const MAX_LISTING_PHOTO_BYTES = 5 * 1024 * 1024;
 
 const querySchema = z.object({

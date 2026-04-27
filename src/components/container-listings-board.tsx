@@ -131,7 +131,7 @@ const MAP_POINT_LAYER_ID = "containers-list-points";
 const MAP_DETAIL_POINT_LAYER_ID = "containers-list-detail-points";
 const MAX_CLUSTER_POPUP_ITEMS = 24;
 const MAX_POPUP_VISIBLE_ITEMS = 20;
-const MAP_CLUSTER_MAX_ZOOM = 12;
+const MAP_CLUSTER_MAX_ZOOM = 10;
 const DEFAULT_MAP_CENTER: [number, number] = [19.1451, 51.9194];
 const LIST_PAGE_SIZE = 20;
 const GUEST_FAVORITES_STORAGE_KEY = "container-listing-favorites-v1";
@@ -791,31 +791,7 @@ const ListingsMap = memo(function ListingsMap({
     }),
     [points],
   );
-  const clusterFeatureCollection = useMemo<MapFeatureCollection>(() => {
-    const uniqueByListingId = new Map<string, ContainerListingMapPoint>();
-
-    for (const item of points) {
-      if (!uniqueByListingId.has(item.id)) {
-        uniqueByListingId.set(item.id, item);
-      }
-    }
-
-    return {
-      type: "FeatureCollection",
-      features: Array.from(uniqueByListingId.values()).map((item) => ({
-        type: "Feature",
-        geometry: {
-          type: "Point",
-          coordinates: [item.locationLng as number, item.locationLat as number],
-        },
-        properties: {
-          id: item.id,
-          type: item.type,
-          quantity: item.quantity,
-        },
-      })),
-    };
-  }, [points]);
+  const clusterFeatureCollection = detailFeatureCollection;
 
   const loadPopupDetailsByIds = useCallback(async (ids: string[]) => {
     const uniqueIds = Array.from(new Set(ids.filter(Boolean)));

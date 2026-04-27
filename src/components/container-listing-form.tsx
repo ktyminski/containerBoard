@@ -17,8 +17,9 @@ import {
 import {
   CREATE_FLOW_PRECHECK_FIELDS,
   MAX_ADDITIONAL_LOCATIONS,
+  MAX_CONTAINER_ADDITIONAL_PHOTOS,
   MAX_CONTAINER_PHOTO_MB,
-  MAX_CONTAINER_PHOTOS,
+  MAX_CONTAINER_TOTAL_PHOTOS,
   PRIMARY_LOCATION_MAP_ID,
   buildLocationDisplay,
   getContainerLogoPlaceholderSrc,
@@ -699,11 +700,11 @@ export function ContainerListingForm({
     const canUploadPhotosForSubmission = values.type !== "buy";
     if (
       canUploadPhotosForSubmission &&
-      totalPhotoCount > MAX_CONTAINER_PHOTOS
+      totalPhotoCount > MAX_CONTAINER_TOTAL_PHOTOS
     ) {
       toast.error(
         formatTemplate(messages.form.maxPhotosTotal, {
-          count: MAX_CONTAINER_PHOTOS,
+          count: MAX_CONTAINER_TOTAL_PHOTOS,
         }),
       );
       return;
@@ -1934,7 +1935,7 @@ export function ContainerListingForm({
               <div className="grid gap-2">
                 <ImageDropzone
                   title={formatTemplate(messages.form.additionalPhotosTitle, {
-                    count: MAX_CONTAINER_PHOTOS,
+                    count: MAX_CONTAINER_ADDITIONAL_PHOTOS,
                   })}
                   hintText={formatTemplate(messages.form.photoHint, {
                     count: MAX_CONTAINER_PHOTO_MB,

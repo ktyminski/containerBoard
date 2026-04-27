@@ -1,6 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getCurrentUserFromRequest } from "@/lib/auth-user";
-import { getContainerListingFavoritesCollection, getContainerListingsCollection } from "@/lib/container-listings";
+import {
+  expireContainerListingsIfNeeded,
+  getContainerListingFavoritesCollection,
+  getContainerListingsCollection,
+} from "@/lib/container-listings";
+import { LISTING_STATUS } from "@/lib/container-listing-types";
 import { enforceAuthenticatedRateLimitOrResponse } from "@/lib/app-rate-limit";
 import { logError } from "@/lib/server-logger";
 
@@ -16,6 +21,8 @@ function isTruthyFlag(value: string | null): boolean {
 
 export async function GET(request: NextRequest) {
   try {
+    await expireContainerListingsIfNeeded();
+
     const user = await getCurrentUserFromRequest(request);
     if (!user?._id) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
@@ -34,13 +41,8 @@ export async function GET(request: NextRequest) {
 
     const mineOnly = isTruthyFlag(request.nextUrl.searchParams.get("mine"));
     const favorites = await getContainerListingFavoritesCollection();
-
-    if (!mineOnly) {
-      const total = await favorites.countDocuments({ userId: user._id });
-      return NextResponse.json({ total, hasAny: total > 0 });
-    }
-
     const listings = await getContainerListingsCollection();
+    const now = new Date();
     const [summary] = await favorites
       .aggregate<{ total: number }>([
         { $match: { userId: user._id } },
@@ -53,7 +55,13 @@ export async function GET(request: NextRequest) {
           },
         },
         { $unwind: "$listing" },
-        { $match: { "listing.createdByUserId": user._id } },
+        {
+          $match: {
+            "listing.status": LISTING_STATUS.ACTIVE,
+            "listing.expiresAt": { $gt: now },
+            ...(mineOnly ? { "listing.createdByUserId": user._id } : {}),
+          },
+        },
         { $count: "total" },
       ])
       .toArray();

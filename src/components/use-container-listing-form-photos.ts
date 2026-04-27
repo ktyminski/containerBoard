@@ -7,7 +7,7 @@ import type { ImageCropState } from "@/components/new-company-form/types";
 import {
   MAX_CONTAINER_PHOTO_BYTES,
   MAX_CONTAINER_PHOTO_MB,
-  MAX_CONTAINER_PHOTOS,
+  MAX_CONTAINER_TOTAL_PHOTOS,
   createImageItems,
   type ImageItem,
   optimizeListingImageForUpload,
@@ -95,10 +95,10 @@ export function useContainerListingFormPhotos({
         onWarning(messages.form.addGraphicFile);
         return;
       }
-      if (!coverPhotoItem && totalPhotoCount >= MAX_CONTAINER_PHOTOS) {
+      if (!coverPhotoItem && totalPhotoCount >= MAX_CONTAINER_TOTAL_PHOTOS) {
         onWarning(
           formatTemplate(messages.form.removePhotoForCover, {
-            count: MAX_CONTAINER_PHOTOS,
+            count: MAX_CONTAINER_TOTAL_PHOTOS,
           }),
         );
         return;
@@ -180,12 +180,12 @@ export function useContainerListingFormPhotos({
 
       const remainingSlots = Math.max(
         0,
-        MAX_CONTAINER_PHOTOS - totalPhotoCount,
+        MAX_CONTAINER_TOTAL_PHOTOS - totalPhotoCount,
       );
       if (remainingSlots === 0) {
         onWarning(
           formatTemplate(messages.form.maxPhotosTotal, {
-            count: MAX_CONTAINER_PHOTOS,
+            count: MAX_CONTAINER_TOTAL_PHOTOS,
           }),
         );
         return;
