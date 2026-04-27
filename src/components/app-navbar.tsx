@@ -12,31 +12,33 @@ type AppNavbarProps = {
 };
 
 export async function AppNavbar({ locale, messages }: AppNavbarProps) {
+  const brandWordmark = (
+    <span className="inline-flex items-center">
+      <span className="hidden shrink-0 items-center sm:inline-flex">
+        <ContainerboardBrandMark className="h-[1.08em] w-auto opacity-95" />
+      </span>
+      <span className="text-[#e2efff]">Container</span>
+      <span className="text-[#38bdf8]">Board</span>
+    </span>
+  );
+
   return (
     <header className="sticky top-0 z-40 h-16 max-h-16 border-b border-[#1f4f86] bg-[linear-gradient(180deg,#031a3c_0%,#05244f_100%)] backdrop-blur">
       <div className="flex h-full w-full items-center justify-between gap-3 px-4 md:px-6">
         <div className="flex min-w-0 items-center gap-3 whitespace-nowrap">
           <Link
             href={withLang("/list", locale)}
-            className="inline-flex h-9 items-center gap-2 text-[15px] font-semibold leading-none tracking-[0.06em] drop-shadow-[0_1px_8px_rgba(3,169,244,0.22)] sm:hidden"
+            className="inline-flex h-9 items-center text-[15px] font-semibold leading-none tracking-[0.06em] drop-shadow-[0_1px_8px_rgba(3,169,244,0.22)] sm:hidden"
             aria-label="ContainerBoard"
           >
-            <ContainerboardBrandMark className="h-6 w-auto shrink-0" />
-            <span>
-              <span className="text-[#e2efff]">Container</span>
-              <span className="text-[#38bdf8]">Board</span>
-            </span>
+            {brandWordmark}
           </Link>
           <Link
             href={withLang("/", locale)}
-            className="hidden h-9 items-center gap-2 text-[15px] font-semibold leading-none tracking-[0.06em] drop-shadow-[0_1px_8px_rgba(3,169,244,0.22)] sm:inline-flex"
+            className="hidden h-9 items-center text-[15px] font-semibold leading-none tracking-[0.06em] drop-shadow-[0_1px_8px_rgba(3,169,244,0.22)] sm:inline-flex"
             aria-label="ContainerBoard"
           >
-            <ContainerboardBrandMark className="h-6 w-auto shrink-0" />
-            <span>
-              <span className="text-[#e2efff]">Container</span>
-              <span className="text-[#38bdf8]">Board</span>
-            </span>
+            {brandWordmark}
           </Link>
           <Link
             href={withLang("/list", locale)}
