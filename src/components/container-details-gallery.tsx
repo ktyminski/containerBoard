@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { createPortal } from "react-dom";
 import { ContainerPhotoWithPlaceholder } from "@/components/container-photo-with-placeholder";
 import type { ContainerModuleMessages } from "@/components/container-modules-i18n";
 import { formatTemplate } from "@/lib/i18n";
@@ -15,6 +16,8 @@ type ContainerDetailsGalleryProps = {
   mainImageClassName?: string;
   thumbnailsGridClassName?: string;
   thumbnailButtonClassName?: string;
+  previewImages?: string[];
+  previewIndexOffset?: number;
   messages: ContainerModuleMessages["gallery"];
 };
 
@@ -28,10 +31,13 @@ export function ContainerDetailsGallery({
   mainImageClassName,
   thumbnailsGridClassName,
   thumbnailButtonClassName,
+  previewImages,
+  previewIndexOffset = 0,
   messages,
 }: ContainerDetailsGalleryProps) {
   const [selectedIndex, setSelectedIndex] = useState(0);
   const [zoomedIndex, setZoomedIndex] = useState<number | null>(null);
+  const zoomImages = previewImages && previewImages.length > 0 ? previewImages : images;
 
   useEffect(() => {
     if (zoomedIndex === null) {
@@ -48,7 +54,7 @@ export function ContainerDetailsGallery({
           if (current === null) {
             return current;
           }
-          return (current + 1) % images.length;
+          return (current + 1) % zoomImages.length;
         });
       }
       if (event.key === "ArrowLeft") {
@@ -56,7 +62,7 @@ export function ContainerDetailsGallery({
           if (current === null) {
             return current;
           }
-          return (current - 1 + images.length) % images.length;
+          return (current - 1 + zoomImages.length) % zoomImages.length;
         });
       }
     }
@@ -65,14 +71,88 @@ export function ContainerDetailsGallery({
     return () => {
       window.removeEventListener("keydown", handleKeyDown);
     };
-  }, [images.length, zoomedIndex]);
+  }, [zoomImages.length, zoomedIndex]);
 
   if (images.length === 0 || (!showMainImage && !showThumbnails)) {
     return null;
   }
 
   const selectedImage = images[Math.min(selectedIndex, images.length - 1)] ?? images[0];
-  const zoomedImage = zoomedIndex === null ? null : images[zoomedIndex] ?? null;
+  const zoomedImage = zoomedIndex === null ? null : zoomImages[zoomedIndex] ?? null;
+  const zoomOverlay = zoomedImage ? (
+    <div className="fixed inset-0 z-[1000] flex items-center justify-center bg-neutral-950/85 p-3 sm:p-4">
+      <button
+        type="button"
+        aria-label={messages.closePreviewAria}
+        className="absolute inset-0"
+        onClick={() => {
+          setZoomedIndex(null);
+        }}
+      />
+
+      <div className="relative z-10 flex h-full w-full max-w-5xl flex-col gap-3 pt-[max(env(safe-area-inset-top),0px)]">
+        <div className="flex justify-end">
+          <button
+            type="button"
+            onClick={() => {
+              setZoomedIndex(null);
+            }}
+            className="rounded-md border border-neutral-300 bg-white px-3 py-1.5 text-sm text-neutral-700 hover:bg-neutral-100"
+          >
+            {messages.close}
+          </button>
+        </div>
+
+        <div className="relative min-h-0 flex-1 overflow-hidden rounded-md border border-neutral-700 bg-neutral-900">
+          <ContainerPhotoWithPlaceholder
+            src={zoomedImage}
+            alt={formatTemplate(messages.previewAlt, { title })}
+            fill
+            unoptimized
+            className="object-contain p-2"
+            sizes="100vw"
+            priority
+          />
+        </div>
+
+        {zoomImages.length > 1 ? (
+          <div className="flex items-center justify-center gap-2 pb-[max(env(safe-area-inset-bottom),0px)]">
+            <button
+              type="button"
+              className="rounded-md border border-neutral-300 bg-white px-3 py-1.5 text-sm text-neutral-700 hover:bg-neutral-100"
+              onClick={() => {
+                setZoomedIndex((current) => {
+                  if (current === null) {
+                    return current;
+                  }
+                  return (current - 1 + zoomImages.length) % zoomImages.length;
+                });
+              }}
+            >
+              {messages.previous}
+            </button>
+            <p className="min-w-12 text-center text-sm text-neutral-100">
+              {(zoomedIndex ?? 0) + 1} / {zoomImages.length}
+            </p>
+            <button
+              type="button"
+              className="rounded-md border border-neutral-300 bg-white px-3 py-1.5 text-sm text-neutral-700 hover:bg-neutral-100"
+              onClick={() => {
+                setZoomedIndex((current) => {
+                  if (current === null) {
+                    return current;
+                  }
+                  return (current + 1) % zoomImages.length;
+                });
+              }}
+            >
+              {messages.next}
+            </button>
+          </div>
+        ) : null}
+      </div>
+    </div>
+  ) : null;
 
   return (
     <>
@@ -81,7 +161,7 @@ export function ContainerDetailsGallery({
           <button
             type="button"
             onClick={() => {
-              setZoomedIndex(Math.min(selectedIndex, images.length - 1));
+              setZoomedIndex(Math.min(selectedIndex + previewIndexOffset, zoomImages.length - 1));
             }}
             className={mainImageClassName ?? "relative h-36 w-36 overflow-hidden rounded-md border border-neutral-200 bg-neutral-100 sm:h-44 sm:w-44"}
           >
@@ -107,7 +187,7 @@ export function ContainerDetailsGallery({
                   type="button"
                   onClick={() => {
                     setSelectedIndex(index);
-                    setZoomedIndex(index);
+                    setZoomedIndex(Math.min(index + previewIndexOffset, zoomImages.length - 1));
                   }}
                   className={
                     thumbnailButtonClassName ??
@@ -134,80 +214,9 @@ export function ContainerDetailsGallery({
         ) : null}
       </div>
 
-      {zoomedImage ? (
-        <div className="fixed inset-0 z-[85] flex items-center justify-center bg-neutral-950/85 p-4">
-          <button
-            type="button"
-            aria-label={messages.closePreviewAria}
-            className="absolute inset-0"
-            onClick={() => {
-              setZoomedIndex(null);
-            }}
-          />
-
-          <div className="relative z-10 flex w-full max-w-5xl flex-col gap-3">
-            <div className="flex justify-end">
-              <button
-                type="button"
-                onClick={() => {
-                  setZoomedIndex(null);
-                }}
-                className="rounded-md border border-neutral-300 bg-white px-3 py-1.5 text-sm text-neutral-700 hover:bg-neutral-100"
-              >
-                {messages.close}
-              </button>
-            </div>
-
-            <div className="relative h-[70vh] w-full overflow-hidden rounded-md border border-neutral-700 bg-neutral-900">
-              <ContainerPhotoWithPlaceholder
-                src={zoomedImage}
-                alt={formatTemplate(messages.previewAlt, { title })}
-                fill
-                unoptimized
-                className="object-contain p-2"
-                sizes="100vw"
-                priority
-              />
-            </div>
-
-            {images.length > 1 ? (
-              <div className="flex items-center justify-center gap-2">
-                <button
-                  type="button"
-                  className="rounded-md border border-neutral-300 bg-white px-3 py-1.5 text-sm text-neutral-700 hover:bg-neutral-100"
-                  onClick={() => {
-                    setZoomedIndex((current) => {
-                      if (current === null) {
-                        return current;
-                      }
-                    return (current - 1 + images.length) % images.length;
-                  });
-                }}
-              >
-                  {messages.previous}
-                </button>
-                <p className="text-sm text-neutral-100">
-                  {(zoomedIndex ?? 0) + 1} / {images.length}
-                </p>
-                <button
-                  type="button"
-                  className="rounded-md border border-neutral-300 bg-white px-3 py-1.5 text-sm text-neutral-700 hover:bg-neutral-100"
-                  onClick={() => {
-                    setZoomedIndex((current) => {
-                      if (current === null) {
-                        return current;
-                      }
-                    return (current + 1) % images.length;
-                  });
-                }}
-              >
-                  {messages.next}
-                </button>
-              </div>
-            ) : null}
-          </div>
-        </div>
-      ) : null}
+      {typeof document !== "undefined" && zoomOverlay
+        ? createPortal(zoomOverlay, document.body)
+        : null}
     </>
   );
 }

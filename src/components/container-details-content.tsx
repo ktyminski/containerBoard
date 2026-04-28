@@ -8,7 +8,6 @@ import { ContainerDetailsGallery } from "@/components/container-details-gallery"
 import { ContainerContactRevealCard } from "@/components/container-contact-reveal-card";
 import { ContainerDetailsRelatedListings } from "@/components/container-details-related-listings";
 import { ContainerDetailsScrollTop } from "@/components/container-details-scroll-top";
-import { ContainerPhotoWithPlaceholder } from "@/components/container-photo-with-placeholder";
 import {
   ContainerDetailsLocationsMap,
   type ContainerDetailsLocationPoint,
@@ -448,6 +447,13 @@ function getCscValidityLabel(item: ContainerListingItem): string | null {
   return `${String(item.cscValidToMonth).padStart(2, "0")}.${item.cscValidToYear}`;
 }
 
+function getOptionalBooleanDetailLabel(
+  value: boolean,
+  moduleMessages: ReturnType<typeof getMessages>["containerModules"],
+): string {
+  return value ? moduleMessages.details.yes : moduleMessages.details.noData;
+}
+
 function getQuantityDisplay(value: number): string {
   if (!Number.isFinite(value) || value <= 1) {
     return "1";
@@ -736,23 +742,22 @@ export async function ContainerDetailsContent({
             <div className="grid gap-4 sm:grid-cols-[176px_minmax(0,1fr)] sm:items-start">
               {hasRealMainImage ? (
                 <div className="sm:hidden">
-                  <div className="relative mx-auto aspect-square w-full max-w-[375px] overflow-hidden rounded-md border border-neutral-200 bg-neutral-100">
-                    <ContainerPhotoWithPlaceholder
-                      src={mainImage}
-                      alt={galleryTitle}
-                      fill
-                      unoptimized
-                      className="object-contain p-1"
-                      sizes="(max-width: 640px) 100vw, 375px"
-                      priority
-                    />
-                  </div>
+                  <ContainerDetailsGallery
+                    images={detailPhotoUrls}
+                    title={galleryTitle}
+                    showMainImage
+                    mainImagePriority
+                    showThumbnails={false}
+                    className="mt-0"
+                    mainImageClassName="relative mx-auto aspect-square w-full max-w-[375px] overflow-hidden rounded-md border border-neutral-200 bg-neutral-100"
+                    messages={moduleMessages.gallery}
+                  />
                 </div>
               ) : null}
 
               <div className="hidden h-fit justify-items-start sm:grid">
                 <ContainerDetailsGallery
-                  images={[mainImage]}
+                  images={hasRealMainImage ? detailPhotoUrls : [mainImage]}
                   title={galleryTitle}
                   showMainImage
                   mainImagePriority
@@ -922,25 +927,22 @@ export async function ContainerDetailsContent({
                 <p>
                   {moduleMessages.details.cscPlateLabel}:{" "}
                   <span className="text-neutral-900">
-                    {listingItem.hasCscPlate
-                      ? moduleMessages.details.yes
-                      : moduleMessages.details.no}
+                    {getOptionalBooleanDetailLabel(listingItem.hasCscPlate, moduleMessages)}
                   </span>
                 </p>
                 <p>
                   {moduleMessages.details.cscCertificationLabel}:{" "}
                   <span className="text-neutral-900">
-                    {listingItem.hasCscCertification
-                      ? moduleMessages.details.yes
-                      : moduleMessages.details.no}
+                    {getOptionalBooleanDetailLabel(
+                      listingItem.hasCscCertification,
+                      moduleMessages,
+                    )}
                   </span>
                 </p>
                 <p>
                   {moduleMessages.details.warrantyLabel}:{" "}
                   <span className="text-neutral-900">
-                    {listingItem.hasWarranty
-                      ? moduleMessages.details.yes
-                      : moduleMessages.details.no}
+                    {getOptionalBooleanDetailLabel(listingItem.hasWarranty, moduleMessages)}
                   </span>
                 </p>
                 <p>
@@ -1107,6 +1109,8 @@ export async function ContainerDetailsContent({
               className="mt-3"
               thumbnailsGridClassName="grid gap-3 sm:grid-cols-2"
               thumbnailButtonClassName="relative aspect-[4/3] overflow-hidden rounded-md border border-neutral-200 bg-neutral-100 transition hover:border-sky-300 hover:ring-1 hover:ring-sky-200"
+              previewImages={detailPhotoUrls}
+              previewIndexOffset={1}
               messages={moduleMessages.gallery}
             />
           </section>
