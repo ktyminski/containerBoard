@@ -2199,7 +2199,7 @@
       "unloadingIncluded": "Розвантаження / HDS включено",
       "unloadingAvailable": "Розвантаження / HDS доступне",
       "contactTitle": "Контакт",
-      "contactHiddenTitle": "Контакт приховано до відкриття",
+      "contactHiddenTitle": "Контакт продавця - без посередників",
       "contactHiddenHint": "Натисніть на секцію або кнопку, щоб побачити email і номер телефону продавця.",
       "contactRevealButton": "Показати контакт",
       "contactRevealLoading": "Відкриваю...",

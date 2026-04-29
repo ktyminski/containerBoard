@@ -10,7 +10,12 @@ import { FocusVisibleInit } from "@/components/focus-visible-init";
 import { ToastProvider } from "@/components/toast-provider";
 import { SESSION_COOKIE_NAME } from "@/lib/auth-session";
 import { getMessages, LOCALE_COOKIE_NAME, resolveLocale } from "@/lib/i18n";
-import { getSiteUrl, SITE_NAME } from "@/lib/seo";
+import {
+  DEFAULT_OPEN_GRAPH_IMAGE_PATH,
+  getAbsoluteUrl,
+  getSiteUrl,
+  SITE_NAME,
+} from "@/lib/seo";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -23,6 +28,8 @@ const geistMono = Geist_Mono({
   subsets: ["latin"],
 });
 
+const defaultOpenGraphImage = getAbsoluteUrl(DEFAULT_OPEN_GRAPH_IMAGE_PATH);
+
 export const metadata: Metadata = {
   metadataBase: new URL(getSiteUrl()),
   title: {
@@ -32,9 +39,17 @@ export const metadata: Metadata = {
   openGraph: {
     siteName: SITE_NAME,
     type: "website",
+    images: [
+      {
+        url: defaultOpenGraphImage,
+        width: 1448,
+        height: 1086,
+      },
+    ],
   },
   twitter: {
     card: "summary_large_image",
+    images: [defaultOpenGraphImage],
   },
 };
 

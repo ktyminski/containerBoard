@@ -2,7 +2,6 @@ import type { Metadata } from "next";
 import { ObjectId } from "mongodb";
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
-import { getContainerShortDetailTitleLocalized } from "@/components/container-listings-i18n";
 import { ContainerDetailsContent } from "@/components/container-details-content";
 import {
   ensureContainerListingsIndexes,
@@ -10,8 +9,8 @@ import {
   getContainerListingsCollection,
   mapContainerListingToItem,
 } from "@/lib/container-listings";
-import { getMessages, LOCALE_COOKIE_NAME, resolveLocale } from "@/lib/i18n";
-import { buildPageMetadata, stripHtmlToPlainText } from "@/lib/seo";
+import { buildContainerListingMetadata } from "@/lib/container-listing-seo";
+import { LOCALE_COOKIE_NAME, resolveLocale } from "@/lib/i18n";
 
 type ContainerDetailsPageProps = {
   params: Promise<{ id: string }>;
@@ -49,35 +48,11 @@ export async function generateMetadata({ params }: ContainerDetailsPageProps): P
   }
 
   const item = mapContainerListingToItem(listing);
-  const listingMessages = getMessages(locale).containerListings;
-  const title = getContainerShortDetailTitleLocalized(listingMessages, item.container);
-  const descriptionSource = item.description?.trim()
-    ? stripHtmlToPlainText(item.description).replace(/\s+/g, " ").trim()
-    : undefined;
-  const description =
-    descriptionSource && descriptionSource.length > 320
-      ? `${descriptionSource.slice(0, 317).trimEnd()}...`
-      : descriptionSource;
-  const imagePath = item.photoUrls?.find((photoUrl) => photoUrl.startsWith("/"));
-  const metadata = buildPageMetadata({
-    path: `/containers/${id}`,
+  return buildContainerListingMetadata({
+    item,
     locale,
-    title,
-    description,
-    ...(imagePath ? { imagePath } : {}),
-    type: "article",
+    path: `/containers/${id}`,
   });
-
-  return {
-    ...metadata,
-    robots:
-      item.status === "active"
-        ? undefined
-        : {
-            index: false,
-            follow: true,
-          },
-  };
 }
 
 export default async function ContainerDetailsPage({ params }: ContainerDetailsPageProps) {

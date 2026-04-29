@@ -926,7 +926,10 @@ export function buildContainerListingMetadata(input: {
     locale: input.locale,
     title,
     description,
+    type: "article",
   });
+  const ogImages = imageUrl ? [{ url: imageUrl }] : base.openGraph?.images;
+  const twitterImages = imageUrl ? [imageUrl] : base.twitter?.images;
 
   return {
     ...base,
@@ -942,14 +945,14 @@ export function buildContainerListingMetadata(input: {
       ...base.openGraph,
       title,
       description,
-      images: imageUrl ? [{ url: imageUrl }] : undefined,
+      images: ogImages,
     },
     twitter: {
       ...base.twitter,
-      card: imageUrl ? "summary_large_image" : "summary",
+      card: "summary_large_image",
       title,
       description,
-      images: imageUrl ? [imageUrl] : undefined,
+      images: twitterImages,
     },
   };
 }

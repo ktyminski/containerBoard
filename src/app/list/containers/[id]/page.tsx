@@ -1,8 +1,16 @@
 import type { Metadata } from "next";
+import { ObjectId } from "mongodb";
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { ContainerDetailsContent } from "@/components/container-details-content";
-import { getLocaleFromRequest, getMessages, LOCALE_COOKIE_NAME } from "@/lib/i18n";
+import {
+  ensureContainerListingsIndexes,
+  expireContainerListingsIfNeeded,
+  getContainerListingsCollection,
+  mapContainerListingToItem,
+} from "@/lib/container-listings";
+import { buildContainerListingMetadata } from "@/lib/container-listing-seo";
+import { getLocaleFromRequest, LOCALE_COOKIE_NAME } from "@/lib/i18n";
 
 type ListContainerDetailsPageProps = {
   params: Promise<{ id: string }>;
@@ -10,17 +18,50 @@ type ListContainerDetailsPageProps = {
 };
 
 export async function generateMetadata({
+  params,
   searchParams,
 }: ListContainerDetailsPageProps): Promise<Metadata> {
-  const params = await searchParams;
+  const [{ id }, queryParams] = await Promise.all([params, searchParams]);
   const cookieStore = await cookies();
   const locale = getLocaleFromRequest({
-    params,
+    params: queryParams,
     cookieLocale: cookieStore.get(LOCALE_COOKIE_NAME)?.value,
   });
 
+  if (!ObjectId.isValid(id)) {
+    return {
+      title: "Kontener",
+      robots: {
+        index: false,
+        follow: false,
+      },
+    };
+  }
+
+  await ensureContainerListingsIndexes();
+  await expireContainerListingsIfNeeded();
+
+  const listings = await getContainerListingsCollection();
+  const listing = await listings.findOne({ _id: new ObjectId(id) });
+
+  if (!listing?._id) {
+    return {
+      title: "Kontener",
+      robots: {
+        index: false,
+        follow: false,
+      },
+    };
+  }
+
+  const metadata = buildContainerListingMetadata({
+    item: mapContainerListingToItem(listing),
+    locale,
+    path: `/list/containers/${id}`,
+  });
+
   return {
-    title: getMessages(locale).listPage.detailsMetaTitle,
+    ...metadata,
     robots: {
       index: false,
       follow: false,

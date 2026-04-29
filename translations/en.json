@@ -2200,7 +2200,7 @@
       "unloadingIncluded": "Unloading / HDS included",
       "unloadingAvailable": "Unloading / HDS available",
       "contactTitle": "Contact",
-      "contactHiddenTitle": "Contact hidden until reveal",
+      "contactHiddenTitle": "Seller contact - no intermediaries",
       "contactHiddenHint": "Click the section or button to reveal the seller email and phone number.",
       "contactRevealButton": "Show contact",
       "contactRevealLoading": "Revealing...",

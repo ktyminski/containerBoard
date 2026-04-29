@@ -7,6 +7,7 @@ import {
 import { stripHtmlToPlainText as stripHtmlToPlainTextBase } from "@/lib/rich-text";
 
 const DEFAULT_SITE_URL = "https://containerboard.eu";
+export const DEFAULT_OPEN_GRAPH_IMAGE_PATH = "/photos/placeholder-listing.png";
 export const SITE_NAME = "ContainerBoard – Buy & Sell Shipping Containers";
 
 const OPEN_GRAPH_LOCALE: Record<AppLocale, string> = {
@@ -71,7 +72,16 @@ export function buildPageMetadata(input: {
   noIndex?: boolean;
 }): Metadata {
   const canonical = getLocalizedCanonical(input.path, input.locale);
-  const image = input.imagePath ? getAbsoluteUrl(input.imagePath) : undefined;
+  const imagePath = input.imagePath ?? DEFAULT_OPEN_GRAPH_IMAGE_PATH;
+  const image = getAbsoluteUrl(imagePath);
+  const imageMetadata =
+    imagePath === DEFAULT_OPEN_GRAPH_IMAGE_PATH
+      ? {
+          url: image,
+          width: 1448,
+          height: 1086,
+        }
+      : { url: image };
 
   return {
     title: input.title,
@@ -85,13 +95,13 @@ export function buildPageMetadata(input: {
       url: canonical,
       title: input.title,
       description: input.description,
-      images: image ? [{ url: image }] : undefined,
+      images: [imageMetadata],
     },
     twitter: {
-      card: image ? "summary_large_image" : "summary",
+      card: "summary_large_image",
       title: input.title,
       description: input.description,
-      images: image ? [image] : undefined,
+      images: [image],
     },
   };
 }
