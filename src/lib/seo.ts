@@ -7,7 +7,7 @@ import {
 import { stripHtmlToPlainText as stripHtmlToPlainTextBase } from "@/lib/rich-text";
 
 const DEFAULT_SITE_URL = "https://containerboard.eu";
-export const DEFAULT_OPEN_GRAPH_IMAGE_PATH = "/photos/placeholder-listing.png";
+export const DEFAULT_OPEN_GRAPH_IMAGE_PATH = "/photos/placeholder-listing.webp";
 export const SITE_NAME = "ContainerBoard – Buy & Sell Shipping Containers";
 
 const OPEN_GRAPH_LOCALE: Record<AppLocale, string> = {
@@ -78,8 +78,8 @@ export function buildPageMetadata(input: {
     imagePath === DEFAULT_OPEN_GRAPH_IMAGE_PATH
       ? {
           url: image,
-          width: 1448,
-          height: 1086,
+          width: 1200,
+          height: 900,
         }
       : { url: image };
 

@@ -42,8 +42,8 @@ export const metadata: Metadata = {
     images: [
       {
         url: defaultOpenGraphImage,
-        width: 1448,
-        height: 1086,
+        width: 1200,
+        height: 900,
       },
     ],
   },
