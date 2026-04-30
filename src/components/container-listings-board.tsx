@@ -123,6 +123,7 @@ type MapFeature = {
     id: string;
     type: ListingType;
     quantity: number;
+    quantityLabel: string;
   };
 };
 
@@ -131,26 +132,7 @@ type MapFeatureCollection = {
   features: MapFeature[];
 };
 
-type MapClusterCountFeature = {
-  type: "Feature";
-  geometry: {
-    type: "Point";
-    coordinates: [number, number];
-  };
-  properties: {
-    cluster_id: number;
-    quantity_count: number;
-    countLabel: string;
-  };
-};
-
-type MapClusterCountFeatureCollection = {
-  type: "FeatureCollection";
-  features: MapClusterCountFeature[];
-};
-
 const MAP_CLUSTER_SOURCE_ID = "containers-list-cluster-source";
-const MAP_CLUSTER_COUNT_SOURCE_ID = "containers-list-cluster-count-source";
 const MAP_DETAIL_SOURCE_ID = "containers-list-detail-source";
 const MAP_CLUSTER_LAYER_ID = "containers-list-clusters";
 const MAP_CLUSTER_COUNT_LAYER_ID = "containers-list-cluster-count";
@@ -160,8 +142,7 @@ const MAP_DETAIL_POINT_LAYER_ID = "containers-list-detail-points";
 const MAP_DETAIL_POINT_COUNT_LAYER_ID = "containers-list-detail-point-count";
 const MAX_CLUSTER_POPUP_ITEMS = 24;
 const MAX_POPUP_VISIBLE_ITEMS = 20;
-const MAP_CLUSTER_MAX_ZOOM = 9;
-const MAP_CLUSTER_RADIUS = 52;
+const MAP_CLUSTER_MAX_ZOOM = 10;
 const DEFAULT_MAP_CENTER: [number, number] = [19.1451, 51.9194];
 const LIST_PAGE_SIZE = 20;
 const GUEST_FAVORITES_STORAGE_KEY = "container-listing-favorites-v1";
@@ -344,45 +325,9 @@ function getSafeMapQuantity(value: number): number {
     : 1;
 }
 
-function formatMapCountLabel(value: number): string {
-  const safeValue = Math.max(0, Math.trunc(value));
-  if (safeValue >= 1_000_000) {
-    return `${Math.round(safeValue / 100_000) / 10}M`;
-  }
-  if (safeValue >= 10_000) {
-    return `${Math.round(safeValue / 1_000)}k`;
-  }
-  if (safeValue >= 1_000) {
-    return `${Math.round(safeValue / 100) / 10}k`;
-  }
-  return String(safeValue);
-}
-
-function sumUniqueMapQuantities(
-  features: Array<{ properties?: Record<string, unknown> | null }>,
-): number {
-  const quantitiesById = new Map<string, number>();
-
-  for (const feature of features) {
-    const id = String(feature.properties?.id ?? "").trim();
-    if (!id || quantitiesById.has(id)) {
-      continue;
-    }
-
-    const quantityRaw = feature.properties?.quantity;
-    const quantity =
-      typeof quantityRaw === "number"
-        ? quantityRaw
-        : typeof quantityRaw === "string"
-          ? Number(quantityRaw)
-          : 1;
-    quantitiesById.set(id, getSafeMapQuantity(quantity));
-  }
-
-  return Array.from(quantitiesById.values()).reduce(
-    (sum, quantity) => sum + quantity,
-    0,
-  );
+function getMapQuantityLabel(value: number): string {
+  const quantity = getSafeMapQuantity(value);
+  return quantity > 99 ? "99+" : String(quantity);
 }
 
 function createLocationFilterMarkerElement(): HTMLDivElement {
@@ -786,7 +731,7 @@ function ensurePopupVisibility(
 function setSourceData(
   map: maplibregl.Map,
   sourceId: string,
-  data: MapFeatureCollection | MapClusterCountFeatureCollection,
+  data: MapFeatureCollection,
 ): void {
   const source = map.getSource(sourceId);
   if (source && "setData" in source) {
@@ -843,7 +788,6 @@ const ListingsMap = memo(function ListingsMap({
   const pendingPreserveZoomChangeTokenRef = useRef<number | null>(null);
   const lastMapContainerSizeKeyRef = useRef<string | null>(null);
   const viewportVisibilityRef = useRef(false);
-  const clusterCountRefreshSeqRef = useRef(0);
   const itemsByCoordinateRef = useRef<Map<string, ContainerListingMapPoint[]>>(
     new Map(),
   );
@@ -852,11 +796,6 @@ const ListingsMap = memo(function ListingsMap({
     type: "FeatureCollection",
     features: [],
   });
-  const clusterCountFeatureCollectionRef =
-    useRef<MapClusterCountFeatureCollection>({
-      type: "FeatureCollection",
-      features: [],
-    });
   const detailFeatureCollectionRef = useRef<MapFeatureCollection>({
     type: "FeatureCollection",
     features: [],
@@ -894,6 +833,7 @@ const ListingsMap = memo(function ListingsMap({
           id: item.id,
           type: item.type,
           quantity: getSafeMapQuantity(item.quantity),
+          quantityLabel: getMapQuantityLabel(item.quantity),
         },
       })),
     }),
@@ -912,6 +852,7 @@ const ListingsMap = memo(function ListingsMap({
           id: item.id,
           type: item.type,
           quantity: getSafeMapQuantity(item.quantity),
+          quantityLabel: getMapQuantityLabel(item.quantity),
         },
       })),
     }),
@@ -979,108 +920,6 @@ const ListingsMap = memo(function ListingsMap({
     [],
   );
 
-  const refreshClusterCountLabels = useCallback((map: maplibregl.Map) => {
-    if (!map.isStyleLoaded()) {
-      return;
-    }
-
-    const clusterSource = map.getSource(MAP_CLUSTER_SOURCE_ID) as
-      | GeoJSONSource
-      | undefined;
-    const countSource = map.getSource(MAP_CLUSTER_COUNT_SOURCE_ID) as
-      | GeoJSONSource
-      | undefined;
-    if (!clusterSource || !countSource || !map.getLayer(MAP_CLUSTER_LAYER_ID)) {
-      return;
-    }
-
-    const requestSeq = ++clusterCountRefreshSeqRef.current;
-    const canvas = map.getCanvas();
-    const renderedClusters = map.queryRenderedFeatures(
-      [
-        [0, 0],
-        [canvas.clientWidth, canvas.clientHeight],
-      ],
-      { layers: [MAP_CLUSTER_LAYER_ID] },
-    );
-    const clustersById = new Map<
-      number,
-      { coordinates: [number, number]; pointCount: number }
-    >();
-
-    for (const feature of renderedClusters) {
-      if (feature.geometry.type !== "Point") {
-        continue;
-      }
-
-      const clusterId = Number(feature.properties?.cluster_id);
-      const pointCount = Number(feature.properties?.point_count);
-      if (
-        !Number.isFinite(clusterId) ||
-        !Number.isFinite(pointCount) ||
-        clustersById.has(clusterId)
-      ) {
-        continue;
-      }
-
-      clustersById.set(clusterId, {
-        coordinates: feature.geometry.coordinates as [number, number],
-        pointCount,
-      });
-    }
-
-    if (clustersById.size === 0) {
-      const emptyData: MapClusterCountFeatureCollection = {
-        type: "FeatureCollection",
-        features: [],
-      };
-      clusterCountFeatureCollectionRef.current = emptyData;
-      setSourceData(map, MAP_CLUSTER_COUNT_SOURCE_ID, emptyData);
-      return;
-    }
-
-    void Promise.all(
-      Array.from(clustersById.entries()).map(async ([clusterId, cluster]) => {
-        const leaves = await clusterSource.getClusterLeaves(
-          clusterId,
-          cluster.pointCount,
-          0,
-        );
-        return {
-          clusterId,
-          coordinates: cluster.coordinates,
-          quantityCount: sumUniqueMapQuantities(leaves),
-        };
-      }),
-    )
-      .then((items) => {
-        if (requestSeq !== clusterCountRefreshSeqRef.current) {
-          return;
-        }
-
-        const data: MapClusterCountFeatureCollection = {
-          type: "FeatureCollection",
-          features: items.map((item) => ({
-            type: "Feature",
-            geometry: {
-              type: "Point",
-              coordinates: item.coordinates,
-            },
-            properties: {
-              cluster_id: item.clusterId,
-              quantity_count: item.quantityCount,
-              countLabel: formatMapCountLabel(item.quantityCount),
-            },
-          })),
-        };
-        clusterCountFeatureCollectionRef.current = data;
-        setSourceData(map, MAP_CLUSTER_COUNT_SOURCE_ID, data);
-      })
-      .catch(() => {
-        // Keep the native clusters interactive even if label refresh fails.
-      });
-  }, []);
-
   useEffect(() => {
     const nextByCoordinate = new Map<string, ContainerListingMapPoint[]>();
 
@@ -1122,14 +961,10 @@ const ListingsMap = memo(function ListingsMap({
           data: clusterFeatureCollectionRef.current,
           cluster: true,
           clusterMaxZoom: MAP_CLUSTER_MAX_ZOOM,
-          clusterRadius: MAP_CLUSTER_RADIUS,
-        });
-      }
-
-      if (!map.getSource(MAP_CLUSTER_COUNT_SOURCE_ID)) {
-        map.addSource(MAP_CLUSTER_COUNT_SOURCE_ID, {
-          type: "geojson",
-          data: clusterCountFeatureCollectionRef.current,
+          clusterRadius: 52,
+          clusterProperties: {
+            quantity_count: ["+", ["get", "quantity"]],
+          },
         });
       }
 
@@ -1149,7 +984,7 @@ const ListingsMap = memo(function ListingsMap({
           paint: {
             "circle-color": [
               "step",
-              ["get", "point_count"],
+              ["coalesce", ["get", "quantity_count"], ["get", "point_count"]],
               "#d1d5db",
               10,
               "#64748b",
@@ -1158,7 +993,7 @@ const ListingsMap = memo(function ListingsMap({
             ],
             "circle-radius": [
               "step",
-              ["get", "point_count"],
+              ["coalesce", ["get", "quantity_count"], ["get", "point_count"]],
               16,
               10,
               22,
@@ -1175,25 +1010,27 @@ const ListingsMap = memo(function ListingsMap({
         map.addLayer({
           id: MAP_CLUSTER_COUNT_LAYER_ID,
           type: "symbol",
-          source: MAP_CLUSTER_COUNT_SOURCE_ID,
+          source: MAP_CLUSTER_SOURCE_ID,
+          filter: ["has", "point_count"],
           layout: {
-            "text-field": ["get", "countLabel"],
+            "text-field": [
+              "to-string",
+              ["coalesce", ["get", "quantity_count"], ["get", "point_count"]],
+            ],
             "text-size": 12,
             "text-font": ["Open Sans Semibold", "Arial Unicode MS Bold"],
-            "text-allow-overlap": true,
-            "text-ignore-placement": true,
           },
           paint: {
             "text-color": [
               "step",
-              ["get", "quantity_count"],
+              ["coalesce", ["get", "quantity_count"], ["get", "point_count"]],
               "#0f172a",
               10,
               "#f8fafc",
             ],
             "text-halo-color": [
               "step",
-              ["get", "quantity_count"],
+              ["coalesce", ["get", "quantity_count"], ["get", "point_count"]],
               "rgba(255, 255, 255, 0.9)",
               10,
               "rgba(15, 23, 42, 0.55)",
@@ -1227,8 +1064,8 @@ const ListingsMap = memo(function ListingsMap({
           filter: ["!", ["has", "point_count"]],
           maxzoom: MAP_CLUSTER_MAX_ZOOM + 1,
           layout: {
-            "text-field": ["to-string", ["get", "quantity"]],
-            "text-size": 10,
+            "text-field": ["get", "quantityLabel"],
+            "text-size": ["step", ["get", "quantity"], 10, 10, 11, 100, 10],
             "text-font": ["Open Sans Semibold", "Arial Unicode MS Bold"],
             "text-allow-overlap": true,
             "text-ignore-placement": true,
@@ -1263,8 +1100,8 @@ const ListingsMap = memo(function ListingsMap({
           source: MAP_DETAIL_SOURCE_ID,
           minzoom: MAP_CLUSTER_MAX_ZOOM + 1,
           layout: {
-            "text-field": ["to-string", ["get", "quantity"]],
-            "text-size": 10,
+            "text-field": ["get", "quantityLabel"],
+            "text-size": ["step", ["get", "quantity"], 10, 10, 11, 100, 10],
             "text-font": ["Open Sans Semibold", "Arial Unicode MS Bold"],
             "text-allow-overlap": true,
             "text-ignore-placement": true,
@@ -1328,7 +1165,9 @@ const ListingsMap = memo(function ListingsMap({
 
         const clusterIdRaw = feature.properties?.cluster_id;
         const clusterId = Number(clusterIdRaw);
-        const clusterTotalCount = Number(feature.properties?.point_count ?? 0);
+        const clusterTotalCount = Number(
+          feature.properties?.quantity_count ?? feature.properties?.point_count ?? 0,
+        );
         if (!Number.isFinite(clusterId)) {
           return;
         }
@@ -1557,12 +1396,6 @@ const ListingsMap = memo(function ListingsMap({
         handlePointClick(event, MAP_DETAIL_POINT_COUNT_LAYER_ID);
       });
 
-      const handleClusterLabelRefresh = () => {
-        refreshClusterCountLabels(map);
-      };
-      map.on("moveend", handleClusterLabelRefresh);
-      map.on("zoomend", handleClusterLabelRefresh);
-
       setSourceData(
         map,
         MAP_CLUSTER_SOURCE_ID,
@@ -1573,9 +1406,6 @@ const ListingsMap = memo(function ListingsMap({
         MAP_DETAIL_SOURCE_ID,
         detailFeatureCollectionRef.current,
       );
-      window.requestAnimationFrame(() => {
-        refreshClusterCountLabels(map);
-      });
       lastMapContainerSizeKeyRef.current = getMapContainerSizeKey(map);
     });
 
@@ -1595,7 +1425,6 @@ const ListingsMap = memo(function ListingsMap({
     loadPopupDetailsByIds,
     locale,
     messages,
-    refreshClusterCountLabels,
   ]);
 
   useEffect(() => {
@@ -1608,10 +1437,7 @@ const ListingsMap = memo(function ListingsMap({
     popupRef.current = null;
     setSourceData(map, MAP_CLUSTER_SOURCE_ID, clusterFeatureCollection);
     setSourceData(map, MAP_DETAIL_SOURCE_ID, detailFeatureCollection);
-    window.requestAnimationFrame(() => {
-      refreshClusterCountLabels(map);
-    });
-  }, [clusterFeatureCollection, detailFeatureCollection, refreshClusterCountLabels]);
+  }, [clusterFeatureCollection, detailFeatureCollection]);
 
   useEffect(() => {
     const map = mapRef.current;
