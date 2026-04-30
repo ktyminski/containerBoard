@@ -1,6 +1,14 @@
 "use client";
 
-import { memo, useCallback, useEffect, useMemo, useRef, useState, type FocusEvent } from "react";
+import {
+  memo,
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type FocusEvent,
+} from "react";
 import { FormProvider, useForm } from "react-hook-form";
 import maplibregl, { type GeoJSONSource } from "maplibre-gl";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
@@ -128,10 +136,13 @@ const MAP_DETAIL_SOURCE_ID = "containers-list-detail-source";
 const MAP_CLUSTER_LAYER_ID = "containers-list-clusters";
 const MAP_CLUSTER_COUNT_LAYER_ID = "containers-list-cluster-count";
 const MAP_POINT_LAYER_ID = "containers-list-points";
+const MAP_POINT_COUNT_LAYER_ID = "containers-list-point-count";
 const MAP_DETAIL_POINT_LAYER_ID = "containers-list-detail-points";
+const MAP_DETAIL_POINT_COUNT_LAYER_ID = "containers-list-detail-point-count";
 const MAX_CLUSTER_POPUP_ITEMS = 24;
 const MAX_POPUP_VISIBLE_ITEMS = 20;
-const MAP_CLUSTER_MAX_ZOOM = 10;
+const MAP_CLUSTER_MAX_ZOOM = 9;
+const MAP_CLUSTER_RADIUS = 52;
 const DEFAULT_MAP_CENTER: [number, number] = [19.1451, 51.9194];
 const LIST_PAGE_SIZE = 20;
 const GUEST_FAVORITES_STORAGE_KEY = "container-listing-favorites-v1";
@@ -270,7 +281,11 @@ function centerMapToPointsPreservingZoom(
   const currentZoom = map.getZoom();
 
   if (points.length === 0) {
-    map.easeTo({ center: DEFAULT_MAP_CENTER, zoom: currentZoom, duration: 400 });
+    map.easeTo({
+      center: DEFAULT_MAP_CENTER,
+      zoom: currentZoom,
+      duration: 400,
+    });
     return;
   }
 
@@ -302,6 +317,30 @@ function centerMapToPointsPreservingZoom(
       duration: 500,
     });
   }
+}
+
+function getSafeMapQuantity(value: number): number {
+  return Number.isFinite(value) && value > 0
+    ? Math.max(1, Math.trunc(value))
+    : 1;
+}
+
+function dedupeMapPointsByListingId(
+  points: ContainerListingMapPoint[],
+): ContainerListingMapPoint[] {
+  const output: ContainerListingMapPoint[] = [];
+  const seenIds = new Set<string>();
+
+  for (const point of points) {
+    const id = point.id.trim();
+    if (!id || seenIds.has(id)) {
+      continue;
+    }
+    seenIds.add(id);
+    output.push(point);
+  }
+
+  return output;
 }
 
 function createLocationFilterMarkerElement(): HTMLDivElement {
@@ -340,7 +379,10 @@ function createLocationFilterMarkerElement(): HTMLDivElement {
   path.setAttribute("stroke", "#ffffff");
   path.setAttribute("stroke-width", "1.5");
 
-  const center = document.createElementNS("http://www.w3.org/2000/svg", "circle");
+  const center = document.createElementNS(
+    "http://www.w3.org/2000/svg",
+    "circle",
+  );
   center.setAttribute("cx", "12");
   center.setAttribute("cy", "11.25");
   center.setAttribute("r", "3.25");
@@ -393,13 +435,21 @@ function buildMapPopupListNode(
     titleLink.style.textOverflow = "ellipsis";
     titleLink.style.whiteSpace = "nowrap";
     const titleBase = document.createElement("span");
-    titleBase.textContent = getContainerShortLabelLocalized(messages, item.container);
+    titleBase.textContent = getContainerShortLabelLocalized(
+      messages,
+      item.container,
+    );
     const titleSeparator = document.createElement("span");
     titleSeparator.textContent = " | ";
     titleSeparator.style.color = "#94a3b8";
     const titleCondition = document.createElement("span");
-    titleCondition.textContent = getContainerConditionLabel(messages, item.container.condition);
-    titleCondition.style.color = getPopupConditionColor(item.container.condition);
+    titleCondition.textContent = getContainerConditionLabel(
+      messages,
+      item.container.condition,
+    );
+    titleCondition.style.color = getPopupConditionColor(
+      item.container.condition,
+    );
     titleLink.append(titleBase, titleSeparator, titleCondition);
 
     const priceDisplay = getPopupPriceDisplay(locale, messages, item);
@@ -477,9 +527,7 @@ function getPopupPriceDisplay(
   locale: AppLocale,
   messages: ContainerListingsMessages,
   item: ContainerListingItem,
-):
-  | { amountLabel: string; unitLabel: string }
-  | undefined {
+): { amountLabel: string; unitLabel: string } | undefined {
   const pricingAmount = item.pricing?.original.amount;
   const pricingCurrency = item.pricing?.original.currency;
   const pricingTaxMode = item.pricing?.original.taxMode;
@@ -538,9 +586,7 @@ function getPopupLocationLabel(
 ): string {
   const locations = item.locations ?? [];
   const locationToDisplay =
-    locations.length > 0
-      ? resolveBestLocationByHint(locations, hint)
-      : null;
+    locations.length > 0 ? resolveBestLocationByHint(locations, hint) : null;
 
   const postalCode =
     locationToDisplay?.locationAddressParts?.postalCode?.trim() ||
@@ -631,7 +677,10 @@ function resolvePopupPlacement(
   const spaceLeft = markerViewportX - mapRect.left - safeHorizontalEdge;
   const spaceRight = mapRect.right - markerViewportX - safeHorizontalEdge;
   const estimatedPopupWidth = 336;
-  const estimatedPopupHeight = Math.min(320, 92 + Math.max(0, itemCount - 1) * 62);
+  const estimatedPopupHeight = Math.min(
+    320,
+    92 + Math.max(0, itemCount - 1) * 62,
+  );
   const requiredVerticalSpace = estimatedPopupHeight + 12;
 
   const canOpenAboveMarker = spaceAbove >= requiredVerticalSpace;
@@ -649,27 +698,38 @@ function resolvePopupPlacement(
 
   const shouldOpenRight = spaceRight >= spaceLeft;
   if (verticalAnchor === "bottom") {
-    return { anchor: shouldOpenRight ? "bottom-left" : "bottom-right", offset: 8 };
+    return {
+      anchor: shouldOpenRight ? "bottom-left" : "bottom-right",
+      offset: 8,
+    };
   }
   return { anchor: shouldOpenRight ? "top-left" : "top-right", offset: 8 };
 }
 
-function ensurePopupVisibility(map: maplibregl.Map, popup: maplibregl.Popup): void {
+function ensurePopupVisibility(
+  map: maplibregl.Map,
+  popup: maplibregl.Popup,
+): void {
   const popupElement = popup.getElement();
   const mapRect = map.getContainer().getBoundingClientRect();
   const popupRect = popupElement.getBoundingClientRect();
   const edgePadding = 12;
 
   const overflowLeft = Math.max(0, mapRect.left + edgePadding - popupRect.left);
-  const overflowRight = Math.max(0, popupRect.right - (mapRect.right - edgePadding));
+  const overflowRight = Math.max(
+    0,
+    popupRect.right - (mapRect.right - edgePadding),
+  );
   const overflowTop = Math.max(0, mapRect.top + edgePadding - popupRect.top);
   const overflowBottom = Math.max(
     0,
     popupRect.bottom - (window.innerHeight - edgePadding),
   );
 
-  const panX = overflowLeft > 0 ? overflowLeft : overflowRight > 0 ? -overflowRight : 0;
-  const panY = overflowTop > 0 ? overflowTop : overflowBottom > 0 ? -overflowBottom : 0;
+  const panX =
+    overflowLeft > 0 ? overflowLeft : overflowRight > 0 ? -overflowRight : 0;
+  const panY =
+    overflowTop > 0 ? overflowTop : overflowBottom > 0 ? -overflowBottom : 0;
 
   if (Math.abs(panX) < 1 && Math.abs(panY) < 1) {
     return;
@@ -785,47 +845,68 @@ const ListingsMap = memo(function ListingsMap({
         properties: {
           id: item.id,
           type: item.type,
-          quantity: item.quantity,
+          quantity: getSafeMapQuantity(item.quantity),
         },
       })),
     }),
     [points],
   );
-  const clusterFeatureCollection = detailFeatureCollection;
+  const clusterFeatureCollection = useMemo<MapFeatureCollection>(
+    () => ({
+      type: "FeatureCollection",
+      features: dedupeMapPointsByListingId(points).map((item) => ({
+        type: "Feature",
+        geometry: {
+          type: "Point",
+          coordinates: [item.locationLng as number, item.locationLat as number],
+        },
+        properties: {
+          id: item.id,
+          type: item.type,
+          quantity: getSafeMapQuantity(item.quantity),
+        },
+      })),
+    }),
+    [points],
+  );
 
-  const loadPopupDetailsByIds = useCallback(async (ids: string[]) => {
-    const uniqueIds = Array.from(new Set(ids.filter(Boolean)));
-    if (uniqueIds.length === 0) {
-      return [];
-    }
-
-    const cached = detailsByIdRef.current;
-    const missingIds = uniqueIds.filter((id) => !cached.has(id));
-
-    if (missingIds.length > 0) {
-      try {
-        const params = new URLSearchParams({
-          ids: missingIds.join(","),
-        });
-        const response = await fetch(`/api/containers?${params.toString()}`, {
-          cache: "no-store",
-          headers: requestHeaders,
-        });
-        const data = (await response.json()) as ContainerPopupDetailsApiResponse;
-        if (response.ok) {
-          for (const item of data.items ?? []) {
-            cached.set(item.id, item);
-          }
-        }
-      } catch {
-        // Ignore popup detail loading errors; keeping interaction responsive.
+  const loadPopupDetailsByIds = useCallback(
+    async (ids: string[]) => {
+      const uniqueIds = Array.from(new Set(ids.filter(Boolean)));
+      if (uniqueIds.length === 0) {
+        return [];
       }
-    }
 
-    return uniqueIds
-      .map((id) => cached.get(id))
-      .filter((item): item is ContainerListingItem => Boolean(item));
-  }, [requestHeaders]);
+      const cached = detailsByIdRef.current;
+      const missingIds = uniqueIds.filter((id) => !cached.has(id));
+
+      if (missingIds.length > 0) {
+        try {
+          const params = new URLSearchParams({
+            ids: missingIds.join(","),
+          });
+          const response = await fetch(`/api/containers?${params.toString()}`, {
+            cache: "no-store",
+            headers: requestHeaders,
+          });
+          const data =
+            (await response.json()) as ContainerPopupDetailsApiResponse;
+          if (response.ok) {
+            for (const item of data.items ?? []) {
+              cached.set(item.id, item);
+            }
+          }
+        } catch {
+          // Ignore popup detail loading errors; keeping interaction responsive.
+        }
+      }
+
+      return uniqueIds
+        .map((id) => cached.get(id))
+        .filter((item): item is ContainerListingItem => Boolean(item));
+    },
+    [requestHeaders],
+  );
 
   const reportReadyOnce = useCallback(() => {
     if (hasReportedReadyRef.current) {
@@ -891,7 +972,10 @@ const ListingsMap = memo(function ListingsMap({
           data: clusterFeatureCollectionRef.current,
           cluster: true,
           clusterMaxZoom: MAP_CLUSTER_MAX_ZOOM,
-          clusterRadius: 52,
+          clusterRadius: MAP_CLUSTER_RADIUS,
+          clusterProperties: {
+            quantity_count: ["+", ["get", "quantity"]],
+          },
         });
       }
 
@@ -911,7 +995,7 @@ const ListingsMap = memo(function ListingsMap({
           paint: {
             "circle-color": [
               "step",
-              ["get", "point_count"],
+              ["coalesce", ["get", "quantity_count"], ["get", "point_count"]],
               "#d1d5db",
               10,
               "#64748b",
@@ -920,7 +1004,7 @@ const ListingsMap = memo(function ListingsMap({
             ],
             "circle-radius": [
               "step",
-              ["get", "point_count"],
+              ["coalesce", ["get", "quantity_count"], ["get", "point_count"]],
               16,
               10,
               22,
@@ -940,15 +1024,24 @@ const ListingsMap = memo(function ListingsMap({
           source: MAP_CLUSTER_SOURCE_ID,
           filter: ["has", "point_count"],
           layout: {
-            "text-field": ["get", "point_count_abbreviated"],
+            "text-field": [
+              "to-string",
+              ["coalesce", ["get", "quantity_count"], ["get", "point_count"]],
+            ],
             "text-size": 12,
             "text-font": ["Open Sans Semibold", "Arial Unicode MS Bold"],
           },
           paint: {
-            "text-color": ["step", ["get", "point_count"], "#0f172a", 10, "#f8fafc"],
+            "text-color": [
+              "step",
+              ["coalesce", ["get", "quantity_count"], ["get", "point_count"]],
+              "#0f172a",
+              10,
+              "#f8fafc",
+            ],
             "text-halo-color": [
               "step",
-              ["get", "point_count"],
+              ["coalesce", ["get", "quantity_count"], ["get", "point_count"]],
               "rgba(255, 255, 255, 0.9)",
               10,
               "rgba(15, 23, 42, 0.55)",
@@ -966,10 +1059,32 @@ const ListingsMap = memo(function ListingsMap({
           filter: ["!", ["has", "point_count"]],
           maxzoom: MAP_CLUSTER_MAX_ZOOM + 1,
           paint: {
-            "circle-radius": 7,
+            "circle-radius": ["step", ["get", "quantity"], 10, 10, 12, 100, 14],
             "circle-color": "#64748b",
             "circle-stroke-width": 2,
             "circle-stroke-color": "#ffffff",
+          },
+        });
+      }
+
+      if (!map.getLayer(MAP_POINT_COUNT_LAYER_ID)) {
+        map.addLayer({
+          id: MAP_POINT_COUNT_LAYER_ID,
+          type: "symbol",
+          source: MAP_CLUSTER_SOURCE_ID,
+          filter: ["!", ["has", "point_count"]],
+          maxzoom: MAP_CLUSTER_MAX_ZOOM + 1,
+          layout: {
+            "text-field": ["to-string", ["get", "quantity"]],
+            "text-size": 10,
+            "text-font": ["Open Sans Semibold", "Arial Unicode MS Bold"],
+            "text-allow-overlap": true,
+            "text-ignore-placement": true,
+          },
+          paint: {
+            "text-color": "#f8fafc",
+            "text-halo-color": "rgba(15, 23, 42, 0.4)",
+            "text-halo-width": 0.8,
           },
         });
       }
@@ -981,10 +1096,31 @@ const ListingsMap = memo(function ListingsMap({
           source: MAP_DETAIL_SOURCE_ID,
           minzoom: MAP_CLUSTER_MAX_ZOOM + 1,
           paint: {
-            "circle-radius": 7,
+            "circle-radius": ["step", ["get", "quantity"], 10, 10, 12, 100, 14],
             "circle-color": "#64748b",
             "circle-stroke-width": 2,
             "circle-stroke-color": "#ffffff",
+          },
+        });
+      }
+
+      if (!map.getLayer(MAP_DETAIL_POINT_COUNT_LAYER_ID)) {
+        map.addLayer({
+          id: MAP_DETAIL_POINT_COUNT_LAYER_ID,
+          type: "symbol",
+          source: MAP_DETAIL_SOURCE_ID,
+          minzoom: MAP_CLUSTER_MAX_ZOOM + 1,
+          layout: {
+            "text-field": ["to-string", ["get", "quantity"]],
+            "text-size": 10,
+            "text-font": ["Open Sans Semibold", "Arial Unicode MS Bold"],
+            "text-allow-overlap": true,
+            "text-ignore-placement": true,
+          },
+          paint: {
+            "text-color": "#f8fafc",
+            "text-halo-color": "rgba(15, 23, 42, 0.4)",
+            "text-halo-width": 0.8,
           },
         });
       }
@@ -1007,10 +1143,22 @@ const ListingsMap = memo(function ListingsMap({
       map.on("mouseleave", MAP_POINT_LAYER_ID, () => {
         map.getCanvas().style.cursor = "";
       });
+      map.on("mouseenter", MAP_POINT_COUNT_LAYER_ID, () => {
+        map.getCanvas().style.cursor = "pointer";
+      });
+      map.on("mouseleave", MAP_POINT_COUNT_LAYER_ID, () => {
+        map.getCanvas().style.cursor = "";
+      });
       map.on("mouseenter", MAP_DETAIL_POINT_LAYER_ID, () => {
         map.getCanvas().style.cursor = "pointer";
       });
       map.on("mouseleave", MAP_DETAIL_POINT_LAYER_ID, () => {
+        map.getCanvas().style.cursor = "";
+      });
+      map.on("mouseenter", MAP_DETAIL_POINT_COUNT_LAYER_ID, () => {
+        map.getCanvas().style.cursor = "pointer";
+      });
+      map.on("mouseleave", MAP_DETAIL_POINT_COUNT_LAYER_ID, () => {
         map.getCanvas().style.cursor = "";
       });
 
@@ -1069,13 +1217,20 @@ const ListingsMap = memo(function ListingsMap({
             const ids = Array.from(idsSet);
             const grouped = await loadPopupDetailsByIds(ids);
 
-            if (requestSeq !== popupRequestSeqRef.current || grouped.length === 0) {
+            if (
+              requestSeq !== popupRequestSeqRef.current ||
+              grouped.length === 0
+            ) {
               return;
             }
 
             const [lng, lat] = (feature.geometry as GeoJSON.Point)
               .coordinates as [number, number];
-            const popupPlacement = resolvePopupPlacement(map, clickPoint, grouped.length);
+            const popupPlacement = resolvePopupPlacement(
+              map,
+              clickPoint,
+              grouped.length,
+            );
             popupRef.current?.remove();
             const nextPopup = new maplibregl.Popup({
               offset: popupPlacement.offset,
@@ -1115,7 +1270,10 @@ const ListingsMap = memo(function ListingsMap({
       map.on("click", MAP_CLUSTER_LAYER_ID, handleClusterClick);
       map.on("click", MAP_CLUSTER_COUNT_LAYER_ID, handleClusterClick);
 
-      const handlePointClick = (event: maplibregl.MapLayerMouseEvent, layerId: string) => {
+      const handlePointClick = (
+        event: maplibregl.MapLayerMouseEvent,
+        layerId: string,
+      ) => {
         const requestSeq = ++popupRequestSeqRef.current;
         const feature =
           event.features?.[0] ??
@@ -1127,8 +1285,10 @@ const ListingsMap = memo(function ListingsMap({
         }
 
         const listingId = String(feature.properties?.id ?? "");
-        const coordinates = (feature.geometry as GeoJSON.Point)
-          .coordinates as [number, number];
+        const coordinates = (feature.geometry as GeoJSON.Point).coordinates as [
+          number,
+          number,
+        ];
         const clickedLng = Number(coordinates[0]);
         const clickedLat = Number(coordinates[1]);
         if (!Number.isFinite(clickedLng) || !Number.isFinite(clickedLat)) {
@@ -1156,13 +1316,14 @@ const ListingsMap = memo(function ListingsMap({
             } satisfies ContainerListingMapPoint,
           ]
         ).slice();
-        const groupedIds = grouped
-          .map((item) => item.id)
-          .filter(Boolean);
+        const groupedIds = grouped.map((item) => item.id).filter(Boolean);
         if (groupedIds.length === 0 && listingId) {
           groupedIds.push(listingId);
         }
-        const locationHintsByListingId = new Map<string, { lat: number; lng: number }>();
+        const locationHintsByListingId = new Map<
+          string,
+          { lat: number; lng: number }
+        >();
         for (const groupedItem of grouped) {
           if (
             groupedItem.locationLat === null ||
@@ -1188,11 +1349,18 @@ const ListingsMap = memo(function ListingsMap({
         }
 
         void loadPopupDetailsByIds(groupedIds).then((details) => {
-          if (requestSeq !== popupRequestSeqRef.current || details.length === 0) {
+          if (
+            requestSeq !== popupRequestSeqRef.current ||
+            details.length === 0
+          ) {
             return;
           }
 
-          const popupPlacement = resolvePopupPlacement(map, event.point, details.length);
+          const popupPlacement = resolvePopupPlacement(
+            map,
+            event.point,
+            details.length,
+          );
           popupRef.current?.remove();
           const nextPopup = new maplibregl.Popup({
             offset: popupPlacement.offset,
@@ -1227,12 +1395,26 @@ const ListingsMap = memo(function ListingsMap({
       map.on("click", MAP_POINT_LAYER_ID, (event) => {
         handlePointClick(event, MAP_POINT_LAYER_ID);
       });
+      map.on("click", MAP_POINT_COUNT_LAYER_ID, (event) => {
+        handlePointClick(event, MAP_POINT_COUNT_LAYER_ID);
+      });
       map.on("click", MAP_DETAIL_POINT_LAYER_ID, (event) => {
         handlePointClick(event, MAP_DETAIL_POINT_LAYER_ID);
       });
+      map.on("click", MAP_DETAIL_POINT_COUNT_LAYER_ID, (event) => {
+        handlePointClick(event, MAP_DETAIL_POINT_COUNT_LAYER_ID);
+      });
 
-      setSourceData(map, MAP_CLUSTER_SOURCE_ID, clusterFeatureCollectionRef.current);
-      setSourceData(map, MAP_DETAIL_SOURCE_ID, detailFeatureCollectionRef.current);
+      setSourceData(
+        map,
+        MAP_CLUSTER_SOURCE_ID,
+        clusterFeatureCollectionRef.current,
+      );
+      setSourceData(
+        map,
+        MAP_DETAIL_SOURCE_ID,
+        detailFeatureCollectionRef.current,
+      );
       lastMapContainerSizeKeyRef.current = getMapContainerSizeKey(map);
     });
 
@@ -1246,7 +1428,13 @@ const ListingsMap = memo(function ListingsMap({
       map.remove();
       mapRef.current = null;
     };
-  }, [detailsHrefPrefix, detailsQueryString, loadPopupDetailsByIds, locale, messages]);
+  }, [
+    detailsHrefPrefix,
+    detailsQueryString,
+    loadPopupDetailsByIds,
+    locale,
+    messages,
+  ]);
 
   useEffect(() => {
     const map = mapRef.current;
@@ -1317,7 +1505,8 @@ const ListingsMap = memo(function ListingsMap({
 
     const nextLocationKey = `${activeLocation.lat.toFixed(6)}:${activeLocation.lng.toFixed(6)}`;
     previousActiveLocationKeyRef.current = nextLocationKey;
-    const locationChanged = lastCenteredActiveLocationKeyRef.current !== nextLocationKey;
+    const locationChanged =
+      lastCenteredActiveLocationKeyRef.current !== nextLocationKey;
     lastCenteredActiveLocationKeyRef.current = nextLocationKey;
 
     const map = mapRef.current;
@@ -1388,7 +1577,9 @@ const ListingsMap = memo(function ListingsMap({
         return;
       }
 
-      if (pendingPreserveZoomChangeTokenRef.current === preserveZoomChangeToken) {
+      if (
+        pendingPreserveZoomChangeTokenRef.current === preserveZoomChangeToken
+      ) {
         if (points.length === 0) {
           reportReadyOnce();
           return;
@@ -1460,10 +1651,7 @@ const ListingsMap = memo(function ListingsMap({
 
   return (
     <div className={outerClassName}>
-      <div
-        ref={mapContainerRef}
-        className={mapClassName}
-      />
+      <div ref={mapContainerRef} className={mapClassName} />
     </div>
   );
 });
@@ -1495,7 +1683,9 @@ export function ContainerListingsBoard({
   const [mapItems, setMapItems] = useState<ContainerListingMapPoint[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [deliveryReachItems, setDeliveryReachItems] = useState<ContainerListingItem[]>([]);
+  const [deliveryReachItems, setDeliveryReachItems] = useState<
+    ContainerListingItem[]
+  >([]);
   const [deliveryReachTotal, setDeliveryReachTotal] = useState(0);
   const [isLoadingDeliveryReach, setIsLoadingDeliveryReach] = useState(false);
 
@@ -1504,12 +1694,19 @@ export function ContainerListingsBoard({
   const [total, setTotal] = useState(0);
   const [activeTab, setActiveTab] = useState<"all" | "favorites">(initialTab);
   const [mapTabSwitchToken, setMapTabSwitchToken] = useState(0);
-  const [pendingFavoriteId, setPendingFavoriteId] = useState<string | null>(null);
+  const [pendingFavoriteId, setPendingFavoriteId] = useState<string | null>(
+    null,
+  );
   const [hasAnyFavorites, setHasAnyFavorites] = useState(false);
-  const [hasResolvedFavoritesVisibility, setHasResolvedFavoritesVisibility] = useState(false);
-  const [favoritesPresenceRefreshVersion, setFavoritesPresenceRefreshVersion] = useState(0);
-  const [guestFavoriteListingIds, setGuestFavoriteListingIds] = useState<string[]>([]);
-  const [hasHydratedGuestFavorites, setHasHydratedGuestFavorites] = useState(isLoggedIn);
+  const [hasResolvedFavoritesVisibility, setHasResolvedFavoritesVisibility] =
+    useState(false);
+  const [favoritesPresenceRefreshVersion, setFavoritesPresenceRefreshVersion] =
+    useState(0);
+  const [guestFavoriteListingIds, setGuestFavoriteListingIds] = useState<
+    string[]
+  >([]);
+  const [hasHydratedGuestFavorites, setHasHydratedGuestFavorites] =
+    useState(isLoggedIn);
 
   const [isMapOpen, setIsMapOpen] = useState(false);
   const [isDesktopMapOpen, setIsDesktopMapOpen] = useState(true);
@@ -1527,8 +1724,12 @@ export function ContainerListingsBoard({
   const hasSeenFirstAppliedFiltersRef = useRef(false);
 
   const [isResolvingLocation, setIsResolvingLocation] = useState(false);
-  const [locationFilterError, setLocationFilterError] = useState<string | null>(null);
-  const [resolvedLocationMode, setResolvedLocationMode] = useState<"point" | "country" | null>(null);
+  const [locationFilterError, setLocationFilterError] = useState<string | null>(
+    null,
+  );
+  const [resolvedLocationMode, setResolvedLocationMode] = useState<
+    "point" | "country" | null
+  >(null);
 
   const formMethods = useForm<FiltersFormValues>({
     defaultValues: {
@@ -1569,7 +1770,8 @@ export function ContainerListingsBoard({
     sortPreset: FILTER_FORM_DEFAULTS.sortPreset,
   });
   const isFavoritesTab = activeTab === "favorites";
-  const shouldShowFavoritesToggle = hasResolvedFavoritesVisibility && hasAnyFavorites;
+  const shouldShowFavoritesToggle =
+    hasResolvedFavoritesVisibility && hasAnyFavorites;
   const guestFavoriteListingIdSet = useMemo(
     () => new Set(guestFavoriteListingIds),
     [guestFavoriteListingIds],
@@ -1581,7 +1783,9 @@ export function ContainerListingsBoard({
 
   const isLocationApplied = appliedFilters.locationQuery.trim().length > 0;
   const isDetailsOverlayPending = pendingDetailsNavigation !== null;
-  usePageScrollLock((isDetailsOverlayPending && !isDetailsOverlayRouteActive) || isMapOpen);
+  usePageScrollLock(
+    (isDetailsOverlayPending && !isDetailsOverlayRouteActive) || isMapOpen,
+  );
   const currentListHref = useMemo(() => {
     const params = searchParams.toString();
     return params ? `${pathname}?${params}` : pathname;
@@ -1667,11 +1871,16 @@ export function ContainerListingsBoard({
     let previousHref = "";
     try {
       const rawHistory = window.sessionStorage.getItem(NAV_HISTORY_STACK_KEY);
-      const parsedHistory = rawHistory ? (JSON.parse(rawHistory) as unknown) : [];
-      const historyStack = Array.isArray(parsedHistory)
-        ? parsedHistory.filter((entry): entry is string => typeof entry === "string")
+      const parsedHistory = rawHistory
+        ? (JSON.parse(rawHistory) as unknown)
         : [];
-      previousHref = historyStack.length >= 2 ? historyStack[historyStack.length - 2] : "";
+      const historyStack = Array.isArray(parsedHistory)
+        ? parsedHistory.filter(
+            (entry): entry is string => typeof entry === "string",
+          )
+        : [];
+      previousHref =
+        historyStack.length >= 2 ? historyStack[historyStack.length - 2] : "";
     } catch {
       previousHref = "";
     }
@@ -1732,12 +1941,17 @@ export function ContainerListingsBoard({
 
     async function resolveFavoritesVisibility() {
       try {
-        const response = await fetch(`/api/containers/favorites/summary?${params.toString()}`, {
-          cache: "no-store",
-          headers: requestHeaders,
-          signal: controller.signal,
-        });
-        const data = (await response.json().catch(() => null)) as FavoritesSummaryApiResponse | null;
+        const response = await fetch(
+          `/api/containers/favorites/summary?${params.toString()}`,
+          {
+            cache: "no-store",
+            headers: requestHeaders,
+            signal: controller.signal,
+          },
+        );
+        const data = (await response
+          .json()
+          .catch(() => null)) as FavoritesSummaryApiResponse | null;
         if (!response.ok || controller.signal.aborted) {
           return;
         }
@@ -1757,10 +1971,19 @@ export function ContainerListingsBoard({
     return () => {
       controller.abort();
     };
-  }, [favoritesPresenceRefreshVersion, initialMine, isLoggedIn, requestHeaders]);
+  }, [
+    favoritesPresenceRefreshVersion,
+    initialMine,
+    isLoggedIn,
+    requestHeaders,
+  ]);
 
   useEffect(() => {
-    if (activeTab !== "favorites" || !hasResolvedFavoritesVisibility || hasAnyFavorites) {
+    if (
+      activeTab !== "favorites" ||
+      !hasResolvedFavoritesVisibility ||
+      hasAnyFavorites
+    ) {
       return;
     }
 
@@ -1775,7 +1998,10 @@ export function ContainerListingsBoard({
       }
 
       const nextFocused = event.relatedTarget;
-      if (nextFocused instanceof Node && locationControlsRef.current?.contains(nextFocused)) {
+      if (
+        nextFocused instanceof Node &&
+        locationControlsRef.current?.contains(nextFocused)
+      ) {
         return;
       }
 
@@ -1837,20 +2063,25 @@ export function ContainerListingsBoard({
     setResolvedLocationMode(null);
   }, [resolvedLocationMode, setValue]);
 
-  const applyNonLocationFilters = useCallback((nextFilters: NonLocationFilters) => {
-    setPage(1);
-    setAppliedFilters((current) => {
-      const currentNonLocationFilters = pickNonLocationFilters(current);
-      if (areNonLocationFiltersEqual(nextFilters, currentNonLocationFilters)) {
-        return current;
-      }
+  const applyNonLocationFilters = useCallback(
+    (nextFilters: NonLocationFilters) => {
+      setPage(1);
+      setAppliedFilters((current) => {
+        const currentNonLocationFilters = pickNonLocationFilters(current);
+        if (
+          areNonLocationFiltersEqual(nextFilters, currentNonLocationFilters)
+        ) {
+          return current;
+        }
 
-      return {
-        ...current,
-        ...nextFilters,
-      };
-    });
-  }, []);
+        return {
+          ...current,
+          ...nextFilters,
+        };
+      });
+    },
+    [],
+  );
 
   const submitFilters = handleSubmit(async (values) => {
     const trimmedLocationQuery = values.locationInput.trim();
@@ -1948,10 +2179,14 @@ export function ContainerListingsBoard({
           shouldDirty: false,
           shouldTouch: false,
         });
-        setValue("country", data.item.addressParts?.country?.trim() || trimmedLocationQuery, {
-          shouldDirty: false,
-          shouldTouch: false,
-        });
+        setValue(
+          "country",
+          data.item.addressParts?.country?.trim() || trimmedLocationQuery,
+          {
+            shouldDirty: false,
+            shouldTouch: false,
+          },
+        );
         setValue("countryCode", data.item.countryCode.trim().toUpperCase(), {
           shouldDirty: false,
           shouldTouch: false,
@@ -1962,7 +2197,8 @@ export function ContainerListingsBoard({
           locationQuery: trimmedLocationQuery,
           locationCenter: null,
           city: "",
-          country: data.item.addressParts?.country?.trim() || trimmedLocationQuery,
+          country:
+            data.item.addressParts?.country?.trim() || trimmedLocationQuery,
           countryCode: data.item.countryCode.trim().toUpperCase(),
         });
         return;
@@ -2068,7 +2304,13 @@ export function ContainerListingsBoard({
         mineOnly: initialMine,
         companySlug: hiddenCompanySlug,
       }),
-    [appliedFilters, hiddenCompanySlug, initialMine, isFavoritesTab, localFavoriteIdsForApi],
+    [
+      appliedFilters,
+      hiddenCompanySlug,
+      initialMine,
+      isFavoritesTab,
+      localFavoriteIdsForApi,
+    ],
   );
 
   useEffect(() => {
@@ -2082,7 +2324,8 @@ export function ContainerListingsBoard({
       return;
     }
 
-    const targetTop = targetElement.getBoundingClientRect().top + window.scrollY;
+    const targetTop =
+      targetElement.getBoundingClientRect().top + window.scrollY;
     const shouldScrollToResults = window.scrollY > targetTop - 140;
     if (!shouldScrollToResults) {
       return;
@@ -2114,7 +2357,10 @@ export function ContainerListingsBoard({
         });
         const data = (await response.json()) as ContainersListApiResponse;
         if (!response.ok) {
-          throw new Error(data.error ?? `${messages.board.apiErrorPrefix} (${response.status})`);
+          throw new Error(
+            data.error ??
+              `${messages.board.apiErrorPrefix} (${response.status})`,
+          );
         }
 
         if (controller.signal.aborted) {
@@ -2138,7 +2384,9 @@ export function ContainerListingsBoard({
           return;
         }
         setError(
-          loadError instanceof Error ? loadError.message : messages.board.loadError,
+          loadError instanceof Error
+            ? loadError.message
+            : messages.board.loadError,
         );
       } finally {
         if (!controller.signal.aborted) {
@@ -2190,7 +2438,10 @@ export function ContainerListingsBoard({
         });
         const data = (await response.json()) as ContainersListApiResponse;
         if (!response.ok) {
-          throw new Error(data.error ?? `${messages.board.apiErrorPrefix} (${response.status})`);
+          throw new Error(
+            data.error ??
+              `${messages.board.apiErrorPrefix} (${response.status})`,
+          );
         }
 
         if (controller.signal.aborted) {
@@ -2252,7 +2503,10 @@ export function ContainerListingsBoard({
         });
         const data = (await response.json()) as ContainersMapApiResponse;
         if (!response.ok) {
-          throw new Error(data.error ?? `${messages.board.mapApiErrorPrefix} (${response.status})`);
+          throw new Error(
+            data.error ??
+              `${messages.board.mapApiErrorPrefix} (${response.status})`,
+          );
         }
 
         if (controller.signal.aborted) {
@@ -2273,7 +2527,13 @@ export function ContainerListingsBoard({
     return () => {
       controller.abort();
     };
-  }, [hasHydratedGuestFavorites, isLoggedIn, mapRequestUrl, messages.board.mapApiErrorPrefix, requestHeaders]);
+  }, [
+    hasHydratedGuestFavorites,
+    isLoggedIn,
+    mapRequestUrl,
+    messages.board.mapApiErrorPrefix,
+    requestHeaders,
+  ]);
 
   const clearAllFilters = useCallback(() => {
     reset(FILTER_FORM_DEFAULTS);
@@ -2309,19 +2569,22 @@ export function ContainerListingsBoard({
     setLocationFilterError(null);
   }, [reset]);
 
-  const scrollToResultsTop = useCallback((behavior: ScrollBehavior = "smooth") => {
-    const targetElement = resultsTopRef.current;
-    if (!targetElement) {
-      return;
-    }
+  const scrollToResultsTop = useCallback(
+    (behavior: ScrollBehavior = "smooth") => {
+      const targetElement = resultsTopRef.current;
+      if (!targetElement) {
+        return;
+      }
 
-    window.requestAnimationFrame(() => {
-      targetElement.scrollIntoView({
-        behavior,
-        block: "start",
+      window.requestAnimationFrame(() => {
+        targetElement.scrollIntoView({
+          behavior,
+          block: "start",
+        });
       });
-    });
-  }, []);
+    },
+    [],
+  );
 
   const goToPreviousPage = useCallback(() => {
     scrollToResultsTop();
@@ -2345,20 +2608,26 @@ export function ContainerListingsBoard({
     [activeTab],
   );
 
-  const removeListingFromFavoritesView = useCallback((listingId: string) => {
-    setItems((current) => current.filter((item) => item.id !== listingId));
-    setMapItems((current) => current.filter((item) => item.id !== listingId));
-    setTotal((currentTotal) => {
-      const nextTotal = Math.max(0, currentTotal - 1);
-      const nextTotalPages = Math.max(1, Math.ceil(nextTotal / LIST_PAGE_SIZE));
-      setTotalPages(nextTotalPages);
-      setPage((currentPage) => Math.min(currentPage, nextTotalPages));
-      if (!isLoggedIn && nextTotal === 0) {
-        setHasAnyFavorites(false);
-      }
-      return nextTotal;
-    });
-  }, [isLoggedIn]);
+  const removeListingFromFavoritesView = useCallback(
+    (listingId: string) => {
+      setItems((current) => current.filter((item) => item.id !== listingId));
+      setMapItems((current) => current.filter((item) => item.id !== listingId));
+      setTotal((currentTotal) => {
+        const nextTotal = Math.max(0, currentTotal - 1);
+        const nextTotalPages = Math.max(
+          1,
+          Math.ceil(nextTotal / LIST_PAGE_SIZE),
+        );
+        setTotalPages(nextTotalPages);
+        setPage((currentPage) => Math.min(currentPage, nextTotalPages));
+        if (!isLoggedIn && nextTotal === 0) {
+          setHasAnyFavorites(false);
+        }
+        return nextTotal;
+      });
+    },
+    [isLoggedIn],
+  );
 
   const handleToggleFavorite = useCallback(
     async (listingId: string, isFavorite: boolean) => {
@@ -2370,7 +2639,9 @@ export function ContainerListingsBoard({
         const normalizedListingId = listingId.trim().toLowerCase();
         const nextGuestFavoriteIds = isFavorite
           ? guestFavoriteListingIds.filter((id) => id !== normalizedListingId)
-          : Array.from(new Set([...guestFavoriteListingIds, normalizedListingId]));
+          : Array.from(
+              new Set([...guestFavoriteListingIds, normalizedListingId]),
+            );
 
         setGuestFavoriteListingIds(nextGuestFavoriteIds);
         writeGuestFavoriteListingIds(nextGuestFavoriteIds);
@@ -2379,7 +2650,9 @@ export function ContainerListingsBoard({
         } else {
           setItems((current) =>
             current.map((item) =>
-              item.id === listingId ? { ...item, isFavorite: !isFavorite } : item,
+              item.id === listingId
+                ? { ...item, isFavorite: !isFavorite }
+                : item,
             ),
           );
         }
@@ -2408,7 +2681,9 @@ export function ContainerListingsBoard({
         }
 
         if (!response.ok) {
-          const payload = (await response.json().catch(() => null)) as { error?: string } | null;
+          const payload = (await response.json().catch(() => null)) as {
+            error?: string;
+          } | null;
           throw new Error(payload?.error ?? messages.map.favoriteUpdateError);
         }
 
@@ -2416,7 +2691,9 @@ export function ContainerListingsBoard({
           isFavorite?: boolean;
         } | null;
         const nextIsFavorite =
-          typeof payload?.isFavorite === "boolean" ? payload.isFavorite : !isFavorite;
+          typeof payload?.isFavorite === "boolean"
+            ? payload.isFavorite
+            : !isFavorite;
 
         if (nextIsFavorite === true) {
           setHasAnyFavorites(true);
@@ -2465,7 +2742,10 @@ export function ContainerListingsBoard({
 
   const handleCopyListingLink = useCallback(
     async (listingId: string) => {
-      const listingUrl = new URL(`/containers/${listingId}`, window.location.origin).toString();
+      const listingUrl = new URL(
+        `/containers/${listingId}`,
+        window.location.origin,
+      ).toString();
       const copied = await copyTextToClipboard(listingUrl);
 
       if (copied) {
@@ -2478,25 +2758,28 @@ export function ContainerListingsBoard({
     [messages.map.copyError, messages.map.linkCopied, toast],
   );
 
-  const handleOpenDetails = useCallback((targetHref: string) => {
-    const listHref = currentListHref;
-    cancelledPendingOverlayListHrefRef.current = null;
-    if (pendingOverlayCloseTimeoutRef.current !== null) {
-      window.clearTimeout(pendingOverlayCloseTimeoutRef.current);
-      pendingOverlayCloseTimeoutRef.current = null;
-    }
-    if (pendingOverlayOpenRafRef.current !== null) {
-      window.cancelAnimationFrame(pendingOverlayOpenRafRef.current);
-      pendingOverlayOpenRafRef.current = null;
-    }
-    setIsPendingOverlayClosing(false);
-    setPendingDetailsNavigation({ listHref });
+  const handleOpenDetails = useCallback(
+    (targetHref: string) => {
+      const listHref = currentListHref;
+      cancelledPendingOverlayListHrefRef.current = null;
+      if (pendingOverlayCloseTimeoutRef.current !== null) {
+        window.clearTimeout(pendingOverlayCloseTimeoutRef.current);
+        pendingOverlayCloseTimeoutRef.current = null;
+      }
+      if (pendingOverlayOpenRafRef.current !== null) {
+        window.cancelAnimationFrame(pendingOverlayOpenRafRef.current);
+        pendingOverlayOpenRafRef.current = null;
+      }
+      setIsPendingOverlayClosing(false);
+      setPendingDetailsNavigation({ listHref });
 
-    pendingOverlayOpenRafRef.current = window.requestAnimationFrame(() => {
-      pendingOverlayOpenRafRef.current = null;
-      router.push(targetHref, { scroll: false });
-    });
-  }, [currentListHref, router]);
+      pendingOverlayOpenRafRef.current = window.requestAnimationFrame(() => {
+        pendingOverlayOpenRafRef.current = null;
+        router.push(targetHref, { scroll: false });
+      });
+    },
+    [currentListHref, router],
+  );
 
   const cancelPendingDetailsNavigation = useCallback(() => {
     if (!pendingDetailsNavigation || isPendingOverlayClosing) {
@@ -2549,7 +2832,9 @@ export function ContainerListingsBoard({
                 detailsHrefPrefix={detailsHrefPrefix}
                 detailsQueryString={detailsQueryString}
                 activeLocation={
-                  resolvedLocationMode === "point" ? appliedFilters.locationCenter : null
+                  resolvedLocationMode === "point"
+                    ? appliedFilters.locationCenter
+                    : null
                 }
                 activeLocationLabel={appliedFilters.locationQuery}
                 suppressAutoFit={resolvedLocationMode === "country"}
@@ -2569,7 +2854,9 @@ export function ContainerListingsBoard({
               aria-controls="containers-listings-desktop-map-panel"
               className={`pointer-events-auto inline-flex min-h-10 items-center rounded-md px-5 text-sm font-semibold shadow-[0_10px_24px_-12px_rgba(5,36,79,0.8)] ${DARK_BLUE_CTA_BASE_CLASS}`}
             >
-              {isDesktopMapOpen ? messages.map.collapseMap : messages.map.expandMap}
+              {isDesktopMapOpen
+                ? messages.map.collapseMap
+                : messages.map.expandMap}
             </button>
           </div>
         </section>
@@ -2585,7 +2872,12 @@ export function ContainerListingsBoard({
                 title={messages.filters.moreFilters}
                 className="pointer-events-auto inline-flex h-11 w-11 items-center justify-center rounded-full border border-neutral-300 bg-white/92 text-neutral-600 shadow-[0_12px_26px_-18px_rgba(15,23,42,0.55)] backdrop-blur-sm transition hover:border-neutral-400 hover:bg-white"
               >
-                <svg viewBox="0 0 24 24" aria-hidden="true" className="h-4.5 w-4.5" fill="none">
+                <svg
+                  viewBox="0 0 24 24"
+                  aria-hidden="true"
+                  className="h-4.5 w-4.5"
+                  fill="none"
+                >
                   <path
                     d="M4 7h16M7 12h10M10 17h4"
                     stroke="currentColor"
@@ -2606,14 +2898,23 @@ export function ContainerListingsBoard({
                 title={messages.map.expandMap}
                 className="pointer-events-auto inline-flex h-11 w-11 items-center justify-center rounded-full border border-[#9db9d8] bg-white/92 text-[#355a82] shadow-[0_12px_26px_-18px_rgba(15,23,42,0.55)] backdrop-blur-sm transition hover:border-[#7ea6cf] hover:bg-white"
               >
-                <svg viewBox="0 0 24 24" aria-hidden="true" className="h-4.5 w-4.5" fill="none">
+                <svg
+                  viewBox="0 0 24 24"
+                  aria-hidden="true"
+                  className="h-4.5 w-4.5"
+                  fill="none"
+                >
                   <path
                     d="M4 7.5L9 5l6 2.5L20 5v11.5L15 19l-6-2.5L4 19V7.5Z"
                     stroke="currentColor"
                     strokeWidth="1.7"
                     strokeLinejoin="round"
                   />
-                  <path d="M9 5v11.5M15 7.5V19" stroke="currentColor" strokeWidth="1.7" />
+                  <path
+                    d="M9 5v11.5M15 7.5V19"
+                    stroke="currentColor"
+                    strokeWidth="1.7"
+                  />
                 </svg>
               </button>
             </div>
@@ -2660,7 +2961,9 @@ export function ContainerListingsBoard({
                 detailsHrefPrefix={detailsHrefPrefix}
                 detailsQueryString={detailsQueryString}
                 activeLocation={
-                  resolvedLocationMode === "point" ? appliedFilters.locationCenter : null
+                  resolvedLocationMode === "point"
+                    ? appliedFilters.locationCenter
+                    : null
                 }
                 activeLocationLabel={appliedFilters.locationQuery}
                 suppressAutoFit={resolvedLocationMode === "country"}
@@ -2719,7 +3022,10 @@ export function ContainerListingsBoard({
                   countryCode: appliedFilters.countryCode,
                 }}
               />
-              {!isLoading && !error && items.length === 0 && deliveryReachItems.length > 0 ? (
+              {!isLoading &&
+              !error &&
+              items.length === 0 &&
+              deliveryReachItems.length > 0 ? (
                 <section className="mt-4 grid gap-3">
                   <div className="rounded-md border border-neutral-300 bg-neutral-50/95 p-4 shadow-sm">
                     <p className="text-xs font-semibold uppercase tracking-[0.12em] text-[#0c3466]">
@@ -2784,7 +3090,9 @@ export function ContainerListingsBoard({
               />
               <div
                 className={`cb-overlay-panel-shell h-full w-full max-w-5xl overflow-y-auto ${
-                  isPendingOverlayClosing ? "cb-overlay-panel-exit" : "cb-overlay-panel-enter"
+                  isPendingOverlayClosing
+                    ? "cb-overlay-panel-exit"
+                    : "cb-overlay-panel-enter"
                 }`}
               >
                 <div className="grid gap-4 px-4 py-6 sm:px-6">
@@ -2828,6 +3136,3 @@ export function ContainerListingsBoard({
     </FormProvider>
   );
 }
-
-
-
