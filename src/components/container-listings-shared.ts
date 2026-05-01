@@ -119,7 +119,7 @@ export const CONTAINER_CONDITION_COLOR_TOKENS: Record<
 export const FILTER_FORM_DEFAULTS: FiltersFormValues = {
   listingKind: "sell",
   locationInput: "",
-  locationRadiusKmInput: "200",
+  locationRadiusKmInput: "50",
   containerSizes: [],
   containerHeights: [],
   containerTypes: [],

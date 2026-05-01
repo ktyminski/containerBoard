@@ -144,6 +144,7 @@ export type ContainerListingDocument = {
   contactEmail: string;
   contactPhone?: string;
   contactRevealCount?: number;
+  detailsViewCount?: number;
   status: ListingStatus;
   createdByUserId: ObjectId;
   createdAt: Date;
@@ -226,6 +227,7 @@ export type ContainerListingItem = {
   contactEmail: string;
   contactPhone?: string;
   contactRevealCount: number;
+  detailsViewCount: number;
   status: ListingStatus;
   createdAt: string;
   updatedAt: string;
@@ -583,6 +585,10 @@ export function mapContainerListingToItem(doc: ContainerListingDocument): Contai
       typeof doc.contactRevealCount === "number" && Number.isFinite(doc.contactRevealCount)
         ? Math.max(0, Math.trunc(doc.contactRevealCount))
         : 0,
+    detailsViewCount:
+      typeof doc.detailsViewCount === "number" && Number.isFinite(doc.detailsViewCount)
+        ? Math.max(1, Math.trunc(doc.detailsViewCount))
+        : 1,
     status: isExpired && doc.status === LISTING_STATUS.ACTIVE
       ? LISTING_STATUS.EXPIRED
       : doc.status,

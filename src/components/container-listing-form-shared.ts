@@ -147,8 +147,8 @@ export type AdditionalLocationDraft = {
   locationAddressParts: GeocodeAddressParts | null;
 };
 
-export const MAX_CONTAINER_TOTAL_PHOTOS = 6;
-export const MAX_CONTAINER_ADDITIONAL_PHOTOS = 5;
+export const MAX_CONTAINER_TOTAL_PHOTOS = 10;
+export const MAX_CONTAINER_ADDITIONAL_PHOTOS = 9;
 export const MAX_CONTAINER_PHOTO_BYTES = 5 * 1024 * 1024;
 export const MAX_CONTAINER_PHOTO_MB = 5;
 export const MAX_ADDITIONAL_LOCATIONS = MAX_LISTING_LOCATIONS - 1;

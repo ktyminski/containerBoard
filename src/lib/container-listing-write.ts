@@ -262,6 +262,7 @@ export function buildContainerListingDocument(
     ...setFields,
     status: input.status,
     createdByUserId: input.createdByUserId,
+    detailsViewCount: 1,
     createdAt: input.now,
     updatedAt: input.now,
     expiresAt: getDefaultListingExpiration(input.now),

@@ -110,18 +110,22 @@ function getListingPriceLabel(
   locale: AppLocale,
   messages: ContainerModuleMessages["myListings"],
 ): string {
+  const getTaxSuffix = (taxMode: "net" | "gross") =>
+    taxMode === "net" ? " +VAT" : "";
   const originalAmount = item.pricing?.original.amount;
   const originalCurrency = item.pricing?.original.currency;
+  const originalTaxMode = item.pricing?.original.taxMode;
   if (
     typeof originalAmount === "number" &&
     Number.isFinite(originalAmount) &&
-    originalCurrency
+    originalCurrency &&
+    originalTaxMode
   ) {
-    return `${Math.round(originalAmount).toLocaleString(toIntlLocale(locale))} ${originalCurrency}`;
+    return `${Math.round(originalAmount).toLocaleString(toIntlLocale(locale))} ${originalCurrency}${getTaxSuffix(originalTaxMode)}`;
   }
 
   if (typeof item.priceAmount === "number" && Number.isFinite(item.priceAmount)) {
-    return `${Math.round(item.priceAmount).toLocaleString(toIntlLocale(locale))} PLN`;
+    return `${Math.round(item.priceAmount).toLocaleString(toIntlLocale(locale))} PLN${getTaxSuffix("net")}`;
   }
 
   return messages.priceOnRequest;
@@ -248,6 +252,9 @@ const MyContainerListingRow = memo(function MyContainerListingRow({
             <p>{getListingLocationLabel(item, messages)}</p>
             <p>
               {messages.quantityLabel}: {item.quantity}
+            </p>
+            <p>
+              {messages.detailsViewCountLabel}: {item.detailsViewCount}
             </p>
             <p>
               {messages.contactRevealCountLabel}: {item.contactRevealCount}

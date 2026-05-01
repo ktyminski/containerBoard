@@ -30,6 +30,7 @@ import {
   pickNonLocationFilters,
   type AppliedFilters,
   type FiltersFormValues,
+  type FormLocationRadiusKm,
   type ListingKind,
   type NonLocationFilters,
 } from "@/components/container-listings-shared";
@@ -2074,6 +2075,20 @@ export function ContainerListingsBoard({
     [],
   );
 
+  const applyLocationRadiusKm = useCallback((nextRadius: FormLocationRadiusKm) => {
+    setPage(1);
+    setAppliedFilters((current) => {
+      if (current.locationRadiusKm === nextRadius) {
+        return current;
+      }
+
+      return {
+        ...current,
+        locationRadiusKm: nextRadius,
+      };
+    });
+  }, []);
+
   const submitFilters = handleSubmit(async (values) => {
     const trimmedLocationQuery = values.locationInput.trim();
     const nextBase = buildAppliedBaseFromFormValues(values);
@@ -2981,6 +2996,7 @@ export function ContainerListingsBoard({
             isResolvingLocation={isResolvingLocation}
             locationFilterError={locationFilterError}
             onApplyNonLocationFilters={applyNonLocationFilters}
+            onApplyLocationRadiusKm={applyLocationRadiusKm}
             clearLocationFilter={clearLocationFilter}
             clearAllFilters={clearAllFilters}
           >

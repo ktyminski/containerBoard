@@ -46,6 +46,7 @@ import {
   toNormalizedArray,
   type AppliedFilters,
   type FiltersFormValues,
+  type FormLocationRadiusKm,
   type MultiFilterKey,
   type NonLocationFilters,
 } from "@/components/container-listings-shared";
@@ -308,6 +309,7 @@ type ContainerListingsFiltersProps = {
   isResolvingLocation: boolean;
   locationFilterError: string | null;
   onApplyNonLocationFilters: (nextFilters: NonLocationFilters) => void;
+  onApplyLocationRadiusKm: (nextRadius: FormLocationRadiusKm) => void;
   clearLocationFilter: () => void;
   clearAllFilters: () => void;
 };
@@ -324,12 +326,14 @@ function ContainerListingsFiltersComponent({
   isResolvingLocation,
   locationFilterError,
   onApplyNonLocationFilters,
+  onApplyLocationRadiusKm,
   clearLocationFilter,
   clearAllFilters,
 }: ContainerListingsFiltersProps) {
   const { register, setValue, control } = useFormContext<FiltersFormValues>();
   const filterMessages = messages.filters;
   const [isMobileAdditionalFiltersOpen, setIsMobileAdditionalFiltersOpen] = useState(false);
+  const [isDesktopViewport, setIsDesktopViewport] = useState(false);
   const [openMultiFilters, setOpenMultiFilters] = useState<
     Record<MultiFilterKey, boolean>
   >({
@@ -346,6 +350,19 @@ function ContainerListingsFiltersComponent({
     () => Object.values(openMultiFilters).some(Boolean),
     [openMultiFilters],
   );
+
+  useEffect(() => {
+    const mediaQuery = window.matchMedia("(min-width: 1024px)");
+    const syncViewport = () => {
+      setIsDesktopViewport(mediaQuery.matches);
+    };
+
+    syncViewport();
+    mediaQuery.addEventListener("change", syncViewport);
+    return () => {
+      mediaQuery.removeEventListener("change", syncViewport);
+    };
+  }, []);
 
   useEffect(() => {
     if (!isMobileAdditionalFiltersOpen) {
@@ -427,6 +444,12 @@ function ContainerListingsFiltersComponent({
   const priceMaxInputValue = useWatch({ control, name: "priceMaxInput" }) ?? "";
   const productionYearInputValue =
     useWatch({ control, name: "productionYearInput" }) ?? "";
+  const locationRadiusKmInputValue =
+    useWatch({ control, name: "locationRadiusKmInput" }) ??
+    FILTER_FORM_DEFAULTS.locationRadiusKmInput;
+  const locationPlaceholder = isDesktopViewport
+    ? filterMessages.anyLocation
+    : `${filterMessages.anyLocation} (+${locationRadiusKmInputValue} km)`;
   const cityValue = useWatch({ control, name: "city" }) ?? "";
   const countryValue = useWatch({ control, name: "country" }) ?? "";
   const countryCodeValue = useWatch({ control, name: "countryCode" }) ?? "";
@@ -721,7 +744,7 @@ function ContainerListingsFiltersComponent({
         }`}
       >
         <div id="container-listings-primary-filters">
-          <div className="grid gap-2 lg:grid-cols-[minmax(100px,0.85fr)_minmax(100px,0.85fr)_minmax(100px,1fr)_minmax(100px,1fr)_minmax(280px,1fr)_minmax(180px,220px)_auto]">
+          <div className="grid gap-2 lg:grid-cols-[minmax(100px,0.85fr)_minmax(100px,0.85fr)_minmax(100px,1fr)_minmax(100px,1fr)_minmax(280px,1.35fr)_minmax(112px,128px)_auto]">
             <div className="grid grid-cols-2 gap-2 sm:grid-cols-4 lg:contents">
               {renderSizesFilter(undefined, "w-[min(20rem,calc(100vw-2rem))]")}
               {renderHeightsFilter(undefined, "w-[min(20rem,calc(100vw-2rem))]")}
@@ -736,7 +759,7 @@ function ContainerListingsFiltersComponent({
               <div className="relative">
                 <input
                   {...register("locationInput")}
-                  placeholder={filterMessages.anyLocation}
+                  placeholder={locationPlaceholder}
                   className={`h-full min-h-12 w-full rounded-md border px-3 py-2 text-sm text-neutral-900 ${
                     isLocationApplied
                       ? "border-sky-400 bg-sky-100/70 pr-11 shadow-[0_0_0_1px_rgba(56,189,248,0.15)]"
@@ -1184,6 +1207,33 @@ function ContainerListingsFiltersComponent({
                           </button>
                         ))}
                       </div>
+                    </div>
+
+                    <div className="grid gap-2 text-sm">
+                      <span className="text-neutral-600">{filterMessages.locationRadius}</span>
+                      <SelectWithChevron
+                        value={locationRadiusKmInputValue}
+                        onChange={(event) => {
+                          const nextRadius = event.target.value as FormLocationRadiusKm;
+                          setValue("locationRadiusKmInput", nextRadius, {
+                            shouldDirty: true,
+                            shouldTouch: true,
+                          });
+                          onApplyLocationRadiusKm(nextRadius);
+                        }}
+                        className={`rounded-md border px-3 py-2 text-neutral-900 ${
+                          locationRadiusKmInputValue !==
+                          FILTER_FORM_DEFAULTS.locationRadiusKmInput
+                            ? "border-sky-400 bg-sky-100/70 shadow-[0_0_0_1px_rgba(56,189,248,0.15)]"
+                            : "border-neutral-300 bg-white"
+                        }`}
+                      >
+                        {LOCATION_RADIUS_OPTIONS.map((value) => (
+                          <option key={value} value={String(value)}>
+                            +{value} km
+                          </option>
+                        ))}
+                      </SelectWithChevron>
                     </div>
 
                     <div className="grid gap-2 text-sm">

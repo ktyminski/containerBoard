@@ -13,6 +13,7 @@ import {
   type ContainerDetailsLocationPoint,
 } from "@/components/container-details-locations-map";
 import { ContainerInquiryModalTrigger } from "@/components/container-inquiry-modal-trigger";
+import { ContainerListingViewTracker } from "@/components/container-listing-view-tracker";
 import { toIntlLocale } from "@/components/container-modules-i18n";
 import { DetailsBackButton } from "@/components/details-back-button";
 import { SESSION_COOKIE_NAME } from "@/lib/auth-session";
@@ -70,6 +71,7 @@ type ListingPriceDisplay = {
   amountLabel: string;
   metaLine: string;
   isRequestPrice: boolean;
+  taxCounterpartLine: string | null;
   additionalAmounts: string[];
 };
 
@@ -136,6 +138,7 @@ function getListingPriceDisplay(
       amountLabel: moduleMessages.details.askPrice,
       metaLine: metaParts.join(" | "),
       isRequestPrice: true,
+      taxCounterpartLine: null,
       additionalAmounts: [],
     };
   }
@@ -168,6 +171,18 @@ function getListingPriceDisplay(
         return `~${Math.round(normalizedAmount).toLocaleString(toIntlLocale(locale))} ${currency}`;
       })
       .filter((value): value is string => Boolean(value));
+    const counterpartTaxMode = pricing.original.taxMode === "net" ? "gross" : "net";
+    const counterpartAmount = getNormalizedAmountByCurrency(
+      pricing.normalized[counterpartTaxMode],
+      pricing.original.currency,
+    );
+    const taxCounterpartLine =
+      typeof counterpartAmount === "number" &&
+      Number.isFinite(counterpartAmount)
+        ? `${getPriceTaxModeLabel(messages, counterpartTaxMode)}: ${Math.round(
+            counterpartAmount,
+          ).toLocaleString(toIntlLocale(locale))} ${pricing.original.currency}`
+        : null;
 
     const metaParts = [getPriceTaxModeLabel(messages, pricing.original.taxMode)];
     const vatRateLabel = formatVatRateLabel(pricing.original.vatRate, locale);
@@ -182,6 +197,7 @@ function getListingPriceDisplay(
       amountLabel: `${Math.round(pricing.original.amount).toLocaleString(toIntlLocale(locale))} ${pricing.original.currency}`,
       metaLine: metaParts.join(" | "),
       isRequestPrice: false,
+      taxCounterpartLine,
       additionalAmounts,
     };
   }
@@ -198,6 +214,7 @@ function getListingPriceDisplay(
       amountLabel: `${Math.round(item.priceAmount).toLocaleString(toIntlLocale(locale))} PLN`,
       metaLine: metaParts.join(" | "),
       isRequestPrice: false,
+      taxCounterpartLine: null,
       additionalAmounts: [],
     };
   }
@@ -211,6 +228,7 @@ function getListingPriceDisplay(
       amountLabel: item.price.trim(),
       metaLine: metaParts.join(" | "),
       isRequestPrice: false,
+      taxCounterpartLine: null,
       additionalAmounts: [],
     };
   }
@@ -219,6 +237,7 @@ function getListingPriceDisplay(
     amountLabel: moduleMessages.details.askPrice,
     metaLine: "",
     isRequestPrice: true,
+    taxCounterpartLine: null,
     additionalAmounts: [],
   };
 }
@@ -676,6 +695,10 @@ export async function ContainerDetailsContent({
           __html: JSON.stringify(structuredData),
         }}
       />
+      <ContainerListingViewTracker
+        listingId={listing._id.toHexString()}
+        enabled={!isOwner && !isAdmin}
+      />
       <ContainerDetailsScrollTop listingId={listing._id.toHexString()} />
       <div className="sticky top-0 z-20 -mx-4 -mt-6 px-4 pb-1 pt-6 sm:hidden">
         <div className="flex min-w-0 items-center gap-2 rounded-md border border-neutral-200 bg-white/95 p-2 shadow-sm backdrop-blur">
@@ -898,6 +921,11 @@ export async function ContainerDetailsContent({
                   {priceDisplay.metaLine}
                 </p>
               ) : null}
+              {priceDisplay.taxCounterpartLine ? (
+                <p className="mt-1 text-sm font-semibold text-neutral-700">
+                  {priceDisplay.taxCounterpartLine}
+                </p>
+              ) : null}
               {isPublic && isPriceNegotiable ? (
                 <div className="mt-3 sm:hidden">
                   <ContainerInquiryModalTrigger
@@ -1116,11 +1144,19 @@ export async function ContainerDetailsContent({
           </section>
         ) : null}
 
-        <div className="mt-4 flex justify-end">
+        <div className="mt-4 grid justify-items-end gap-1">
           <p className="text-right text-xs text-neutral-400">
             {moduleMessages.details.expiresLabel}:{" "}
             {listing.expiresAt.toLocaleDateString(toIntlLocale(locale))}
           </p>
+          {isOwner || isAdmin ? (
+            <p className="text-right text-xs text-neutral-400">
+              {moduleMessages.details.detailsViewCountLabel}:{" "}
+              <span className="font-semibold text-neutral-500">
+                {listingItem.detailsViewCount}
+              </span>
+            </p>
+          ) : null}
         </div>
       </article>
       <div className="flex flex-wrap items-center justify-end gap-2 sm:hidden">

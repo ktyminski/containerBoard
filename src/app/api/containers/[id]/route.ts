@@ -54,7 +54,7 @@ import { USER_ROLE } from "@/lib/user-roles";
 import { logError } from "@/lib/server-logger";
 
 export const runtime = "nodejs";
-const MAX_LISTING_PHOTO_COUNT = 6;
+const MAX_LISTING_PHOTO_COUNT = 10;
 const MAX_LISTING_PHOTO_BYTES = 5 * 1024 * 1024;
 
 type RouteContext = {

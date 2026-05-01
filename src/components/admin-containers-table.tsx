@@ -180,7 +180,7 @@ export function AdminContainersTable({
       ) : null}
 
       <div className="overflow-auto">
-        <table className="w-full min-w-[1080px] text-left text-sm">
+        <table className="w-full min-w-[1220px] text-left text-sm">
           <thead>
             <tr className="text-neutral-400">
               <th className="pb-2">{messages.columns.company}</th>
@@ -188,6 +188,8 @@ export function AdminContainersTable({
               <th className="pb-2">{messages.columns.location}</th>
               <th className="pb-2">{messages.columns.createdAt}</th>
               <th className="pb-2">{messages.columns.quantity}</th>
+              <th className="pb-2">{messages.columns.detailsViews}</th>
+              <th className="pb-2">{messages.columns.contactReveals}</th>
               <th className="pb-2">{messages.columns.status}</th>
               <th className="pb-2">{messages.columns.expires}</th>
               <th className="pb-2">{messages.columns.actions}</th>
@@ -206,6 +208,8 @@ export function AdminContainersTable({
                   {new Date(item.createdAt).toLocaleString(locale)}
                 </td>
                 <td className="py-2 pr-3 text-neutral-300">{item.quantity}</td>
+                <td className="py-2 pr-3 text-neutral-300">{item.detailsViewCount}</td>
+                <td className="py-2 pr-3 text-neutral-300">{item.contactRevealCount}</td>
                 <td className="py-2 pr-3 text-neutral-300">{messages.statusValues[item.status]}</td>
                 <td className="py-2 pr-3 text-neutral-300">{new Date(item.expiresAt).toLocaleDateString(locale)}</td>
                 <td className="py-2">
