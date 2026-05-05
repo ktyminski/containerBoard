@@ -51,11 +51,45 @@ import {
 } from "@/lib/container-listing-write";
 import { updateListingSchema } from "@/lib/container-listing-write-schema";
 import { USER_ROLE } from "@/lib/user-roles";
-import { logError } from "@/lib/server-logger";
+import { logError, logWarn } from "@/lib/server-logger";
 
 export const runtime = "nodejs";
 const MAX_LISTING_PHOTO_COUNT = 10;
 const MAX_LISTING_PHOTO_BYTES = 5 * 1024 * 1024;
+const SLOW_CONTAINER_WRITE_MS = 1500;
+
+type ContainerWriteTimings = Record<string, number>;
+
+function elapsedMs(start: number): number {
+  return Math.round(performance.now() - start);
+}
+
+function logSlowContainerWrite(input: {
+  action: "create" | "update";
+  route: string;
+  startedAt: number;
+  timings: ContainerWriteTimings;
+  photoCount: number;
+  totalPhotoBytes: number;
+  listingId?: string;
+  userId?: string;
+}): void {
+  const totalMs = elapsedMs(input.startedAt);
+  if (totalMs < SLOW_CONTAINER_WRITE_MS) {
+    return;
+  }
+
+  logWarn("Slow container write", {
+    action: input.action,
+    route: input.route,
+    totalMs,
+    timings: input.timings,
+    photoCount: input.photoCount,
+    totalPhotoBytes: input.totalPhotoBytes,
+    listingId: input.listingId,
+    userId: input.userId,
+  });
+}
 
 type RouteContext = {
   params: Promise<{
@@ -248,8 +282,12 @@ export async function GET(request: NextRequest, context: RouteContext) {
 }
 
 export async function PATCH(request: NextRequest, context: RouteContext) {
+  const writeStartedAt = performance.now();
+  const timings: ContainerWriteTimings = {};
   try {
+    let stepStartedAt = performance.now();
     await ensureContainerListingsIndexes();
+    timings.ensureIndexesMs = elapsedMs(stepStartedAt);
 
     const { id } = await context.params;
     if (!ObjectId.isValid(id)) {
@@ -273,7 +311,9 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
 
     const listingId = new ObjectId(id);
     const listings = await getContainerListingsCollection();
+    stepStartedAt = performance.now();
     const listing = await listings.findOne({ _id: listingId });
+    timings.listingLookupMs = elapsedMs(stepStartedAt);
     if (!listing?._id) {
       return NextResponse.json({ error: "Listing not found" }, { status: 404 });
     }
@@ -290,7 +330,10 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
       );
     }
 
+    stepStartedAt = performance.now();
     const { payload, photoFiles, keepPhotoIndexesRaw, prependUploadedPhotos } = await parsePatchBody(request);
+    timings.parseBodyMs = elapsedMs(stepStartedAt);
+    const totalPhotoBytes = photoFiles.reduce((sum, file) => sum + file.size, 0);
 
     const updateParsed = updateSchema.safeParse(payload);
     if (updateParsed.success) {
@@ -424,7 +467,9 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
         updateParsed.data.cscValidToYear <= 2100
           ? updateParsed.data.cscValidToYear
           : undefined;
+      stepStartedAt = performance.now();
       const fxContext = await getLatestFxContext(now);
+      timings.fxLookupMs = elapsedMs(stepStartedAt);
       const normalizedPricing =
         updateParsed.data.pricing
           ? normalizeListingPrice(
@@ -439,6 +484,7 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
               fxContext,
             });
       const companies = await getCompaniesCollection();
+      stepStartedAt = performance.now();
       const ownerCompany = await companies.findOne(
         {
           createdByUserId: listing.createdByUserId,
@@ -452,6 +498,7 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
           sort: { updatedAt: -1 },
         },
       );
+      timings.companyLookupMs = elapsedMs(stepStartedAt);
       const publishAsCompanyRequested = updateParsed.data.publishedAsCompany === true;
       const publishedAsCompany =
         listing.publishedAsCompany === true || publishAsCompanyRequested;
@@ -464,10 +511,13 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
       const uploadedBlobUrls: string[] = [];
       let storedNextUploadedPhotos: ContainerListingImageAsset[] = [];
       try {
+        stepStartedAt = performance.now();
         const nextUploadedPhotos =
           photoFiles.length > 0
             ? await Promise.all(photoFiles.map((file) => processGalleryUpload(file, "photo")))
             : [];
+        timings.processPhotosMs = elapsedMs(stepStartedAt);
+        stepStartedAt = performance.now();
         storedNextUploadedPhotos =
           nextUploadedPhotos.length > 0
             ? await Promise.all(
@@ -484,6 +534,7 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
                 }),
               )
             : [];
+        timings.uploadPhotosMs = elapsedMs(stepStartedAt);
       } catch (mediaError) {
         if (uploadedBlobUrls.length > 0) {
           await safeDeleteBlobUrls(uploadedBlobUrls);
@@ -603,6 +654,7 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
       });
 
       try {
+        stepStartedAt = performance.now();
         await listings.updateOne(
           { _id: listingId },
           {
@@ -631,6 +683,7 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
               : {}),
           },
         );
+        timings.dbUpdateMs = elapsedMs(stepStartedAt);
       } catch (dbError) {
         if (uploadedBlobUrls.length > 0) {
           await safeDeleteBlobUrls(uploadedBlobUrls);
@@ -639,10 +692,24 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
       }
       const staleBlobUrls = toBlobUrls(removedExistingPhotos);
       if (staleBlobUrls.length > 0) {
+        stepStartedAt = performance.now();
         await safeDeleteBlobUrls(staleBlobUrls);
+        timings.deleteStalePhotosMs = elapsedMs(stepStartedAt);
       }
 
+      stepStartedAt = performance.now();
       const refreshed = await listings.findOne({ _id: listingId });
+      timings.refreshLookupMs = elapsedMs(stepStartedAt);
+      logSlowContainerWrite({
+        action: "update",
+        route: "/api/containers/[id]",
+        startedAt: writeStartedAt,
+        timings,
+        photoCount: photoFiles.length,
+        totalPhotoBytes,
+        listingId: listingId.toHexString(),
+        userId: user._id.toHexString(),
+      });
       return NextResponse.json({ item: refreshed ? mapContainerListingToItem(refreshed) : null });
     }
 

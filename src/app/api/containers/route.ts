@@ -24,7 +24,7 @@ import {
   type ContainerListingImageAsset,
   type ContainerListingItem,
 } from "@/lib/container-listings";
-import { getCompaniesCollection } from "@/lib/companies";
+import { getCompaniesCollection, type CompanyDocument } from "@/lib/companies";
 import {
   CONTAINER_CONDITIONS,
   CONTAINER_FEATURES,
@@ -71,7 +71,7 @@ import {
 } from "@/lib/container-listing-write-schema";
 import { normalizeCompanyVerificationStatus } from "@/lib/company-verification";
 import { enforceRateLimitOrResponse } from "@/lib/request-rate-limit";
-import { logError } from "@/lib/server-logger";
+import { logError, logWarn } from "@/lib/server-logger";
 import { USER_ROLE } from "@/lib/user-roles";
 
 export const runtime = "nodejs";
@@ -80,6 +80,40 @@ const MAX_MAP_POINTS = 50_000;
 const MAX_LOCAL_FAVORITE_IDS = 2_000;
 const MAX_LISTING_PHOTO_COUNT = 10;
 const MAX_LISTING_PHOTO_BYTES = 5 * 1024 * 1024;
+const SLOW_CONTAINER_WRITE_MS = 1500;
+
+type ContainerWriteTimings = Record<string, number>;
+
+function elapsedMs(start: number): number {
+  return Math.round(performance.now() - start);
+}
+
+function logSlowContainerWrite(input: {
+  action: "create" | "update";
+  route: string;
+  startedAt: number;
+  timings: ContainerWriteTimings;
+  photoCount: number;
+  totalPhotoBytes: number;
+  listingId?: string;
+  userId?: string;
+}): void {
+  const totalMs = elapsedMs(input.startedAt);
+  if (totalMs < SLOW_CONTAINER_WRITE_MS) {
+    return;
+  }
+
+  logWarn("Slow container write", {
+    action: input.action,
+    route: input.route,
+    totalMs,
+    timings: input.timings,
+    photoCount: input.photoCount,
+    totalPhotoBytes: input.totalPhotoBytes,
+    listingId: input.listingId,
+    userId: input.userId,
+  });
+}
 
 const querySchema = z.object({
   page: z.coerce.number().int().min(1).default(1),
@@ -554,6 +588,11 @@ type CompanyProfileByOwner = {
   isVerified: boolean;
 };
 
+type CompanyProfilesForListings = {
+  byOwnerUserId: Map<string, CompanyProfileByOwner>;
+  bySlug: Map<string, CompanyProfileByOwner>;
+};
+
 type MapListingRow = Pick<
   ContainerListingDocument,
   | "_id"
@@ -640,22 +679,39 @@ function resolveListingCompanySlug(input: {
   return profile.slug;
 }
 
-async function getCompanyProfilesByOwnerUserId(
+async function getCompanyProfilesForListings(
   rows: ContainerListingDocument[],
-): Promise<Map<string, CompanyProfileByOwner>> {
+): Promise<CompanyProfilesForListings> {
   const ownerUserIds = Array.from(
     new Set(rows.map((row) => row.createdByUserId?.toHexString()).filter(Boolean)),
   ).filter((value): value is string => Boolean(value) && ObjectId.isValid(value));
+  const companySlugs = Array.from(
+    new Set(rows.map((row) => row.companySlug?.trim()).filter(Boolean)),
+  ).filter((value): value is string => Boolean(value));
 
-  if (ownerUserIds.length === 0) {
-    return new Map<string, CompanyProfileByOwner>();
+  const emptyProfiles: CompanyProfilesForListings = {
+    byOwnerUserId: new Map<string, CompanyProfileByOwner>(),
+    bySlug: new Map<string, CompanyProfileByOwner>(),
+  };
+  const profileFilters: Filter<CompanyDocument>[] = [];
+  if (ownerUserIds.length > 0) {
+    profileFilters.push({
+      createdByUserId: { $in: ownerUserIds.map((value) => new ObjectId(value)) },
+    });
+  }
+  if (companySlugs.length > 0) {
+    profileFilters.push({ slug: { $in: companySlugs } });
+  }
+
+  if (profileFilters.length === 0) {
+    return emptyProfiles;
   }
 
   const companies = await getCompaniesCollection();
   const companyRows = await companies
     .find(
       {
-        createdByUserId: { $in: ownerUserIds.map((value) => new ObjectId(value)) },
+        $or: profileFilters,
         isBlocked: { $ne: true },
       },
       {
@@ -672,36 +728,43 @@ async function getCompanyProfilesByOwnerUserId(
     .toArray();
 
   const byOwnerUserId = new Map<string, CompanyProfileByOwner>();
+  const bySlug = new Map<string, CompanyProfileByOwner>();
   for (const company of companyRows) {
-    const ownerUserId = company.createdByUserId?.toHexString();
-    if (!ownerUserId || byOwnerUserId.has(ownerUserId)) {
-      continue;
-    }
     const slug = company.slug?.trim();
     const name = company.name?.trim();
     if (!slug || !name) {
       continue;
     }
-    byOwnerUserId.set(ownerUserId, {
+    const profile = {
       slug,
       name,
       isVerified:
         normalizeCompanyVerificationStatus(company.verificationStatus) === "verified",
-    });
+    };
+    if (!bySlug.has(slug)) {
+      bySlug.set(slug, profile);
+    }
+
+    const ownerUserId = company.createdByUserId?.toHexString();
+    if (ownerUserId && !byOwnerUserId.has(ownerUserId)) {
+      byOwnerUserId.set(ownerUserId, profile);
+    }
   }
 
-  return byOwnerUserId;
+  return { byOwnerUserId, bySlug };
 }
 
 function mapRowsToItems(
   rows: ContainerListingDocument[],
   input?: {
     favoriteIdSet?: Set<string>;
-    companyProfilesByOwnerUserId?: Map<string, CompanyProfileByOwner>;
+    companyProfiles?: CompanyProfilesForListings;
   },
 ): ContainerListingItem[] {
   const companyProfilesByOwnerUserId =
-    input?.companyProfilesByOwnerUserId ?? new Map<string, CompanyProfileByOwner>();
+    input?.companyProfiles?.byOwnerUserId ?? new Map<string, CompanyProfileByOwner>();
+  const companyProfilesBySlug =
+    input?.companyProfiles?.bySlug ?? new Map<string, CompanyProfileByOwner>();
   return rows.map((row) => {
     const mapped = mapContainerListingToItem(row);
     const ownerUserId = row.createdByUserId?.toHexString();
@@ -713,8 +776,11 @@ function mapRowsToItems(
       item: mapped,
       byOwnerUserId: companyProfilesByOwnerUserId,
     });
+    const slugProfile = companySlug ? companyProfilesBySlug.get(companySlug) : undefined;
     let companyIsVerified = mapped.companyIsVerified;
-    if (
+    if (slugProfile) {
+      companyIsVerified = slugProfile.isVerified;
+    } else if (
       companySlug &&
       ownerProfile &&
       isSameCompanyName(row.companyName, ownerProfile.name)
@@ -1168,8 +1234,8 @@ export async function GET(request: NextRequest) {
       const ordered = requestedIds
         .map((id) => byId.get(id))
         .filter((row): row is ContainerListingDocument => Boolean(row));
-      const [companyProfilesByOwnerUserId, favoriteIdSet] = await Promise.all([
-        getCompanyProfilesByOwnerUserId(ordered),
+      const [companyProfiles, favoriteIdSet] = await Promise.all([
+        getCompanyProfilesForListings(ordered),
         user?._id
           ? favorites
             ? Promise.resolve(new Set(ordered.map((row) => row._id.toHexString())))
@@ -1182,14 +1248,14 @@ export async function GET(request: NextRequest) {
 
       if (!user?._id) {
         return NextResponse.json({
-          items: mapRowsToItems(ordered, { companyProfilesByOwnerUserId }),
+          items: mapRowsToItems(ordered, { companyProfiles }),
         });
       }
 
       return NextResponse.json({
         items: mapRowsToItems(ordered, {
           favoriteIdSet: favoriteIdSet ?? new Set<string>(),
-          companyProfilesByOwnerUserId,
+          companyProfiles,
         }),
       });
     }
@@ -1265,8 +1331,8 @@ export async function GET(request: NextRequest) {
         .map((id) => deliveryPageRowsById.get(id.toHexString()))
         .filter((row): row is ContainerListingDocument => Boolean(row));
 
-      const [companyProfilesByOwnerUserId, favoriteIdSet] = await Promise.all([
-        getCompanyProfilesByOwnerUserId(orderedDeliveryPageRows),
+      const [companyProfiles, favoriteIdSet] = await Promise.all([
+        getCompanyProfilesForListings(orderedDeliveryPageRows),
         user?._id
           ? favorites
             ? Promise.resolve(
@@ -1282,7 +1348,7 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({
         items: mapRowsToItems(orderedDeliveryPageRows, {
           favoriteIdSet: favoriteIdSet ?? undefined,
-          companyProfilesByOwnerUserId,
+          companyProfiles,
         }),
         meta: {
           page: deliveryCurrentPage,
@@ -1364,8 +1430,8 @@ export async function GET(request: NextRequest) {
             skip: (currentPage - 1) * pageSize,
             limit: pageSize,
           });
-    const [companyProfilesByOwnerUserId, favoriteIdSet] = await Promise.all([
-      getCompanyProfilesByOwnerUserId(rows),
+    const [companyProfiles, favoriteIdSet] = await Promise.all([
+      getCompanyProfilesForListings(rows),
       user?._id
         ? favorites
           ? Promise.resolve(new Set(rows.map((row) => row._id.toHexString())))
@@ -1378,7 +1444,7 @@ export async function GET(request: NextRequest) {
 
     if (!user?._id) {
       return NextResponse.json({
-        items: mapRowsToItems(rows, { companyProfilesByOwnerUserId }),
+        items: mapRowsToItems(rows, { companyProfiles }),
         meta: {
           page: currentPage,
           pageSize,
@@ -1391,7 +1457,7 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({
       items: mapRowsToItems(rows, {
         favoriteIdSet: favoriteIdSet ?? new Set<string>(),
-        companyProfilesByOwnerUserId,
+        companyProfiles,
       }),
       meta: {
         page: currentPage,
@@ -1413,8 +1479,12 @@ export async function GET(request: NextRequest) {
 }
 
 export async function POST(request: NextRequest) {
+  const writeStartedAt = performance.now();
+  const timings: ContainerWriteTimings = {};
   try {
+    let stepStartedAt = performance.now();
     await ensureContainerListingsIndexes();
+    timings.ensureIndexesMs = elapsedMs(stepStartedAt);
 
     const ipRateLimitResponse = await enforceRateLimitOrResponse({
       request,
@@ -1451,7 +1521,10 @@ export async function POST(request: NextRequest) {
       return userRateLimitResponse;
     }
 
+    stepStartedAt = performance.now();
     const { payload, photoFiles } = await parseCreateBody(request);
+    timings.parseBodyMs = elapsedMs(stepStartedAt);
+    const totalPhotoBytes = photoFiles.reduce((sum, file) => sum + file.size, 0);
     const parsed = createSchema.safeParse(payload);
     if (!parsed.success) {
       return NextResponse.json(
@@ -1497,6 +1570,7 @@ export async function POST(request: NextRequest) {
         { status: 403 },
       );
     }
+    stepStartedAt = performance.now();
     const adminSelectedCompany = adminSelectedCompanyId
       ? await companies.findOne(
           {
@@ -1531,6 +1605,7 @@ export async function POST(request: NextRequest) {
         sort: { updatedAt: -1 },
       },
     );
+    timings.companyLookupMs = elapsedMs(stepStartedAt);
     const publishAsCompanyRequested = listing.publishedAsCompany === true;
     if (!adminSelectedCompany && publishAsCompanyRequested && !ownerCompany?._id) {
       return NextResponse.json(
@@ -1624,7 +1699,9 @@ export async function POST(request: NextRequest) {
       listing.cscValidToYear <= 2100
         ? listing.cscValidToYear
         : undefined;
+    stepStartedAt = performance.now();
     const fxContext = await getLatestFxContext(now);
+    timings.fxLookupMs = elapsedMs(stepStartedAt);
     const normalizedPricing =
       listing.pricing
         ? normalizeListingPrice(listing.pricing as ListingPriceInput, now, fxContext)
@@ -1652,10 +1729,13 @@ export async function POST(request: NextRequest) {
     let storedPhotos: ContainerListingImageAsset[] = [];
     const uploadedBlobUrls: string[] = [];
     try {
+      stepStartedAt = performance.now();
       uploadedPhotos =
         photoFiles.length > 0
           ? await Promise.all(photoFiles.map((file) => processGalleryUpload(file, "photo")))
           : [];
+      timings.processPhotosMs = elapsedMs(stepStartedAt);
+      stepStartedAt = performance.now();
       storedPhotos =
         uploadedPhotos.length > 0
           ? await Promise.all(
@@ -1672,6 +1752,7 @@ export async function POST(request: NextRequest) {
               }),
             )
           : [];
+      timings.uploadPhotosMs = elapsedMs(stepStartedAt);
     } catch (mediaError) {
       if (uploadedBlobUrls.length > 0) {
         await safeDeleteBlobUrls(uploadedBlobUrls);
@@ -1690,6 +1771,7 @@ export async function POST(request: NextRequest) {
     const listings = await getContainerListingsCollection();
     let insertResult;
     try {
+      stepStartedAt = performance.now();
       insertResult = await listings.insertOne(
         buildContainerListingDocument({
           listingId,
@@ -1741,12 +1823,24 @@ export async function POST(request: NextRequest) {
           contactPhone: normalizeOptionalString(listing.contactPhone),
         }),
       );
+      timings.dbInsertMs = elapsedMs(stepStartedAt);
     } catch (dbError) {
       if (uploadedBlobUrls.length > 0) {
         await safeDeleteBlobUrls(uploadedBlobUrls);
       }
       throw dbError;
     }
+
+    logSlowContainerWrite({
+      action: "create",
+      route: "/api/containers",
+      startedAt: writeStartedAt,
+      timings,
+      photoCount: photoFiles.length,
+      totalPhotoBytes,
+      listingId: insertResult.insertedId.toHexString(),
+      userId: user._id.toHexString(),
+    });
 
     return NextResponse.json(
       {

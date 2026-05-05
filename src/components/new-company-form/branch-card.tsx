@@ -8,7 +8,7 @@ import type {
 } from "react-hook-form";
 import { BranchLocationPicker } from "@/components/branch-location-picker";
 import type { AppLocale, AppMessages } from "@/lib/i18n";
-import { hasGeocodedAddressParts, type GeocodeAddressParts } from "@/lib/geocode-address";
+import type { GeocodeAddressParts } from "@/lib/geocode-address";
 import {
   PHONE_REGEX,
   getFieldMessage,
@@ -161,21 +161,19 @@ export function BranchCard({
               required: messages.requiredField,
               minLength: { value: 1, message: messages.requiredField },
               maxLength: { value: 200, message: messages.validationError },
-              validate: () =>
-                hasGeocodedAddressParts(getValues(`branches.${index}.addressParts`))
-                  || messages.branchAddressGeocodeRequired,
               onChange: () => {
+                setLocationStatus(null);
                 setValue(`branches.${index}.addressParts`, null, {
                   shouldDirty: true,
                   shouldValidate: false,
                 });
                 setValue(`branches.${index}.lat`, "", {
                   shouldDirty: true,
-                  shouldValidate: true,
+                  shouldValidate: false,
                 });
                 setValue(`branches.${index}.lng`, "", {
                   shouldDirty: true,
-                  shouldValidate: true,
+                  shouldValidate: false,
                 });
               },
             })}

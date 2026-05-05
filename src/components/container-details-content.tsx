@@ -1,6 +1,6 @@
 import Link from "next/link";
 import Image from "next/image";
-import { ObjectId } from "mongodb";
+import { ObjectId, type Filter } from "mongodb";
 import { cookies } from "next/headers";
 import { notFound } from "next/navigation";
 import { CONTAINER_CONDITION_COLOR_TOKENS } from "@/components/container-listings-shared";
@@ -18,7 +18,7 @@ import { toIntlLocale } from "@/components/container-modules-i18n";
 import { DetailsBackButton } from "@/components/details-back-button";
 import { SESSION_COOKIE_NAME } from "@/lib/auth-session";
 import { getCurrentUserFromToken } from "@/lib/auth-user";
-import { getCompaniesCollection } from "@/lib/companies";
+import { getCompaniesCollection, type CompanyDocument } from "@/lib/companies";
 import { normalizeCompanyVerificationStatus } from "@/lib/company-verification";
 import {
   getContainerConditionLabel,
@@ -521,19 +521,35 @@ export async function ContainerDetailsContent({
     ? `/companies/${listingItem.companySlug}`
     : null;
   const companies = await getCompaniesCollection();
-  const ownerCompany = await companies.findOne(
-    {
-      createdByUserId: listing.createdByUserId,
-      isBlocked: { $ne: true },
-    },
-    {
-      projection: {
-        slug: 1,
-        name: 1,
-        verificationStatus: 1,
+  const listingCompanySlug = listingItem.companySlug?.trim();
+  const companyProfileFilters: Filter<CompanyDocument>[] = [
+    { createdByUserId: listing.createdByUserId },
+  ];
+  if (listingCompanySlug) {
+    companyProfileFilters.push({ slug: listingCompanySlug });
+  }
+  const companyProfileRows = await companies
+    .find(
+      {
+        $or: companyProfileFilters,
+        isBlocked: { $ne: true },
       },
-      sort: { updatedAt: -1 },
-    },
+      {
+        projection: {
+          createdByUserId: 1,
+          slug: 1,
+          name: 1,
+          verificationStatus: 1,
+        },
+        sort: { updatedAt: -1 },
+      },
+    )
+    .toArray();
+  const slugCompany = listingCompanySlug
+    ? companyProfileRows.find((company) => company.slug?.trim() === listingCompanySlug)
+    : undefined;
+  const ownerCompany = companyProfileRows.find((company) =>
+    company.createdByUserId?.equals(listing.createdByUserId),
   );
   const ownerCompanyMatchesListing =
     Boolean(ownerCompany?.name) &&
@@ -542,7 +558,10 @@ export async function ContainerDetailsContent({
   if (!companyProfileHref && ownerCompanySlug && ownerCompanyMatchesListing) {
     companyProfileHref = `/companies/${ownerCompanySlug}`;
   }
-  if (
+  if (slugCompany) {
+    isCompanyVerified =
+      normalizeCompanyVerificationStatus(slugCompany.verificationStatus) === "verified";
+  } else if (
     ownerCompanyMatchesListing &&
     normalizeCompanyVerificationStatus(ownerCompany?.verificationStatus) === "verified"
   ) {

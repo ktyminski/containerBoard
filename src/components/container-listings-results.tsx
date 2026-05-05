@@ -316,6 +316,12 @@ function getContainerPreviewSrc(item: ContainerListingItem): string {
   return firstPhotoUrl ?? getContainerPlaceholderSrc(item);
 }
 
+function getAdditionalPhotoCount(item: ContainerListingItem): number {
+  const photoCount =
+    item.photoUrls?.filter((value) => value?.trim().length > 0).length ?? 0;
+  return Math.max(0, photoCount - 1);
+}
+
 function getCscValidityLabel(
   messages: ContainerListingsMessages,
   item: ContainerListingItem,
@@ -859,6 +865,7 @@ const ContainerListingResultCard = memo(function ContainerListingResultCard({
     .filter((part) => part.length > 0 && part !== messages.results.negotiable)
     .join(" | ");
   const containerColors = item.containerColors ?? [];
+  const additionalPhotoCount = getAdditionalPhotoCount(item);
 
   return (
     <li className="w-full rounded-md border border-neutral-200 bg-white p-1.5 shadow-sm transition-colors duration-150 hover:border-sky-100 hover:bg-sky-50/60 sm:p-4">
@@ -877,6 +884,34 @@ const ContainerListingResultCard = memo(function ContainerListingResultCard({
               sizes="(max-width: 640px) 100vw, 176px"
               priority={shouldPrioritizeImage}
             />
+            {additionalPhotoCount > 0 ? (
+              <span
+                className="absolute bottom-1.5 right-1.5 inline-flex h-6 min-w-8 items-center justify-center gap-1 rounded-md border border-neutral-300 bg-white/95 px-1.5 text-[11px] font-semibold text-neutral-900 shadow-sm backdrop-blur"
+                aria-label={`+${additionalPhotoCount}`}
+                title={`+${additionalPhotoCount}`}
+              >
+                <svg
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  className="h-3.5 w-3.5"
+                  aria-hidden="true"
+                >
+                  <path
+                    d="M7 7h2l1.2-2h3.6L15 7h2a3 3 0 0 1 3 3v6.5a3 3 0 0 1-3 3H7a3 3 0 0 1-3-3V10a3 3 0 0 1 3-3Z"
+                    stroke="currentColor"
+                    strokeWidth="1.8"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  />
+                  <path
+                    d="M12 16a3 3 0 1 0 0-6 3 3 0 0 0 0 6Z"
+                    stroke="currentColor"
+                    strokeWidth="1.8"
+                  />
+                </svg>
+                <span>+{additionalPhotoCount}</span>
+              </span>
+            ) : null}
           </div>
           <span
             className={`-mt-px inline-flex w-full items-center justify-center rounded-b-md border px-2 py-1 text-[10px] font-medium sm:hidden ${CONTAINER_CONDITION_COLOR_TOKENS[item.container.condition].badgeClassName}`}
