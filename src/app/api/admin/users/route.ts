@@ -4,6 +4,7 @@ import { z } from "zod";
 import { enforceAuthenticatedRateLimitOrResponse } from "@/lib/app-rate-limit";
 import { getCurrentUserFromRequest } from "@/lib/auth-user";
 import { ensureCompaniesIndexes, getCompaniesCollection } from "@/lib/companies";
+import { assignCompanyListingsToOwner } from "@/lib/company-listing-ownership";
 import { USER_ROLE } from "@/lib/user-roles";
 import {
   getUsersCollection,
@@ -409,7 +410,7 @@ export async function POST(request: NextRequest) {
       ),
       companies.findOne(
         { _id: companyId },
-        { projection: { _id: 1, createdByUserId: 1 } },
+        { projection: { _id: 1, createdByUserId: 1, slug: 1 } },
       ),
     ]);
 
@@ -426,12 +427,13 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    const now = new Date();
     const companyUpdateResult = await companies.updateOne(
       { _id: companyId, createdByUserId: { $exists: false } },
       {
         $set: {
           createdByUserId: userId,
-          updatedAt: new Date(),
+          updatedAt: now,
         },
       },
     );
@@ -448,12 +450,19 @@ export async function POST(request: NextRequest) {
       {
         $set: {
           role: USER_ROLE.COMPANY_OWNER,
-          updatedAt: new Date(),
+          updatedAt: now,
         },
       },
     );
 
-    return NextResponse.json({ ok: true });
+    const reassignedListingsCount = await assignCompanyListingsToOwner({
+      companyId,
+      companySlug: company.slug,
+      ownerUserId: userId,
+      now,
+    });
+
+    return NextResponse.json({ ok: true, reassignedListingsCount });
   } catch (error) {
     logError("Unhandled API error", { route: "/api/admin/users", error });
     return NextResponse.json(

@@ -7,7 +7,7 @@ const BACKGROUND_WIDTH = 1600;
 const BACKGROUND_HEIGHT = 400;
 const PHOTO_MAX_WIDTH = 1600;
 const PHOTO_MAX_HEIGHT = 1600;
-const WEBP_EFFORT = 4;
+const WEBP_EFFORT = 2;
 
 type SharpLike = typeof import("sharp");
 

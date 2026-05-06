@@ -112,6 +112,7 @@ function logSlowContainerWrite(input: {
     totalPhotoBytes: input.totalPhotoBytes,
     listingId: input.listingId,
     userId: input.userId,
+    functionRegion: process.env.VERCEL_REGION,
   });
 }
 
@@ -951,7 +952,7 @@ async function uploadContainerImageAsset(input: {
       contentType: input.asset.contentType,
     }),
     contentType: input.asset.contentType,
-    access: "public",
+    access: "private",
     cacheControlMaxAge: 31536000,
     buffer,
   });
@@ -1118,6 +1119,22 @@ export async function GET(request: NextRequest) {
         companyFilterSlug = "__no_company_match__";
       }
     }
+    const adminDetachedCompanySlugs =
+      mine && user?.role === USER_ROLE.ADMIN
+        ? (
+            await (await getCompaniesCollection())
+              .find(
+                {
+                  createdByUserId: { $exists: false },
+                  isBlocked: { $ne: true },
+                },
+                { projection: { slug: 1 } },
+              )
+              .toArray()
+          )
+            .map((row) => row.slug?.trim() ?? "")
+            .filter(Boolean)
+        : undefined;
 
     const includeOnlyPublic = !mine;
     const filter = buildContainerListingsFilter({
@@ -1151,6 +1168,8 @@ export async function GET(request: NextRequest) {
       countryCode,
       status: mine && isAllowedMineStatus(status) ? status : undefined,
       ownerUserId: mine && user?._id ? new ObjectId(user._id.toHexString()) : undefined,
+      excludeAdminCreatedByUserId: mine && user?._id ? new ObjectId(user._id.toHexString()) : undefined,
+      excludeCompanySlugs: adminDetachedCompanySlugs,
       includeOnlyPublic,
     });
 
@@ -1626,6 +1645,8 @@ export async function POST(request: NextRequest) {
       : publishedAsCompany
         ? ownerCompany?.slug?.trim() || undefined
         : undefined;
+    const isAdminDetachedCompanyListing =
+      Boolean(adminSelectedCompany?._id) && !adminSelectedCompany?.createdByUserId;
     const effectiveCreatedByUserId = adminSelectedCompany?.createdByUserId ?? user._id;
     const listingId = new ObjectId();
     const legacyLocationAddressLabel = normalizeOptionalString(listing.locationAddressLabel);
@@ -1777,6 +1798,12 @@ export async function POST(request: NextRequest) {
           listingId,
           now,
           createdByUserId: effectiveCreatedByUserId,
+          ...(isAdminDetachedCompanyListing
+            ? {
+                adminCreatedByUserId: user._id,
+                adminCreatedForCompanyId: adminSelectedCompanyId ?? undefined,
+              }
+            : {}),
           status: LISTING_STATUS.ACTIVE,
           type: listing.type,
           container: {

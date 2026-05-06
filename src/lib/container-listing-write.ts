@@ -250,6 +250,8 @@ export function buildContainerListingDocument(
   input: ListingWritePersistenceInput & {
     listingId?: ObjectId;
     createdByUserId: ObjectId;
+    adminCreatedByUserId?: ObjectId;
+    adminCreatedForCompanyId?: ObjectId;
     status: ContainerListingDocument["status"];
     now: Date;
   },
@@ -262,6 +264,12 @@ export function buildContainerListingDocument(
     ...setFields,
     status: input.status,
     createdByUserId: input.createdByUserId,
+    ...(input.adminCreatedByUserId
+      ? { adminCreatedByUserId: input.adminCreatedByUserId }
+      : {}),
+    ...(input.adminCreatedForCompanyId
+      ? { adminCreatedForCompanyId: input.adminCreatedForCompanyId }
+      : {}),
     detailsViewCount: 1,
     createdAt: input.now,
     updatedAt: input.now,

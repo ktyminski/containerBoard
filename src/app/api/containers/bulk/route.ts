@@ -901,6 +901,8 @@ export async function POST(request: NextRequest) {
         { status: 403 },
       );
     }
+    const isAdminDetachedCompanyImport =
+      Boolean(adminSelectedCompany?._id) && !adminSelectedCompany?.createdByUserId;
     const firstCompanyLocation = effectiveCompany.locations?.[0];
     const fallbackLocationAddress =
       normalizeOptionalString(firstCompanyLocation?.addressText) ??
@@ -1027,6 +1029,12 @@ export async function POST(request: NextRequest) {
         listingId,
         now: listingNow,
         createdByUserId: effectiveCompany.createdByUserId ?? user._id,
+        ...(isAdminDetachedCompanyImport
+          ? {
+              adminCreatedByUserId: user._id,
+              adminCreatedForCompanyId: adminSelectedCompanyId ?? undefined,
+            }
+          : {}),
         status: LISTING_STATUS.ACTIVE,
         type: rowValue.type,
         container: {

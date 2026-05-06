@@ -1,4 +1,10 @@
-import { Binary, ObjectId, type Collection, type Filter } from "mongodb";
+import {
+  Binary,
+  ObjectId,
+  type Collection,
+  type Filter,
+  type IndexDescription,
+} from "mongodb";
 import { getDb } from "@/lib/mongodb";
 import type { GeocodeAddressParts } from "@/lib/geocode-address";
 import {
@@ -147,6 +153,8 @@ export type ContainerListingDocument = {
   detailsViewCount?: number;
   status: ListingStatus;
   createdByUserId: ObjectId;
+  adminCreatedByUserId?: ObjectId;
+  adminCreatedForCompanyId?: ObjectId;
   createdAt: Date;
   updatedAt: Date;
   expiresAt: Date;
@@ -397,48 +405,71 @@ export async function ensureContainerListingsIndexes(): Promise<void> {
       const inquiries = await getContainerInquiriesCollection();
       const favorites = await getContainerListingFavoritesCollection();
 
-      await listings.createIndex({ status: 1, expiresAt: 1, createdAt: -1 });
-      await listings.createIndex({ status: 1, expiresAt: 1, companySlug: 1, createdAt: -1 });
-      await listings.createIndex({
-        status: 1,
-        expiresAt: 1,
-        expiryReminder7dSentAt: 1,
-        expiryReminder2dSentAt: 1,
-      });
-      await listings.createIndex({ createdByUserId: 1, createdAt: -1 });
-      await listings.createIndex({ type: 1, "container.type": 1, createdAt: -1 });
-      await listings.createIndex({ type: 1, containerType: 1, createdAt: -1 });
-      await listings.createIndex({ "containerColors.ral": 1 });
-      await listings.createIndex({ "container.size": 1, "container.height": 1, "container.type": 1 });
-      await listings.createIndex({ "container.condition": 1 });
-      await listings.createIndex({ "container.features": 1 });
-      await listings.createIndex({ priceAmount: 1 });
-      await listings.createIndex({ priceNegotiable: 1, priceAmount: 1 });
-      await listings.createIndex({ "pricing.original.currency": 1 });
-      await listings.createIndex({ "pricing.original.taxMode": 1, "pricing.original.negotiable": 1 });
-      await listings.createIndex({ "pricing.normalized.net.amountPln": 1 });
-      await listings.createIndex({ "pricing.normalized.net.amountEur": 1 });
-      await listings.createIndex({ "pricing.normalized.net.amountUsd": 1 });
-      await listings.createIndex({ hasCscPlate: 1, hasCscCertification: 1, productionYear: 1 });
-      await listings.createIndex({ locationCity: 1, locationCountry: 1 });
-      await listings.createIndex({ locationCountryCode: 1, type: 1, status: 1, expiresAt: 1, createdAt: -1 });
-      await listings.createIndex({ locationLat: 1, locationLng: 1 });
-      await listings.createIndex({ "locations.locationCity": 1, "locations.locationCountry": 1 });
-      await listings.createIndex({ "locations.locationCountryCode": 1, type: 1, status: 1, expiresAt: 1, createdAt: -1 });
-      await listings.createIndex({ "locations.locationLat": 1, "locations.locationLng": 1 });
-      await listings.createIndex({ expiresAt: 1 });
+      const listingIndexes: IndexDescription[] = [
+        { key: { status: 1, expiresAt: 1, createdAt: -1 } },
+        { key: { status: 1, expiresAt: 1, companySlug: 1, createdAt: -1 } },
+        {
+          key: {
+            status: 1,
+            expiresAt: 1,
+            expiryReminder7dSentAt: 1,
+            expiryReminder2dSentAt: 1,
+          },
+        },
+        { key: { createdByUserId: 1, createdAt: -1 } },
+        { key: { type: 1, "container.type": 1, createdAt: -1 } },
+        { key: { type: 1, containerType: 1, createdAt: -1 } },
+        { key: { "containerColors.ral": 1 } },
+        { key: { "container.size": 1, "container.height": 1, "container.type": 1 } },
+        { key: { "container.condition": 1 } },
+        { key: { "container.features": 1 } },
+        { key: { priceAmount: 1 } },
+        { key: { priceNegotiable: 1, priceAmount: 1 } },
+        { key: { "pricing.original.currency": 1 } },
+        { key: { "pricing.original.taxMode": 1, "pricing.original.negotiable": 1 } },
+        { key: { "pricing.normalized.net.amountPln": 1 } },
+        { key: { "pricing.normalized.net.amountEur": 1 } },
+        { key: { "pricing.normalized.net.amountUsd": 1 } },
+        { key: { hasCscPlate: 1, hasCscCertification: 1, productionYear: 1 } },
+        { key: { locationCity: 1, locationCountry: 1 } },
+        {
+          key: {
+            locationCountryCode: 1,
+            type: 1,
+            status: 1,
+            expiresAt: 1,
+            createdAt: -1,
+          },
+        },
+        { key: { locationLat: 1, locationLng: 1 } },
+        { key: { "locations.locationCity": 1, "locations.locationCountry": 1 } },
+        {
+          key: {
+            "locations.locationCountryCode": 1,
+            type: 1,
+            status: 1,
+            expiresAt: 1,
+            createdAt: -1,
+          },
+        },
+        { key: { "locations.locationLat": 1, "locations.locationLng": 1 } },
+        { key: { expiresAt: 1 } },
+      ];
+      const inquiryIndexes: IndexDescription[] = [
+        { key: { listingId: 1, createdAt: -1 } },
+        { key: { createdByUserId: 1, createdAt: -1 } },
+      ];
+      const favoriteIndexes: IndexDescription[] = [
+        { key: { userId: 1, listingId: 1 }, unique: true },
+        { key: { userId: 1, createdAt: -1 } },
+        { key: { listingId: 1 } },
+      ];
 
-      await inquiries.createIndex({ listingId: 1, createdAt: -1 });
-      await inquiries.createIndex({ createdByUserId: 1, createdAt: -1 });
-
-      await favorites.createIndex({ userId: 1, listingId: 1 }, { unique: true });
-      await favorites.createIndex({ userId: 1, createdAt: -1 });
-      await favorites.createIndex({ listingId: 1 });
-
-      await listings.updateMany(
-        { "pricing.original.unit": { $exists: true } },
-        { $unset: { "pricing.original.unit": "" } },
-      );
+      await Promise.all([
+        listings.createIndexes(listingIndexes),
+        inquiries.createIndexes(inquiryIndexes),
+        favorites.createIndexes(favoriteIndexes),
+      ]);
     })();
   }
 
@@ -764,6 +795,8 @@ export function buildContainerListingsFilter(input: {
   countryCode?: string;
   status?: ListingStatus;
   ownerUserId?: ObjectId;
+  excludeAdminCreatedByUserId?: ObjectId;
+  excludeCompanySlugs?: string[];
   includeOnlyPublic?: boolean;
   now?: Date;
 }): Filter<ContainerListingDocument> {
@@ -780,6 +813,26 @@ export function buildContainerListingsFilter(input: {
 
   if (input.ownerUserId) {
     filter.createdByUserId = input.ownerUserId;
+  }
+
+  if (input.excludeAdminCreatedByUserId) {
+    filter.adminCreatedByUserId = { $ne: input.excludeAdminCreatedByUserId };
+  }
+
+  const excludeCompanySlugs = Array.from(
+    new Set(
+      (input.excludeCompanySlugs ?? [])
+        .map((slug) => slug.trim())
+        .filter(Boolean),
+    ),
+  );
+  if (excludeCompanySlugs.length > 0) {
+    andConditions.push({
+      $or: [
+        { companySlug: { $exists: false } },
+        { companySlug: { $nin: excludeCompanySlugs } },
+      ],
+    } as Filter<ContainerListingDocument>);
   }
 
   if (input.type) {

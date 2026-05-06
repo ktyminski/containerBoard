@@ -88,6 +88,7 @@ function logSlowContainerWrite(input: {
     totalPhotoBytes: input.totalPhotoBytes,
     listingId: input.listingId,
     userId: input.userId,
+    functionRegion: process.env.VERCEL_REGION,
   });
 }
 
@@ -171,7 +172,7 @@ async function uploadContainerImageAsset(input: {
       contentType: input.asset.contentType,
     }),
     contentType: input.asset.contentType,
-    access: "public",
+    access: "private",
     cacheControlMaxAge: 31536000,
     buffer,
   });

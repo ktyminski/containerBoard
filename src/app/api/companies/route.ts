@@ -238,7 +238,7 @@ async function uploadCompanyImageAsset(input: {
       contentType: input.asset.contentType,
     }),
     contentType: input.asset.contentType,
-    access: "public",
+    access: "private",
     cacheControlMaxAge: 31536000,
     buffer,
   });

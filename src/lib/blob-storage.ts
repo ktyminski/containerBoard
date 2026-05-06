@@ -2,6 +2,8 @@ import { del, get, put, type BlobAccessType } from "@vercel/blob";
 
 export type BlobAccess = BlobAccessType;
 
+let publicUploadsRequirePrivateAccess = false;
+
 function isPrivateStorePublicAccessError(error: unknown): boolean {
   if (!error || typeof error !== "object") {
     return false;
@@ -80,9 +82,14 @@ export async function uploadBlobFromBuffer(input: {
   cacheControlMaxAge?: number;
 }): Promise<{ url: string; pathname: string }> {
   requireBlobToken();
+  const requestedAccess =
+    input.access === "public" && publicUploadsRequirePrivateAccess
+      ? "private"
+      : input.access;
+
   try {
     const result = await put(input.pathname, input.buffer, {
-      access: input.access,
+      access: requestedAccess,
       contentType: input.contentType,
       addRandomSuffix: true,
       ...(typeof input.cacheControlMaxAge === "number"
@@ -91,10 +98,15 @@ export async function uploadBlobFromBuffer(input: {
     });
     return { url: result.url, pathname: result.pathname };
   } catch (error) {
-    if (input.access !== "public" || !isPrivateStorePublicAccessError(error)) {
+    if (
+      input.access !== "public" ||
+      requestedAccess !== "public" ||
+      !isPrivateStorePublicAccessError(error)
+    ) {
       throw error;
     }
 
+    publicUploadsRequirePrivateAccess = true;
     const fallbackResult = await put(input.pathname, input.buffer, {
       access: "private",
       contentType: input.contentType,
