@@ -8,7 +8,14 @@ if (!mongoUri || !mongoDb) {
 }
 
 const SEED_PREFIX = "[seed-eu]";
-const TOTAL_LISTINGS = 200;
+const rawArgs = process.argv.slice(2);
+const shouldKeepExistingSeed = rawArgs.includes("--keep");
+const requestedCount = rawArgs
+  .find((arg) => arg.startsWith("--count="))
+  ?.slice("--count=".length);
+const parsedCount = requestedCount ? Number.parseInt(requestedCount, 10) : NaN;
+const TOTAL_LISTINGS =
+  Number.isInteger(parsedCount) && parsedCount > 0 ? parsedCount : 240;
 const TTL_DAYS = 30;
 const SYSTEM_USER_ID = new ObjectId("0000000000000000000000c0");
 
@@ -73,30 +80,30 @@ const companies = [
   "Portside Logistics",
 ];
 const hubs = [
-  { city: "Gdansk", country: "Polska", street: "Portowa", lat: 54.352, lng: 18.6466 },
-  { city: "Gdynia", country: "Polska", street: "Kontenerowa", lat: 54.5189, lng: 18.5305 },
-  { city: "Szczecin", country: "Polska", street: "Nabrzezna", lat: 53.4285, lng: 14.5528 },
-  { city: "Hamburg", country: "Niemcy", street: "Hafenstrasse", lat: 53.5511, lng: 9.9937 },
-  { city: "Bremerhaven", country: "Niemcy", street: "Dockstrasse", lat: 53.5396, lng: 8.5809 },
-  { city: "Rotterdam", country: "Holandia", street: "Havenweg", lat: 51.9244, lng: 4.4777 },
-  { city: "Antwerpia", country: "Belgia", street: "Kaaienlaan", lat: 51.2194, lng: 4.4025 },
-  { city: "Amsterdam", country: "Holandia", street: "Terminalweg", lat: 52.3676, lng: 4.9041 },
-  { city: "Le Havre", country: "Francja", street: "Rue du Port", lat: 49.4944, lng: 0.1079 },
-  { city: "Barcelona", country: "Hiszpania", street: "Carrer del Port", lat: 41.3851, lng: 2.1734 },
-  { city: "Lizbona", country: "Portugalia", street: "Rua do Porto", lat: 38.7223, lng: -9.1393 },
-  { city: "Mediolan", country: "Wlochy", street: "Via Container", lat: 45.4642, lng: 9.19 },
-  { city: "Ateny", country: "Grecja", street: "Leoforos Limaniou", lat: 37.9838, lng: 23.7275 },
-  { city: "Bukareszt", country: "Rumunia", street: "Strada Terminal", lat: 44.4268, lng: 26.1025 },
-  { city: "Praga", country: "Czechy", street: "Pristavni", lat: 50.0755, lng: 14.4378 },
-  { city: "Kopenhaga", country: "Dania", street: "Havnevej", lat: 55.6761, lng: 12.5683 },
-  { city: "Sztokholm", country: "Szwecja", street: "Hamnvagen", lat: 59.3293, lng: 18.0686 },
-  { city: "Londyn", country: "Wielka Brytania", street: "Harbor Lane", lat: 51.5074, lng: -0.1278 },
-  { city: "Paryz", country: "Francja", street: "Rue Logistique", lat: 48.8566, lng: 2.3522 },
-  { city: "Berlin", country: "Niemcy", street: "Logistikallee", lat: 52.52, lng: 13.405 },
-  { city: "Warszawa", country: "Polska", street: "Terminalowa", lat: 52.2297, lng: 21.0122 },
-  { city: "Lodz", country: "Polska", street: "Magazynowa", lat: 51.7592, lng: 19.456 },
-  { city: "Wroclaw", country: "Polska", street: "Dokowa", lat: 51.1079, lng: 17.0385 },
-  { city: "Poznan", country: "Polska", street: "Transportowa", lat: 52.4064, lng: 16.9252 },
+  { city: "Gdansk", country: "Polska", countryCode: "PL", street: "Portowa", lat: 54.352, lng: 18.6466 },
+  { city: "Gdynia", country: "Polska", countryCode: "PL", street: "Kontenerowa", lat: 54.5189, lng: 18.5305 },
+  { city: "Szczecin", country: "Polska", countryCode: "PL", street: "Nabrzezna", lat: 53.4285, lng: 14.5528 },
+  { city: "Hamburg", country: "Niemcy", countryCode: "DE", street: "Hafenstrasse", lat: 53.5511, lng: 9.9937 },
+  { city: "Bremerhaven", country: "Niemcy", countryCode: "DE", street: "Dockstrasse", lat: 53.5396, lng: 8.5809 },
+  { city: "Rotterdam", country: "Holandia", countryCode: "NL", street: "Havenweg", lat: 51.9244, lng: 4.4777 },
+  { city: "Antwerpia", country: "Belgia", countryCode: "BE", street: "Kaaienlaan", lat: 51.2194, lng: 4.4025 },
+  { city: "Amsterdam", country: "Holandia", countryCode: "NL", street: "Terminalweg", lat: 52.3676, lng: 4.9041 },
+  { city: "Le Havre", country: "Francja", countryCode: "FR", street: "Rue du Port", lat: 49.4944, lng: 0.1079 },
+  { city: "Barcelona", country: "Hiszpania", countryCode: "ES", street: "Carrer del Port", lat: 41.3851, lng: 2.1734 },
+  { city: "Lizbona", country: "Portugalia", countryCode: "PT", street: "Rua do Porto", lat: 38.7223, lng: -9.1393 },
+  { city: "Mediolan", country: "Wlochy", countryCode: "IT", street: "Via Container", lat: 45.4642, lng: 9.19 },
+  { city: "Ateny", country: "Grecja", countryCode: "GR", street: "Leoforos Limaniou", lat: 37.9838, lng: 23.7275 },
+  { city: "Bukareszt", country: "Rumunia", countryCode: "RO", street: "Strada Terminal", lat: 44.4268, lng: 26.1025 },
+  { city: "Praga", country: "Czechy", countryCode: "CZ", street: "Pristavni", lat: 50.0755, lng: 14.4378 },
+  { city: "Kopenhaga", country: "Dania", countryCode: "DK", street: "Havnevej", lat: 55.6761, lng: 12.5683 },
+  { city: "Sztokholm", country: "Szwecja", countryCode: "SE", street: "Hamnvagen", lat: 59.3293, lng: 18.0686 },
+  { city: "Londyn", country: "Wielka Brytania", countryCode: "GB", street: "Harbor Lane", lat: 51.5074, lng: -0.1278 },
+  { city: "Paryz", country: "Francja", countryCode: "FR", street: "Rue Logistique", lat: 48.8566, lng: 2.3522 },
+  { city: "Berlin", country: "Niemcy", countryCode: "DE", street: "Logistikallee", lat: 52.52, lng: 13.405 },
+  { city: "Warszawa", country: "Polska", countryCode: "PL", street: "Terminalowa", lat: 52.2297, lng: 21.0122 },
+  { city: "Lodz", country: "Polska", countryCode: "PL", street: "Magazynowa", lat: 51.7592, lng: 19.456 },
+  { city: "Wroclaw", country: "Polska", countryCode: "PL", street: "Dokowa", lat: 51.1079, lng: 17.0385 },
+  { city: "Poznan", country: "Polska", countryCode: "PL", street: "Transportowa", lat: 52.4064, lng: 16.9252 },
 ];
 
 function randomInt(min, max) {
@@ -338,6 +345,7 @@ function buildLocationEntry({ hub, lat, lng, isPrimary }) {
   return {
     locationCity: hub.city,
     locationCountry: hub.country,
+    locationCountryCode: hub.countryCode,
     locationLat: lat,
     locationLng: lng,
     locationAddressLabel: `${hub.street} ${houseNumber}, ${postalCode} ${hub.city}, ${hub.country}`,
@@ -347,6 +355,7 @@ function buildLocationEntry({ hub, lat, lng, isPrimary }) {
       postalCode,
       city: hub.city,
       country: hub.country,
+      countryCode: hub.countryCode,
     },
     isPrimary,
   };
@@ -468,6 +477,7 @@ function buildListing(index, now) {
     quantity,
     locationCity: primaryLocation.locationCity,
     locationCountry: primaryLocation.locationCountry,
+    locationCountryCode: primaryLocation.locationCountryCode,
     locationLat: primaryLocation.locationLat,
     locationLng: primaryLocation.locationLng,
     locationAddressLabel: primaryLocation.locationAddressLabel,
@@ -502,6 +512,7 @@ function buildListing(index, now) {
       quantity,
     }),
     companyName: company,
+    publishedAsCompany: false,
     contactEmail: `containers+${index + 1}@example.com`,
     contactPhone: `+48 600 ${String(100000 + index).slice(-6)}`,
     status: "active",
@@ -519,16 +530,18 @@ async function run() {
   const db = client.db(mongoDb);
   const listings = db.collection("container_listings");
 
-  const deleted = await listings.deleteMany({
-    description: { $regex: /^\[seed-eu\]/i },
-  });
+  const deleted = shouldKeepExistingSeed
+    ? { deletedCount: 0 }
+    : await listings.deleteMany({
+        description: { $regex: /^\[seed-eu\]/i },
+      });
 
   const now = new Date();
   const docs = Array.from({ length: TOTAL_LISTINGS }, (_, index) => buildListing(index, now));
   const inserted = await listings.insertMany(docs, { ordered: false });
 
   console.log(
-    `Seed complete. Removed ${deleted.deletedCount} old seeded listings and inserted ${inserted.insertedCount} listings in current model.`,
+    `Seed complete. ${shouldKeepExistingSeed ? "Kept existing seeded listings." : `Removed ${deleted.deletedCount} old seeded listings.`} Inserted ${inserted.insertedCount} listings in current model.`,
   );
 
   await client.close();

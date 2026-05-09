@@ -654,6 +654,7 @@ export async function ContainerDetailsContent({
   const hasRealMainImage = detailPhotoUrls.length > 0;
   const hasAnyCertification =
     listingItem.hasCscPlate || listingItem.hasCscCertification || listingItem.hasWarranty;
+  const hasAnyCscDetails = hasAnyCertification || Boolean(cscValidityLabel);
   const quantityDisplay = getQuantityDisplay(listingItem.quantity);
   const locationItems = getLocationDisplayItems(listingItem, locale, moduleMessages);
   const locationMapPoints = getLocationMapPoints(listingItem, locale, moduleMessages);
@@ -965,7 +966,7 @@ export async function ContainerDetailsContent({
                 hasAnyCertification
                   ? "border-green-300 bg-green-50"
                   : "border-neutral-300 bg-white"
-              } h-full`}
+              } h-full ${hasAnyCscDetails ? "" : "hidden lg:block"}`}
             >
               <p className="text-xs font-medium uppercase tracking-wide text-neutral-500">
                 CSC

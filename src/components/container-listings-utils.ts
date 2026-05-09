@@ -2,12 +2,26 @@ import type { ContainerListingItem } from "@/lib/container-listings";
 import { parseContainerRalColors } from "@/lib/container-ral-colors";
 import type { ContainerListingsMessages } from "@/components/container-listings-i18n";
 import {
+  FILTER_FORM_DEFAULTS,
+  LOCATION_RADIUS_OPTIONS,
   type AppliedFilters,
+  type FilterCurrency,
+  type FormContainerSize,
+  type FormLocationRadiusKm,
   type FiltersFormValues,
   type ListingKind,
+  type PriceDisplayCurrency,
   type SortPreset,
   toNormalizedArray,
 } from "@/components/container-listings-shared";
+import {
+  CONTAINER_CONDITIONS,
+  CONTAINER_FEATURES,
+  CONTAINER_HEIGHTS,
+  CONTAINER_TYPES,
+  PRICE_CURRENCIES,
+  PRICE_TAX_MODES,
+} from "@/lib/container-listing-types";
 import { getCountryDisplayName } from "@/lib/country-flags";
 import { formatTemplate, type AppLocale } from "@/lib/i18n";
 
@@ -28,6 +42,169 @@ type BuildContainersApiUrlOptions = {
   deliveryReach?: boolean;
 };
 
+type PageFiltersParseOptions = {
+  initialKind?: ListingKind;
+  initialCity?: string;
+  initialCountry?: string;
+  initialCountryCode?: string;
+};
+
+type ParsedPageFilters = {
+  formValues: FiltersFormValues;
+  appliedFilters: AppliedFilters;
+  resolvedLocationMode: "point" | "country" | null;
+};
+
+type BuildPageSearchParamsOptions = {
+  appliedFilters: AppliedFilters;
+  activeTab?: "all" | "favorites";
+  mineOnly?: boolean;
+  companySlug?: string;
+};
+
+const CONTAINER_SIZE_FILTER_VALUES = [
+  "10",
+  "20",
+  "40",
+  "45",
+  "53",
+  "custom",
+] as const satisfies readonly FormContainerSize[];
+const FILTER_CURRENCIES = [
+  "all",
+  ...PRICE_CURRENCIES,
+] as const satisfies readonly FilterCurrency[];
+const PRICE_DISPLAY_CURRENCIES = [
+  "original",
+  ...PRICE_CURRENCIES,
+] as const satisfies readonly PriceDisplayCurrency[];
+const SORT_PRESETS = [
+  "newest",
+  "quantity_desc",
+  "quantity_asc",
+  "available_asc",
+  "price_net_asc",
+  "price_net_desc",
+] as const satisfies readonly SortPreset[];
+const LOCATION_RADIUS_PARAM_VALUES = LOCATION_RADIUS_OPTIONS.map(String) as
+  readonly FormLocationRadiusKm[];
+
+function getFirstSearchParam(
+  params: URLSearchParams,
+  names: string[],
+): string | null {
+  for (const name of names) {
+    const value = params.get(name)?.trim();
+    if (value) {
+      return value;
+    }
+  }
+  return null;
+}
+
+function isAllowedValue<T extends string>(
+  values: readonly T[],
+  value: string | null,
+): value is T {
+  return Boolean(value && values.includes(value as T));
+}
+
+function parseCsvParam<T extends string>(
+  params: URLSearchParams,
+  names: string[],
+  allowedValues: readonly T[],
+): T[] {
+  const raw = getFirstSearchParam(params, names);
+  if (!raw) {
+    return [];
+  }
+
+  const allowedSet = new Set<string>(allowedValues);
+  return toNormalizedArray(
+    raw
+      .split(",")
+      .map((value) => value.trim())
+      .filter((value): value is T => allowedSet.has(value)),
+  );
+}
+
+function parseCsvStrings(params: URLSearchParams, names: string[]): string[] {
+  const raw = getFirstSearchParam(params, names);
+  if (!raw) {
+    return [];
+  }
+
+  return toNormalizedArray(
+    raw
+      .split(",")
+      .map((value) => value.trim())
+      .filter(Boolean),
+  );
+}
+
+function parseBooleanParam(params: URLSearchParams, names: string[]): boolean {
+  const raw = getFirstSearchParam(params, names)?.toLowerCase();
+  return raw === "1" || raw === "true";
+}
+
+function parseFiniteParam(params: URLSearchParams, name: string): number | null {
+  const raw = params.get(name);
+  if (!raw) {
+    return null;
+  }
+
+  const value = Number(raw);
+  return Number.isFinite(value) ? value : null;
+}
+
+function parseListingKind(value: string | null, fallback: ListingKind): ListingKind {
+  return value === "sell" || value === "rent" || value === "buy"
+    ? value
+    : fallback;
+}
+
+function parseSortPreset(
+  params: URLSearchParams,
+): SortPreset {
+  const raw = getFirstSearchParam(params, ["sort", "sortPreset"]);
+  if (isAllowedValue(SORT_PRESETS, raw)) {
+    return raw;
+  }
+
+  const sortBy = params.get("sortBy");
+  const sortDir = params.get("sortDir");
+  if (sortBy === "priceNet" && sortDir === "asc") {
+    return "price_net_asc";
+  }
+  if (sortBy === "priceNet" && sortDir === "desc") {
+    return "price_net_desc";
+  }
+  if (sortBy === "quantity" && sortDir === "asc") {
+    return "quantity_asc";
+  }
+  if (sortBy === "quantity" && sortDir === "desc") {
+    return "quantity_desc";
+  }
+  if (sortBy === "availableFrom" && sortDir === "asc") {
+    return "available_asc";
+  }
+  return FILTER_FORM_DEFAULTS.sortPreset;
+}
+
+function setCsvParam<T extends string>(
+  params: URLSearchParams,
+  name: string,
+  values: T[],
+): void {
+  if (values.length > 0) {
+    params.set(name, values.join(","));
+  }
+}
+
+function formatLocationCoordinate(value: number): string {
+  return value.toFixed(4);
+}
+
 export function getSortParams(preset: SortPreset): SortParams {
   if (preset === "price_net_asc") {
     return { sortBy: "priceNet", sortDir: "asc" };
@@ -45,6 +222,243 @@ export function getSortParams(preset: SortPreset): SortParams {
     return { sortBy: "availableFrom", sortDir: "asc" };
   }
   return { sortBy: "createdAt", sortDir: "desc" };
+}
+
+export function parseContainerListingsPageFilters(
+  params: URLSearchParams,
+  options: PageFiltersParseOptions = {},
+): ParsedPageFilters {
+  const fallbackKind = options.initialKind ?? FILTER_FORM_DEFAULTS.listingKind;
+  const listingKind = parseListingKind(
+    getFirstSearchParam(params, ["kind", "type"]),
+    fallbackKind,
+  );
+  const radiusParam = getFirstSearchParam(params, [
+    "radiusKm",
+    "locationRadiusKm",
+  ]);
+  const locationRadiusKm = isAllowedValue(
+    LOCATION_RADIUS_PARAM_VALUES,
+    radiusParam,
+  )
+    ? radiusParam
+    : FILTER_FORM_DEFAULTS.locationRadiusKmInput;
+  const locationQuery = getFirstSearchParam(params, ["q", "location"]) ?? "";
+  const locationLat = parseFiniteParam(params, "locationLat");
+  const locationLng = parseFiniteParam(params, "locationLng");
+  const locationCenter =
+    locationLat !== null && locationLng !== null
+      ? { lat: locationLat, lng: locationLng }
+      : null;
+  const city =
+    getFirstSearchParam(params, ["city"]) ??
+    options.initialCity ??
+    FILTER_FORM_DEFAULTS.city;
+  const country =
+    getFirstSearchParam(params, ["country"]) ??
+    options.initialCountry ??
+    FILTER_FORM_DEFAULTS.country;
+  const countryCode = (
+    getFirstSearchParam(params, ["countryCode"]) ??
+    options.initialCountryCode ??
+    FILTER_FORM_DEFAULTS.countryCode
+  )
+    .trim()
+    .toUpperCase();
+  const visibleLocationInput =
+    locationQuery ||
+    [city, country].filter((value) => value.trim().length > 0).join(", ");
+  const containerRalColors = parseCsvStrings(params, ["containerRal"]);
+  const rawPriceCurrency = getFirstSearchParam(params, ["priceCurrency"]);
+  const rawPriceDisplayCurrency = getFirstSearchParam(params, [
+    "priceDisplayCurrency",
+    "displayCurrency",
+  ]);
+  const rawPriceTaxMode = getFirstSearchParam(params, ["priceTaxMode"]);
+  const priceCurrency = isAllowedValue(FILTER_CURRENCIES, rawPriceCurrency)
+    ? rawPriceCurrency
+    : FILTER_FORM_DEFAULTS.priceCurrency;
+  const priceDisplayCurrency = isAllowedValue(
+    PRICE_DISPLAY_CURRENCIES,
+    rawPriceDisplayCurrency,
+  )
+    ? rawPriceDisplayCurrency
+    : FILTER_FORM_DEFAULTS.priceDisplayCurrency;
+  const priceTaxMode = isAllowedValue(PRICE_TAX_MODES, rawPriceTaxMode)
+    ? rawPriceTaxMode
+    : FILTER_FORM_DEFAULTS.priceTaxMode;
+  const priceMinInput =
+    getFirstSearchParam(params, ["priceMin"]) ??
+    FILTER_FORM_DEFAULTS.priceMinInput;
+  const priceMaxInput =
+    getFirstSearchParam(params, ["priceMax"]) ??
+    FILTER_FORM_DEFAULTS.priceMaxInput;
+  const productionYearInput =
+    getFirstSearchParam(params, ["productionYear"]) ??
+    FILTER_FORM_DEFAULTS.productionYearInput;
+  const sortPreset = parseSortPreset(params);
+  const resolvedLocationMode = locationCenter
+    ? "point"
+    : city || country || countryCode
+      ? "country"
+      : null;
+
+  const formValues: FiltersFormValues = {
+    ...FILTER_FORM_DEFAULTS,
+    listingKind,
+    locationInput: visibleLocationInput,
+    locationRadiusKmInput: locationRadiusKm,
+    containerSizes: parseCsvParam(params, ["containerSize"], CONTAINER_SIZE_FILTER_VALUES),
+    containerHeights: parseCsvParam(params, ["containerHeight"], CONTAINER_HEIGHTS),
+    containerTypes: parseCsvParam(params, ["containerType"], CONTAINER_TYPES),
+    containerConditions: parseCsvParam(
+      params,
+      ["containerCondition"],
+      CONTAINER_CONDITIONS,
+    ),
+    containerFeatures: parseCsvParam(params, ["containerFeature"], CONTAINER_FEATURES),
+    containerRalInput: containerRalColors.join(", "),
+    priceNegotiableOnly: parseBooleanParam(params, ["priceNegotiable"]),
+    logisticsTransportOnly: parseBooleanParam(params, ["logisticsTransport"]),
+    logisticsUnloadingOnly: parseBooleanParam(params, ["logisticsUnloading"]),
+    hasCscPlateOnly: parseBooleanParam(params, ["hasCscPlate"]),
+    hasCscCertificationOnly: parseBooleanParam(params, ["hasCscCertification"]),
+    priceCurrency,
+    priceDisplayCurrency,
+    priceTaxMode,
+    priceMinInput,
+    priceMaxInput,
+    productionYearInput,
+    city,
+    country,
+    countryCode,
+    sortPreset,
+  };
+
+  return {
+    formValues,
+    resolvedLocationMode,
+    appliedFilters: {
+      listingKind,
+      locationQuery: visibleLocationInput,
+      locationCenter,
+      locationRadiusKm,
+      containerSizes: formValues.containerSizes,
+      containerHeights: formValues.containerHeights,
+      containerTypes: formValues.containerTypes,
+      containerConditions: formValues.containerConditions,
+      containerFeatures: formValues.containerFeatures,
+      containerRalColors,
+      priceNegotiableOnly: formValues.priceNegotiableOnly,
+      logisticsTransportOnly: formValues.logisticsTransportOnly,
+      logisticsUnloadingOnly: formValues.logisticsUnloadingOnly,
+      hasCscPlateOnly: formValues.hasCscPlateOnly,
+      hasCscCertificationOnly: formValues.hasCscCertificationOnly,
+      priceCurrency,
+      priceDisplayCurrency,
+      priceTaxMode:
+        priceMinInput || priceMaxInput ? priceTaxMode : FILTER_FORM_DEFAULTS.priceTaxMode,
+      priceMinInput,
+      priceMaxInput,
+      productionYearInput,
+      city,
+      country,
+      countryCode,
+      sortPreset,
+    },
+  };
+}
+
+export function buildContainerListingsPageSearchParams({
+  appliedFilters,
+  activeTab = "all",
+  mineOnly = false,
+  companySlug,
+}: BuildPageSearchParamsOptions): URLSearchParams {
+  const params = new URLSearchParams();
+
+  if (activeTab === "favorites") {
+    params.set("tab", "favorites");
+  }
+  if (mineOnly) {
+    params.set("mine", "1");
+  }
+  if (companySlug?.trim()) {
+    params.set("company", companySlug.trim());
+  }
+  if (appliedFilters.listingKind !== FILTER_FORM_DEFAULTS.listingKind) {
+    params.set("kind", appliedFilters.listingKind);
+  }
+
+  const city = appliedFilters.city.trim();
+  const country = appliedFilters.country.trim();
+  const countryCode = appliedFilters.countryCode.trim().toUpperCase();
+  const hasAdministrativeLocation = Boolean(city || country || countryCode);
+  if (appliedFilters.locationQuery.trim() && !hasAdministrativeLocation) {
+    params.set("q", appliedFilters.locationQuery.trim());
+  }
+  if (appliedFilters.locationCenter && !hasAdministrativeLocation) {
+    params.set("locationLat", formatLocationCoordinate(appliedFilters.locationCenter.lat));
+    params.set("locationLng", formatLocationCoordinate(appliedFilters.locationCenter.lng));
+    params.set("radiusKm", appliedFilters.locationRadiusKm);
+  }
+
+  if (city) {
+    params.set("city", city);
+  }
+  if (country) {
+    params.set("country", country);
+  }
+  if (countryCode) {
+    params.set("countryCode", countryCode);
+  }
+
+  setCsvParam(params, "containerSize", appliedFilters.containerSizes);
+  setCsvParam(params, "containerHeight", appliedFilters.containerHeights);
+  setCsvParam(params, "containerType", appliedFilters.containerTypes);
+  setCsvParam(params, "containerCondition", appliedFilters.containerConditions);
+  setCsvParam(params, "containerFeature", appliedFilters.containerFeatures);
+  setCsvParam(params, "containerRal", appliedFilters.containerRalColors);
+  if (appliedFilters.priceNegotiableOnly) {
+    params.set("priceNegotiable", "1");
+  }
+  if (appliedFilters.logisticsTransportOnly) {
+    params.set("logisticsTransport", "1");
+  }
+  if (appliedFilters.logisticsUnloadingOnly) {
+    params.set("logisticsUnloading", "1");
+  }
+  if (appliedFilters.hasCscPlateOnly) {
+    params.set("hasCscPlate", "1");
+  }
+  if (appliedFilters.hasCscCertificationOnly) {
+    params.set("hasCscCertification", "1");
+  }
+  if (appliedFilters.priceDisplayCurrency !== FILTER_FORM_DEFAULTS.priceDisplayCurrency) {
+    params.set("priceDisplayCurrency", appliedFilters.priceDisplayCurrency);
+  }
+
+  const hasPriceRange =
+    appliedFilters.priceMinInput.trim().length > 0 ||
+    appliedFilters.priceMaxInput.trim().length > 0;
+  if (hasPriceRange) {
+    params.set("priceCurrency", appliedFilters.priceCurrency);
+    params.set("priceTaxMode", appliedFilters.priceTaxMode);
+  }
+  if (appliedFilters.priceMinInput.trim()) {
+    params.set("priceMin", appliedFilters.priceMinInput.trim());
+  }
+  if (appliedFilters.priceMaxInput.trim()) {
+    params.set("priceMax", appliedFilters.priceMaxInput.trim());
+  }
+  if (appliedFilters.productionYearInput.trim()) {
+    params.set("productionYear", appliedFilters.productionYearInput.trim());
+  }
+  if (appliedFilters.sortPreset !== FILTER_FORM_DEFAULTS.sortPreset) {
+    params.set("sort", appliedFilters.sortPreset);
+  }
+
+  return params;
 }
 
 export function getCoordinateKey(lat: number, lng: number): string {
@@ -222,8 +636,8 @@ function applyLocationParams(
   },
 ): void {
   if (appliedFilters.locationCenter) {
-    params.set("locationLat", appliedFilters.locationCenter.lat.toFixed(6));
-    params.set("locationLng", appliedFilters.locationCenter.lng.toFixed(6));
+    params.set("locationLat", formatLocationCoordinate(appliedFilters.locationCenter.lat));
+    params.set("locationLng", formatLocationCoordinate(appliedFilters.locationCenter.lng));
     if (options?.deliveryReach !== true) {
       params.set("radiusKm", appliedFilters.locationRadiusKm);
     }

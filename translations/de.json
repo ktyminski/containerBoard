@@ -1929,6 +1929,9 @@
       "additionalFiltersTitle": "Zusätzliche Filter",
       "additionalFiltersSubtitle": "Versteckte mobile Filter für die Containerliste.",
       "closeFiltersModal": "Filter schließen",
+      "copyFiltersLink": "Filterlink kopieren",
+      "filtersLinkCopied": "Link mit Filtern kopiert.",
+      "filtersLinkCopyError": "Filterlink konnte nicht kopiert werden.",
       "clearAll": "Alle Filter loschen",
       "locationMinChars": "Geben Sie mindestens 3 Zeichen fur den Standort ein.",
       "locationResolveError": "Der Standort konnte nicht ermittelt werden."

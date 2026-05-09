@@ -1929,6 +1929,9 @@
       "additionalFiltersTitle": "Dodatkowe filtry",
       "additionalFiltersSubtitle": "Ukryte filtry mobilne dla listy kontenerów.",
       "closeFiltersModal": "Zamknij filtry",
+      "copyFiltersLink": "Kopiuj link z filtrami",
+      "filtersLinkCopied": "Skopiowano link z filtrami.",
+      "filtersLinkCopyError": "Nie udalo sie skopiowac linku z filtrami.",
       "clearAll": "Wyczyść wszystkie filtry",
       "locationMinChars": "Podaj minimum 3 znaki lokalizacji.",
       "locationResolveError": "Nie udało się ustalić lokalizacji."

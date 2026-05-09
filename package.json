@@ -8,6 +8,7 @@
     "start": "next start",
     "lint": "eslint",
     "seed": "node --env-file=.env.local scripts/seed.mjs",
+    "seed:local": "node --env-file=.env.local scripts/seed-containers-europe.mjs",
     "seed:containers:europe": "node --env-file=.env.local scripts/seed-containers-europe.mjs",
     "seed:containers:reset-model": "node --env-file=.env.local scripts/reset-seed-containers-model.mjs",
     "migrate:containers:logistics-unloading": "node --env-file=.env.local scripts/migrate-logistics-loading-to-unloading.mjs",

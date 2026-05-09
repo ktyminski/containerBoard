@@ -36,8 +36,10 @@ import {
 } from "@/components/container-listings-shared";
 import {
   buildAppliedBaseFromFormValues,
+  buildContainerListingsPageSearchParams,
   buildContainersApiUrl,
   getCoordinateKey,
+  parseContainerListingsPageFilters,
 } from "@/components/container-listings-utils";
 import type {
   ContainerListingItem,
@@ -801,6 +803,12 @@ const ListingsMap = memo(function ListingsMap({
     type: "FeatureCollection",
     features: [],
   });
+  const popupRenderContextRef = useRef({
+    locale,
+    messages,
+    detailsHrefPrefix,
+    detailsQueryString,
+  });
 
   const points = useMemo(
     () =>
@@ -820,6 +828,15 @@ const ListingsMap = memo(function ListingsMap({
     }),
     [locale],
   );
+
+  useEffect(() => {
+    popupRenderContextRef.current = {
+      locale,
+      messages,
+      detailsHrefPrefix,
+      detailsQueryString,
+    };
+  }, [detailsHrefPrefix, detailsQueryString, locale, messages]);
 
   const detailFeatureCollection = useMemo<MapFeatureCollection>(
     () => ({
@@ -1166,8 +1183,8 @@ const ListingsMap = memo(function ListingsMap({
 
         const clusterIdRaw = feature.properties?.cluster_id;
         const clusterId = Number(clusterIdRaw);
-        const clusterTotalCount = Number(
-          feature.properties?.quantity_count ?? feature.properties?.point_count ?? 0,
+        const clusterListingsCount = Number(
+          feature.properties?.point_count ?? 0,
         );
         if (!Number.isFinite(clusterId)) {
           return;
@@ -1224,6 +1241,7 @@ const ListingsMap = memo(function ListingsMap({
               grouped.length,
             );
             popupRef.current?.remove();
+            const popupContext = popupRenderContextRef.current;
             const nextPopup = new maplibregl.Popup({
               offset: popupPlacement.offset,
               anchor: popupPlacement.anchor,
@@ -1235,14 +1253,14 @@ const ListingsMap = memo(function ListingsMap({
               .setLngLat([lng, lat])
               .setDOMContent(
                 buildMapPopupListNode(
-                  locale,
-                  messages,
+                  popupContext.locale,
+                  popupContext.messages,
                   grouped,
-                  Number.isFinite(clusterTotalCount)
-                    ? Math.max(clusterTotalCount, grouped.length)
+                  Number.isFinite(clusterListingsCount)
+                    ? Math.max(clusterListingsCount, grouped.length)
                     : grouped.length,
-                  detailsHrefPrefix,
-                  detailsQueryString,
+                  popupContext.detailsHrefPrefix,
+                  popupContext.detailsQueryString,
                   locationHintsByListingId,
                 ),
               )
@@ -1354,6 +1372,7 @@ const ListingsMap = memo(function ListingsMap({
             details.length,
           );
           popupRef.current?.remove();
+          const popupContext = popupRenderContextRef.current;
           const nextPopup = new maplibregl.Popup({
             offset: popupPlacement.offset,
             anchor: popupPlacement.anchor,
@@ -1365,12 +1384,12 @@ const ListingsMap = memo(function ListingsMap({
             .setLngLat([clickedLng, clickedLat])
             .setDOMContent(
               buildMapPopupListNode(
-                locale,
-                messages,
+                popupContext.locale,
+                popupContext.messages,
                 details,
                 groupedIds.length,
-                detailsHrefPrefix,
-                detailsQueryString,
+                popupContext.detailsHrefPrefix,
+                popupContext.detailsQueryString,
                 locationHintsByListingId,
               ),
             )
@@ -1420,13 +1439,7 @@ const ListingsMap = memo(function ListingsMap({
       map.remove();
       mapRef.current = null;
     };
-  }, [
-    detailsHrefPrefix,
-    detailsQueryString,
-    loadPopupDetailsByIds,
-    locale,
-    messages,
-  ]);
+  }, [loadPopupDetailsByIds]);
 
   useEffect(() => {
     const map = mapRef.current;
@@ -1477,10 +1490,6 @@ const ListingsMap = memo(function ListingsMap({
       .setPopup(popup)
       .addTo(map);
   }, [activeLocation, activeLocationLabel, messages.map.selectedLocation]);
-
-  useEffect(() => {
-    hasAutoFittedViewRef.current = false;
-  }, [points]);
 
   useEffect(() => {
     const becameVisible = isVisible && !wasVisibleRef.current;
@@ -1714,6 +1723,22 @@ export function ContainerListingsBoard({
   const filtersSectionRef = useRef<HTMLDivElement | null>(null);
   const resultsTopRef = useRef<HTMLDivElement | null>(null);
   const hasSeenFirstAppliedFiltersRef = useRef(false);
+  const pendingPageScrollBehaviorRef = useRef<ScrollBehavior | null>(null);
+  const initialPageFilterStateRef = useRef<ReturnType<
+    typeof parseContainerListingsPageFilters
+  > | null>(null);
+  if (initialPageFilterStateRef.current === null) {
+    initialPageFilterStateRef.current = parseContainerListingsPageFilters(
+      searchParams,
+      {
+        initialKind,
+        initialCity,
+        initialCountry,
+        initialCountryCode,
+      },
+    );
+  }
+  const initialPageFilterState = initialPageFilterStateRef.current;
 
   const [isResolvingLocation, setIsResolvingLocation] = useState(false);
   const [locationFilterError, setLocationFilterError] = useState<string | null>(
@@ -1721,46 +1746,16 @@ export function ContainerListingsBoard({
   );
   const [resolvedLocationMode, setResolvedLocationMode] = useState<
     "point" | "country" | null
-  >(null);
+  >(initialPageFilterState.resolvedLocationMode);
 
   const formMethods = useForm<FiltersFormValues>({
-    defaultValues: {
-      ...FILTER_FORM_DEFAULTS,
-      listingKind: initialKind,
-      city: initialCity ?? FILTER_FORM_DEFAULTS.city,
-      country: initialCountry ?? FILTER_FORM_DEFAULTS.country,
-      countryCode: initialCountryCode ?? FILTER_FORM_DEFAULTS.countryCode,
-    },
+    defaultValues: initialPageFilterState.formValues,
   });
   const { handleSubmit, reset, getValues, setValue } = formMethods;
 
-  const [appliedFilters, setAppliedFilters] = useState<AppliedFilters>({
-    listingKind: initialKind,
-    locationQuery: "",
-    locationCenter: null,
-    locationRadiusKm: FILTER_FORM_DEFAULTS.locationRadiusKmInput,
-    containerSizes: FILTER_FORM_DEFAULTS.containerSizes,
-    containerHeights: FILTER_FORM_DEFAULTS.containerHeights,
-    containerTypes: FILTER_FORM_DEFAULTS.containerTypes,
-    containerConditions: FILTER_FORM_DEFAULTS.containerConditions,
-    containerFeatures: FILTER_FORM_DEFAULTS.containerFeatures,
-    containerRalColors: [],
-    priceNegotiableOnly: FILTER_FORM_DEFAULTS.priceNegotiableOnly,
-    logisticsTransportOnly: FILTER_FORM_DEFAULTS.logisticsTransportOnly,
-    logisticsUnloadingOnly: FILTER_FORM_DEFAULTS.logisticsUnloadingOnly,
-    hasCscPlateOnly: FILTER_FORM_DEFAULTS.hasCscPlateOnly,
-    hasCscCertificationOnly: FILTER_FORM_DEFAULTS.hasCscCertificationOnly,
-    priceCurrency: FILTER_FORM_DEFAULTS.priceCurrency,
-    priceDisplayCurrency: FILTER_FORM_DEFAULTS.priceDisplayCurrency,
-    priceTaxMode: FILTER_FORM_DEFAULTS.priceTaxMode,
-    priceMinInput: FILTER_FORM_DEFAULTS.priceMinInput,
-    priceMaxInput: FILTER_FORM_DEFAULTS.priceMaxInput,
-    productionYearInput: FILTER_FORM_DEFAULTS.productionYearInput,
-    city: initialCity ?? FILTER_FORM_DEFAULTS.city,
-    country: initialCountry ?? FILTER_FORM_DEFAULTS.country,
-    countryCode: initialCountryCode ?? FILTER_FORM_DEFAULTS.countryCode,
-    sortPreset: FILTER_FORM_DEFAULTS.sortPreset,
-  });
+  const [appliedFilters, setAppliedFilters] = useState<AppliedFilters>(
+    initialPageFilterState.appliedFilters,
+  );
   const isFavoritesTab = activeTab === "favorites";
   const shouldShowFavoritesToggle =
     hasResolvedFavoritesVisibility && hasAnyFavorites;
@@ -1782,6 +1777,29 @@ export function ContainerListingsBoard({
     const params = searchParams.toString();
     return params ? `${pathname}?${params}` : pathname;
   }, [pathname, searchParams]);
+  const listBasePathname = useMemo(() => {
+    if (pathname.startsWith("/list/containers/")) {
+      return "/list";
+    }
+    return pathname;
+  }, [pathname]);
+  const filterSearchParamsString = useMemo(
+    () =>
+      buildContainerListingsPageSearchParams({
+        appliedFilters,
+        activeTab,
+        mineOnly: initialMine,
+        companySlug: hiddenCompanySlug,
+      }).toString(),
+    [activeTab, appliedFilters, hiddenCompanySlug, initialMine],
+  );
+  const filteredListHref = useMemo(
+    () =>
+      filterSearchParamsString
+        ? `${listBasePathname}?${filterSearchParamsString}`
+        : listBasePathname,
+    [filterSearchParamsString, listBasePathname],
+  );
   const lastActiveTabRef = useRef(activeTab);
   const requestHeaders = useMemo(
     () => ({
@@ -1790,6 +1808,27 @@ export function ContainerListingsBoard({
     }),
     [locale],
   );
+
+  useEffect(() => {
+    if (isDetailsOverlayRouteActive) {
+      return;
+    }
+
+    const currentQuery = searchParams.toString();
+    if (currentQuery === filterSearchParamsString && pathname === listBasePathname) {
+      return;
+    }
+
+    router.replace(filteredListHref, { scroll: false });
+  }, [
+    filterSearchParamsString,
+    filteredListHref,
+    isDetailsOverlayRouteActive,
+    listBasePathname,
+    pathname,
+    router,
+    searchParams,
+  ]);
 
   const redirectToLogin = useCallback(() => {
     const query = searchParams.toString();
@@ -2592,15 +2631,25 @@ export function ContainerListingsBoard({
     [],
   );
 
+  useEffect(() => {
+    const pendingBehavior = pendingPageScrollBehaviorRef.current;
+    if (!pendingBehavior || isLoading) {
+      return;
+    }
+
+    pendingPageScrollBehaviorRef.current = null;
+    scrollToResultsTop(pendingBehavior);
+  }, [isLoading, items, page, scrollToResultsTop]);
+
   const goToPreviousPage = useCallback(() => {
-    scrollToResultsTop();
+    pendingPageScrollBehaviorRef.current = "smooth";
     setPage((current) => Math.max(1, current - 1));
-  }, [scrollToResultsTop]);
+  }, []);
 
   const goToNextPage = useCallback(() => {
-    scrollToResultsTop();
+    pendingPageScrollBehaviorRef.current = "smooth";
     setPage((current) => Math.min(totalPages, current + 1));
-  }, [scrollToResultsTop, totalPages]);
+  }, [totalPages]);
 
   const handleTabChange = useCallback(
     (nextTab: "all" | "favorites") => {
@@ -2764,6 +2813,23 @@ export function ContainerListingsBoard({
     [messages.map.copyError, messages.map.linkCopied, toast],
   );
 
+  const handleCopyFiltersLink = useCallback(async () => {
+    const filtersUrl = new URL(filteredListHref, window.location.origin).toString();
+    const copied = await copyTextToClipboard(filtersUrl);
+
+    if (copied) {
+      toast.info(messages.filters.filtersLinkCopied);
+      return;
+    }
+
+    toast.error(messages.filters.filtersLinkCopyError);
+  }, [
+    filteredListHref,
+    messages.filters.filtersLinkCopied,
+    messages.filters.filtersLinkCopyError,
+    toast,
+  ]);
+
   const handleOpenDetails = useCallback(
     (targetHref: string) => {
       const listHref = currentListHref;
@@ -2819,7 +2885,7 @@ export function ContainerListingsBoard({
 
   return (
     <FormProvider {...formMethods}>
-      <form onSubmit={submitFilters} className="grid gap-4">
+      <form onSubmit={submitFilters} className="grid gap-0">
         <section className="hidden w-full lg:block">
           <div className="relative overflow-visible">
             <div
@@ -2985,6 +3051,36 @@ export function ContainerListingsBoard({
         ) : null}
 
         <div className="mx-auto grid w-full max-w-[1400px] gap-4 px-4 sm:px-6">
+          <div className="mb-[-6px] hidden min-h-[18px] items-end justify-end lg:flex">
+            {filterSearchParamsString ? (
+              <button
+                type="button"
+                onClick={handleCopyFiltersLink}
+                className="inline-flex items-center gap-1.5 text-xs font-medium text-neutral-500 underline underline-offset-2 transition hover:text-[#24476e]"
+              >
+                <svg
+                  viewBox="0 0 20 20"
+                  aria-hidden="true"
+                  className="h-3.5 w-3.5 shrink-0"
+                  fill="none"
+                >
+                  <path
+                    d="M8 11.5a3 3 0 0 0 4.24 0l2.1-2.1a3 3 0 1 0-4.24-4.24l-.8.8"
+                    stroke="currentColor"
+                    strokeWidth="1.5"
+                    strokeLinecap="round"
+                  />
+                  <path
+                    d="M12 8.5a3 3 0 0 0-4.24 0l-2.1 2.1A3 3 0 1 0 9.9 14.84l.8-.8"
+                    stroke="currentColor"
+                    strokeWidth="1.5"
+                    strokeLinecap="round"
+                  />
+                </svg>
+                <span>{messages.filters.copyFiltersLink}</span>
+              </button>
+            ) : null}
+          </div>
           <ContainerListingsFilters
             messages={messages}
             locationControlsRef={locationControlsRef}

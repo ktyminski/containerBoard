@@ -1928,6 +1928,9 @@
       "additionalFiltersTitle": "Додаткові фільтри",
       "additionalFiltersSubtitle": "Приховані мобільні фільтри для списку контейнерів.",
       "closeFiltersModal": "Закрити фільтри",
+      "copyFiltersLink": "Скопіювати посилання з фільтрами",
+      "filtersLinkCopied": "Посилання з фільтрами скопійовано.",
+      "filtersLinkCopyError": "Не вдалося скопіювати посилання з фільтрами.",
       "clearAll": "Очистити всі фільтри",
       "locationMinChars": "Введіть щонайменше 3 символи для локації.",
       "locationResolveError": "Не вдалося визначити локацію."

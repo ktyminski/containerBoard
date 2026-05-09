@@ -71,7 +71,7 @@ function toSearchParams(
 
 export default async function ListPage({ searchParams }: ListPageProps) {
   const params = await searchParams;
-  const initialKind = resolveKind(params.kind);
+  const initialKind = resolveKind(params.kind ?? params.type);
   const initialTab = resolveTab(params.tab);
   const initialMine = resolveMine(params.mine);
   const hiddenCompanySlug = resolveCompanySlug(params.company);

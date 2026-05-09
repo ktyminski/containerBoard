@@ -24,6 +24,23 @@ npm install
 npm run dev
 ```
 
+## Dane lokalne
+
+Zeby szybko wypelnic lokalna baze ogloszeniami kontenerow:
+
+```bash
+npm run seed:local
+```
+
+Domyslnie skrypt usuwa poprzednie ogloszenia oznaczone jako seed i dodaje 240 nowych ofert z roznych miast Europy. Przydatne warianty:
+
+```bash
+npm run seed:local -- --count=400
+npm run seed:local -- --keep
+```
+
+`--count` zmienia liczbe tworzonych ogloszen, a `--keep` dopisuje kolejne bez usuwania poprzedniego seeda.
+
 ## Najwazniejsze endpointy MVP
 
 - `GET /api/containers`

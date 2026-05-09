@@ -1929,6 +1929,9 @@
       "additionalFiltersTitle": "Additional filters",
       "additionalFiltersSubtitle": "Hidden mobile filters for the containers list.",
       "closeFiltersModal": "Close filters",
+      "copyFiltersLink": "Copy filters link",
+      "filtersLinkCopied": "Filtered list link copied.",
+      "filtersLinkCopyError": "Failed to copy the filtered list link.",
       "clearAll": "Clear all filters",
       "locationMinChars": "Enter at least 3 characters for the location.",
       "locationResolveError": "Could not resolve the location."
