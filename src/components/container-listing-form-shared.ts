@@ -37,6 +37,7 @@ export type ContainerListingFormValues = {
   hasCscCertification: boolean;
   hasBranding: boolean;
   hasWarranty: boolean;
+  containerSerialNumber: string;
   cscValidToMonth: string;
   cscValidToYear: string;
   productionYear: string;
@@ -84,6 +85,7 @@ export const CREATE_FLOW_PRECHECK_FIELDS: Array<
   "hasCscCertification",
   "hasBranding",
   "hasWarranty",
+  "containerSerialNumber",
   "cscValidToMonth",
   "cscValidToYear",
   "productionYear",
@@ -497,6 +499,7 @@ export function hasInitialCertificationSectionContent(
     initialValues?.hasCscPlate === true ||
     initialValues?.hasCscCertification === true ||
     initialValues?.hasWarranty === true ||
+    (initialValues?.containerSerialNumber?.trim().length ?? 0) > 0 ||
     (initialValues?.cscValidToMonth?.trim().length ?? 0) > 0 ||
     (initialValues?.cscValidToYear?.trim().length ?? 0) > 0
   );
@@ -645,6 +648,7 @@ export function getDefaultValues(
     hasCscCertification: initialValues?.hasCscCertification ?? false,
     hasBranding: initialValues?.hasBranding ?? false,
     hasWarranty: initialValues?.hasWarranty ?? false,
+    containerSerialNumber: initialValues?.containerSerialNumber ?? "",
     cscValidToMonth: initialValues?.cscValidToMonth ?? "",
     cscValidToYear: initialValues?.cscValidToYear ?? "",
     productionYear: initialValues?.productionYear ?? "",

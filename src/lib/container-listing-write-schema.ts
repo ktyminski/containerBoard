@@ -127,6 +127,7 @@ const listingWriteBaseObjectSchema = z.object({
   hasCscCertification: z.coerce.boolean().optional(),
   hasBranding: z.coerce.boolean().optional(),
   hasWarranty: z.coerce.boolean().optional(),
+  containerSerialNumber: z.string().trim().max(120).optional(),
   cscValidToMonth: z.coerce.number().int().min(1).max(12).optional(),
   cscValidToYear: z.coerce.number().int().min(1900).max(2100).optional(),
   productionYear: z.coerce.number().int().min(1900).max(2100).optional(),

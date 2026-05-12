@@ -422,6 +422,9 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
       const normalizedDescription = normalizeOptionalListingDescriptionHtml(
         updateParsed.data.description,
       );
+      const normalizedContainerSerialNumber = normalizeOptionalString(
+        updateParsed.data.containerSerialNumber,
+      );
       const normalizedPrice = normalizeOptionalString(updateParsed.data.price);
       const normalizedLogisticsComment = normalizeOptionalString(updateParsed.data.logisticsComment);
       const hasContainerColorsRalInput = typeof updateParsed.data.containerColorsRal === "string";
@@ -578,6 +581,9 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
       if (!normalizedDescription) {
         unsetPatch.description = 1;
       }
+      if (!normalizedContainerSerialNumber) {
+        unsetPatch.containerSerialNumber = 1;
+      }
       if (!normalizedLogisticsComment) {
         unsetPatch.logisticsComment = 1;
       }
@@ -640,6 +646,7 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
         hasCscCertification: updateParsed.data.hasCscCertification === true,
         hasBranding: updateParsed.data.hasBranding === true,
         hasWarranty: updateParsed.data.hasWarranty === true,
+        normalizedContainerSerialNumber,
         normalizedCscValidToMonth,
         normalizedCscValidToYear,
         productionYear:

@@ -3,7 +3,7 @@ import { Analytics } from "@vercel/analytics/next";
 import { Geist, Geist_Mono } from "next/font/google";
 import { cookies } from "next/headers";
 import { AppCookieNotice } from "@/components/app-cookie-notice";
-import { AppFooterGuard } from "@/components/app-footer-guard";
+import { AppFooter } from "@/components/app-footer";
 import { InAppNavigationHistoryTracker } from "@/components/in-app-navigation-history-tracker";
 import { AppNavbar } from "@/components/app-navbar";
 import { FocusVisibleInit } from "@/components/focus-visible-init";
@@ -74,7 +74,7 @@ export default async function RootLayout({
             <InAppNavigationHistoryTracker />
             <AppNavbar locale={locale} messages={messages} />
             <div className="w-full flex-1">{children}</div>
-            <AppFooterGuard locale={locale} messages={messages.footer} />
+            <AppFooter locale={locale} messages={messages.footer} />
             <AppCookieNotice
               locale={locale}
               messages={messages.cookieNotice}

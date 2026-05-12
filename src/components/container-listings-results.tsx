@@ -50,6 +50,7 @@ type ContainerListingsResultsProps = {
   detailsHrefPrefix?: string;
   detailsQueryString?: string;
   priceDisplayCurrency: PriceDisplayCurrency;
+  leadingListContent?: ReactNode;
   footerContent?: ReactNode;
   administrativeLocationFilter?: {
     city?: string;
@@ -866,6 +867,7 @@ const ContainerListingResultCard = memo(function ContainerListingResultCard({
     .join(" | ");
   const containerColors = item.containerColors ?? [];
   const additionalPhotoCount = getAdditionalPhotoCount(item);
+  const containerSerialNumber = item.containerSerialNumber?.trim();
 
   return (
     <li className="w-full rounded-md border border-neutral-200 bg-white p-1.5 shadow-sm transition-colors duration-150 hover:border-sky-100 hover:bg-sky-50/60 sm:p-4">
@@ -884,6 +886,14 @@ const ContainerListingResultCard = memo(function ContainerListingResultCard({
               sizes="(max-width: 640px) 100vw, 176px"
               priority={shouldPrioritizeImage}
             />
+            {containerSerialNumber ? (
+              <span
+                className="absolute left-1.5 top-1.5 max-w-[calc(100%-0.75rem)] truncate rounded-md border border-neutral-200 bg-white/88 px-2 py-1 text-[10px] font-semibold uppercase tracking-[0.04em] text-neutral-700 shadow-sm backdrop-blur"
+                title={containerSerialNumber}
+              >
+                {containerSerialNumber}
+              </span>
+            ) : null}
             {additionalPhotoCount > 0 ? (
               <span
                 className="absolute bottom-1.5 right-1.5 inline-flex h-6 min-w-8 items-center justify-center gap-1 rounded-md border border-neutral-300 bg-white/95 px-1.5 text-[11px] font-semibold text-neutral-900 shadow-sm backdrop-blur"
@@ -1190,6 +1200,7 @@ function ContainerListingsResultsComponent({
   detailsHrefPrefix = "/containers",
   detailsQueryString,
   priceDisplayCurrency,
+  leadingListContent,
   footerContent,
   administrativeLocationFilter,
 }: ContainerListingsResultsProps) {
@@ -1320,6 +1331,9 @@ function ContainerListingsResultsComponent({
           {items.length > 0 ? (
             <>
               <ul className="grid w-full grid-cols-2 gap-2 sm:grid-cols-1 sm:gap-3">
+                {leadingListContent ? (
+                  <li className="col-span-2 sm:col-span-1">{leadingListContent}</li>
+                ) : null}
                 {items.map((item, index) => {
                   return (
                     <ContainerListingResultCard

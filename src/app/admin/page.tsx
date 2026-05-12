@@ -74,6 +74,7 @@ export default async function AdminPage({ searchParams }: AdminPageProps) {
         listingMessages={messages.containerListings}
         usersMessages={messages.adminUsers}
         companiesMessages={messages.adminCompanies}
+        transportCompaniesMessages={messages.adminTransportCompanies}
         companyStatusMessages={messages.companyStatus}
         roleMessages={messages.roles}
         mailPreviewMessages={messages.adminMailPreviews}

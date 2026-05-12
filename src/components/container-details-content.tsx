@@ -14,12 +14,14 @@ import {
 } from "@/components/container-details-locations-map";
 import { ContainerInquiryModalTrigger } from "@/components/container-inquiry-modal-trigger";
 import { ContainerListingViewTracker } from "@/components/container-listing-view-tracker";
+import { TransportCompareTrigger } from "@/components/transport-compare-trigger";
 import { toIntlLocale } from "@/components/container-modules-i18n";
 import { DetailsBackButton } from "@/components/details-back-button";
 import { SESSION_COOKIE_NAME } from "@/lib/auth-session";
 import { getCurrentUserFromToken } from "@/lib/auth-user";
 import { getCompaniesCollection, type CompanyDocument } from "@/lib/companies";
 import { normalizeCompanyVerificationStatus } from "@/lib/company-verification";
+import { isTransportCompareFeatureEnabled } from "@/lib/feature-flags";
 import {
   getContainerConditionLabel,
   getContainerFeatureLabel,
@@ -65,6 +67,8 @@ type ContainerDetailsContentProps = {
   listHref?: string;
   preferHistoryBack?: boolean;
   showRelatedListings?: boolean;
+  locale?: AppLocale;
+  canonicalPath?: string;
 };
 
 type ListingPriceDisplay = {
@@ -502,6 +506,8 @@ export async function ContainerDetailsContent({
   listHref = "/list",
   preferHistoryBack = false,
   showRelatedListings = true,
+  locale: preferredLocale,
+  canonicalPath,
 }: ContainerDetailsContentProps) {
   await ensureContainerListingsIndexes();
   await expireContainerListingsIfNeeded();
@@ -577,7 +583,7 @@ export async function ContainerDetailsContent({
       : undefined;
 
   const cookieStore = await cookies();
-  const locale = resolveLocale(cookieStore.get(LOCALE_COOKIE_NAME)?.value);
+  const locale = preferredLocale ?? resolveLocale(cookieStore.get(LOCALE_COOKIE_NAME)?.value);
   const messages = getMessages(locale);
   const moduleMessages = messages.containerModules;
   const listingMessages = messages.containerListings;
@@ -602,6 +608,7 @@ export async function ContainerDetailsContent({
   const isAdmin = currentUser?.role === USER_ROLE.ADMIN;
   const isLoggedIn = Boolean(currentUser?._id);
   const turnstileSiteKey = !isLoggedIn ? getTurnstileSiteKey() : null;
+  const enableTransportCompare = isTransportCompareFeatureEnabled();
   const inquiryInitialValues = isLoggedIn
     ? {
         buyerName:
@@ -654,15 +661,25 @@ export async function ContainerDetailsContent({
   const hasRealMainImage = detailPhotoUrls.length > 0;
   const hasAnyCertification =
     listingItem.hasCscPlate || listingItem.hasCscCertification || listingItem.hasWarranty;
-  const hasAnyCscDetails = hasAnyCertification || Boolean(cscValidityLabel);
+  const hasAnyCscDetails =
+    hasAnyCertification ||
+    Boolean(cscValidityLabel) ||
+    Boolean(listingItem.containerSerialNumber?.trim());
   const quantityDisplay = getQuantityDisplay(listingItem.quantity);
   const locationItems = getLocationDisplayItems(listingItem, locale, moduleMessages);
   const locationMapPoints = getLocationMapPoints(listingItem, locale, moduleMessages);
+  const transportPickupLocation = locationMapPoints[0]
+    ? {
+        label: locationMapPoints[0].label,
+        lat: locationMapPoints[0].lat,
+        lng: locationMapPoints[0].lng,
+      }
+    : null;
   const seoNarrative = getContainerListingSeoNarrative(listingItem, locale);
   const structuredData = buildContainerListingStructuredData({
     item: listingItem,
     locale,
-    path: `/containers/${listing._id.toHexString()}`,
+    path: canonicalPath ?? `/containers/${listing._id.toHexString()}`,
   });
   const freeTransportDistanceKmForMap =
     listingItem.logisticsTransportIncluded &&
@@ -973,6 +990,13 @@ export async function ContainerDetailsContent({
               </p>
               <div className="mt-2 grid gap-1 text-sm text-neutral-700">
                 <p>
+                  {moduleMessages.details.containerSerialNumberLabel}:{" "}
+                  <span className="text-neutral-900">
+                    {listingItem.containerSerialNumber?.trim() ||
+                      moduleMessages.details.noData}
+                  </span>
+                </p>
+                <p>
                   {moduleMessages.details.cscPlateLabel}:{" "}
                   <span className="text-neutral-900">
                     {getOptionalBooleanDetailLabel(listingItem.hasCscPlate, moduleMessages)}
@@ -1112,6 +1136,18 @@ export async function ContainerDetailsContent({
               {logisticsComment ? (
                 <p className="mt-2 text-xs text-neutral-600">{logisticsComment}</p>
               ) : null}
+            </div>
+          ) : null}
+
+          {enableTransportCompare ? (
+            <div className="mt-4 border-t border-neutral-200 pt-3">
+              <TransportCompareTrigger
+                locale={locale}
+                messages={messages.transportCompare}
+                pickupLocation={transportPickupLocation}
+                isLoggedIn={isLoggedIn}
+                turnstileSiteKey={turnstileSiteKey}
+              />
             </div>
           ) : null}
         </section>

@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import {
   SUPPORTED_LOCALES,
+  withLocalePrefix,
   withLang,
   type AppLocale,
 } from "@/lib/i18n";
@@ -39,22 +40,45 @@ export function getAbsoluteUrl(path: string): string {
   return new URL(path, `${getSiteUrl()}/`).toString();
 }
 
-export function getLanguageAlternates(path: string): Record<AppLocale, string> {
+type LocalizedUrlOptions = {
+  localePrefix?: boolean;
+};
+
+function getLocalizedPath(
+  path: string,
+  locale: AppLocale,
+  options?: LocalizedUrlOptions,
+): string {
+  return options?.localePrefix ? withLocalePrefix(path, locale) : withLang(path, locale);
+}
+
+export function getLanguageAlternates(
+  path: string,
+  options?: LocalizedUrlOptions,
+): Record<AppLocale, string> {
   const alternates = {} as Record<AppLocale, string>;
   for (const locale of SUPPORTED_LOCALES) {
-    alternates[locale] = getAbsoluteUrl(withLang(path, locale));
+    alternates[locale] = getAbsoluteUrl(getLocalizedPath(path, locale, options));
   }
   return alternates;
 }
 
-export function getLocalizedCanonical(path: string, locale: AppLocale): string {
-  return getAbsoluteUrl(withLang(path, locale));
+export function getLocalizedCanonical(
+  path: string,
+  locale: AppLocale,
+  options?: LocalizedUrlOptions,
+): string {
+  return getAbsoluteUrl(getLocalizedPath(path, locale, options));
 }
 
-export function getLocalizedAlternates(path: string, locale: AppLocale): Metadata["alternates"] {
+export function getLocalizedAlternates(
+  path: string,
+  locale: AppLocale,
+  options?: LocalizedUrlOptions,
+): Metadata["alternates"] {
   return {
-    canonical: getLocalizedCanonical(path, locale),
-    languages: getLanguageAlternates(path),
+    canonical: getLocalizedCanonical(path, locale, options),
+    languages: getLanguageAlternates(path, options),
   };
 }
 
@@ -70,8 +94,11 @@ export function buildPageMetadata(input: {
   imagePath?: string;
   type?: "website" | "article";
   noIndex?: boolean;
+  localePrefix?: boolean;
 }): Metadata {
-  const canonical = getLocalizedCanonical(input.path, input.locale);
+  const canonical = getLocalizedCanonical(input.path, input.locale, {
+    localePrefix: input.localePrefix,
+  });
   const imagePath = input.imagePath ?? DEFAULT_OPEN_GRAPH_IMAGE_PATH;
   const image = getAbsoluteUrl(imagePath);
   const imageMetadata =
@@ -86,7 +113,9 @@ export function buildPageMetadata(input: {
   return {
     title: input.title,
     description: input.description,
-    alternates: getLocalizedAlternates(input.path, input.locale),
+    alternates: getLocalizedAlternates(input.path, input.locale, {
+      localePrefix: input.localePrefix,
+    }),
     robots: input.noIndex ? { index: false, follow: false } : undefined,
     openGraph: {
       type: input.type ?? "website",

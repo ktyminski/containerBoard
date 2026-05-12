@@ -1,8 +1,6 @@
-"use client";
-
 import Link from "next/link";
 import { FacebookIcon, LinkedInIcon } from "@/components/social-icons";
-import { withLang, type AppLocale, type AppMessages } from "@/lib/i18n";
+import { withLang, withLocalePrefix, type AppLocale, type AppMessages } from "@/lib/i18n";
 import { SITE_FACEBOOK_URL, SITE_LINKEDIN_URL } from "@/lib/site-links";
 
 type AppFooterProps = {
@@ -33,7 +31,10 @@ export function AppFooter({ locale, messages }: AppFooterProps) {
           <Link href={withLang("/list", locale)} className="transition hover:text-[#7dd3fc]">
             {messages.browseListings}
           </Link>
-          <Link href={withLang("/kontenery/na-sprzedaz", locale)} className="transition hover:text-[#7dd3fc]">
+          <Link
+            href={withLocalePrefix("/shipping-containers/for-sale", locale)}
+            className="transition hover:text-[#7dd3fc]"
+          >
             {messages.saleSeo}
           </Link>
           <Link href={withLang("/containers/new", locale)} className="transition hover:text-[#7dd3fc]">

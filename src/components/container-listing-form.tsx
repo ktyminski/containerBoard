@@ -774,6 +774,7 @@ export function ContainerListingForm({
       hasCscCertification: values.hasCscCertification,
       hasBranding: values.hasBranding,
       hasWarranty: values.hasWarranty,
+      containerSerialNumber: normalizeOptionalText(values.containerSerialNumber),
       ...(hasCscValidToMonth && hasCscValidToYear
         ? {
             cscValidToMonth: normalizedCscValidToMonth,
@@ -1769,6 +1770,17 @@ export function ContainerListingForm({
 
           {showCertificationSection ? (
             <FormSection title={messages.form.certificationSectionTitle}>
+              <label className="grid max-w-md gap-1 text-sm">
+                <span className="text-neutral-700">
+                  {messages.form.containerSerialNumberLabel}
+                </span>
+                <input
+                  {...register("containerSerialNumber")}
+                  className="rounded-md border border-neutral-700 bg-neutral-950 px-3 py-2 text-neutral-100"
+                  placeholder={messages.form.containerSerialNumberPlaceholder}
+                />
+              </label>
+
               <div className="flex flex-wrap items-start gap-3">
                 <div className="flex w-fit flex-col gap-1 text-sm">
                   <span

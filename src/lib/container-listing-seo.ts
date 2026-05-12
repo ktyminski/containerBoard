@@ -917,6 +917,7 @@ export function buildContainerListingMetadata(input: {
   item: ContainerListingItem;
   locale: AppLocale;
   path: string;
+  localePrefix?: boolean;
 }): Metadata {
   const title = getContainerListingSeoTitle(input.item, input.locale);
   const description = getContainerListingSeoDescription(input.item, input.locale);
@@ -927,6 +928,7 @@ export function buildContainerListingMetadata(input: {
     title,
     description,
     type: "article",
+    localePrefix: input.localePrefix,
   });
   const ogImages = imageUrl ? [{ url: imageUrl }] : base.openGraph?.images;
   const twitterImages = imageUrl ? [imageUrl] : base.twitter?.images;

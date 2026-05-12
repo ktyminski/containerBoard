@@ -1,11 +1,21 @@
 import Link from "next/link";
 import { ContainerPhotoWithPlaceholder } from "@/components/container-photo-with-placeholder";
 import type { ContainerListingItem } from "@/lib/container-listings";
-import { type AppLocale } from "@/lib/i18n";
+import {
+  getContainerConditionLabel,
+  getContainerFeatureLabel,
+  getContainerShortLabelLocalized,
+} from "@/components/container-listings-i18n";
+import { CONTAINER_CONDITION_COLOR_TOKENS } from "@/components/container-listings-shared";
+import { getContainerListingLocationLabel } from "@/components/container-listings-utils";
+import {
+  PRICE_CURRENCY_LABEL,
+  type Currency,
+} from "@/lib/container-listing-types";
+import { getMessages, type AppLocale, withLocalePrefix } from "@/lib/i18n";
 import {
   getContainerSaleSeoHubCopy,
   getContainerSeoIndexable,
-  getContainerSeoListingSummary,
 } from "@/lib/seo-containers";
 
 type SeoContainerSalePageProps = {
@@ -17,11 +27,13 @@ type SeoContainerSalePageProps = {
   total: number;
 };
 
-function getCardImage(item: ContainerListingItem): string {
-  const firstPhotoUrl = item.photoUrls?.find((value) => value?.trim());
-  if (firstPhotoUrl) {
-    return firstPhotoUrl;
-  }
+type SeoListingPriceDisplay = {
+  amountLabel: string;
+  metaLine: string;
+  isRequestPrice: boolean;
+};
+
+function getContainerPlaceholderSrc(item: ContainerListingItem): string {
   if (item.container.size === 20) {
     return "/placeholders/containers/container-20.svg";
   }
@@ -34,6 +46,181 @@ function getCardImage(item: ContainerListingItem): string {
   return "/placeholders/containers/container-unknown.svg";
 }
 
+function getContainerPreviewSrc(item: ContainerListingItem): string {
+  const firstPhotoUrl = item.photoUrls?.find((value) => value?.trim());
+  return firstPhotoUrl ?? getContainerPlaceholderSrc(item);
+}
+
+function getAdditionalPhotoCount(item: ContainerListingItem): number {
+  const photoCount =
+    item.photoUrls?.filter((value) => value?.trim().length > 0).length ?? 0;
+  return Math.max(0, photoCount - 1);
+}
+
+function getNormalizedAmountByCurrency(
+  input: {
+    amountPln: number | null;
+    amountEur: number | null;
+    amountUsd: number | null;
+  },
+  currency: Currency,
+): number | null {
+  if (currency === "PLN") {
+    return input.amountPln;
+  }
+  if (currency === "EUR") {
+    return input.amountEur;
+  }
+  return input.amountUsd;
+}
+
+function formatVatRateLabel(locale: AppLocale, vatRate: number | null): string | null {
+  if (typeof vatRate !== "number" || !Number.isFinite(vatRate)) {
+    return null;
+  }
+  return `VAT ${vatRate.toLocaleString(locale)}%`;
+}
+
+function getListingPriceDisplay(
+  item: ContainerListingItem,
+  locale: AppLocale,
+  messages: ReturnType<typeof getMessages>["containerListings"],
+): SeoListingPriceDisplay {
+  const pricing = item.pricing;
+
+  if (
+    pricing &&
+    (pricing.original.amount === null ||
+      typeof pricing.original.amount !== "number")
+  ) {
+    const metaParts: string[] = [];
+    if (pricing.original.negotiable === true || item.priceNegotiable === true) {
+      metaParts.push(messages.results.negotiable);
+    }
+    return {
+      amountLabel: messages.results.askPrice,
+      metaLine: metaParts.join(" | "),
+      isRequestPrice: true,
+    };
+  }
+
+  if (
+    pricing?.original.amount !== null &&
+    typeof pricing?.original.amount === "number" &&
+    pricing.original.currency &&
+    pricing.original.taxMode
+  ) {
+    const normalizedAmountSet =
+      pricing.original.taxMode === "net"
+        ? pricing.normalized.net
+        : pricing.normalized.gross;
+    const normalizedAmount = getNormalizedAmountByCurrency(
+      normalizedAmountSet,
+      pricing.original.currency,
+    );
+    const amount =
+      typeof normalizedAmount === "number" && Number.isFinite(normalizedAmount)
+        ? normalizedAmount
+        : pricing.original.amount;
+    const metaParts = [
+      pricing.original.taxMode === "net"
+        ? messages.results.net
+        : messages.results.gross,
+    ];
+    const vatRateLabel = formatVatRateLabel(locale, pricing.original.vatRate);
+    if (vatRateLabel) {
+      metaParts.push(vatRateLabel);
+    }
+    if (pricing.original.negotiable === true || item.priceNegotiable === true) {
+      metaParts.push(messages.results.negotiable);
+    }
+    return {
+      amountLabel: `${Math.round(amount).toLocaleString(locale)} ${
+        PRICE_CURRENCY_LABEL[pricing.original.currency]
+      }`,
+      metaLine: metaParts.join(" | "),
+      isRequestPrice: false,
+    };
+  }
+
+  if (typeof item.priceAmount === "number" && Number.isFinite(item.priceAmount)) {
+    const metaParts = [messages.results.net];
+    if (item.priceNegotiable === true) {
+      metaParts.push(messages.results.negotiable);
+    }
+    return {
+      amountLabel: `${Math.round(item.priceAmount).toLocaleString(locale)} PLN`,
+      metaLine: metaParts.join(" | "),
+      isRequestPrice: false,
+    };
+  }
+
+  if (item.price?.trim()) {
+    const metaParts: string[] = [];
+    if (item.priceNegotiable === true) {
+      metaParts.push(messages.results.negotiable);
+    }
+    return {
+      amountLabel: item.price.trim(),
+      metaLine: metaParts.join(" | "),
+      isRequestPrice: false,
+    };
+  }
+
+  return {
+    amountLabel: messages.results.askPrice,
+    metaLine: "",
+    isRequestPrice: true,
+  };
+}
+
+function getAvailableFromLabel(
+  item: ContainerListingItem,
+  locale: AppLocale,
+  messages: ReturnType<typeof getMessages>["containerListings"],
+): string {
+  if (item.availableNow) {
+    return messages.results.availableNow;
+  }
+  const date = item.availableFrom ? new Date(item.availableFrom) : null;
+  if (!date || !Number.isFinite(date.getTime())) {
+    return messages.results.unknown;
+  }
+  return date.toLocaleDateString(locale);
+}
+
+function getLogisticsSummaryLabels(
+  item: ContainerListingItem,
+  messages: ReturnType<typeof getMessages>["containerListings"],
+): string[] {
+  const labels: string[] = [];
+  if (item.logisticsTransportAvailable) {
+    if (item.logisticsTransportIncluded) {
+      const distanceKm =
+        typeof item.logisticsTransportFreeDistanceKm === "number" &&
+        Number.isFinite(item.logisticsTransportFreeDistanceKm) &&
+        item.logisticsTransportFreeDistanceKm > 0
+          ? Math.trunc(item.logisticsTransportFreeDistanceKm)
+          : null;
+      labels.push(
+        distanceKm
+          ? `${messages.results.freeTransportLabel} ${distanceKm} km`
+          : messages.results.freeTransportLabel,
+      );
+    } else {
+      labels.push(messages.results.transportAvailableLabel);
+    }
+  }
+  if (item.logisticsUnloadingAvailable) {
+    labels.push(
+      item.logisticsUnloadingIncluded
+        ? messages.results.freeUnloadingLabel
+        : messages.results.unloadingAvailableLabel,
+    );
+  }
+  return labels;
+}
+
 export function SeoContainerSalePage({
   locale,
   heading,
@@ -43,6 +230,7 @@ export function SeoContainerSalePage({
   total,
 }: SeoContainerSalePageProps) {
   const copy = getContainerSaleSeoHubCopy(locale);
+  const listingMessages = getMessages(locale).containerListings;
   const isIndexable = getContainerSeoIndexable(total);
 
   return (
@@ -73,47 +261,215 @@ export function SeoContainerSalePage({
           <h2 className="text-xl font-semibold text-neutral-900">{copy.latestHeading}</h2>
         </div>
         {items.length > 0 ? (
-          <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+          <ul className="grid gap-3">
             {items.map((item) => {
-              const summary = getContainerSeoListingSummary(item, locale);
+              const title = getContainerShortLabelLocalized(
+                listingMessages,
+                item.container,
+              );
+              const priceDisplay = getListingPriceDisplay(item, locale, listingMessages);
+              const additionalPhotoCount = getAdditionalPhotoCount(item);
+              const containerFeatureLabels = item.container.features
+                .map((feature) => getContainerFeatureLabel(listingMessages, feature))
+                .filter((label) => label.trim().length > 0);
+              const containerMetaParts = [
+                ...(typeof item.productionYear === "number"
+                  ? [String(item.productionYear)]
+                  : []),
+                ...containerFeatureLabels,
+              ];
+              const logisticsSummaryLabels = getLogisticsSummaryLabels(
+                item,
+                listingMessages,
+              );
+              const detailsHref = withLocalePrefix(`/containers/${item.id}`, locale);
+
               return (
-                <Link
+                <li
                   key={item.id}
-                  href={`/containers/${item.id}`}
-                  className="group overflow-hidden rounded-md border border-neutral-300 bg-white shadow-sm transition hover:border-neutral-400 hover:shadow-md"
+                  className="w-full rounded-md border border-neutral-200 bg-white p-1.5 shadow-sm transition-colors duration-150 hover:border-sky-100 hover:bg-sky-50/60 sm:p-4"
                 >
-                  <div className="relative aspect-[4/3] overflow-hidden bg-neutral-100">
-                    <ContainerPhotoWithPlaceholder
-                      src={getCardImage(item)}
-                      alt={summary.title}
-                      fill
-                      sizes="(max-width: 768px) 100vw, (max-width: 1280px) 50vw, 33vw"
-                      className="object-cover"
-                    />
-                  </div>
-                  <div className="grid gap-3 p-4">
-                    <div className="grid gap-1">
-                      <p className="text-lg font-semibold text-neutral-900">{summary.title}</p>
-                      <p className="text-sm text-neutral-600">
-                        {[item.locationCity, item.locationCountry].filter(Boolean).join(", ")}
-                      </p>
-                    </div>
-                    <div className="flex flex-wrap items-center justify-between gap-2 text-sm text-neutral-600">
-                      <span>
-                        {copy.quantityLabel}: {item.quantity}
+                  <div className="flex h-full flex-col gap-2 sm:flex-row sm:gap-4">
+                    <div className="w-full shrink-0 sm:w-44">
+                      <div className="relative aspect-square overflow-hidden rounded-t-md border border-neutral-200 border-b-0 bg-neutral-100 sm:rounded-md sm:border-b">
+                        <ContainerPhotoWithPlaceholder
+                          src={getContainerPreviewSrc(item)}
+                          alt=""
+                          fill
+                          className={
+                            item.photoUrls && item.photoUrls.length > 0
+                              ? "object-cover"
+                              : "object-contain p-1"
+                          }
+                          sizes="(max-width: 640px) 100vw, 176px"
+                        />
+                        {additionalPhotoCount > 0 ? (
+                          <span
+                            className="absolute bottom-1.5 right-1.5 inline-flex h-6 min-w-8 items-center justify-center gap-1 rounded-md border border-neutral-300 bg-white/95 px-1.5 text-[11px] font-semibold text-neutral-900 shadow-sm backdrop-blur"
+                            aria-label={`+${additionalPhotoCount}`}
+                            title={`+${additionalPhotoCount}`}
+                          >
+                            +{additionalPhotoCount}
+                          </span>
+                        ) : null}
+                      </div>
+                      <span
+                        className={`-mt-px inline-flex w-full items-center justify-center rounded-b-md border px-2 py-1 text-[10px] font-medium sm:hidden ${CONTAINER_CONDITION_COLOR_TOKENS[item.container.condition].badgeClassName}`}
+                      >
+                        {getContainerConditionLabel(
+                          listingMessages,
+                          item.container.condition,
+                        )}
                       </span>
-                      <span>
-                        {copy.addedLabel}: {new Date(item.createdAt).toLocaleDateString(locale)}
-                      </span>
                     </div>
-                    <p className="text-base font-semibold text-neutral-900">
-                      {summary.price ?? copy.askPrice}
-                    </p>
+
+                    <div className="flex min-w-0 flex-1 flex-col">
+                      <div className="flex min-w-0 flex-col gap-2 sm:flex-row sm:items-start sm:gap-3">
+                        <div className="min-w-0 sm:w-0 sm:flex-1">
+                          {item.companySlug ? (
+                            <div className="flex min-w-0 items-center gap-1">
+                              <Link
+                                href={`/companies/${item.companySlug}`}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="block min-w-0 truncate text-[11px] uppercase leading-[1.15] tracking-[0.08em] text-sky-700 decoration-sky-400 underline underline-offset-2 hover:text-sky-800 sm:text-xs"
+                              >
+                                {item.companyName}
+                              </Link>
+                              {item.companyIsVerified ? (
+                                <span
+                                  className="inline-flex h-4 w-4 shrink-0 items-center justify-center rounded-full border border-emerald-300/80 bg-emerald-100/80 text-emerald-700"
+                                  aria-label={listingMessages.results.verifiedCompany}
+                                  title={listingMessages.results.verifiedCompany}
+                                >
+                                  <svg
+                                    viewBox="0 0 20 20"
+                                    fill="none"
+                                    className="h-3 w-3"
+                                    aria-hidden="true"
+                                  >
+                                    <path
+                                      d="M5 10.5l3.2 3.2L15 7"
+                                      stroke="currentColor"
+                                      strokeWidth="2"
+                                      strokeLinecap="round"
+                                      strokeLinejoin="round"
+                                    />
+                                  </svg>
+                                </span>
+                              ) : null}
+                            </div>
+                          ) : (
+                            <p className="truncate text-[11px] uppercase leading-[1.15] tracking-[0.08em] text-neutral-500 sm:text-xs">
+                              {item.companyName}
+                            </p>
+                          )}
+                          <h3 className="mt-1 truncate text-[17px] font-semibold leading-tight text-neutral-900 sm:text-xl">
+                            {title}
+                          </h3>
+                          <p className="mt-1 truncate text-sm text-neutral-600">
+                            {getContainerListingLocationLabel(
+                              item,
+                              listingMessages.utils,
+                              locale,
+                            )}
+                          </p>
+                          {containerMetaParts.length > 0 ? (
+                            <p
+                              className="mt-1 w-full truncate text-[12px] text-neutral-500 sm:text-xs"
+                              title={containerMetaParts.join(", ")}
+                            >
+                              {containerMetaParts.join(", ")}
+                            </p>
+                          ) : null}
+                        </div>
+
+                        <div className="hidden w-full justify-items-start gap-1.5 text-left sm:ml-auto sm:grid sm:w-auto sm:shrink-0 sm:justify-items-end sm:gap-2 sm:text-right">
+                          <div>
+                            <p
+                              className={`max-w-full overflow-hidden text-ellipsis whitespace-nowrap text-sm font-bold sm:text-xl ${
+                                priceDisplay.isRequestPrice
+                                  ? "text-neutral-700"
+                                  : "text-amber-600"
+                              }`}
+                            >
+                              {priceDisplay.amountLabel}
+                            </p>
+                            {priceDisplay.metaLine ? (
+                              <p className="max-w-full overflow-hidden text-ellipsis whitespace-nowrap text-[10px] text-neutral-600 sm:text-xs">
+                                {priceDisplay.metaLine}
+                              </p>
+                            ) : null}
+                          </div>
+                          <div className="hidden flex-wrap items-center justify-end gap-2 sm:flex">
+                            <span
+                              className={`rounded-md border px-2 py-1 text-xs font-medium ${CONTAINER_CONDITION_COLOR_TOKENS[item.container.condition].badgeClassName}`}
+                            >
+                              {getContainerConditionLabel(
+                                listingMessages,
+                                item.container.condition,
+                              )}
+                            </span>
+                          </div>
+                          <p className="hidden text-right text-xs text-neutral-400 sm:block">
+                            {copy.addedLabel}:{" "}
+                            {new Date(item.createdAt).toLocaleDateString(locale)}
+                          </p>
+                        </div>
+                      </div>
+
+                      <div className="mt-2 flex items-center gap-2 overflow-hidden text-[12px] text-neutral-500 sm:mt-3 sm:flex-wrap sm:overflow-visible sm:text-xs">
+                        {logisticsSummaryLabels.length > 0 ? (
+                          <p className="min-w-0 truncate text-neutral-600">
+                            {logisticsSummaryLabels.join(", ")}
+                          </p>
+                        ) : null}
+                        <p className="ml-auto hidden text-right text-sm text-neutral-700 sm:block">
+                          {listingMessages.results.availableFromLabel}:{" "}
+                          <span className="font-medium text-neutral-900">
+                            {getAvailableFromLabel(item, locale, listingMessages)}
+                          </span>
+                        </p>
+                      </div>
+
+                      <div className="mt-auto flex flex-col gap-2 pt-3 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
+                        <p className="text-[12px] text-neutral-700 sm:text-sm">
+                          {copy.quantityLabel}:{" "}
+                          <span className="font-medium text-neutral-900">
+                            {item.quantity}
+                          </span>
+                        </p>
+                        <p className="min-h-[3.2rem] text-center sm:hidden">
+                          <span
+                            className={`text-[17px] font-semibold ${
+                              priceDisplay.isRequestPrice
+                                ? "text-neutral-700"
+                                : "text-amber-600"
+                            }`}
+                          >
+                            {priceDisplay.amountLabel}
+                          </span>
+                          {priceDisplay.metaLine ? (
+                            <span className="mt-0.5 block text-[14px] font-medium leading-tight text-neutral-700">
+                              {priceDisplay.metaLine}
+                            </span>
+                          ) : null}
+                        </p>
+                        <div className="ml-auto flex w-full items-center justify-end gap-2 sm:w-auto">
+                          <Link
+                            href={detailsHref}
+                            className="inline-flex w-full items-center justify-center rounded-md border border-[#1d5ea8] bg-[#103b74] px-2.5 py-1.5 text-[12px] font-medium text-white transition hover:border-[#2f76c7] hover:bg-[#16498d] sm:w-auto sm:px-3 sm:py-2 sm:text-sm"
+                          >
+                            {listingMessages.results.detailsCta}
+                          </Link>
+                        </div>
+                      </div>
+                    </div>
                   </div>
-                </Link>
+                </li>
               );
             })}
-          </div>
+          </ul>
         ) : (
           <div className="rounded-md border border-dashed border-neutral-300 bg-white p-8 text-center">
             <p className="text-lg font-semibold text-neutral-900">{copy.emptyTitle}</p>

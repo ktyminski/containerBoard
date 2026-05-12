@@ -1,6 +1,7 @@
 import type { MetadataRoute } from "next";
 import { getContainerListingsCollection } from "@/lib/container-listings";
 import { LISTING_STATUS } from "@/lib/container-listing-types";
+import { SUPPORTED_LOCALES, withLocalePrefix } from "@/lib/i18n";
 import {
   CONTAINER_BUY_SEO_HUB_PATH,
   CONTAINER_RENT_SEO_HUB_PATH,
@@ -17,6 +18,7 @@ import {
   getSeoContainerCityCount,
   getSeoContainerCountryCount,
 } from "@/lib/seo-containers";
+import { SEO_CITIES } from "@/lib/seo-landings";
 import { getAbsoluteUrl, getLanguageAlternates } from "@/lib/seo";
 
 const STATIC_PATHS = [
@@ -28,6 +30,24 @@ const STATIC_PATHS = [
   "/terms",
   "/cookies",
 ] as const;
+
+function getLocalizedSitemapEntries(input: {
+  path: string;
+  lastModified: Date;
+  changeFrequency: MetadataRoute.Sitemap[number]["changeFrequency"];
+  priority: number;
+}): MetadataRoute.Sitemap {
+  const languages = getLanguageAlternates(input.path, { localePrefix: true });
+  return SUPPORTED_LOCALES.map((locale) => ({
+    url: getAbsoluteUrl(withLocalePrefix(input.path, locale)),
+    lastModified: input.lastModified,
+    changeFrequency: input.changeFrequency,
+    priority: input.priority,
+    alternates: {
+      languages,
+    },
+  }));
+}
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const now = new Date();
@@ -58,19 +78,33 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     },
   }));
 
+  const transportCompanyEntries: MetadataRoute.Sitemap = [
+    ...getLocalizedSitemapEntries({
+      path: "/transport-companies",
+      lastModified: now,
+      changeFrequency: "weekly",
+      priority: 0.8,
+    }),
+    ...SEO_CITIES.slice(0, 30).flatMap((city) =>
+      getLocalizedSitemapEntries({
+        path: `/transport-companies/${city.slug}`,
+        lastModified: now,
+        changeFrequency: "weekly",
+        priority: 0.7,
+      }),
+    ),
+  ];
+
   const listingEntries: MetadataRoute.Sitemap = listingRows
     .filter((row) => row._id)
-    .map((row) => {
+    .flatMap((row) => {
       const path = `/containers/${row._id.toHexString()}`;
-      return {
-        url: getAbsoluteUrl(path),
+      return getLocalizedSitemapEntries({
+        path,
         lastModified: row.updatedAt ?? row.createdAt ?? now,
         changeFrequency: "daily",
         priority: 0.8,
-        alternates: {
-          languages: getLanguageAlternates(path),
-        },
-      };
+      });
     });
 
   const [cityCounts, countryCounts] = await Promise.all([
@@ -90,32 +124,26 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
 
   const cityEntries: MetadataRoute.Sitemap = cityCounts
     .filter((entry) => entry.total >= 3)
-    .map(({ city }) => {
+    .flatMap(({ city }) => {
       const path = getContainerSaleCityPath(city.slug);
-      return {
-        url: getAbsoluteUrl(path),
+      return getLocalizedSitemapEntries({
+        path,
         lastModified: now,
         changeFrequency: "daily",
         priority: 0.8,
-        alternates: {
-          languages: getLanguageAlternates(path),
-        },
-      };
+      });
     });
 
   const countryEntries: MetadataRoute.Sitemap = countryCounts
     .filter((entry) => entry.total >= 3)
-    .map(({ country }) => {
+    .flatMap(({ country }) => {
       const path = getContainerSaleCountryPath(country.slug);
-      return {
-        url: getAbsoluteUrl(path),
+      return getLocalizedSitemapEntries({
+        path,
         lastModified: now,
         changeFrequency: "daily",
         priority: 0.8,
-        alternates: {
-          languages: getLanguageAlternates(path),
-        },
-      };
+      });
     });
 
   const [saleHubTotal, rentHubTotal, buyHubTotal] = await Promise.all([
@@ -130,14 +158,11 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     { path: CONTAINER_BUY_SEO_HUB_PATH, total: buyHubTotal },
   ]
     .filter((entry) => entry.total >= 3)
-    .map((entry) => ({
-      url: getAbsoluteUrl(entry.path),
+    .flatMap((entry) => getLocalizedSitemapEntries({
+      path: entry.path,
       lastModified: now,
-      changeFrequency: "daily" as const,
+      changeFrequency: "daily",
       priority: 0.8,
-      alternates: {
-        languages: getLanguageAlternates(entry.path),
-      },
     }));
 
   const [rentCityCounts, rentCountryCounts, buyCityCounts, buyCountryCounts] = await Promise.all([
@@ -169,66 +194,55 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
 
   const rentCityEntries: MetadataRoute.Sitemap = rentCityCounts
     .filter((entry) => entry.total >= 3)
-    .map(({ city }) => {
+    .flatMap(({ city }) => {
       const path = getContainerSeoCityPath(city.slug, "rent");
-      return {
-        url: getAbsoluteUrl(path),
+      return getLocalizedSitemapEntries({
+        path,
         lastModified: now,
         changeFrequency: "daily",
         priority: 0.8,
-        alternates: {
-          languages: getLanguageAlternates(path),
-        },
-      };
+      });
     });
 
   const rentCountryEntries: MetadataRoute.Sitemap = rentCountryCounts
     .filter((entry) => entry.total >= 3)
-    .map(({ country }) => {
+    .flatMap(({ country }) => {
       const path = getContainerSeoCountryPath(country.slug, "rent");
-      return {
-        url: getAbsoluteUrl(path),
+      return getLocalizedSitemapEntries({
+        path,
         lastModified: now,
         changeFrequency: "daily",
         priority: 0.8,
-        alternates: {
-          languages: getLanguageAlternates(path),
-        },
-      };
+      });
     });
 
   const buyCityEntries: MetadataRoute.Sitemap = buyCityCounts
     .filter((entry) => entry.total >= 3)
-    .map(({ city }) => {
+    .flatMap(({ city }) => {
       const path = getContainerSeoCityPath(city.slug, "buy");
-      return {
-        url: getAbsoluteUrl(path),
+      return getLocalizedSitemapEntries({
+        path,
         lastModified: now,
         changeFrequency: "daily",
         priority: 0.8,
-        alternates: {
-          languages: getLanguageAlternates(path),
-        },
-      };
+      });
     });
 
   const buyCountryEntries: MetadataRoute.Sitemap = buyCountryCounts
     .filter((entry) => entry.total >= 3)
-    .map(({ country }) => {
+    .flatMap(({ country }) => {
       const path = getContainerSeoCountryPath(country.slug, "buy");
-      return {
-        url: getAbsoluteUrl(path),
+      return getLocalizedSitemapEntries({
+        path,
         lastModified: now,
         changeFrequency: "daily",
         priority: 0.8,
-        alternates: {
-          languages: getLanguageAlternates(path),
-        },
-      };
+      });
     });
 
   return [
     ...staticEntries,
+    ...transportCompanyEntries,
     ...hubEntries,
     ...listingEntries,
     ...cityEntries,

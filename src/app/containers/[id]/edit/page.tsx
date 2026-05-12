@@ -188,6 +188,7 @@ export default async function EditContainerPage({
           hasCscCertification: listingItem.hasCscCertification,
           hasBranding: listingItem.hasBranding,
           hasWarranty: listingItem.hasWarranty,
+          containerSerialNumber: listingItem.containerSerialNumber ?? "",
           cscValidToMonth:
             typeof listingItem.cscValidToMonth === "number"
               ? String(listingItem.cscValidToMonth)

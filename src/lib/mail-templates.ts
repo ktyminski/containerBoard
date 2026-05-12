@@ -324,6 +324,47 @@ export function buildContainerInquiryMail(input: {
   };
 }
 
+export function buildTransportCompanyInquiryMail(input: {
+  transportCompanyName: string;
+  transportCompanyLocation?: string;
+  requesterEmail?: string;
+  requesterPhone?: string;
+  message: string;
+}): MailTemplateContent {
+  const subject = `New transport inquiry - ${input.transportCompanyName}`;
+  const sections = [
+    `Transport company: ${input.transportCompanyName}`,
+    input.transportCompanyLocation ? `Base location: ${input.transportCompanyLocation}` : "",
+    "Requester details:",
+    input.requesterEmail ? `Email: ${input.requesterEmail}` : "",
+    input.requesterPhone ? `Phone: ${input.requesterPhone}` : "",
+    `Message: ${input.message}`,
+  ].filter((line) => line.trim().length > 0);
+
+  const htmlLines = [
+    `<strong>Transport company:</strong> ${escapeHtml(input.transportCompanyName)}<br/>`,
+    input.transportCompanyLocation
+      ? `<strong>Base location:</strong> ${escapeHtml(input.transportCompanyLocation)}<br/>`
+      : "",
+    "<br/><strong>Requester details:</strong><br/>",
+    input.requesterEmail ? `<strong>Email:</strong> ${escapeHtml(input.requesterEmail)}<br/>` : "",
+    input.requesterPhone ? `<strong>Phone:</strong> ${escapeHtml(input.requesterPhone)}<br/>` : "",
+    `<strong>Message:</strong><br/>${escapeHtml(input.message).replaceAll("\n", "<br/>")}`,
+  ]
+    .filter((line) => line.trim().length > 0)
+    .join("");
+
+  return {
+    subject,
+    text: renderTextLayout({ sections }),
+    html: renderHtmlLayout({
+      preheader: "A new transport inquiry has been submitted.",
+      title: subject,
+      contentHtml: htmlParagraphRaw(htmlLines),
+    }),
+  };
+}
+
 export function buildConciergeStockUploadMail(input: {
   companyName: string;
   companySlug?: string;

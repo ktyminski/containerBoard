@@ -163,6 +163,40 @@ export function getLocaleFromApiRequest(request: Request): AppLocale {
   });
 }
 
+export function getLocaleFromPathname(pathname?: string | null): AppLocale | null {
+  const firstSegment = pathname?.split("/").filter(Boolean)[0]?.toLowerCase();
+  if (!firstSegment) {
+    return null;
+  }
+
+  const supported = SUPPORTED_LOCALES as readonly string[];
+  return supported.includes(firstSegment) ? (firstSegment as AppLocale) : null;
+}
+
+export function stripLocalePrefix(path: string): string {
+  const normalizedPath = path.startsWith("/") ? path : `/${path}`;
+  const [pathnameWithLocale, suffix = ""] = normalizedPath.split(/(?=[?#])/, 2);
+  const segments = pathnameWithLocale.split("/").filter(Boolean);
+  if (segments.length === 0) {
+    return suffix ? `/${suffix}` : "/";
+  }
+
+  const supported = SUPPORTED_LOCALES as readonly string[];
+  if (!supported.includes(segments[0].toLowerCase())) {
+    return normalizedPath;
+  }
+
+  const withoutLocale = `/${segments.slice(1).join("/")}`;
+  return `${withoutLocale === "/" ? "/" : withoutLocale}${suffix}`;
+}
+
+export function withLocalePrefix(path: string, locale: AppLocale): string {
+  const strippedPath = stripLocalePrefix(path);
+  const [pathname, suffix = ""] = strippedPath.split(/(?=[?#])/, 2);
+  const normalizedPathname = pathname === "/" ? "" : pathname;
+  return `/${locale}${normalizedPathname}${suffix}`;
+}
+
 export function withLang(path: string, locale: AppLocale): string {
   void locale;
   return path;

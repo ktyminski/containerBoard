@@ -15,9 +15,9 @@ import { buildPageMetadata } from "@/lib/seo";
 import { SEO_CITIES } from "@/lib/seo-landings";
 import type { ListingType } from "@/lib/container-listing-types";
 
-export const CONTAINER_SALE_SEO_HUB_PATH = "/kontenery/na-sprzedaz";
-export const CONTAINER_RENT_SEO_HUB_PATH = "/kontenery/wynajem";
-export const CONTAINER_BUY_SEO_HUB_PATH = "/kontenery/kupno";
+export const CONTAINER_SALE_SEO_HUB_PATH = "/shipping-containers/for-sale";
+export const CONTAINER_RENT_SEO_HUB_PATH = "/shipping-containers/for-rent";
+export const CONTAINER_BUY_SEO_HUB_PATH = "/shipping-containers/wanted";
 export type ContainerSeoKind = ListingType;
 
 export type ContainerSeoCity = {
@@ -411,11 +411,11 @@ function getSeoCopyForKind(locale: AppLocale, kind: ContainerSeoKind) {
 }
 
 function buildCityPath(citySlug: string, kind: ContainerSeoKind = "sell") {
-  return `${getSeoHubPath(kind)}/miasta/${citySlug}`;
+  return `${getSeoHubPath(kind)}/cities/${citySlug}`;
 }
 
 function buildCountryPath(countrySlug: string, kind: ContainerSeoKind = "sell") {
-  return `${getSeoHubPath(kind)}/kraje/${countrySlug}`;
+  return `${getSeoHubPath(kind)}/countries/${countrySlug}`;
 }
 
 function appendAndCondition(
@@ -500,6 +500,7 @@ export function getContainerSaleCityMetadata(input: {
       locale: input.locale,
       title: copy.cityTitle(input.city.name),
       description: copy.cityDescription(input.city.name),
+      localePrefix: true,
     }),
     robots: input.hasResults ? undefined : { index: false, follow: true },
   };
@@ -517,6 +518,7 @@ export function getContainerSaleCountryMetadata(input: {
       locale: input.locale,
       title: copy.countryTitle(input.country.name),
       description: copy.countryDescription(input.country.name),
+      localePrefix: true,
     }),
     robots: input.hasResults ? undefined : { index: false, follow: true },
   };
@@ -660,6 +662,7 @@ export function getContainerSeoHubMetadata(
       locale,
       title: copy.hubTitle,
       description: copy.hubDescription,
+      localePrefix: true,
     }),
     robots: hasResults ? undefined : { index: false, follow: true },
   };
@@ -695,6 +698,7 @@ export function getContainerSeoCityMetadata(input: {
       locale: input.locale,
       title: copy.cityTitle(input.city.name),
       description: copy.cityDescription(input.city.name),
+      localePrefix: true,
     }),
     robots: input.hasResults ? undefined : { index: false, follow: true },
   };
@@ -713,6 +717,7 @@ export function getContainerSeoCountryMetadata(input: {
       locale: input.locale,
       title: copy.countryTitle(input.country.name),
       description: copy.countryDescription(input.country.name),
+      localePrefix: true,
     }),
     robots: input.hasResults ? undefined : { index: false, follow: true },
   };

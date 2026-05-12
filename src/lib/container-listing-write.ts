@@ -61,6 +61,7 @@ type ListingWritePersistenceInput = {
   hasCscCertification: boolean;
   hasBranding: boolean;
   hasWarranty: boolean;
+  normalizedContainerSerialNumber?: string;
   normalizedCscValidToMonth?: number;
   normalizedCscValidToYear?: number;
   productionYear?: number;
@@ -214,6 +215,12 @@ export function buildListingPersistenceFields(
   } else {
     unsetFields.cscValidToMonth = 1;
     unsetFields.cscValidToYear = 1;
+  }
+
+  if (input.normalizedContainerSerialNumber) {
+    setFields.containerSerialNumber = input.normalizedContainerSerialNumber;
+  } else {
+    unsetFields.containerSerialNumber = 1;
   }
 
   if (typeof input.productionYear === "number") {

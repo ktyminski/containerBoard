@@ -7,6 +7,7 @@ import { AdminContactActivityTable } from "@/components/admin-contact-activity-t
 import { AdminConciergeRequestsTable } from "@/components/admin-concierge-requests-table";
 import { AdminCompaniesTable } from "@/components/admin-companies-table";
 import { AdminContainersTable } from "@/components/admin-containers-table";
+import { AdminTransportCompaniesTable } from "@/components/admin-transport-companies-table";
 import { AdminUsersTable } from "@/components/admin-users-table";
 import type { AppLocale, AppMessages } from "@/lib/i18n";
 import type { MailPreviewCase } from "@/lib/mail-preview-cases";
@@ -16,6 +17,7 @@ type AdminTabKey =
   | "bulkImport"
   | "users"
   | "companies"
+  | "transportCompanies"
   | "concierge"
   | "contactActivity"
   | "mailPreviews";
@@ -35,6 +37,7 @@ type AdminPanelTabsProps = {
   listingMessages: AppMessages["containerListings"];
   usersMessages: AppMessages["adminUsers"];
   companiesMessages: AppMessages["adminCompanies"];
+  transportCompaniesMessages: AppMessages["adminTransportCompanies"];
   companyStatusMessages: AppMessages["companyStatus"];
   roleMessages: AppMessages["roles"];
   mailPreviewMessages: AppMessages["adminMailPreviews"];
@@ -48,6 +51,7 @@ const ADMIN_TABS: AdminTabKey[] = [
   "bulkImport",
   "users",
   "companies",
+  "transportCompanies",
   "concierge",
   "contactActivity",
   "mailPreviews",
@@ -69,6 +73,7 @@ export function AdminPanelTabs({
   listingMessages,
   usersMessages,
   companiesMessages,
+  transportCompaniesMessages,
   companyStatusMessages,
   roleMessages,
   mailPreviewMessages,
@@ -82,6 +87,7 @@ export function AdminPanelTabs({
     bulkImport: messages.tabs.bulkImport,
     users: messages.tabs.users,
     companies: messages.tabs.companies,
+    transportCompanies: messages.tabs.transportCompanies,
     concierge: messages.tabs.concierge,
     contactActivity: "Logi kontaktu",
     mailPreviews: messages.tabs.mailPreviews,
@@ -134,6 +140,9 @@ export function AdminPanelTabs({
           messages={companiesMessages}
           statusMessages={companyStatusMessages}
         />
+      ) : null}
+      {activeTab === "transportCompanies" ? (
+        <AdminTransportCompaniesTable messages={transportCompaniesMessages} />
       ) : null}
       {activeTab === "concierge" ? (
         <AdminConciergeRequestsTable locale={locale} messages={conciergeMessages} />

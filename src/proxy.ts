@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import {
+  getLocaleFromPathname,
   getLocaleFromRequest,
   LOCALE_COOKIE_NAME,
   LOCALE_HEADER_NAME,
@@ -67,11 +68,23 @@ const LEGACY_STATIC_REDIRECTS = new Map<string, string>([
   ["/kontakt", "/contact"],
   ["/polityka-prywatnosci", "/privacy-policy"],
   ["/regulamin", "/terms"],
+  ["/kontenery/na-sprzedaz", "/pl/shipping-containers/for-sale"],
+  ["/kontenery/wynajem", "/pl/shipping-containers/for-rent"],
+  ["/kontenery/kupno", "/pl/shipping-containers/wanted"],
 ]);
 
 const LEGACY_PREFIX_REDIRECTS: Array<{ from: string; to: string }> = [
   { from: "/praca/", to: "/list/" },
   { from: "/firmy/", to: "/businesses/" },
+  { from: "/kontenery/na-sprzedaz/miasta/", to: "/pl/shipping-containers/for-sale/cities/" },
+  { from: "/kontenery/na-sprzedaz/kraje/", to: "/pl/shipping-containers/for-sale/countries/" },
+  { from: "/kontenery/wynajem/miasta/", to: "/pl/shipping-containers/for-rent/cities/" },
+  { from: "/kontenery/wynajem/kraje/", to: "/pl/shipping-containers/for-rent/countries/" },
+  { from: "/kontenery/kupno/miasta/", to: "/pl/shipping-containers/wanted/cities/" },
+  { from: "/kontenery/kupno/kraje/", to: "/pl/shipping-containers/wanted/countries/" },
+  { from: "/kontenery/na-sprzedaz/", to: "/pl/shipping-containers/for-sale/" },
+  { from: "/kontenery/wynajem/", to: "/pl/shipping-containers/for-rent/" },
+  { from: "/kontenery/kupno/", to: "/pl/shipping-containers/wanted/" },
 ];
 
 function resolveMappedPath(
@@ -154,7 +167,9 @@ function applyLocaleHeaders(request: NextRequest): {
   locale: string;
   response: NextResponse;
 } {
+  const pathLocale = getLocaleFromPathname(request.nextUrl.pathname);
   const locale = getLocaleFromRequest({
+    params: pathLocale ? { locale: pathLocale } : undefined,
     cookieLocale: request.cookies.get(LOCALE_COOKIE_NAME)?.value,
     headerLocale: request.headers.get(LOCALE_HEADER_NAME),
     acceptLanguage: request.headers.get("accept-language"),

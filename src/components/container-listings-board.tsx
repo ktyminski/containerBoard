@@ -22,6 +22,7 @@ import {
 import { ContainerListingsFilters } from "@/components/container-listings-filters";
 import { ContainerListingsResults } from "@/components/container-listings-results";
 import { NAV_HISTORY_STACK_KEY } from "@/components/in-app-navigation-history-tracker";
+import { TransportCompareTrigger } from "@/components/transport-compare-trigger";
 import { useToast } from "@/components/toast-provider";
 import { usePageScrollLock } from "@/components/use-page-scroll-lock";
 import {
@@ -45,13 +46,14 @@ import type {
   ContainerListingItem,
   ContainerListingMapPoint,
 } from "@/lib/container-listings";
+import type { PublicContainerListingsInitialData } from "@/lib/container-listings-public-query";
 import {
   PRICE_CURRENCY_LABEL,
   type ContainerCondition,
   type ListingType,
 } from "@/lib/container-listing-types";
 import { getCountryDisplayName } from "@/lib/country-flags";
-import { LOCALE_HEADER_NAME, type AppLocale } from "@/lib/i18n";
+import { LOCALE_HEADER_NAME, type AppLocale, type AppMessages } from "@/lib/i18n";
 
 type ContainersListApiResponse = {
   items?: ContainerListingItem[];
@@ -106,7 +108,10 @@ type FavoritesSummaryApiResponse = {
 type ContainerListingsBoardProps = {
   locale: AppLocale;
   messages: ContainerListingsMessages;
+  transportCompareMessages: AppMessages["transportCompare"];
+  enableTransportCompare?: boolean;
   isLoggedIn: boolean;
+  turnstileSiteKey?: string | null;
   initialKind?: ListingKind;
   initialTab?: "all" | "favorites";
   initialMine?: boolean;
@@ -114,6 +119,7 @@ type ContainerListingsBoardProps = {
   initialCity?: string;
   initialCountry?: string;
   initialCountryCode?: string;
+  initialListData?: PublicContainerListingsInitialData;
 };
 
 type MapFeature = {
@@ -404,8 +410,9 @@ function buildMapPopupListNode(
     const detailsHref = detailsQueryString
       ? `${detailsHrefPrefix}/${item.id}?${detailsQueryString}`
       : `${detailsHrefPrefix}/${item.id}`;
-    const entry = document.createElement("article");
+    const entry = document.createElement("a");
     entry.className = "company-map-popup-item";
+    entry.href = detailsHref;
 
     const card = document.createElement("article");
     card.className = "company-map-popup-card";
@@ -416,14 +423,13 @@ function buildMapPopupListNode(
     header.style.justifyContent = "space-between";
     header.style.gap = "8px";
 
-    const titleLink = document.createElement("a");
-    titleLink.className = "company-map-popup-card__name";
-    titleLink.href = detailsHref;
-    titleLink.style.flex = "1 1 auto";
-    titleLink.style.minWidth = "0";
-    titleLink.style.overflow = "hidden";
-    titleLink.style.textOverflow = "ellipsis";
-    titleLink.style.whiteSpace = "nowrap";
+    const title = document.createElement("span");
+    title.className = "company-map-popup-card__name";
+    title.style.flex = "1 1 auto";
+    title.style.minWidth = "0";
+    title.style.overflow = "hidden";
+    title.style.textOverflow = "ellipsis";
+    title.style.whiteSpace = "nowrap";
     const titleBase = document.createElement("span");
     titleBase.textContent = getContainerShortLabelLocalized(
       messages,
@@ -440,7 +446,7 @@ function buildMapPopupListNode(
     titleCondition.style.color = getPopupConditionColor(
       item.container.condition,
     );
-    titleLink.append(titleBase, titleSeparator, titleCondition);
+    title.append(titleBase, titleSeparator, titleCondition);
 
     const priceDisplay = getPopupPriceDisplay(locale, messages, item);
     if (priceDisplay) {
@@ -468,9 +474,9 @@ function buildMapPopupListNode(
       unit.style.color = "#b45309";
 
       price.append(amount, unit);
-      header.append(titleLink, price);
+      header.append(title, price);
     } else {
-      header.append(titleLink);
+      header.append(title);
     }
 
     const company = document.createElement("p");
@@ -1443,14 +1449,36 @@ const ListingsMap = memo(function ListingsMap({
 
   useEffect(() => {
     const map = mapRef.current;
-    if (!map || !map.isStyleLoaded()) {
+    if (!map) {
       return;
     }
 
-    popupRef.current?.remove();
-    popupRef.current = null;
-    setSourceData(map, MAP_CLUSTER_SOURCE_ID, clusterFeatureCollection);
-    setSourceData(map, MAP_DETAIL_SOURCE_ID, detailFeatureCollection);
+    const syncSourceData = () => {
+      if (
+        !map.getSource(MAP_CLUSTER_SOURCE_ID) ||
+        !map.getSource(MAP_DETAIL_SOURCE_ID)
+      ) {
+        return;
+      }
+
+      popupRef.current?.remove();
+      popupRef.current = null;
+      setSourceData(map, MAP_CLUSTER_SOURCE_ID, clusterFeatureCollection);
+      setSourceData(map, MAP_DETAIL_SOURCE_ID, detailFeatureCollection);
+    };
+
+    if (
+      map.getSource(MAP_CLUSTER_SOURCE_ID) &&
+      map.getSource(MAP_DETAIL_SOURCE_ID)
+    ) {
+      syncSourceData();
+      return;
+    }
+
+    map.once("load", syncSourceData);
+    return () => {
+      map.off("load", syncSourceData);
+    };
   }, [clusterFeatureCollection, detailFeatureCollection]);
 
   useEffect(() => {
@@ -1661,7 +1689,10 @@ ListingsMap.displayName = "ListingsMap";
 export function ContainerListingsBoard({
   locale,
   messages,
+  transportCompareMessages,
+  enableTransportCompare = false,
   isLoggedIn,
+  turnstileSiteKey = null,
   initialKind = "sell",
   initialTab = "all",
   initialMine = false,
@@ -1669,6 +1700,7 @@ export function ContainerListingsBoard({
   initialCity,
   initialCountry,
   initialCountryCode,
+  initialListData,
 }: ContainerListingsBoardProps) {
   const toast = useToast();
   const router = useRouter();
@@ -1680,9 +1712,11 @@ export function ContainerListingsBoard({
   const detailsQueryString = searchParams.toString();
   const isDetailsOverlayRouteActive = pathname.startsWith("/list/containers/");
 
-  const [items, setItems] = useState<ContainerListingItem[]>([]);
+  const [items, setItems] = useState<ContainerListingItem[]>(
+    initialListData?.items ?? [],
+  );
   const [mapItems, setMapItems] = useState<ContainerListingMapPoint[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+  const [isLoading, setIsLoading] = useState(!initialListData);
   const [error, setError] = useState<string | null>(null);
   const [deliveryReachItems, setDeliveryReachItems] = useState<
     ContainerListingItem[]
@@ -1690,9 +1724,9 @@ export function ContainerListingsBoard({
   const [deliveryReachTotal, setDeliveryReachTotal] = useState(0);
   const [isLoadingDeliveryReach, setIsLoadingDeliveryReach] = useState(false);
 
-  const [page, setPage] = useState(1);
-  const [totalPages, setTotalPages] = useState(1);
-  const [total, setTotal] = useState(0);
+  const [page, setPage] = useState(initialListData?.page ?? 1);
+  const [totalPages, setTotalPages] = useState(initialListData?.totalPages ?? 1);
+  const [total, setTotal] = useState(initialListData?.total ?? 0);
   const [activeTab, setActiveTab] = useState<"all" | "favorites">(initialTab);
   const [mapTabSwitchToken, setMapTabSwitchToken] = useState(0);
   const [pendingFavoriteId, setPendingFavoriteId] = useState<string | null>(
@@ -1723,6 +1757,8 @@ export function ContainerListingsBoard({
   const filtersSectionRef = useRef<HTMLDivElement | null>(null);
   const resultsTopRef = useRef<HTMLDivElement | null>(null);
   const hasSeenFirstAppliedFiltersRef = useRef(false);
+  const initialListRequestUrlRef = useRef(initialListData?.requestUrl ?? null);
+  const shouldUseInitialListDataRef = useRef(Boolean(initialListData));
   const pendingPageScrollBehaviorRef = useRef<ScrollBehavior | null>(null);
   const initialPageFilterStateRef = useRef<ReturnType<
     typeof parseContainerListingsPageFilters
@@ -2388,6 +2424,16 @@ export function ContainerListingsBoard({
     if (!isLoggedIn && !hasHydratedGuestFavorites) {
       return;
     }
+
+    if (
+      shouldUseInitialListDataRef.current &&
+      initialListRequestUrlRef.current === requestUrl
+    ) {
+      shouldUseInitialListDataRef.current = false;
+      setIsLoading(false);
+      return;
+    }
+    shouldUseInitialListDataRef.current = false;
 
     const controller = new AbortController();
 
@@ -3119,6 +3165,16 @@ export function ContainerListingsBoard({
                 detailsHrefPrefix={detailsHrefPrefix}
                 detailsQueryString={detailsQueryString}
                 priceDisplayCurrency={appliedFilters.priceDisplayCurrency}
+                leadingListContent={
+                  enableTransportCompare ? (
+                    <TransportCompareTrigger
+                      locale={locale}
+                      messages={transportCompareMessages}
+                      isLoggedIn={isLoggedIn}
+                      turnstileSiteKey={turnstileSiteKey}
+                    />
+                  ) : null
+                }
                 administrativeLocationFilter={{
                   city: appliedFilters.city,
                   country: appliedFilters.country,

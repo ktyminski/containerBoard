@@ -1678,6 +1678,9 @@ export async function POST(request: NextRequest) {
     const normalizedDescription = normalizeOptionalListingDescriptionHtml(
       listing.description,
     );
+    const normalizedContainerSerialNumber = normalizeOptionalString(
+      listing.containerSerialNumber,
+    );
     const normalizedPrice = normalizeOptionalString(listing.price);
     const normalizedPriceAmount =
       typeof listing.priceAmount === "number" && Number.isFinite(listing.priceAmount)
@@ -1836,6 +1839,7 @@ export async function POST(request: NextRequest) {
           hasCscCertification: listing.hasCscCertification === true,
           hasBranding: listing.hasBranding === true,
           hasWarranty: listing.hasWarranty === true,
+          normalizedContainerSerialNumber,
           normalizedCscValidToMonth,
           normalizedCscValidToYear,
           productionYear:

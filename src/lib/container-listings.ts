@@ -138,6 +138,7 @@ export type ContainerListingDocument = {
   hasCscCertification?: boolean;
   hasBranding?: boolean;
   hasWarranty?: boolean;
+  containerSerialNumber?: string;
   cscValidToMonth?: number;
   cscValidToYear?: number;
   productionYear?: number;
@@ -223,6 +224,7 @@ export type ContainerListingItem = {
   hasCscCertification: boolean;
   hasBranding: boolean;
   hasWarranty: boolean;
+  containerSerialNumber?: string;
   cscValidToMonth?: number;
   cscValidToYear?: number;
   productionYear?: number;
@@ -586,6 +588,7 @@ export function mapContainerListingToItem(doc: ContainerListingDocument): Contai
     hasCscCertification: doc.hasCscCertification === true,
     hasBranding: doc.hasBranding === true,
     hasWarranty: doc.hasWarranty === true,
+    containerSerialNumber: doc.containerSerialNumber?.trim() || undefined,
     cscValidToMonth:
       typeof doc.cscValidToMonth === "number" &&
       Number.isInteger(doc.cscValidToMonth) &&

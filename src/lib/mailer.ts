@@ -7,6 +7,7 @@ import {
   buildListingExpiryReminderMail,
   buildOfferPublishedMail,
   buildPasswordResetMail,
+  buildTransportCompanyInquiryMail,
   buildWelcomeMail,
 } from "@/lib/mail-templates";
 
@@ -200,6 +201,30 @@ export async function sendContainerInquiryEmail(input: {
     inquiryMessage: input.inquiryMessage,
     requestedQuantity: input.requestedQuantity,
     offeredPrice: input.offeredPrice,
+  });
+
+  return sendMail({
+    to: input.to,
+    subject: template.subject,
+    text: template.text,
+    html: template.html,
+  });
+}
+
+export async function sendTransportCompanyInquiryEmail(input: {
+  to: string;
+  transportCompanyName: string;
+  transportCompanyLocation?: string;
+  requesterEmail?: string;
+  requesterPhone?: string;
+  message: string;
+}): Promise<SendMailResult> {
+  const template = buildTransportCompanyInquiryMail({
+    transportCompanyName: input.transportCompanyName,
+    transportCompanyLocation: input.transportCompanyLocation,
+    requesterEmail: input.requesterEmail,
+    requesterPhone: input.requesterPhone,
+    message: input.message,
   });
 
   return sendMail({

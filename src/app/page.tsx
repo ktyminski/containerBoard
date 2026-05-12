@@ -23,9 +23,17 @@ import {
   getMessages,
   LOCALE_COOKIE_NAME,
   resolveLocale,
+  withLocalePrefix,
   withLang,
 } from "@/lib/i18n";
 import { buildPageMetadata } from "@/lib/seo";
+import {
+  CONTAINER_BUY_SEO_HUB_PATH,
+  CONTAINER_RENT_SEO_HUB_PATH,
+  CONTAINER_SALE_SEO_HUB_PATH,
+  getContainerSaleCityPath,
+  getContainerSaleCountryPath,
+} from "@/lib/seo-containers";
 import { logError } from "@/lib/server-logger";
 
 export async function generateMetadata(): Promise<Metadata> {
@@ -134,6 +142,19 @@ export default async function LandingPage() {
     "inline-flex items-center justify-center rounded-md border border-[#1d5ea8] bg-[#103b74] px-5 py-3 text-sm font-semibold text-[#f6fbff] transition duration-200 hover:border-[#2f76c7] hover:bg-[#16498d] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#1d5ea8]";
   const tertiaryCtaClass =
     "inline-flex items-center justify-center rounded-md border border-[#c7d4e5] bg-white px-5 py-3 text-sm font-semibold text-[#153256] transition duration-200 hover:border-[#9fb5d4] hover:bg-[#f7fbff] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#7aa2d6]";
+  const seoCategoryLinks = [
+    { href: CONTAINER_SALE_SEO_HUB_PATH, label: landing.seoLinks.sale },
+    { href: CONTAINER_RENT_SEO_HUB_PATH, label: landing.seoLinks.rent },
+    { href: CONTAINER_BUY_SEO_HUB_PATH, label: landing.seoLinks.buy },
+  ];
+  const seoLocationLinks = [
+    { href: getContainerSaleCityPath("warszawa"), label: landing.seoLinks.warsaw },
+    { href: getContainerSaleCityPath("poznan"), label: landing.seoLinks.poznan },
+    { href: getContainerSaleCityPath("wroclaw"), label: landing.seoLinks.wroclaw },
+    { href: getContainerSaleCityPath("gdansk"), label: landing.seoLinks.gdansk },
+    { href: getContainerSaleCountryPath("polska"), label: landing.seoLinks.poland },
+    { href: getContainerSaleCountryPath("niemcy"), label: landing.seoLinks.germany },
+  ];
   const heroCardTitleParts = landing.heroCardTitle.split("ContainerBoard");
   const heroCardTitlePrefix = heroCardTitleParts[0] ?? "";
   const heroCardTitleSuffix = heroCardTitleParts.slice(1).join("ContainerBoard");
@@ -302,7 +323,7 @@ export default async function LandingPage() {
                 return (
                   <li key={item.id}>
                     <Link
-                      href={withLang(`/containers/${item.id}`, locale)}
+                      href={withLocalePrefix(`/containers/${item.id}`, locale)}
                       className="group flex h-full items-start gap-4 rounded-md border border-neutral-200 bg-white p-4 shadow-sm transition-colors duration-150 hover:border-sky-100 hover:bg-sky-50/60"
                     >
                       <div className="relative aspect-square h-24 w-24 shrink-0 overflow-hidden rounded-md border border-neutral-200 bg-neutral-100 sm:h-28 sm:w-28">
@@ -469,6 +490,40 @@ export default async function LandingPage() {
               >
                 {landing.finalCreateCta}
               </Link>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section className="bg-neutral-100 pb-8 pt-2">
+        <div className="relative mx-auto grid w-full max-w-6xl gap-4 px-4 text-xs text-neutral-500 sm:px-6 lg:grid-cols-2">
+          <div>
+            <h2 className="font-medium text-neutral-600">{landing.seoLinks.categoryTitle}</h2>
+            <div className="mt-2 flex flex-wrap gap-x-3 gap-y-1.5">
+              {seoCategoryLinks.map((link) => (
+                <Link
+                  key={link.href}
+                  href={withLocalePrefix(link.href, locale)}
+                  className="underline-offset-2 hover:text-neutral-700 hover:underline"
+                >
+                  {link.label}
+                </Link>
+              ))}
+            </div>
+          </div>
+
+          <div>
+            <h2 className="font-medium text-neutral-600">{landing.seoLinks.locationTitle}</h2>
+            <div className="mt-2 flex flex-wrap gap-x-3 gap-y-1.5">
+              {seoLocationLinks.map((link) => (
+                <Link
+                  key={link.href}
+                  href={withLocalePrefix(link.href, locale)}
+                  className="underline-offset-2 hover:text-neutral-700 hover:underline"
+                >
+                  {link.label}
+                </Link>
+              ))}
             </div>
           </div>
         </div>
