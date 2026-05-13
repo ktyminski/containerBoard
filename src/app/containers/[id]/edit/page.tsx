@@ -18,6 +18,7 @@ import {
   mapContainerListingToItem,
 } from "@/lib/container-listings";
 import { buildShortAddressLabelFromParts } from "@/lib/geocode-address";
+import { DEFAULT_VAT_RATE } from "@/lib/container-listing-types";
 import { USER_ROLE } from "@/lib/user-roles";
 
 type EditContainerPageProps = {
@@ -239,7 +240,7 @@ export default async function EditContainerPage({
           priceVatRate:
             typeof listingItem.pricing?.original.vatRate === "number"
               ? String(listingItem.pricing.original.vatRate)
-              : "",
+              : String(DEFAULT_VAT_RATE),
           priceNegotiable: listingItem.priceNegotiable,
           description: listingItem.description ?? "",
           companyName: listingItem.companyName,

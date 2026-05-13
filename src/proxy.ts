@@ -9,6 +9,16 @@ import {
 const MUTATING_METHODS = new Set(["POST", "PUT", "PATCH", "DELETE"]);
 const PAGE_METHODS = new Set(["GET", "HEAD"]);
 
+function isCsrfProtectionDisabled(): boolean {
+  const configured = process.env.DISABLE_CSRF_PROTECTION?.trim().toLowerCase();
+  return (
+    process.env.NODE_ENV === "development" ||
+    configured === "1" ||
+    configured === "true" ||
+    configured === "yes"
+  );
+}
+
 function readOriginFromUrl(value: string | undefined): string | null {
   const trimmed = value?.trim();
   if (!trimmed) {
@@ -210,7 +220,7 @@ export function proxy(request: NextRequest) {
   const isMutatingMethod = MUTATING_METHODS.has(method);
   const { response } = applyLocaleHeaders(request);
 
-  if (isApiPath && isMutatingMethod) {
+  if (isApiPath && isMutatingMethod && !isCsrfProtectionDisabled()) {
     if (isCrossSiteBrowserRequest(request) || !isTrustedOrigin(request)) {
       return withSecurityHeaders(
         request,

@@ -3,6 +3,7 @@ import type {
   ListingPrice,
   TaxMode,
 } from "@/lib/container-listing-types";
+import { DEFAULT_VAT_RATE as FALLBACK_VAT_RATE } from "@/lib/container-listing-types";
 import { getFallbackFxContext, type FxContext } from "@/lib/fx-rates";
 
 export type ListingPriceInput = {
@@ -90,8 +91,10 @@ export function normalizeListingPrice(
   fxContext: FxContext = getFallbackFxContext(now),
 ): ListingPrice {
   const fx = fxContext;
-  const vatRate = toNullableVatRate(input.original.vatRate);
   const amount = toNullableAmount(input.original.amount);
+  const vatRate =
+    toNullableVatRate(input.original.vatRate) ??
+    (amount !== null ? FALLBACK_VAT_RATE : null);
   const currency = input.original.currency;
   const taxMode = input.original.taxMode;
 

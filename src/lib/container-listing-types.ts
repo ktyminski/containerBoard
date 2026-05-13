@@ -2,6 +2,7 @@ export const LISTING_TYPES = ["sell", "rent", "buy"] as const;
 export const LISTING_STATUSES = ["active", "expired", "closed"] as const;
 export const PRICE_CURRENCIES = ["PLN", "EUR", "USD"] as const;
 export const PRICE_TAX_MODES = ["net", "gross"] as const;
+export const DEFAULT_VAT_RATE = 23;
 
 export const CONTAINER_SIZES = [10, 20, 40, 45, 53] as const;
 export const CONTAINER_SIZE = {

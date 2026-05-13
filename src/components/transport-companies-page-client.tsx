@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useEffect, useMemo, useRef, useState, type FormEvent } from "react";
 import maplibregl from "maplibre-gl";
 import {
@@ -7,10 +8,11 @@ import {
   MAP_STYLE_URL,
   POLAND_BOUNDS,
 } from "@/components/map-shared";
+import { SmartBackButton } from "@/components/smart-back-button";
 import { TurnstileWidget } from "@/components/turnstile-widget";
 import { useToast } from "@/components/toast-provider";
 import { usePageScrollLock } from "@/components/use-page-scroll-lock";
-import type { AppLocale, AppMessages } from "@/lib/i18n";
+import { withLang, type AppLocale, type AppMessages } from "@/lib/i18n";
 import type { TransportCompanyPublicItem } from "@/lib/transport-companies";
 
 type TransportCompaniesPageClientProps = {
@@ -39,6 +41,24 @@ const INPUT_CLASS =
   "w-full rounded-md border border-neutral-300 bg-white px-3 py-2 text-sm text-neutral-900 outline-none transition focus:border-[#166534] focus:ring-2 focus:ring-[#86efac]/35";
 const GREEN_BUTTON_CLASS =
   "rounded-md border border-[#166534] bg-[#166534] px-4 py-2 text-sm font-semibold text-white transition hover:bg-[#14532d] disabled:cursor-not-allowed disabled:opacity-70";
+
+function useIsDesktopMapViewport(): boolean {
+  const [isDesktop, setIsDesktop] = useState(false);
+
+  useEffect(() => {
+    const mediaQuery = window.matchMedia("(min-width: 640px)");
+    const syncViewport = () => setIsDesktop(mediaQuery.matches);
+
+    syncViewport();
+    mediaQuery.addEventListener("change", syncViewport);
+
+    return () => {
+      mediaQuery.removeEventListener("change", syncViewport);
+    };
+  }, []);
+
+  return isDesktop;
+}
 
 function formatDistanceValue(
   value: number | null,
@@ -628,7 +648,6 @@ export function TransportCompaniesPageClient({
   initialItems,
   initialLocationLabel = null,
   title = messages.title,
-  subtitle = messages.subtitle,
   isLoggedIn = false,
   turnstileSiteKey = null,
 }: TransportCompaniesPageClientProps) {
@@ -641,6 +660,9 @@ export function TransportCompaniesPageClient({
     useState<TransportCompanyPublicItem | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+  const [isMobileMapVisible, setIsMobileMapVisible] = useState(false);
+  const isDesktopMapViewport = useIsDesktopMapViewport();
+  const shouldRenderMap = isDesktopMapViewport || isMobileMapVisible;
   usePageScrollLock(selectedCompany !== null);
 
   const search = async () => {
@@ -680,22 +702,17 @@ export function TransportCompaniesPageClient({
 
   return (
     <main className="w-full bg-neutral-100 text-neutral-900">
-      <section className="border-b border-neutral-300 bg-white">
-        <div className="mx-auto w-full max-w-6xl px-4 py-8 sm:px-6">
-          <p className="text-xs font-semibold uppercase tracking-[0.14em] text-[#166534]">
-            {messages.eyebrow}
-          </p>
-          <h1 className="mt-2 text-3xl font-semibold text-neutral-950 sm:text-4xl">
+      <section className="mx-auto grid w-full max-w-6xl gap-4 px-4 py-6 sm:px-6">
+        <SmartBackButton
+          label={messages.backToList}
+          fallbackHref={withLang("/list", locale)}
+          className="inline-flex w-fit items-center gap-2 rounded-md border border-neutral-300 bg-white px-3 py-2 text-sm font-medium text-neutral-700 transition hover:border-neutral-400 hover:bg-neutral-100"
+        />
+
+        <div className="rounded-md border border-neutral-300 bg-white p-4 shadow-sm">
+          <h1 className="mb-4 text-center text-2xl font-semibold text-neutral-950 sm:text-3xl">
             {title}
           </h1>
-          <p className="mt-3 max-w-3xl text-base leading-7 text-neutral-700">
-            {subtitle}
-          </p>
-        </div>
-      </section>
-
-      <section className="mx-auto grid w-full max-w-6xl gap-4 px-4 py-6 sm:px-6">
-        <div className="rounded-md border border-neutral-300 bg-white p-4 shadow-sm">
           <div className="grid gap-3 sm:grid-cols-[minmax(0,1fr)_auto_auto] sm:items-end">
             <label className="grid gap-1 text-sm font-medium text-neutral-700">
               {messages.locationLabel}
@@ -744,12 +761,44 @@ export function TransportCompaniesPageClient({
           ) : null}
         </div>
 
-        <TransportCompaniesMap
-          locale={locale}
-          items={items}
-          compareMessages={compareMessages}
-          onOpenDetails={setSelectedCompany}
-        />
+        {!isDesktopMapViewport && !isMobileMapVisible ? (
+          <button
+            type="button"
+            onClick={() => setIsMobileMapVisible(true)}
+            className="inline-flex items-center justify-center gap-2 rounded-md border border-[#166534] bg-white px-4 py-2 text-sm font-semibold text-[#166534] transition hover:bg-[#dcfce7] sm:hidden"
+          >
+            <span>{messages.showMapButton}</span>
+            <svg
+              viewBox="0 0 24 24"
+              fill="none"
+              className="h-4 w-4"
+              aria-hidden="true"
+            >
+              <path
+                d="M9 18l-6 3V6l6-3 6 3 6-3v15l-6 3-6-3z"
+                stroke="currentColor"
+                strokeWidth="1.8"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              />
+              <path
+                d="M9 3v15M15 6v15"
+                stroke="currentColor"
+                strokeWidth="1.8"
+                strokeLinecap="round"
+              />
+            </svg>
+          </button>
+        ) : null}
+
+        {shouldRenderMap ? (
+          <TransportCompaniesMap
+            locale={locale}
+            items={items}
+            compareMessages={compareMessages}
+            onOpenDetails={setSelectedCompany}
+          />
+        ) : null}
 
         <div className="flex items-center justify-between gap-3">
           <h2 className="text-lg font-semibold text-neutral-900">
@@ -776,6 +825,16 @@ export function TransportCompaniesPageClient({
             <p className="text-sm text-neutral-600">{messages.empty}</p>
           </div>
         )}
+
+        <div className="rounded-md border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-950">
+          <span>{messages.joinInfo} </span>
+          <Link
+            href={withLang("/contact", locale)}
+            className="font-semibold text-[#166534] underline-offset-4 transition hover:underline"
+          >
+            {messages.joinContactLink}
+          </Link>
+        </div>
       </section>
 
       {selectedCompany ? (

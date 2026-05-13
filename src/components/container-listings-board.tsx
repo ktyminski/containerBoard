@@ -526,7 +526,14 @@ function getPopupPriceDisplay(
 ): { amountLabel: string; unitLabel: string } | undefined {
   const pricingAmount = item.pricing?.original.amount;
   const pricingCurrency = item.pricing?.original.currency;
-  const pricingTaxMode = item.pricing?.original.taxMode;
+  const pricingGrossAmount =
+    pricingCurrency === "PLN"
+      ? item.pricing?.normalized.gross.amountPln
+      : pricingCurrency === "EUR"
+        ? item.pricing?.normalized.gross.amountEur
+        : pricingCurrency === "USD"
+          ? item.pricing?.normalized.gross.amountUsd
+          : null;
   if (
     typeof pricingAmount === "number" &&
     Number.isFinite(pricingAmount) &&
@@ -535,12 +542,14 @@ function getPopupPriceDisplay(
     const currencyLabel = pricingCurrency
       ? PRICE_CURRENCY_LABEL[pricingCurrency]
       : "PLN";
+    const amount =
+      typeof pricingGrossAmount === "number" &&
+      Number.isFinite(pricingGrossAmount)
+        ? pricingGrossAmount
+        : pricingAmount;
     return {
-      amountLabel: `${Math.round(pricingAmount).toLocaleString(locale)}`,
-      unitLabel:
-        pricingTaxMode === "gross"
-          ? currencyLabel
-          : `${currencyLabel} ${messages.map.plusVatSuffix}`,
+      amountLabel: `${Math.round(amount).toLocaleString(locale)}`,
+      unitLabel: `${currencyLabel} ${messages.results.gross.toLowerCase()}`,
     };
   }
 
@@ -549,9 +558,10 @@ function getPopupPriceDisplay(
     Number.isFinite(item.priceAmount) &&
     item.priceAmount >= 0
   ) {
+    const grossAmount = Math.round(item.priceAmount * 1.23);
     return {
-      amountLabel: `${Math.round(item.priceAmount).toLocaleString(locale)}`,
-      unitLabel: `PLN ${messages.map.plusVatSuffix}`,
+      amountLabel: `${grossAmount.toLocaleString(locale)}`,
+      unitLabel: `PLN ${messages.results.gross.toLowerCase()}`,
     };
   }
 

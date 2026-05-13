@@ -655,6 +655,22 @@ export function ContainerListingForm({
       return;
     }
 
+    if (
+      typeof normalizedVatRate !== "number" ||
+      normalizedVatRate < 0 ||
+      normalizedVatRate > 100
+    ) {
+      setError("priceVatRate", {
+        type: "validate",
+        message:
+          values.priceVatRate.trim().length === 0
+            ? messages.form.vatRateRequired
+            : messages.form.invalidVatRate,
+      });
+      toast.error(messages.form.vatRateRequired);
+      return;
+    }
+
     const hasCscValidToMonth = typeof normalizedCscValidToMonth === "number";
     const hasCscValidToYear = typeof normalizedCscValidToYear === "number";
     if (hasCscValidToMonth !== hasCscValidToYear) {
@@ -720,7 +736,7 @@ export function ContainerListingForm({
         vatRate:
           normalizedPriceAmount === undefined
             ? null
-            : (normalizedVatRate ?? null),
+            : normalizedVatRate,
         negotiable: values.priceNegotiable,
       },
     };
@@ -1416,10 +1432,26 @@ export function ContainerListingForm({
                   min={0}
                   max={100}
                   step="0.01"
-                  {...register("priceVatRate")}
+                  {...register("priceVatRate", {
+                    validate: (value) => {
+                      const parsed = normalizeOptionalNumber(value);
+                      if (typeof parsed !== "number") {
+                        return messages.form.vatRateRequired;
+                      }
+                      if (parsed < 0 || parsed > 100) {
+                        return messages.form.invalidVatRate;
+                      }
+                      return true;
+                    },
+                  })}
                   className="rounded-md border border-neutral-700 bg-neutral-950 px-3 py-2 text-neutral-100"
                   placeholder={messages.form.vatRatePlaceholder}
                 />
+                {errors.priceVatRate?.message ? (
+                  <span className="text-xs text-red-700">
+                    {errors.priceVatRate.message}
+                  </span>
+                ) : null}
               </label>
               <label className="flex min-w-[130px] flex-[0.7_1_150px] flex-col gap-1 text-sm">
                 <span className="text-neutral-700">

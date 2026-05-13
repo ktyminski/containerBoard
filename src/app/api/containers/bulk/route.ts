@@ -15,6 +15,7 @@ import {
   CONTAINER_SIZE,
   CONTAINER_SIZES,
   CONTAINER_TYPES,
+  DEFAULT_VAT_RATE,
   LISTING_STATUS,
   PRICE_CURRENCIES,
   PRICE_TAX_MODES,
@@ -583,7 +584,7 @@ function parseBulkRow(input: {
   const priceNegotiable = parseBooleanFlag(get("price_negotiable")) === true;
   const currency = priceAmount === undefined ? null : (parsedCurrency ?? "PLN");
   const taxMode = priceAmount === undefined ? null : (parsedTaxMode ?? "net");
-  const vatRate = priceAmount === undefined ? null : (parsedVatRate ?? null);
+  const vatRate = priceAmount === undefined ? null : (parsedVatRate ?? DEFAULT_VAT_RATE);
 
   const productionYear = parseInteger(get("production_year"));
   if (

@@ -12,6 +12,7 @@ import {
   CONTAINER_HEIGHTS,
   CONTAINER_SIZES,
   CONTAINER_TYPES,
+  DEFAULT_VAT_RATE,
   LISTING_TYPES,
   PRICE_CURRENCIES,
   PRICE_TAX_MODES,
@@ -560,6 +561,15 @@ export function isCreateFormReadyToPublish(
     }
   }
 
+  const parsedVatRate = normalizeOptionalNumber(values.priceVatRate);
+  if (
+    typeof parsedVatRate !== "number" ||
+    parsedVatRate < 0 ||
+    parsedVatRate > 100
+  ) {
+    return false;
+  }
+
   if (!PRICE_CURRENCIES.includes(values.priceCurrency)) {
     return false;
   }
@@ -678,7 +688,7 @@ export function getDefaultValues(
     priceValueAmount: initialValues?.priceValueAmount ?? "",
     priceCurrency: initialValues?.priceCurrency ?? "PLN",
     priceTaxMode: initialValues?.priceTaxMode ?? "net",
-    priceVatRate: initialValues?.priceVatRate ?? "",
+    priceVatRate: initialValues?.priceVatRate ?? String(DEFAULT_VAT_RATE),
     priceNegotiable: initialValues?.priceNegotiable ?? false,
     description: initialValues?.description ?? "",
     companyName: initialValues?.companyName ?? "",

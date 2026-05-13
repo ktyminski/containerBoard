@@ -40,6 +40,7 @@ import {
   resolveCountryCodeFromInputApprox,
 } from "@/lib/country-flags";
 import { escapeRegexPattern } from "@/lib/escape-regex-pattern";
+import { normalizeListingPrice } from "@/lib/listing-price";
 
 export const LISTING_TTL_DAYS = 30;
 export const LISTING_REMINDER_FIRST_DAYS = 7;
@@ -498,7 +499,17 @@ export function mapContainerListingToItem(doc: ContainerListingDocument): Contai
   const now = Date.now();
   const expiresAtMs = doc.expiresAt.getTime();
   const isExpired = doc.status === LISTING_STATUS.EXPIRED || expiresAtMs <= now;
-  const pricing = doc.pricing;
+  const pricing = doc.pricing
+    ? normalizeListingPrice({
+        original: {
+          amount: doc.pricing.original.amount,
+          currency: doc.pricing.original.currency,
+          taxMode: doc.pricing.original.taxMode,
+          vatRate: doc.pricing.original.vatRate,
+          negotiable: doc.pricing.original.negotiable,
+        },
+      })
+    : undefined;
   const normalizedOriginalAmount =
     typeof pricing?.original.amount === "number" && Number.isFinite(pricing.original.amount)
       ? pricing.original.amount

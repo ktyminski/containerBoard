@@ -153,17 +153,17 @@ function getListingPriceDisplay(
     pricing.original.currency &&
     pricing.original.taxMode
   ) {
-    const normalizedAmountSet =
-      pricing.original.taxMode === "net"
-        ? pricing.normalized.net
-        : pricing.normalized.gross;
+    const grossAmount = getNormalizedAmountByCurrency(
+      pricing.normalized.gross,
+      pricing.original.currency,
+    );
     const alternativeCurrencies = (["PLN", "EUR", "USD"] as const).filter(
       (currency) => currency !== pricing.original.currency,
     );
     const additionalAmounts = alternativeCurrencies
       .map((currency) => {
         const normalizedAmount = getNormalizedAmountByCurrency(
-          normalizedAmountSet,
+          pricing.normalized.gross,
           currency,
         );
         if (
@@ -175,20 +175,19 @@ function getListingPriceDisplay(
         return `~${Math.round(normalizedAmount).toLocaleString(toIntlLocale(locale))} ${currency}`;
       })
       .filter((value): value is string => Boolean(value));
-    const counterpartTaxMode = pricing.original.taxMode === "net" ? "gross" : "net";
-    const counterpartAmount = getNormalizedAmountByCurrency(
-      pricing.normalized[counterpartTaxMode],
+    const netAmount = getNormalizedAmountByCurrency(
+      pricing.normalized.net,
       pricing.original.currency,
     );
     const taxCounterpartLine =
-      typeof counterpartAmount === "number" &&
-      Number.isFinite(counterpartAmount)
-        ? `${getPriceTaxModeLabel(messages, counterpartTaxMode)}: ${Math.round(
-            counterpartAmount,
+      typeof netAmount === "number" &&
+      Number.isFinite(netAmount)
+        ? `${getPriceTaxModeLabel(messages, "net")}: ${Math.round(
+            netAmount,
           ).toLocaleString(toIntlLocale(locale))} ${pricing.original.currency}`
         : null;
 
-    const metaParts = [getPriceTaxModeLabel(messages, pricing.original.taxMode)];
+    const metaParts = [getPriceTaxModeLabel(messages, "gross")];
     const vatRateLabel = formatVatRateLabel(pricing.original.vatRate, locale);
     if (vatRateLabel) {
       metaParts.push(vatRateLabel);
@@ -198,7 +197,11 @@ function getListingPriceDisplay(
     }
 
     return {
-      amountLabel: `${Math.round(pricing.original.amount).toLocaleString(toIntlLocale(locale))} ${pricing.original.currency}`,
+      amountLabel: `${Math.round(
+        typeof grossAmount === "number" && Number.isFinite(grossAmount)
+          ? grossAmount
+          : pricing.original.amount,
+      ).toLocaleString(toIntlLocale(locale))} ${pricing.original.currency}`,
       metaLine: metaParts.join(" | "),
       isRequestPrice: false,
       taxCounterpartLine,
@@ -210,15 +213,15 @@ function getListingPriceDisplay(
     typeof item.priceAmount === "number" &&
     Number.isFinite(item.priceAmount)
   ) {
-    const metaParts = [moduleMessages.details.net];
+    const metaParts = [getPriceTaxModeLabel(messages, "gross"), "VAT 23%"];
     if (item.priceNegotiable === true) {
       metaParts.push(moduleMessages.details.negotiable);
     }
     return {
-      amountLabel: `${Math.round(item.priceAmount).toLocaleString(toIntlLocale(locale))} PLN`,
+      amountLabel: `${Math.round(item.priceAmount * 1.23).toLocaleString(toIntlLocale(locale))} PLN`,
       metaLine: metaParts.join(" | "),
       isRequestPrice: false,
-      taxCounterpartLine: null,
+      taxCounterpartLine: `${moduleMessages.details.net}: ${Math.round(item.priceAmount).toLocaleString(toIntlLocale(locale))} PLN`,
       additionalAmounts: [],
     };
   }

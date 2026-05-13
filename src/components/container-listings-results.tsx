@@ -61,6 +61,7 @@ type ContainerListingsResultsProps = {
 
 type ListingPriceDisplay = {
   amountLabel: string;
+  netLine: string;
   metaLine: string;
   isRequestPrice: boolean;
 };
@@ -186,6 +187,17 @@ function getNormalizedAmountByCurrency(
   return input.amountUsd;
 }
 
+function formatPriceAmount(
+  amount: number,
+  currency: string,
+  locale: AppLocale,
+  suffix = "",
+  prefix = "",
+): string {
+  const base = `${prefix}${Math.round(amount).toLocaleString(locale)} ${currency}`;
+  return suffix ? `${base} ${suffix}` : base;
+}
+
 function getListingPriceDisplay(
   messages: ContainerListingsMessages,
   locale: AppLocale,
@@ -206,6 +218,7 @@ function getListingPriceDisplay(
 
     return {
       amountLabel: messages.results.askPrice,
+      netLine: "",
       metaLine: metaParts.join(" | "),
       isRequestPrice: true,
     };
@@ -217,34 +230,44 @@ function getListingPriceDisplay(
     pricing.original.currency &&
     pricing.original.taxMode
   ) {
-    const normalizedAmountSet =
-      pricing.original.taxMode === "net"
-        ? pricing.normalized.net
-        : pricing.normalized.gross;
     const shouldConvertAmount =
       priceDisplayCurrency !== "original" &&
       priceDisplayCurrency !== pricing.original.currency;
-    const normalizedAmount = shouldConvertAmount
-      ? getNormalizedAmountByCurrency(normalizedAmountSet, priceDisplayCurrency)
-      : null;
+    const grossAmount = shouldConvertAmount
+      ? getNormalizedAmountByCurrency(pricing.normalized.gross, priceDisplayCurrency)
+      : getNormalizedAmountByCurrency(
+          pricing.normalized.gross,
+          pricing.original.currency,
+        );
+    const netAmount = shouldConvertAmount
+      ? getNormalizedAmountByCurrency(pricing.normalized.net, priceDisplayCurrency)
+      : getNormalizedAmountByCurrency(
+          pricing.normalized.net,
+          pricing.original.currency,
+        );
+    const primaryAmount =
+      typeof grossAmount === "number" && Number.isFinite(grossAmount)
+        ? grossAmount
+        : pricing.original.amount;
     const hasConvertedAmount =
       shouldConvertAmount &&
-      typeof normalizedAmount === "number" &&
-      Number.isFinite(normalizedAmount);
-    const resolvedAmountRaw = hasConvertedAmount
-      ? normalizedAmount
-      : pricing.original.amount;
-    const resolvedAmount = Math.round(resolvedAmountRaw);
-    const resolvedCurrency = hasConvertedAmount
+      typeof grossAmount === "number" &&
+      Number.isFinite(grossAmount);
+    const resolvedCurrency = shouldConvertAmount
       ? priceDisplayCurrency
       : pricing.original.currency;
     const convertedPrefix = hasConvertedAmount ? "~" : "";
-
-    const metaParts = [
-      pricing.original.taxMode === "net"
-        ? messages.results.net
-        : messages.results.gross,
-    ];
+    let netLine = "";
+    if (typeof netAmount === "number" && Number.isFinite(netAmount)) {
+      netLine = formatPriceAmount(
+        netAmount,
+        PRICE_CURRENCY_LABEL[resolvedCurrency],
+        locale,
+        messages.results.net.toLowerCase(),
+        hasConvertedAmount ? "~" : "",
+      );
+    }
+    const metaParts: string[] = [];
     const vatRateLabel = formatVatRateLabel(locale, pricing.original.vatRate);
     if (vatRateLabel) {
       metaParts.push(vatRateLabel);
@@ -254,7 +277,14 @@ function getListingPriceDisplay(
     }
 
     return {
-      amountLabel: `${convertedPrefix}${resolvedAmount.toLocaleString(locale)} ${PRICE_CURRENCY_LABEL[resolvedCurrency]}`,
+      amountLabel: formatPriceAmount(
+        primaryAmount,
+        PRICE_CURRENCY_LABEL[resolvedCurrency],
+        locale,
+        "",
+        convertedPrefix,
+      ),
+      netLine,
       metaLine: metaParts.join(" | "),
       isRequestPrice: false,
     };
@@ -264,13 +294,16 @@ function getListingPriceDisplay(
     typeof item.priceAmount === "number" &&
     Number.isFinite(item.priceAmount)
   ) {
-    const metaParts = [messages.results.net];
+    const grossAmount = Math.round(item.priceAmount * 1.23);
+    const netLine = `${Math.round(item.priceAmount).toLocaleString(locale)} PLN ${messages.results.net.toLowerCase()}`;
+    const metaParts = ["VAT23%"];
     if (item.priceNegotiable === true) {
       metaParts.push(messages.results.negotiable);
     }
 
     return {
-      amountLabel: `${Math.round(item.priceAmount).toLocaleString(locale)} PLN`,
+      amountLabel: `${grossAmount.toLocaleString(locale)} PLN`,
+      netLine,
       metaLine: metaParts.join(" | "),
       isRequestPrice: false,
     };
@@ -284,6 +317,7 @@ function getListingPriceDisplay(
 
     return {
       amountLabel: item.price.trim(),
+      netLine: "",
       metaLine: metaParts.join(" | "),
       isRequestPrice: false,
     };
@@ -291,6 +325,7 @@ function getListingPriceDisplay(
 
   return {
     amountLabel: messages.results.askPrice,
+    netLine: "",
     metaLine: "",
     isRequestPrice: true,
   };
@@ -860,8 +895,10 @@ const ContainerListingResultCard = memo(function ContainerListingResultCard({
     ...(typeof item.productionYear === "number" ? [String(item.productionYear)] : []),
     ...containerFeatureLabels,
   ];
-  const compactPriceMetaLine = priceDisplay.metaLine
-    .split(" | ")
+  const compactPriceMetaLine = [
+    priceDisplay.netLine,
+    ...priceDisplay.metaLine.split(" | "),
+  ]
     .map((part) => part.trim())
     .filter((part) => part.length > 0 && part !== messages.results.negotiable)
     .join(" | ");
@@ -1002,8 +1039,14 @@ const ContainerListingResultCard = memo(function ContainerListingResultCard({
                 >
                   {priceDisplay.amountLabel}
                 </p>
-                {priceDisplay.metaLine ? (
+                {priceDisplay.netLine || priceDisplay.metaLine ? (
                   <p className="max-w-full overflow-hidden text-ellipsis whitespace-nowrap text-[10px] text-neutral-600 sm:text-xs">
+                    {priceDisplay.netLine ? (
+                      <span className="font-semibold text-neutral-700">
+                        {priceDisplay.netLine}
+                      </span>
+                    ) : null}
+                    {priceDisplay.netLine && priceDisplay.metaLine ? " | " : null}
                     {priceDisplay.metaLine}
                   </p>
                 ) : null}
@@ -1112,7 +1155,7 @@ const ContainerListingResultCard = memo(function ContainerListingResultCard({
                 {priceDisplay.amountLabel}
               </span>
               {compactPriceMetaLine ? (
-                <span className="mt-0.5 block text-[14px] font-medium leading-tight text-neutral-700">
+                <span className="mt-0.5 block text-[12px] font-semibold leading-tight text-neutral-700 sm:text-[14px]">
                   {compactPriceMetaLine}
                 </span>
               ) : null}

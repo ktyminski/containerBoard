@@ -110,23 +110,26 @@ function getListingPriceDisplay(
     pricing.original.currency &&
     pricing.original.taxMode
   ) {
-    const normalizedAmountSet =
-      pricing.original.taxMode === "net"
-        ? pricing.normalized.net
-        : pricing.normalized.gross;
-    const normalizedAmount = getNormalizedAmountByCurrency(
-      normalizedAmountSet,
+    const grossAmount = getNormalizedAmountByCurrency(
+      pricing.normalized.gross,
       pricing.original.currency,
     );
     const amount =
-      typeof normalizedAmount === "number" && Number.isFinite(normalizedAmount)
-        ? normalizedAmount
+      typeof grossAmount === "number" && Number.isFinite(grossAmount)
+        ? grossAmount
         : pricing.original.amount;
-    const metaParts = [
-      pricing.original.taxMode === "net"
-        ? messages.results.net
-        : messages.results.gross,
-    ];
+    const metaParts = [messages.results.gross];
+    const netAmount = getNormalizedAmountByCurrency(
+      pricing.normalized.net,
+      pricing.original.currency,
+    );
+    if (typeof netAmount === "number" && Number.isFinite(netAmount)) {
+      metaParts.push(
+        `${Math.round(netAmount).toLocaleString(locale)} ${
+          PRICE_CURRENCY_LABEL[pricing.original.currency]
+        } ${messages.results.net.toLowerCase()}`,
+      );
+    }
     const vatRateLabel = formatVatRateLabel(locale, pricing.original.vatRate);
     if (vatRateLabel) {
       metaParts.push(vatRateLabel);
@@ -144,12 +147,15 @@ function getListingPriceDisplay(
   }
 
   if (typeof item.priceAmount === "number" && Number.isFinite(item.priceAmount)) {
-    const metaParts = [messages.results.net];
+    const metaParts = [
+      `${Math.round(item.priceAmount).toLocaleString(locale)} PLN ${messages.results.net.toLowerCase()}`,
+      "VAT 23%",
+    ];
     if (item.priceNegotiable === true) {
       metaParts.push(messages.results.negotiable);
     }
     return {
-      amountLabel: `${Math.round(item.priceAmount).toLocaleString(locale)} PLN`,
+      amountLabel: `${Math.round(item.priceAmount * 1.23).toLocaleString(locale)} PLN`,
       metaLine: metaParts.join(" | "),
       isRequestPrice: false,
     };

@@ -83,6 +83,13 @@ export const pricingPayloadSchema = z
         message: "Tax mode is required when amount is set",
       });
     }
+    if (value.original.vatRate === null) {
+      context.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["original", "vatRate"],
+        message: "VAT rate is required when amount is set",
+      });
+    }
   });
 
 export const listingTypeInputSchema = z.enum(LISTING_TYPES);
