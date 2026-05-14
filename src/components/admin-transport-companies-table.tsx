@@ -25,6 +25,7 @@ type AdminTransportCompanyItem = {
   phone: string;
   email: string;
   isActive: boolean;
+  detailsViewCount: number;
   createdAt: string;
   updatedAt: string;
 };
@@ -495,6 +496,12 @@ export function AdminTransportCompaniesTable({
                 <p className="mt-2 text-xs text-neutral-500">
                   {item.location.label} | {item.email}
                   {item.phone ? ` | ${item.phone}` : ""}
+                </p>
+                <p className="mt-1 text-xs font-medium text-neutral-400">
+                  {messages.detailsViews}:{" "}
+                  <span className="text-neutral-200">
+                    {item.detailsViewCount}
+                  </span>
                 </p>
               </div>
               <div className="flex items-start gap-2 md:justify-end">

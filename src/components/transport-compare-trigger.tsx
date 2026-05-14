@@ -36,6 +36,15 @@ type TransportCompanyResult = {
   totalRouteDistanceKm: number | null;
 };
 
+function recordTransportCompanyDetailsView(companyId: string): void {
+  void fetch(`/api/transport-companies/${companyId}/view`, {
+    method: "POST",
+    cache: "no-store",
+  }).catch(() => {
+    // Analytics should never interrupt the transport comparison flow.
+  });
+}
+
 type NearestTransportCompaniesResponse = {
   items?: TransportCompanyResult[];
   error?: string;
@@ -105,6 +114,11 @@ export function TransportCompareTrigger({
   const [inquiryError, setInquiryError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [isSendingInquiry, setIsSendingInquiry] = useState(false);
+
+  const openCompanyDetails = (item: TransportCompanyResult) => {
+    setSelectedCompany(item);
+    recordTransportCompanyDetailsView(item.id);
+  };
 
   usePageScrollLock(isOpen);
 
@@ -634,17 +648,16 @@ export function TransportCompareTrigger({
                                 </p>
                               </div>
 
-                              {item.transportPrice ? (
-                                <p className="mt-3 text-sm text-neutral-700">
-                                  <span className="font-medium">{messages.priceLabel}:</span>{" "}
-                                  {item.transportPrice}
+                              {item.description ? (
+                                <p className="mt-3 line-clamp-3 text-sm leading-6 text-neutral-700">
+                                  {item.description}
                                 </p>
                               ) : null}
 
                               <div className="mt-3 flex justify-end">
                                 <button
                                   type="button"
-                                  onClick={() => setSelectedCompany(item)}
+                                  onClick={() => openCompanyDetails(item)}
                                   className="inline-flex items-center gap-1 rounded-md border border-[#166534] bg-white px-3 py-1.5 text-sm font-semibold text-[#166534] transition hover:bg-[#dcfce7]"
                                 >
                                   {messages.detailsButton}

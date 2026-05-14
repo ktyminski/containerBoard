@@ -171,6 +171,7 @@ export async function POST(request: NextRequest) {
       phone: parsed.data.phone,
       email: parsed.data.email,
       isActive: parsed.data.isActive,
+      detailsViewCount: 0,
       createdAt: now,
       updatedAt: now,
     };

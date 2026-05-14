@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useMemo, useRef, useState, type FormEvent } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, type FormEvent } from "react";
 import maplibregl from "maplibre-gl";
 import {
   applyBaseMapLanguage,
@@ -36,6 +36,15 @@ type SearchResponse = {
   } | null;
   error?: string;
 };
+
+function recordTransportCompanyDetailsView(companyId: string): void {
+  void fetch(`/api/transport-companies/${companyId}/view`, {
+    method: "POST",
+    cache: "no-store",
+  }).catch(() => {
+    // Analytics should never interrupt the transport company details flow.
+  });
+}
 
 const INPUT_CLASS =
   "w-full rounded-md border border-neutral-300 bg-white px-3 py-2 text-sm text-neutral-900 outline-none transition focus:border-[#166534] focus:ring-2 focus:ring-[#86efac]/35";
@@ -282,12 +291,9 @@ function TransportCompanyCard({
         ) : null}
       </div>
 
-      {item.transportPrice ? (
-        <p className="mt-4 text-sm text-neutral-700">
-          <span className="font-semibold text-neutral-900">
-            {compareMessages.priceLabel}:
-          </span>{" "}
-          {item.transportPrice}
+      {item.description ? (
+        <p className="mt-4 line-clamp-3 text-sm leading-6 text-neutral-700">
+          {item.description}
         </p>
       ) : null}
 
@@ -700,6 +706,11 @@ export function TransportCompaniesPageClient({
     setItems(initialItems);
   };
 
+  const openCompanyDetails = useCallback((item: TransportCompanyPublicItem) => {
+    setSelectedCompany(item);
+    recordTransportCompanyDetailsView(item.id);
+  }, []);
+
   return (
     <main className="w-full bg-neutral-100 text-neutral-900">
       <section className="mx-auto grid w-full max-w-6xl gap-4 px-4 py-6 sm:px-6">
@@ -796,7 +807,7 @@ export function TransportCompaniesPageClient({
             locale={locale}
             items={items}
             compareMessages={compareMessages}
-            onOpenDetails={setSelectedCompany}
+            onOpenDetails={openCompanyDetails}
           />
         ) : null}
 
@@ -816,7 +827,7 @@ export function TransportCompaniesPageClient({
                 key={item.id}
                 item={item}
                 compareMessages={compareMessages}
-                onOpenDetails={setSelectedCompany}
+                onOpenDetails={openCompanyDetails}
               />
             ))}
           </div>

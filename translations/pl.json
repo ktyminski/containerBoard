@@ -711,6 +711,7 @@
     "deleteConfirm": "Usunąć firmę \"{name}\"?",
     "statusActive": "Aktywna",
     "statusInactive": "Ukryta",
+    "detailsViews": "Wejścia w szczegóły",
     "filters": {
       "all": "Wszystkie",
       "active": "Aktywne",

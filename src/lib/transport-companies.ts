@@ -28,6 +28,7 @@ export type TransportCompanyDocument = {
   phone: string;
   email: string;
   isActive: boolean;
+  detailsViewCount?: number;
   createdAt: Date;
   updatedAt: Date;
 };
@@ -50,6 +51,7 @@ export type TransportCompanyPublicItem = {
 
 export type TransportCompanyAdminItem = TransportCompanyPublicItem & {
   isActive: boolean;
+  detailsViewCount: number;
   createdAt: string;
   updatedAt: string;
 };
@@ -72,6 +74,7 @@ export async function ensureTransportCompaniesIndexes(): Promise<void> {
   const indexes: IndexDescription[] = [
     { key: { isActive: 1, name: 1 }, name: "transport_companies_active_name" },
     { key: { "location.lat": 1, "location.lng": 1 }, name: "transport_companies_location" },
+    { key: { detailsViewCount: -1 }, name: "transport_companies_details_views" },
     { key: { updatedAt: -1 }, name: "transport_companies_updated_at" },
   ];
 
@@ -157,6 +160,11 @@ export function mapTransportCompanyToAdminItem(
   return {
     ...mapTransportCompanyToPublicItem(company, null),
     isActive: company.isActive,
+    detailsViewCount:
+      typeof company.detailsViewCount === "number" &&
+      Number.isFinite(company.detailsViewCount)
+        ? Math.max(0, Math.trunc(company.detailsViewCount))
+        : 0,
     createdAt: company.createdAt.toISOString(),
     updatedAt: company.updatedAt.toISOString(),
   };
