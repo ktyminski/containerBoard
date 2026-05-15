@@ -671,7 +671,7 @@ export function getDefaultValues(
     locationPostalCode: initialValues?.locationPostalCode ?? "",
     locationAddressCity: initialValues?.locationAddressCity ?? "",
     locationAddressCountry: initialValues?.locationAddressCountry ?? "",
-    availableNow: initialValues?.availableNow ?? false,
+    availableNow: initialValues?.availableNow ?? true,
     availableFromApproximate: initialValues?.availableFromApproximate ?? false,
     availableFrom: initialValues?.availableFrom ?? today,
     logisticsTransportAvailable:

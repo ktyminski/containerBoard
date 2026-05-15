@@ -290,6 +290,22 @@ export async function getPublicContainerListingsInitialData(input: {
     sort.createdAt = -1;
   }
 
+  let companyFilterSlug = input.companySlug?.trim() || undefined;
+  let companyFilterName: string | undefined;
+  if (companyFilterSlug) {
+    const companies = await getCompaniesCollection();
+    const companyRecord = await companies.findOne(
+      { slug: companyFilterSlug, isBlocked: { $ne: true } },
+      { projection: { slug: 1, name: 1 } },
+    );
+    if (companyRecord?.slug?.trim()) {
+      companyFilterSlug = companyRecord.slug.trim();
+      companyFilterName = companyRecord.name?.trim() || undefined;
+    } else {
+      companyFilterSlug = "__no_company_match__";
+    }
+  }
+
   const standardContainerSizes = appliedFilters.containerSizes
     .filter((value) => value !== "custom")
     .map((value) => Number(value) as ContainerSize);
@@ -302,7 +318,8 @@ export async function getPublicContainerListingsInitialData(input: {
         ? appliedFilters.locationQuery
         : undefined,
     type: appliedFilters.listingKind,
-    companySlug: input.companySlug,
+    companySlug: companyFilterSlug,
+    companyName: companyFilterName,
     containerSizes: standardContainerSizes.length > 0 ? standardContainerSizes : undefined,
     includeCustomContainerSize: appliedFilters.containerSizes.includes("custom"),
     containerHeights:
@@ -360,7 +377,7 @@ export async function getPublicContainerListingsInitialData(input: {
       appliedFilters,
       page: 1,
       pageSize: PUBLIC_LIST_PAGE_SIZE,
-      companySlug: input.companySlug,
+      companySlug: companyFilterSlug,
     }),
     items: mapRowsToPublicItems(rows, companyProfiles),
     page: 1,

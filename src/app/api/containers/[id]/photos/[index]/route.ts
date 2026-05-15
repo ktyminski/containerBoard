@@ -7,6 +7,11 @@ import { logError } from "@/lib/server-logger";
 
 export const runtime = "nodejs";
 
+const THUMBNAIL_WIDTHS = [64, 96, 160, 320] as const;
+const THUMBNAIL_WEBP_QUALITY = 62;
+
+type SharpLike = typeof import("sharp");
+
 type RouteContext = {
   params: Promise<{
     id: string;
@@ -33,6 +38,64 @@ function toBytes(value: unknown): Uint8Array | null {
   return null;
 }
 
+function parseThumbnailWidth(request: NextRequest): number | null {
+  const widthParam = request.nextUrl.searchParams.get("w");
+  if (!widthParam) {
+    return null;
+  }
+
+  const requestedWidth = Number(widthParam);
+  if (!Number.isFinite(requestedWidth) || requestedWidth <= 0) {
+    return null;
+  }
+
+  return (
+    THUMBNAIL_WIDTHS.find((width) => requestedWidth <= width) ??
+    THUMBNAIL_WIDTHS[THUMBNAIL_WIDTHS.length - 1]
+  );
+}
+
+async function resizeToThumbnailWebp(
+  bytes: Uint8Array,
+  width: number,
+): Promise<Buffer> {
+  const sharpModule = await import("sharp");
+  const sharp = (sharpModule.default ?? sharpModule) as unknown as SharpLike;
+  return sharp(Buffer.from(bytes), { failOn: "none" })
+    .rotate()
+    .resize({
+      width,
+      height: width,
+      fit: "cover",
+      position: "attention",
+      withoutEnlargement: true,
+    })
+    .webp({
+      quality: THUMBNAIL_WEBP_QUALITY,
+      effort: 1,
+    })
+    .toBuffer();
+}
+
+function buildImageResponse(input: {
+  bytes: Uint8Array;
+  contentType: string;
+  cacheControl: string;
+}): NextResponse {
+  const safeBytes = new Uint8Array(input.bytes.byteLength);
+  safeBytes.set(input.bytes);
+  const blob = new Blob([safeBytes.buffer], { type: input.contentType });
+
+  return new NextResponse(blob, {
+    status: 200,
+    headers: {
+      "Content-Type": input.contentType,
+      "Content-Length": String(input.bytes.byteLength),
+      "Cache-Control": input.cacheControl,
+    },
+  });
+}
+
 export async function GET(request: NextRequest, context: RouteContext) {
   try {
     const { id, index } = await context.params;
@@ -45,6 +108,9 @@ export async function GET(request: NextRequest, context: RouteContext) {
     if (!Number.isInteger(numericIndex) || numericIndex < 0) {
       return NextResponse.json({ error: "Invalid photo index" }, { status: 400 });
     }
+
+    const thumbnailWidth = parseThumbnailWidth(request);
+    const cacheControl = getMediaCacheControl(request.nextUrl.searchParams.has("v"));
 
     const listings = await getContainerListingsCollection();
     const listing = await listings.findOne(
@@ -59,20 +125,29 @@ export async function GET(request: NextRequest, context: RouteContext) {
       });
       if (downloaded) {
         const contentType = photo.contentType || downloaded.contentType || "application/octet-stream";
-        return new NextResponse(new Uint8Array(downloaded.buffer), {
-          status: 200,
-          headers: {
-            "Content-Type": contentType,
-            "Content-Length": String(downloaded.buffer.byteLength),
-            "Cache-Control": getMediaCacheControl(request.nextUrl.searchParams.has("v")),
-          },
+        if (thumbnailWidth) {
+          const thumbnail = await resizeToThumbnailWebp(
+            new Uint8Array(downloaded.buffer),
+            thumbnailWidth,
+          );
+          return buildImageResponse({
+            bytes: new Uint8Array(thumbnail),
+            contentType: "image/webp",
+            cacheControl,
+          });
+        }
+
+        return buildImageResponse({
+          bytes: new Uint8Array(downloaded.buffer),
+          contentType,
+          cacheControl,
         });
       }
 
       const redirect = NextResponse.redirect(photo.blobUrl, 307);
       redirect.headers.set(
         "Cache-Control",
-        getMediaCacheControl(request.nextUrl.searchParams.has("v")),
+        cacheControl,
       );
       return redirect;
     }
@@ -89,6 +164,15 @@ export async function GET(request: NextRequest, context: RouteContext) {
     const contentType = photo.contentType || "application/octet-stream";
     const safeBytes = new Uint8Array(bytes.byteLength);
     safeBytes.set(bytes);
+    if (thumbnailWidth) {
+      const thumbnail = await resizeToThumbnailWebp(safeBytes, thumbnailWidth);
+      return buildImageResponse({
+        bytes: new Uint8Array(thumbnail),
+        contentType: "image/webp",
+        cacheControl,
+      });
+    }
+
     const blob = new Blob([safeBytes.buffer], { type: contentType });
 
     return new NextResponse(blob, {
@@ -96,7 +180,7 @@ export async function GET(request: NextRequest, context: RouteContext) {
       headers: {
         "Content-Type": contentType,
         "Content-Length": String(safeBytes.byteLength),
-        "Cache-Control": getMediaCacheControl(request.nextUrl.searchParams.has("v")),
+        "Cache-Control": cacheControl,
       },
     });
   } catch (error) {

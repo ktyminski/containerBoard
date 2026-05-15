@@ -1106,10 +1106,11 @@ export async function GET(request: NextRequest) {
 
     let companyFilterSlug = companySlug?.trim() || undefined;
     let companyFilterName: string | undefined;
-    if (!companyFilterSlug && company?.trim()) {
+    const companyLookupSlug = companyFilterSlug || company?.trim();
+    if (companyLookupSlug) {
       const companies = await getCompaniesCollection();
       const companyRecord = await companies.findOne(
-        { slug: company.trim(), isBlocked: { $ne: true } },
+        { slug: companyLookupSlug, isBlocked: { $ne: true } },
         { projection: { slug: 1, name: 1 } },
       );
       if (companyRecord?.slug?.trim()) {

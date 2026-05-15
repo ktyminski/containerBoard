@@ -151,6 +151,7 @@ const MAP_DETAIL_POINT_LAYER_ID = "containers-list-detail-points";
 const MAP_DETAIL_POINT_COUNT_LAYER_ID = "containers-list-detail-point-count";
 const MAX_CLUSTER_POPUP_ITEMS = 24;
 const MAX_POPUP_VISIBLE_ITEMS = 20;
+const MAP_POPUP_THUMB_WIDTH = 64;
 const MAP_CLUSTER_MAX_ZOOM = 18;
 const DEFAULT_MAP_CENTER: [number, number] = [19.1451, 51.9194];
 const LIST_PAGE_SIZE = 20;
@@ -417,6 +418,14 @@ function buildMapPopupListNode(
     const card = document.createElement("article");
     card.className = "company-map-popup-card";
 
+    const row = document.createElement("div");
+    row.className = "company-map-popup-card__row";
+
+    row.append(createPopupThumbnailNode(item));
+
+    const content = document.createElement("div");
+    content.className = "company-map-popup-card__content";
+
     const header = document.createElement("div");
     header.style.display = "flex";
     header.style.alignItems = "flex-start";
@@ -503,7 +512,9 @@ function buildMapPopupListNode(
     }
     meta.textContent = metaParts.join(" | ");
 
-    card.append(header, company, location, meta);
+    content.append(header, company, location, meta);
+    row.append(content);
+    card.append(row);
     entry.append(card);
     list.append(entry);
   }
@@ -517,6 +528,63 @@ function buildMapPopupListNode(
 
   scroll.append(list);
   return scroll;
+}
+
+function getPopupPhotoThumbnailUrl(item: ContainerListingItem): string | null {
+  const firstPhotoUrl = item.photoUrls?.find((value) => value.trim().length > 0);
+  if (!firstPhotoUrl) {
+    return null;
+  }
+
+  const separator = firstPhotoUrl.includes("?") ? "&" : "?";
+  return `${firstPhotoUrl}${separator}w=${MAP_POPUP_THUMB_WIDTH}`;
+}
+
+function createPopupThumbnailNode(item: ContainerListingItem): HTMLElement {
+  const thumbnail = document.createElement("span");
+  thumbnail.className = "company-map-popup-card__thumb";
+  thumbnail.setAttribute("aria-hidden", "true");
+
+  const photoUrl = getPopupPhotoThumbnailUrl(item);
+  if (photoUrl) {
+    const image = document.createElement("img");
+    image.className = "company-map-popup-card__thumb-image";
+    image.src = photoUrl;
+    image.alt = "";
+    image.width = 55;
+    image.height = 55;
+    image.loading = "lazy";
+    image.decoding = "async";
+    image.setAttribute("fetchpriority", "low");
+    thumbnail.append(image);
+    return thumbnail;
+  }
+
+  thumbnail.className = "company-map-popup-card__thumb company-map-popup-card__thumb--empty";
+
+  const svgNamespace = "http://www.w3.org/2000/svg";
+  const svg = document.createElementNS(svgNamespace, "svg");
+  svg.setAttribute("viewBox", "0 0 40 40");
+  svg.setAttribute("focusable", "false");
+  svg.classList.add("company-map-popup-card__thumb-icon");
+
+  const box = document.createElementNS(svgNamespace, "rect");
+  box.setAttribute("x", "8.5");
+  box.setAttribute("y", "12.5");
+  box.setAttribute("width", "23");
+  box.setAttribute("height", "15");
+  box.setAttribute("rx", "2");
+
+  const linePositions = [13, 17.5, 22, 26.5];
+  const lines = linePositions.map((x) => {
+    const line = document.createElementNS(svgNamespace, "path");
+    line.setAttribute("d", `M${x} 13v14`);
+    return line;
+  });
+
+  svg.append(box, ...lines);
+  thumbnail.append(svg);
+  return thumbnail;
 }
 
 function getPopupPriceDisplay(

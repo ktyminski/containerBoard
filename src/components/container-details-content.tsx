@@ -1241,6 +1241,7 @@ export async function ContainerDetailsContent({
       {showRelatedListings ? (
         <ContainerDetailsRelatedListings
           currentListingId={listing._id.toHexString()}
+          currentListingType={listingItem.type}
           companySlug={relatedCompanySlug}
           isLoggedIn={isLoggedIn}
           limit={4}

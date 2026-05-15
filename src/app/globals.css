@@ -248,7 +248,7 @@ html.user-is-tabbing .listing-kind-option:focus {
 .company-map-popup-card__row {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 7px;
 }
 
 .company-map-popup-card__logo {
@@ -261,11 +261,63 @@ html.user-is-tabbing .listing-kind-option:focus {
   background: #0f172a;
 }
 
+.company-map-popup-card__thumb {
+  flex: 0 0 55px;
+  width: 55px;
+  min-width: 55px;
+  max-width: 55px;
+  height: 55px;
+  min-height: 55px;
+  max-height: 55px;
+  align-self: center;
+  overflow: hidden;
+  border: 1px solid #1e293b;
+  border-radius: 6px;
+  background: #0f172a;
+  display: grid;
+  place-items: center;
+}
+
+.company-map-popup-card__thumb-image {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.company-map-popup-card__thumb--empty {
+  background:
+    linear-gradient(180deg, rgba(30, 41, 59, 0.98), rgba(15, 23, 42, 0.98));
+}
+
+.company-map-popup-card__thumb-icon {
+  width: 34px;
+  height: 34px;
+  color: #94a3b8;
+}
+
+.company-map-popup-card__thumb-icon rect,
+.company-map-popup-card__thumb-icon path {
+  fill: none;
+  stroke: currentColor;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-width: 1.7;
+}
+
 .company-map-popup-item:hover .company-map-popup-card__logo {
   border-color: rgba(103, 232, 249, 0.45);
 }
 
+.company-map-popup-item:hover .company-map-popup-card__thumb {
+  border-color: rgba(103, 232, 249, 0.45);
+}
+
 .company-map-popup-item.company-map-popup-item--premium:hover .company-map-popup-card__logo {
+  border-color: rgba(52, 211, 153, 0.62);
+}
+
+.company-map-popup-item.company-map-popup-item--premium:hover .company-map-popup-card__thumb {
   border-color: rgba(52, 211, 153, 0.62);
 }
 
@@ -455,6 +507,20 @@ html.user-is-tabbing .listing-kind-option:focus {
 .company-map-popup-card__logo {
   border-color: #bfdbfe;
   background: #ffffff;
+}
+
+.company-map-popup-card__thumb {
+  border-color: #bfdbfe;
+  background: #e2e8f0;
+}
+
+.company-map-popup-card__thumb--empty {
+  background:
+    linear-gradient(180deg, #f8fafc, #e2e8f0);
+}
+
+.company-map-popup-card__thumb-icon {
+  color: #64748b;
 }
 
 .company-map-popup-card__name {

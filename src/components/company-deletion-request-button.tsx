@@ -7,6 +7,7 @@ import {
   LOCALE_HEADER_NAME,
   type AppLocale,
   type AppMessages,
+  withLang,
 } from "@/lib/i18n";
 
 type CompanyDeletionRequestButtonProps = {
@@ -70,6 +71,7 @@ export function CompanyDeletionRequestButton({
 
       toast.success(messages.deletionRequestSubmitted);
       setIsModalOpen(false);
+      router.push(withLang("/list", locale));
       router.refresh();
     } catch {
       toast.error(messages.deletionRequestUnknownError);

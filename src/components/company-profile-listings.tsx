@@ -5,6 +5,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { ContainerListingsResults } from "@/components/container-listings-results";
 import { useToast } from "@/components/toast-provider";
 import type { ContainerListingItem } from "@/lib/container-listings";
+import type { ListingType } from "@/lib/container-listing-types";
 import { formatTemplate, getMessages, resolveLocale } from "@/lib/i18n";
 
 type ContainersListApiResponse = {
@@ -27,6 +28,21 @@ type CompanyProfileListingsProps = {
 
 const DARK_BLUE_CTA_BASE_CLASS =
   "border border-[#2f639a] bg-[linear-gradient(180deg,#082650_0%,#0c3466_100%)] text-[#e2efff] transition hover:border-[#67c7ff] hover:text-white";
+const LISTING_TYPE_TABS: ListingType[] = ["sell", "rent", "buy"];
+
+type ListingsByType = Record<ListingType, ContainerListingItem[]>;
+type TotalsByType = Record<ListingType, number>;
+
+const EMPTY_LISTINGS_BY_TYPE: ListingsByType = {
+  sell: [],
+  rent: [],
+  buy: [],
+};
+const EMPTY_TOTALS_BY_TYPE: TotalsByType = {
+  sell: 0,
+  rent: 0,
+  buy: 0,
+};
 
 async function copyTextToClipboard(value: string): Promise<boolean> {
   if (
@@ -63,6 +79,46 @@ async function copyTextToClipboard(value: string): Promise<boolean> {
   }
 }
 
+function buildCompanyRequestUrl(
+  companySlug: string,
+  pageSize: number,
+  type: ListingType,
+): string {
+  const params = new URLSearchParams({
+    company: companySlug,
+    page: "1",
+    pageSize: String(pageSize),
+    sortBy: "createdAt",
+    sortDir: "desc",
+    type,
+  });
+  return `/api/containers?${params.toString()}`;
+}
+
+function getMostPopulatedListingType(totals: TotalsByType): ListingType {
+  return LISTING_TYPE_TABS.reduce((bestType, type) =>
+    totals[type] > totals[bestType] ? type : bestType,
+  );
+}
+
+function buildCompanyListingsHref(
+  fallbackCompanySlug: string,
+  type: ListingType,
+  baseHref?: string,
+): string {
+  const fallbackHref = `/list?company=${encodeURIComponent(fallbackCompanySlug)}`;
+  const href = baseHref?.trim() || fallbackHref;
+
+  try {
+    const url = new URL(href, "https://containerboard.local");
+    url.searchParams.set("kind", type);
+    return `${url.pathname}${url.search}`;
+  } catch {
+    const separator = href.includes("?") ? "&" : "?";
+    return `${href}${separator}kind=${encodeURIComponent(type)}`;
+  }
+}
+
 export function CompanyProfileListings({
   companySlug,
   isLoggedIn,
@@ -83,63 +139,80 @@ export function CompanyProfileListings({
   const relatedMessages = listingMessages.related;
   const toast = useToast();
   const normalizedSlug = companySlug.trim();
-  const [items, setItems] = useState<ContainerListingItem[]>([]);
-  const [total, setTotal] = useState(0);
+  const [itemsByType, setItemsByType] = useState<ListingsByType>(
+    EMPTY_LISTINGS_BY_TYPE,
+  );
+  const [totalsByType, setTotalsByType] =
+    useState<TotalsByType>(EMPTY_TOTALS_BY_TYPE);
+  const [activeType, setActiveType] = useState<ListingType>("sell");
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [pendingFavoriteId, setPendingFavoriteId] = useState<string | null>(null);
 
-  const requestUrl = useMemo(() => {
-    if (!normalizedSlug) {
-      return "";
-    }
-    const params = new URLSearchParams({
-      company: normalizedSlug,
-      page: "1",
-      pageSize: String(limit),
-      sortBy: "createdAt",
-      sortDir: "desc",
-    });
-    return `/api/containers?${params.toString()}`;
-  }, [limit, normalizedSlug]);
-
   useEffect(() => {
-    if (!requestUrl) {
-      setItems([]);
-      setTotal(0);
+    if (!normalizedSlug) {
+      setItemsByType(EMPTY_LISTINGS_BY_TYPE);
+      setTotalsByType(EMPTY_TOTALS_BY_TYPE);
+      setActiveType("sell");
       setIsLoading(false);
       setError(null);
       return;
     }
 
     const controller = new AbortController();
-    async function loadListings() {
+
+    async function fetchList(type: ListingType): Promise<{
+      type: ListingType;
+      items: ContainerListingItem[];
+      total: number;
+    }> {
+      const response = await fetch(buildCompanyRequestUrl(normalizedSlug, limit, type), {
+        cache: "no-store",
+        signal: controller.signal,
+      });
+      const data = (await response.json()) as ContainersListApiResponse;
+      if (!response.ok) {
+        throw new Error(
+          data.error ?? `${listingMessages.board.apiErrorPrefix} (${response.status})`,
+        );
+      }
+
+      return {
+        type,
+        items: data.items ?? [],
+        total: data.meta?.total ?? 0,
+      };
+    }
+
+    async function loadListingsByType() {
       setIsLoading(true);
       try {
-        const response = await fetch(requestUrl, {
-          cache: "no-store",
-          signal: controller.signal,
-        });
-        const data = (await response.json()) as ContainersListApiResponse;
-        if (!response.ok) {
-          throw new Error(
-            data.error ?? `${listingMessages.board.apiErrorPrefix} (${response.status})`,
-          );
-        }
+        const results = await Promise.all(
+          LISTING_TYPE_TABS.map((type) => fetchList(type)),
+        );
 
         if (controller.signal.aborted) {
           return;
         }
 
-        setItems(data.items ?? []);
-        setTotal(data.meta?.total ?? 0);
+        const nextItemsByType = { ...EMPTY_LISTINGS_BY_TYPE };
+        const nextTotalsByType = { ...EMPTY_TOTALS_BY_TYPE };
+        for (const result of results) {
+          nextItemsByType[result.type] = result.items;
+          nextTotalsByType[result.type] = result.total;
+        }
+
+        setItemsByType(nextItemsByType);
+        setTotalsByType(nextTotalsByType);
+        setActiveType(getMostPopulatedListingType(nextTotalsByType));
         setError(null);
       } catch (loadError) {
         if (controller.signal.aborted) {
           return;
         }
-        setItems([]);
-        setTotal(0);
+        setItemsByType(EMPTY_LISTINGS_BY_TYPE);
+        setTotalsByType(EMPTY_TOTALS_BY_TYPE);
+        setActiveType("sell");
         setError(
           loadError instanceof Error
             ? loadError.message
@@ -152,9 +225,14 @@ export function CompanyProfileListings({
       }
     }
 
-    void loadListings();
+    void loadListingsByType();
     return () => controller.abort();
-  }, [requestUrl]);
+  }, [
+    limit,
+    listingMessages.board.apiErrorPrefix,
+    normalizedSlug,
+    relatedMessages.loadCompanyError,
+  ]);
 
   const handleToggleFavorite = useCallback(
     async (listingId: string, isFavorite: boolean) => {
@@ -168,11 +246,12 @@ export function CompanyProfileListings({
 
       const nextIsFavorite = !isFavorite;
       setPendingFavoriteId(listingId);
-      setItems((current) =>
-        current.map((item) =>
+      setItemsByType((current) => ({
+        ...current,
+        [activeType]: current[activeType].map((item) =>
           item.id === listingId ? { ...item, isFavorite: nextIsFavorite } : item,
         ),
-      );
+      }));
 
       try {
         const response = await fetch(`/api/containers/${listingId}/favorite`, {
@@ -184,11 +263,12 @@ export function CompanyProfileListings({
           throw new Error(payload?.error ?? listingMessages.map.favoriteUpdateError);
         }
       } catch (favoriteError) {
-        setItems((current) =>
-          current.map((item) =>
+        setItemsByType((current) => ({
+          ...current,
+          [activeType]: current[activeType].map((item) =>
             item.id === listingId ? { ...item, isFavorite } : item,
           ),
-        );
+        }));
         toast.error(
           favoriteError instanceof Error
             ? favoriteError.message
@@ -198,7 +278,14 @@ export function CompanyProfileListings({
         setPendingFavoriteId(null);
       }
     },
-    [isLoggedIn, pendingFavoriteId, toast],
+    [
+      activeType,
+      isLoggedIn,
+      listingMessages.map.favoriteUpdateError,
+      pendingFavoriteId,
+      relatedMessages.loginRequiredForFavorites,
+      toast,
+    ],
   );
 
   const handleCopyListingLink = useCallback(
@@ -215,11 +302,16 @@ export function CompanyProfileListings({
     [listingMessages.map.copyError, listingMessages.map.linkCopied, toast],
   );
 
+  const items = itemsByType[activeType];
+  const total = totalsByType[activeType];
+  const visibleTypes = LISTING_TYPE_TABS.filter((type) => totalsByType[type] > 0);
+  const hasAnyListings = visibleTypes.length > 0;
   const hiddenCount = Math.max(total - items.length, 0);
-  const listingsHref =
-    allListingsHref && allListingsHref.trim().length > 0
-      ? allListingsHref
-      : `/list?company=${encodeURIComponent(normalizedSlug)}`;
+  const listingsHref = buildCompanyListingsHref(
+    normalizedSlug,
+    activeType,
+    allListingsHref,
+  );
   const hiddenListingsFooter =
     !isLoading && !error && hiddenCount > 0 ? (
       <div className="flex justify-center">
@@ -236,8 +328,58 @@ export function CompanyProfileListings({
       </div>
     ) : null;
 
+  if (!isLoading && !error && !hasAnyListings) {
+    return null;
+  }
+
   return (
-    <div className="grid gap-1">
+    <div className="grid gap-3">
+      <h2 className="px-1 text-lg font-semibold text-neutral-900">
+        {relatedMessages.companyLatestTitle}
+      </h2>
+      {hasAnyListings ? (
+        <div className="flex flex-wrap items-center justify-between gap-2 px-1">
+          <div className="flex flex-wrap gap-2">
+            {visibleTypes.map((type) => {
+              const isActive = type === activeType;
+              return (
+                <button
+                  key={type}
+                  type="button"
+                  onClick={() => setActiveType(type)}
+                  className={`rounded-md border px-3 py-1.5 text-sm font-medium transition ${
+                    isActive
+                      ? "border-[#1f2937] bg-[#1f2937] text-white shadow-sm"
+                      : "border-neutral-300 bg-white text-neutral-600 hover:border-neutral-400 hover:text-neutral-900"
+                  }`}
+                >
+                  {listingMessages.shared.listingKinds[type]} ({totalsByType[type]})
+                </button>
+              );
+            })}
+          </div>
+          <Link
+            href={listingsHref}
+            className="inline-flex items-center gap-1 text-sm font-medium text-neutral-500 transition-colors hover:text-neutral-700"
+          >
+            <span>{relatedMessages.showAll}</span>
+            <svg
+              viewBox="0 0 20 20"
+              fill="none"
+              className="h-4 w-4"
+              aria-hidden="true"
+            >
+              <path
+                d="M7 5l5 5-5 5"
+                stroke="currentColor"
+                strokeWidth="1.8"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              />
+            </svg>
+          </Link>
+        </div>
+      ) : null}
       <ContainerListingsResults
         locale={locale}
         messages={listingMessages}

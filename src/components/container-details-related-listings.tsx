@@ -5,6 +5,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { ContainerListingsResults } from "@/components/container-listings-results";
 import { useToast } from "@/components/toast-provider";
 import type { ContainerListingItem } from "@/lib/container-listings";
+import type { ListingType } from "@/lib/container-listing-types";
 import { formatTemplate, getMessages, resolveLocale } from "@/lib/i18n";
 
 type ContainersListApiResponse = {
@@ -22,6 +23,7 @@ type RelatedMode = "company" | "latest";
 
 type ContainerDetailsRelatedListingsProps = {
   currentListingId: string;
+  currentListingType: ListingType;
   companySlug?: string;
   isLoggedIn: boolean;
   limit?: number;
@@ -65,29 +67,55 @@ async function copyTextToClipboard(value: string): Promise<boolean> {
   }
 }
 
-function buildCompanyRequestUrl(companySlug: string, pageSize: number): string {
+function buildCompanyRequestUrl(
+  companySlug: string,
+  pageSize: number,
+  type: ListingType,
+): string {
   const params = new URLSearchParams({
     company: companySlug,
     page: "1",
     pageSize: String(pageSize),
     sortBy: "createdAt",
     sortDir: "desc",
+    type,
   });
   return `/api/containers?${params.toString()}`;
 }
 
-function buildLatestRequestUrl(pageSize: number): string {
+function buildLatestRequestUrl(pageSize: number, type: ListingType): string {
   const params = new URLSearchParams({
     page: "1",
     pageSize: String(pageSize),
     sortBy: "createdAt",
     sortDir: "desc",
+    type,
   });
   return `/api/containers?${params.toString()}`;
 }
 
+function buildRelatedTypeFallbacks(type: ListingType): ListingType[] {
+  if (type === "rent") {
+    return ["rent", "buy"];
+  }
+  return [type];
+}
+
+function buildRelatedListingsHref(
+  mode: RelatedMode,
+  type: ListingType,
+  companySlug: string,
+): string {
+  const params = new URLSearchParams({ kind: type });
+  if (mode === "company" && companySlug) {
+    params.set("company", companySlug);
+  }
+  return `/list?${params.toString()}`;
+}
+
 export function ContainerDetailsRelatedListings({
   currentListingId,
+  currentListingType,
   companySlug,
   isLoggedIn,
   limit = 4,
@@ -106,10 +134,15 @@ export function ContainerDetailsRelatedListings({
   const relatedMessages = listingMessages.related;
   const toast = useToast();
   const normalizedCurrentId = currentListingId.trim();
+  const relatedTypeFallbacks = useMemo(
+    () => buildRelatedTypeFallbacks(currentListingType),
+    [currentListingType],
+  );
   const normalizedCompanySlug = companySlug?.trim() || "";
   const [items, setItems] = useState<ContainerListingItem[]>([]);
   const [total, setTotal] = useState(0);
   const [mode, setMode] = useState<RelatedMode>("latest");
+  const [relatedType, setRelatedType] = useState<ListingType>(currentListingType);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [pendingFavoriteId, setPendingFavoriteId] = useState<string | null>(null);
@@ -138,54 +171,68 @@ export function ContainerDetailsRelatedListings({
 
       try {
         if (normalizedCompanySlug) {
-          const companyData = await fetchList(
-            buildCompanyRequestUrl(normalizedCompanySlug, requestPageSize),
-          );
+          for (const type of relatedTypeFallbacks) {
+            const companyData = await fetchList(
+              buildCompanyRequestUrl(normalizedCompanySlug, requestPageSize, type),
+            );
+            if (controller.signal.aborted) {
+              return;
+            }
+
+            const companyItems = companyData.items ?? [];
+            const companyFiltered = companyItems.filter(
+              (item) => item.id !== normalizedCurrentId,
+            );
+            const companyIncludesCurrent = companyItems.some(
+              (item) => item.id === normalizedCurrentId,
+            );
+            const companyTotalRaw = companyData.meta?.total ?? companyFiltered.length;
+            const companyTotal = Math.max(
+              0,
+              companyTotalRaw - (companyIncludesCurrent ? 1 : 0),
+            );
+
+            if (companyFiltered.length > 0) {
+              setMode("company");
+              setRelatedType(type);
+              setItems(companyFiltered.slice(0, limit));
+              setTotal(companyTotal);
+              return;
+            }
+          }
+        }
+
+        for (const type of relatedTypeFallbacks) {
+          const latestData = await fetchList(buildLatestRequestUrl(requestPageSize, type));
           if (controller.signal.aborted) {
             return;
           }
 
-          const companyItems = companyData.items ?? [];
-          const companyFiltered = companyItems.filter(
+          const latestItems = (latestData.items ?? []).filter(
             (item) => item.id !== normalizedCurrentId,
           );
-          const companyIncludesCurrent = companyItems.some(
+          const latestTotalRaw = latestData.meta?.total ?? latestItems.length;
+          const latestIncludesCurrent = (latestData.items ?? []).some(
             (item) => item.id === normalizedCurrentId,
           );
-          const companyTotalRaw = companyData.meta?.total ?? companyFiltered.length;
-          const companyTotal = Math.max(
+          const latestTotal = Math.max(
             0,
-            companyTotalRaw - (companyIncludesCurrent ? 1 : 0),
+            latestTotalRaw - (latestIncludesCurrent ? 1 : 0),
           );
 
-          if (companyFiltered.length > 0) {
-            setMode("company");
-            setItems(companyFiltered.slice(0, limit));
-            setTotal(companyTotal);
+          if (latestItems.length > 0) {
+            setMode("latest");
+            setRelatedType(type);
+            setItems(latestItems.slice(0, limit));
+            setTotal(latestTotal);
             return;
           }
         }
 
-        const latestData = await fetchList(buildLatestRequestUrl(requestPageSize));
-        if (controller.signal.aborted) {
-          return;
-        }
-
-        const latestItems = (latestData.items ?? []).filter(
-          (item) => item.id !== normalizedCurrentId,
-        );
-        const latestTotalRaw = latestData.meta?.total ?? latestItems.length;
-        const latestIncludesCurrent = (latestData.items ?? []).some(
-          (item) => item.id === normalizedCurrentId,
-        );
-        const latestTotal = Math.max(
-          0,
-          latestTotalRaw - (latestIncludesCurrent ? 1 : 0),
-        );
-
         setMode("latest");
-        setItems(latestItems.slice(0, limit));
-        setTotal(latestTotal);
+        setRelatedType(relatedTypeFallbacks[0] ?? currentListingType);
+        setItems([]);
+        setTotal(0);
       } catch (loadError) {
         if (controller.signal.aborted) {
           return;
@@ -206,7 +253,15 @@ export function ContainerDetailsRelatedListings({
 
     void loadRelatedListings();
     return () => controller.abort();
-  }, [limit, normalizedCompanySlug, normalizedCurrentId]);
+  }, [
+    currentListingType,
+    limit,
+    listingMessages.board.apiErrorPrefix,
+    normalizedCompanySlug,
+    normalizedCurrentId,
+    relatedMessages.loadRelatedError,
+    relatedTypeFallbacks,
+  ]);
 
   const handleToggleFavorite = useCallback(
     async (listingId: string, isFavorite: boolean) => {
@@ -252,7 +307,13 @@ export function ContainerDetailsRelatedListings({
         setPendingFavoriteId(null);
       }
     },
-    [isLoggedIn, pendingFavoriteId, toast],
+    [
+      isLoggedIn,
+      listingMessages.map.favoriteUpdateError,
+      pendingFavoriteId,
+      relatedMessages.loginRequiredForFavorites,
+      toast,
+    ],
   );
 
   const handleCopyListingLink = useCallback(
@@ -271,10 +332,7 @@ export function ContainerDetailsRelatedListings({
 
   const sectionTitle =
     mode === "company" ? relatedMessages.companyTitle : relatedMessages.latestTitle;
-  const listingsHref =
-    mode === "company" && normalizedCompanySlug
-      ? `/list?company=${encodeURIComponent(normalizedCompanySlug)}`
-      : "/list";
+  const listingsHref = buildRelatedListingsHref(mode, relatedType, normalizedCompanySlug);
   const hiddenCount = Math.max(total - items.length, 0);
   const hiddenListingsFooter =
     !isLoading && !error && hiddenCount > 0 ? (

@@ -4,6 +4,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { cookies } from "next/headers";
 import { ContainerPhotoWithPlaceholder } from "@/components/container-photo-with-placeholder";
+import type { ContainerListingsMessages } from "@/components/container-listings-i18n";
 import { SESSION_COOKIE_NAME } from "@/lib/auth-session";
 import {
   buildContainerListingsFilter,
@@ -15,6 +16,7 @@ import {
 } from "@/lib/container-listings";
 import {
   CONTAINER_CONDITION_LABEL,
+  type Currency,
   PRICE_CURRENCY_LABEL,
   getContainerShortLabel,
 } from "@/lib/container-listing-types";
@@ -35,6 +37,11 @@ import {
   getContainerSaleCountryPath,
 } from "@/lib/seo-containers";
 import { logError } from "@/lib/server-logger";
+
+type LandingCardPriceDisplay = {
+  grossLabel: string;
+  netLabel: string | null;
+};
 
 export async function generateMetadata(): Promise<Metadata> {
   const cookieStore = await cookies();
@@ -108,20 +115,95 @@ function getLandingCardImageSrc(item: ContainerListingItem): string {
   return firstPhotoUrl ?? getLandingCardPlaceholderSrc(item);
 }
 
-function getLandingCardPriceLabel(item: ContainerListingItem, locale: string): string | null {
+function getLandingPriceAmount(
+  amounts: {
+    amountPln: number | null;
+    amountEur: number | null;
+    amountUsd: number | null;
+  },
+  currency: Currency,
+): number | null {
+  if (currency === "PLN") {
+    return amounts.amountPln;
+  }
+  if (currency === "EUR") {
+    return amounts.amountEur;
+  }
+  return amounts.amountUsd;
+}
+
+function formatLandingPriceAmount(
+  amount: number,
+  currency: Currency,
+  locale: string,
+  taxLabel?: string,
+): string {
+  const base = `${Math.round(amount).toLocaleString(locale)} ${
+    PRICE_CURRENCY_LABEL[currency]
+  }`;
+  return taxLabel ? `${base} ${taxLabel.toLowerCase()}` : base;
+}
+
+function getLandingCardPriceDisplay(
+  item: ContainerListingItem,
+  locale: string,
+  listingMessages: ContainerListingsMessages,
+): LandingCardPriceDisplay | null {
   if (
     item.pricing?.original.amount !== null &&
     typeof item.pricing?.original.amount === "number" &&
     Number.isFinite(item.pricing.original.amount) &&
     item.pricing.original.currency
   ) {
-    return `${Math.round(item.pricing.original.amount).toLocaleString(locale)} ${
-      PRICE_CURRENCY_LABEL[item.pricing.original.currency]
-    }`;
+    const currency = item.pricing.original.currency;
+    const grossAmount = getLandingPriceAmount(item.pricing.normalized.gross, currency);
+    const netAmount = getLandingPriceAmount(item.pricing.normalized.net, currency);
+    const fallbackAmount = item.pricing.original.amount;
+
+    return {
+      grossLabel: formatLandingPriceAmount(
+        typeof grossAmount === "number" && Number.isFinite(grossAmount)
+          ? grossAmount
+          : fallbackAmount,
+        currency,
+        locale,
+      ),
+      netLabel:
+        typeof netAmount === "number" && Number.isFinite(netAmount)
+          ? formatLandingPriceAmount(
+              netAmount,
+              currency,
+              locale,
+              listingMessages.results.net,
+            )
+          : null,
+    };
   }
 
   if (typeof item.priceAmount === "number" && Number.isFinite(item.priceAmount)) {
-    return `${Math.round(item.priceAmount).toLocaleString(locale)} PLN`;
+    const netAmount = Math.round(item.priceAmount);
+    const grossAmount = Math.round(item.priceAmount * 1.23);
+
+    return {
+      grossLabel: formatLandingPriceAmount(
+        grossAmount,
+        "PLN",
+        locale,
+      ),
+      netLabel: formatLandingPriceAmount(
+        netAmount,
+        "PLN",
+        locale,
+        listingMessages.results.net,
+      ),
+    };
+  }
+
+  if (item.price?.trim()) {
+    return {
+      grossLabel: item.price.trim(),
+      netLabel: null,
+    };
   }
 
   return null;
@@ -132,6 +214,7 @@ export default async function LandingPage() {
   const locale = resolveLocale(cookieStore.get(LOCALE_COOKIE_NAME)?.value);
   const messages = getMessages(locale);
   const landing = messages.landingPage;
+  const listingMessages = messages.containerListings;
   const isLoggedIn = Boolean(cookieStore.get(SESSION_COOKIE_NAME)?.value);
   const latestListings = await getLatestListings(6);
   const nextCreate = encodeURIComponent("/containers/new");
@@ -315,7 +398,11 @@ export default async function LandingPage() {
           {latestListings.length > 0 ? (
             <ul className="grid gap-4 lg:grid-cols-2">
               {latestListings.map((item) => {
-                const priceLabel = getLandingCardPriceLabel(item, locale);
+                const priceDisplay = getLandingCardPriceDisplay(
+                  item,
+                  locale,
+                  listingMessages,
+                );
                 const createdAtLabel = formatTemplate(landing.latestAddedTemplate, {
                   date: new Date(item.createdAt).toLocaleDateString(locale),
                 });
@@ -356,11 +443,16 @@ export default async function LandingPage() {
                               </p>
                             </div>
 
-                            {priceLabel ? (
+                            {priceDisplay ? (
                               <div className="min-w-0 max-w-[8.5rem] shrink-0 text-right sm:max-w-[11rem]">
                                 <p className="break-words text-sm font-bold leading-tight text-neutral-900 sm:text-lg">
-                                  {priceLabel}
+                                  {priceDisplay.grossLabel}
                                 </p>
+                                {priceDisplay.netLabel ? (
+                                  <p className="mt-1 break-words text-[11px] font-medium leading-tight text-neutral-500">
+                                    {priceDisplay.netLabel}
+                                  </p>
+                                ) : null}
                               </div>
                             ) : null}
                           </div>
