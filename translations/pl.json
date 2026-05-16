@@ -2278,7 +2278,7 @@
         "rent": "Chcesz sprzedać albo szukasz kontenera?",
         "buy": "Chcesz sprzedać albo wynająć?"
       },
-      "requiredHint": "Pola oznaczone gwiazdka są obowiazkowe.",
+      "requiredHint": "Pola oznaczone gwiazdką są obowiązkowe.",
       "submitLabel": "Publikuj kontener",
       "successMessage": "Kontener opublikowany",
       "backToList": "Powrót do listy kontenerów",

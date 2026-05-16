@@ -7,7 +7,6 @@ import { notFound } from "next/navigation";
 import { CompanyDeletionRequestButton } from "@/components/company-deletion-request-button";
 import { CompanyProfileListings } from "@/components/company-profile-listings";
 import { CompanyLocationsAndBranches } from "@/components/company-locations-and-branches";
-import { SmartBackButton } from "@/components/smart-back-button";
 import { FacebookIcon, InstagramIcon, LinkedInIcon } from "@/components/social-icons";
 import { SESSION_COOKIE_NAME } from "@/lib/auth-session";
 import { getCurrentUserFromToken } from "@/lib/auth-user";
@@ -154,19 +153,6 @@ function buildLocalizedBranchAddress(input: {
   return input.fallbackLabel?.trim() ?? "";
 }
 
-function resolveInternalBackHref(
-  value: string | string[] | undefined,
-): string | null {
-  const resolved = typeof value === "string" ? value : value?.[0];
-  const normalized = resolved?.trim() ?? "";
-
-  if (!normalized.startsWith("/") || normalized.startsWith("//")) {
-    return null;
-  }
-
-  return normalized;
-}
-
 export async function generateMetadata({
   params,
   searchParams,
@@ -242,8 +228,6 @@ export default async function CompanyDetailsPage({
     company.createdByUserId?.toHexString() === currentUser?._id?.toHexString();
   const operatingArea = normalizeCompanyOperatingArea(company.operatingArea);
   const operatingAreaLabel = messages.companyCreate.operatingAreas[operatingArea];
-  const preferredBackHref = resolveInternalBackHref(query.back);
-  const fallbackBackHref = withLang(canEdit ? "/containers/mine" : "/list", locale);
   const logoUrl = company.logo?.size || company.logo?.filename ? `/api/companies/${companyId}/logo` : null;
   const backgroundUrl = company.background?.size || company.background?.filename
     ? `/api/companies/${companyId}/background`
@@ -364,17 +348,12 @@ export default async function CompanyDetailsPage({
         />
         <div className="flex flex-wrap items-center gap-2">
           <div className="flex flex-wrap items-center gap-2">
-            <SmartBackButton
-              label={messages.companyDetails.back}
-              preferredHref={preferredBackHref ?? undefined}
-              fallbackHref={fallbackBackHref}
-              className={`${neutralActionButtonClass} w-fit cursor-pointer gap-2`}
-            />
             <Link
               href={withLang("/list", locale)}
-              className={neutralActionButtonClass}
+              className={`${neutralActionButtonClass} gap-2`}
             >
-              {messages.companyDetails.backToMap}
+              <span aria-hidden="true">&larr;</span>
+              <span>{messages.companyDetails.backToMap}</span>
             </Link>
           </div>
           {canEdit ? (
