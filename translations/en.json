@@ -2155,6 +2155,7 @@
       "copyError": "Failed to copy the link.",
       "collapseMap": "Collapse map",
       "expandMap": "Expand map",
+      "mobileMapLabel": "Map",
       "closePreview": "Close listing preview",
       "backToList": "Back to list",
       "loadingDetailsAria": "Loading listing details",

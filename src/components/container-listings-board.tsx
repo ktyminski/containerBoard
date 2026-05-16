@@ -531,6 +531,46 @@ function buildMapPopupListNode(
   return scroll;
 }
 
+function buildMapPopupLoadingNode(
+  messages: ContainerListingsMessages,
+  expectedItemsCount = 1,
+): HTMLElement {
+  const wrapper = document.createElement("div");
+  wrapper.className = "company-map-popup-loading";
+  wrapper.setAttribute("role", "status");
+  wrapper.setAttribute("aria-live", "polite");
+  wrapper.setAttribute("aria-label", messages.map.loadingDetailsAria);
+
+  const label = document.createElement("p");
+  label.className = "company-map-popup-loading__label";
+  label.textContent = messages.map.loadingDetails;
+  wrapper.append(label);
+
+  const skeletonCount = Math.min(3, Math.max(1, expectedItemsCount));
+  for (let index = 0; index < skeletonCount; index += 1) {
+    const row = document.createElement("div");
+    row.className = "company-map-popup-loading__row";
+
+    const thumb = document.createElement("span");
+    thumb.className = "company-map-popup-loading__thumb";
+
+    const content = document.createElement("span");
+    content.className = "company-map-popup-loading__content";
+
+    const title = document.createElement("span");
+    title.className = "company-map-popup-loading__line company-map-popup-loading__line--title";
+
+    const meta = document.createElement("span");
+    meta.className = "company-map-popup-loading__line company-map-popup-loading__line--meta";
+
+    content.append(title, meta);
+    row.append(thumb, content);
+    wrapper.append(row);
+  }
+
+  return wrapper;
+}
+
 function getPopupPhotoThumbnailUrl(item: ContainerListingItem): string | null {
   const firstPhotoUrl = item.photoUrls?.find((value) => value.trim().length > 0);
   if (!firstPhotoUrl) {
@@ -731,12 +771,73 @@ type PopupAnchor =
   | "bottom-left"
   | "bottom-right";
 
+type PopupSafeArea = {
+  top: number;
+  right: number;
+  bottom: number;
+  left: number;
+  width: number;
+  height: number;
+};
+
+function getVisualViewportRect() {
+  const visualViewport = window.visualViewport;
+  if (visualViewport) {
+    return {
+      top: visualViewport.offsetTop,
+      right: visualViewport.offsetLeft + visualViewport.width,
+      bottom: visualViewport.offsetTop + visualViewport.height,
+      left: visualViewport.offsetLeft,
+      width: visualViewport.width,
+      height: visualViewport.height,
+    };
+  }
+
+  return {
+    top: 0,
+    right: window.innerWidth,
+    bottom: window.innerHeight,
+    left: 0,
+    width: window.innerWidth,
+    height: window.innerHeight,
+  };
+}
+
+function getPopupSafeArea(map: maplibregl.Map, edgePadding = 12): PopupSafeArea {
+  const mapRect = map.getContainer().getBoundingClientRect();
+  const viewportRect = getVisualViewportRect();
+  const stickyHeader = document.querySelector("header.sticky");
+  const stickyHeaderBottom =
+    stickyHeader instanceof HTMLElement
+      ? stickyHeader.getBoundingClientRect().bottom
+      : 0;
+
+  const top = Math.max(
+    mapRect.top,
+    viewportRect.top,
+    stickyHeaderBottom,
+  ) + edgePadding;
+  const right = Math.min(mapRect.right, viewportRect.right) - edgePadding;
+  const bottom = Math.min(mapRect.bottom, viewportRect.bottom) - edgePadding;
+  const left = Math.max(mapRect.left, viewportRect.left) + edgePadding;
+
+  return {
+    top,
+    right,
+    bottom,
+    left,
+    width: Math.max(0, right - left),
+    height: Math.max(0, bottom - top),
+  };
+}
+
 function resolvePopupPlacement(
   map: maplibregl.Map,
   point: { x: number; y: number },
   itemCount: number,
 ): { anchor: PopupAnchor; offset: number } {
   const mapRect = map.getContainer().getBoundingClientRect();
+  const isCompactMap = mapRect.width < 640;
   const markerViewportX = mapRect.left + point.x;
   const markerViewportY = mapRect.top + point.y;
   const stickyHeader = document.querySelector("header.sticky");
@@ -744,23 +845,37 @@ function resolvePopupPlacement(
     stickyHeader instanceof HTMLElement
       ? stickyHeader.getBoundingClientRect().bottom
       : 0;
-  const safeTopEdge = Math.max(8, stickyHeaderBottom + 8);
-  const safeBottomEdge = 8;
-  const safeHorizontalEdge = 12;
+  let safeTopEdge = Math.max(8, stickyHeaderBottom + 8);
+  let safeBottomEdge = window.innerHeight - 8;
+  let safeLeftEdge = mapRect.left + 12;
+  let safeRightEdge = mapRect.right - 12;
+  let availablePopupWidth = mapRect.width - 24;
+  let compactPopupHeightLimit: number | null = null;
+
+  if (isCompactMap) {
+    const safeArea = getPopupSafeArea(map);
+    safeTopEdge = safeArea.top;
+    safeBottomEdge = safeArea.bottom;
+    safeLeftEdge = safeArea.left;
+    safeRightEdge = safeArea.right;
+    availablePopupWidth = safeArea.width;
+    compactPopupHeightLimit = Math.max(140, safeArea.height - 16);
+  }
+
   const spaceAbove = markerViewportY - safeTopEdge;
-  const spaceBelow = window.innerHeight - markerViewportY - safeBottomEdge;
-  const spaceLeft = markerViewportX - mapRect.left - safeHorizontalEdge;
-  const spaceRight = mapRect.right - markerViewportX - safeHorizontalEdge;
+  const spaceBelow = safeBottomEdge - markerViewportY;
+  const spaceLeft = markerViewportX - safeLeftEdge;
+  const spaceRight = safeRightEdge - markerViewportX;
   const estimatedPopupWidth = Math.min(
     336,
-    Math.max(240, mapRect.width - safeHorizontalEdge * 2),
+    Math.max(240, availablePopupWidth),
   );
   const estimatedPopupHeight = Math.min(
     320,
+    ...(compactPopupHeightLimit !== null ? [compactPopupHeightLimit] : []),
     92 + Math.max(0, itemCount - 1) * 62,
   );
   const requiredVerticalSpace = estimatedPopupHeight + 12;
-  const isCompactMap = mapRect.width < 640;
 
   const canOpenAboveMarker = spaceAbove >= requiredVerticalSpace;
   const canOpenBelowMarker = spaceBelow >= requiredVerticalSpace;
@@ -792,34 +907,80 @@ function ensurePopupVisibility(
   popup: maplibregl.Popup,
 ): void {
   const popupElement = popup.getElement();
-  const mapRect = map.getContainer().getBoundingClientRect();
-  const popupRect = popupElement.getBoundingClientRect();
-  const edgePadding = 12;
-
-  const overflowLeft = Math.max(0, mapRect.left + edgePadding - popupRect.left);
-  const overflowRight = Math.max(
-    0,
-    popupRect.right - (mapRect.right - edgePadding),
-  );
-  const overflowTop = Math.max(0, mapRect.top + edgePadding - popupRect.top);
-  const overflowBottom = Math.max(
-    0,
-    popupRect.bottom - (window.innerHeight - edgePadding),
-  );
-
-  const panX =
-    overflowLeft > 0 ? overflowLeft : overflowRight > 0 ? -overflowRight : 0;
-  const panY =
-    overflowTop > 0 ? overflowTop : overflowBottom > 0 ? -overflowBottom : 0;
-
-  if (Math.abs(panX) < 1 && Math.abs(panY) < 1) {
+  if (!popupElement.isConnected) {
     return;
   }
 
-  map.panBy([panX, panY], {
-    duration: 180,
-    easing: (value) => value,
-  });
+  const mapRect = map.getContainer().getBoundingClientRect();
+  const isCompactMap = mapRect.width < 640;
+  const contentElement = popupElement.querySelector(".maplibregl-popup-content");
+  popupElement.style.translate = "";
+  if (contentElement instanceof HTMLElement) {
+    contentElement.style.translate = "";
+  }
+
+  if (!isCompactMap) {
+    const scrollElement = popupElement.querySelector(
+      ".company-map-popup-scroll",
+    );
+    if (scrollElement instanceof HTMLElement) {
+      scrollElement.style.maxHeight = "";
+    }
+
+    const popupRect = popupElement.getBoundingClientRect();
+    const edgePadding = 12;
+
+    const overflowLeft = Math.max(
+      0,
+      mapRect.left + edgePadding - popupRect.left,
+    );
+    const overflowRight = Math.max(
+      0,
+      popupRect.right - (mapRect.right - edgePadding),
+    );
+    const overflowTop = Math.max(0, mapRect.top + edgePadding - popupRect.top);
+    const overflowBottom = Math.max(
+      0,
+      popupRect.bottom - (window.innerHeight - edgePadding),
+    );
+
+    const panX =
+      overflowLeft > 0 ? overflowLeft : overflowRight > 0 ? -overflowRight : 0;
+    const panY =
+      overflowTop > 0 ? overflowTop : overflowBottom > 0 ? -overflowBottom : 0;
+
+    if (Math.abs(panX) < 1 && Math.abs(panY) < 1) {
+      return;
+    }
+
+    map.panBy([panX, panY], {
+      duration: 180,
+      easing: (value) => value,
+    });
+    return;
+  }
+
+  if (!(contentElement instanceof HTMLElement)) {
+    return;
+  }
+
+  const safeArea = getPopupSafeArea(map);
+  const scrollElement = popupElement.querySelector(".company-map-popup-scroll");
+  if (scrollElement instanceof HTMLElement) {
+    const maxPopupScrollHeight = Math.max(
+      132,
+      Math.min(288, safeArea.height - 28),
+    );
+    scrollElement.style.maxHeight = `${maxPopupScrollHeight}px`;
+  }
+
+  const contentRect = contentElement.getBoundingClientRect();
+  const targetLeft = Math.min(
+    Math.max(contentRect.left, safeArea.left),
+    Math.max(safeArea.left, safeArea.right - contentRect.width),
+  );
+  const translateX = Math.round(targetLeft - contentRect.left);
+  contentElement.style.translate = `${translateX}px 0`;
 }
 
 function setSourceData(
@@ -1288,6 +1449,45 @@ const ListingsMap = memo(function ListingsMap({
           return;
         }
 
+        const [lng, lat] = (feature.geometry as GeoJSON.Point).coordinates as [
+          number,
+          number,
+        ];
+        const popupContext = popupRenderContextRef.current;
+        const loadingPopupPlacement = resolvePopupPlacement(
+          map,
+          clickPoint,
+          Number.isFinite(clusterListingsCount)
+            ? Math.max(
+                1,
+                Math.min(clusterListingsCount, MAX_POPUP_VISIBLE_ITEMS),
+              )
+            : 1,
+        );
+        popupRef.current?.remove();
+        const loadingPopup = new maplibregl.Popup({
+          offset: loadingPopupPlacement.offset,
+          anchor: loadingPopupPlacement.anchor,
+          className: "company-map-popup",
+          closeButton: false,
+          closeOnClick: true,
+          maxWidth: MAP_POPUP_MAX_WIDTH_CSS,
+        })
+          .setLngLat([lng, lat])
+          .setDOMContent(
+            buildMapPopupLoadingNode(
+              popupContext.messages,
+              Number.isFinite(clusterListingsCount) ? clusterListingsCount : 1,
+            ),
+          )
+          .addTo(map);
+        popupRef.current = loadingPopup;
+        window.requestAnimationFrame(() => {
+          if (popupRef.current === loadingPopup) {
+            ensurePopupVisibility(map, loadingPopup);
+          }
+        });
+
         void source
           .getClusterLeaves(clusterId, MAX_CLUSTER_POPUP_ITEMS, 0)
           .then(async (clusterFeatures) => {
@@ -1321,49 +1521,41 @@ const ListingsMap = memo(function ListingsMap({
               requestSeq !== popupRequestSeqRef.current ||
               grouped.length === 0
             ) {
+              if (popupRef.current === loadingPopup) {
+                popupRef.current.remove();
+                popupRef.current = null;
+              }
               return;
             }
 
-            const [lng, lat] = (feature.geometry as GeoJSON.Point)
-              .coordinates as [number, number];
-            const popupPlacement = resolvePopupPlacement(
-              map,
-              clickPoint,
-              grouped.length,
+            if (popupRef.current !== loadingPopup) {
+              return;
+            }
+
+            loadingPopup.setDOMContent(
+              buildMapPopupListNode(
+                popupContext.locale,
+                popupContext.messages,
+                grouped,
+                Number.isFinite(clusterListingsCount)
+                  ? Math.max(clusterListingsCount, grouped.length)
+                  : grouped.length,
+                popupContext.detailsHrefPrefix,
+                popupContext.detailsQueryString,
+                locationHintsByListingId,
+              ),
             );
-            popupRef.current?.remove();
-            const popupContext = popupRenderContextRef.current;
-            const nextPopup = new maplibregl.Popup({
-              offset: popupPlacement.offset,
-              anchor: popupPlacement.anchor,
-              className: "company-map-popup",
-              closeButton: false,
-              closeOnClick: true,
-              maxWidth: MAP_POPUP_MAX_WIDTH_CSS,
-            })
-              .setLngLat([lng, lat])
-              .setDOMContent(
-                buildMapPopupListNode(
-                  popupContext.locale,
-                  popupContext.messages,
-                  grouped,
-                  Number.isFinite(clusterListingsCount)
-                    ? Math.max(clusterListingsCount, grouped.length)
-                    : grouped.length,
-                  popupContext.detailsHrefPrefix,
-                  popupContext.detailsQueryString,
-                  locationHintsByListingId,
-                ),
-              )
-              .addTo(map);
-            popupRef.current = nextPopup;
             window.requestAnimationFrame(() => {
-              if (popupRef.current === nextPopup) {
-                ensurePopupVisibility(map, nextPopup);
+              if (popupRef.current === loadingPopup) {
+                ensurePopupVisibility(map, loadingPopup);
               }
             });
           })
           .catch(() => {
+            if (popupRef.current === loadingPopup) {
+              popupRef.current.remove();
+              popupRef.current = null;
+            }
             // Ignore cluster popup errors and keep map interaction responsive.
           });
       };
@@ -1449,48 +1641,73 @@ const ListingsMap = memo(function ListingsMap({
           });
         }
 
+        const popupPlacement = resolvePopupPlacement(
+          map,
+          event.point,
+          Math.max(1, groupedIds.length),
+        );
+        popupRef.current?.remove();
+        const popupContext = popupRenderContextRef.current;
+        const loadingPopup = new maplibregl.Popup({
+          offset: popupPlacement.offset,
+          anchor: popupPlacement.anchor,
+          className: "company-map-popup",
+          closeButton: false,
+          closeOnClick: true,
+          maxWidth: MAP_POPUP_MAX_WIDTH_CSS,
+        })
+          .setLngLat([clickedLng, clickedLat])
+          .setDOMContent(
+            buildMapPopupLoadingNode(
+              popupContext.messages,
+              Math.max(1, groupedIds.length),
+            ),
+          )
+          .addTo(map);
+        popupRef.current = loadingPopup;
+        window.requestAnimationFrame(() => {
+          if (popupRef.current === loadingPopup) {
+            ensurePopupVisibility(map, loadingPopup);
+          }
+        });
+
         void loadPopupDetailsByIds(groupedIds).then((details) => {
           if (
             requestSeq !== popupRequestSeqRef.current ||
             details.length === 0
           ) {
+            if (popupRef.current === loadingPopup) {
+              popupRef.current.remove();
+              popupRef.current = null;
+            }
             return;
           }
 
-          const popupPlacement = resolvePopupPlacement(
-            map,
-            event.point,
-            details.length,
+          if (popupRef.current !== loadingPopup) {
+            return;
+          }
+
+          loadingPopup.setDOMContent(
+            buildMapPopupListNode(
+              popupContext.locale,
+              popupContext.messages,
+              details,
+              groupedIds.length,
+              popupContext.detailsHrefPrefix,
+              popupContext.detailsQueryString,
+              locationHintsByListingId,
+            ),
           );
-          popupRef.current?.remove();
-          const popupContext = popupRenderContextRef.current;
-          const nextPopup = new maplibregl.Popup({
-            offset: popupPlacement.offset,
-            anchor: popupPlacement.anchor,
-            className: "company-map-popup",
-            closeButton: false,
-            closeOnClick: true,
-            maxWidth: MAP_POPUP_MAX_WIDTH_CSS,
-          })
-            .setLngLat([clickedLng, clickedLat])
-            .setDOMContent(
-              buildMapPopupListNode(
-                popupContext.locale,
-                popupContext.messages,
-                details,
-                groupedIds.length,
-                popupContext.detailsHrefPrefix,
-                popupContext.detailsQueryString,
-                locationHintsByListingId,
-              ),
-            )
-            .addTo(map);
-          popupRef.current = nextPopup;
           window.requestAnimationFrame(() => {
-            if (popupRef.current === nextPopup) {
-              ensurePopupVisibility(map, nextPopup);
+            if (popupRef.current === loadingPopup) {
+              ensurePopupVisibility(map, loadingPopup);
             }
           });
+        }).catch(() => {
+          if (popupRef.current === loadingPopup) {
+            popupRef.current.remove();
+            popupRef.current = null;
+          }
         });
       };
 
@@ -3099,7 +3316,7 @@ export function ContainerListingsBoard({
                 aria-controls="containers-listings-mobile-map-panel"
                 aria-label={messages.map.expandMap}
                 title={messages.map.expandMap}
-                className="pointer-events-auto inline-flex h-11 w-11 items-center justify-center rounded-full border border-[#9db9d8] bg-white/92 text-[#355a82] shadow-[0_12px_26px_-18px_rgba(15,23,42,0.55)] backdrop-blur-sm transition hover:border-[#7ea6cf] hover:bg-white"
+                className="pointer-events-auto inline-flex h-11 items-center justify-center gap-2 rounded-full border border-[#9db9d8] bg-white/92 px-3.5 text-[#355a82] shadow-[0_12px_26px_-18px_rgba(15,23,42,0.55)] backdrop-blur-sm transition hover:border-[#7ea6cf] hover:bg-white"
               >
                 <svg
                   viewBox="0 0 24 24"
@@ -3119,6 +3336,9 @@ export function ContainerListingsBoard({
                     strokeWidth="1.7"
                   />
                 </svg>
+                <span className="text-xs font-semibold">
+                  {messages.map.mobileMapLabel}
+                </span>
               </button>
             </div>
           </div>

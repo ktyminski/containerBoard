@@ -2155,6 +2155,7 @@
       "copyError": "Der Link konnte nicht kopiert werden.",
       "collapseMap": "Karte einklappen",
       "expandMap": "Karte ausklappen",
+      "mobileMapLabel": "Karte",
       "closePreview": "Vorschau schliessen",
       "backToList": "Zuruck zur Liste",
       "loadingDetailsAria": "Lade Anzeigendetails",

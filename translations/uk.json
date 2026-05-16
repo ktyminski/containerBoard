@@ -2154,6 +2154,7 @@
       "copyError": "Не вдалося скопіювати посилання.",
       "collapseMap": "Згорнути карту",
       "expandMap": "Розгорнути карту",
+      "mobileMapLabel": "Мапа",
       "closePreview": "Закрити перегляд оголошення",
       "backToList": "Назад до списку",
       "loadingDetailsAria": "Завантаження деталей оголошення",
