@@ -11,6 +11,7 @@ import {
 } from "@/components/container-listings-i18n";
 import type { ContainerListingItem } from "@/lib/container-listings";
 import { ContainerPhotoWithPlaceholder } from "@/components/container-photo-with-placeholder";
+import { ContainerSerialNumberOverlay } from "@/components/container-serial-number-overlay";
 import { CopyLinkIcon } from "@/components/icons/copy-link-icon";
 import {
   PRICE_CURRENCY_LABEL,
@@ -923,14 +924,7 @@ const ContainerListingResultCard = memo(function ContainerListingResultCard({
               sizes="(max-width: 640px) 100vw, 176px"
               priority={shouldPrioritizeImage}
             />
-            {containerSerialNumber ? (
-              <span
-                className="absolute left-1.5 top-1.5 max-w-[calc(100%-0.75rem)] truncate rounded-md border border-neutral-200 bg-white/88 px-2 py-1 text-[10px] font-semibold uppercase tracking-[0.04em] text-neutral-700 shadow-sm backdrop-blur"
-                title={containerSerialNumber}
-              >
-                {containerSerialNumber}
-              </span>
-            ) : null}
+            <ContainerSerialNumberOverlay value={containerSerialNumber} />
             {additionalPhotoCount > 0 ? (
               <span
                 className="absolute bottom-1.5 right-1.5 inline-flex h-6 min-w-8 items-center justify-center gap-1 rounded-md border border-neutral-300 bg-white/95 px-1.5 text-[11px] font-semibold text-neutral-900 shadow-sm backdrop-blur"

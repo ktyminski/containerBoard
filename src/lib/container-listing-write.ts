@@ -107,6 +107,7 @@ function buildListingResolvedOptionalValues(
 export function buildListingPersistenceFields(
   input: ListingWritePersistenceInput,
 ) {
+  const isBuyerRequest = input.type === "buy";
   const {
     primaryLocation,
     resolvedPriceAmount,
@@ -133,16 +134,22 @@ export function buildListingPersistenceFields(
       : input.availableFromApproximate,
     availableFrom: input.resolvedAvailableFrom,
     priceNegotiable: resolvedPriceNegotiable,
-    logisticsTransportAvailable: input.logisticsTransportAvailable,
-    logisticsTransportIncluded:
-      input.logisticsTransportAvailable && input.logisticsTransportIncluded,
-    logisticsUnloadingAvailable: input.logisticsUnloadingAvailable,
-    logisticsUnloadingIncluded:
-      input.logisticsUnloadingAvailable && input.logisticsUnloadingIncluded,
-    hasCscPlate: input.hasCscPlate,
-    hasCscCertification: input.hasCscCertification,
+    logisticsTransportAvailable: isBuyerRequest
+      ? false
+      : input.logisticsTransportAvailable,
+    logisticsTransportIncluded: isBuyerRequest
+      ? false
+      : input.logisticsTransportAvailable && input.logisticsTransportIncluded,
+    logisticsUnloadingAvailable: isBuyerRequest
+      ? false
+      : input.logisticsUnloadingAvailable,
+    logisticsUnloadingIncluded: isBuyerRequest
+      ? false
+      : input.logisticsUnloadingAvailable && input.logisticsUnloadingIncluded,
+    hasCscPlate: isBuyerRequest ? false : input.hasCscPlate,
+    hasCscCertification: isBuyerRequest ? false : input.hasCscCertification,
     hasBranding: input.hasBranding,
-    hasWarranty: input.hasWarranty,
+    hasWarranty: isBuyerRequest ? false : input.hasWarranty,
     companyName: input.companyName,
     publishedAsCompany: input.publishedAsCompany,
     contactEmail: input.contactEmail,
@@ -193,20 +200,24 @@ export function buildListingPersistenceFields(
     unsetFields.price = 1;
   }
 
-  if (input.normalizedLogisticsTransportFreeDistanceKm !== undefined) {
+  if (
+    !isBuyerRequest &&
+    input.normalizedLogisticsTransportFreeDistanceKm !== undefined
+  ) {
     setFields.logisticsTransportFreeDistanceKm =
       input.normalizedLogisticsTransportFreeDistanceKm;
   } else {
     unsetFields.logisticsTransportFreeDistanceKm = 1;
   }
 
-  if (input.normalizedLogisticsComment) {
+  if (!isBuyerRequest && input.normalizedLogisticsComment) {
     setFields.logisticsComment = input.normalizedLogisticsComment;
   } else {
     unsetFields.logisticsComment = 1;
   }
 
   if (
+    !isBuyerRequest &&
     input.normalizedCscValidToMonth !== undefined &&
     input.normalizedCscValidToYear !== undefined
   ) {
@@ -217,7 +228,7 @@ export function buildListingPersistenceFields(
     unsetFields.cscValidToYear = 1;
   }
 
-  if (input.normalizedContainerSerialNumber) {
+  if (!isBuyerRequest && input.normalizedContainerSerialNumber) {
     setFields.containerSerialNumber = input.normalizedContainerSerialNumber;
   } else {
     unsetFields.containerSerialNumber = 1;

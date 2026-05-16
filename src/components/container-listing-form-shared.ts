@@ -577,22 +577,24 @@ export function isCreateFormReadyToPublish(
     return false;
   }
 
-  const logisticsDistance = normalizeOptionalInteger(
-    values.logisticsTransportFreeDistanceKm,
-  );
-  if (
-    values.logisticsTransportIncluded &&
-    !(
-      typeof logisticsDistance === "number" &&
-      logisticsDistance > 0 &&
-      logisticsDistance <= 10_000
-    )
-  ) {
-    return false;
-  }
+  if (values.type !== "buy") {
+    const logisticsDistance = normalizeOptionalInteger(
+      values.logisticsTransportFreeDistanceKm,
+    );
+    if (
+      values.logisticsTransportIncluded &&
+      !(
+        typeof logisticsDistance === "number" &&
+        logisticsDistance > 0 &&
+        logisticsDistance <= 10_000
+      )
+    ) {
+      return false;
+    }
 
-  if ((values.logisticsComment ?? "").length > 600) {
-    return false;
+    if ((values.logisticsComment ?? "").length > 600) {
+      return false;
+    }
   }
 
   if (getRichTextLength(values.description ?? "") > 1000) {
@@ -605,22 +607,24 @@ export function isCreateFormReadyToPublish(
     return false;
   }
 
-  const monthDigits = (values.cscValidToMonth ?? "").replace(/\D+/g, "");
-  if (monthDigits.length > 2) {
-    return false;
-  }
-  const yearDigits = (values.cscValidToYear ?? "").replace(/\D+/g, "");
-  if (yearDigits.length > 4) {
-    return false;
-  }
-  const cscMonth = normalizeOptionalInteger(values.cscValidToMonth ?? "");
-  const cscYear = normalizeOptionalInteger(values.cscValidToYear ?? "");
-  if (!(cscMonth === undefined && cscYear === undefined)) {
-    if (!(typeof cscMonth === "number" && cscMonth >= 1 && cscMonth <= 12)) {
+  if (values.type !== "buy") {
+    const monthDigits = (values.cscValidToMonth ?? "").replace(/\D+/g, "");
+    if (monthDigits.length > 2) {
       return false;
     }
-    if (!(typeof cscYear === "number" && cscYear >= 1900 && cscYear <= 2100)) {
+    const yearDigits = (values.cscValidToYear ?? "").replace(/\D+/g, "");
+    if (yearDigits.length > 4) {
       return false;
+    }
+    const cscMonth = normalizeOptionalInteger(values.cscValidToMonth ?? "");
+    const cscYear = normalizeOptionalInteger(values.cscValidToYear ?? "");
+    if (!(cscMonth === undefined && cscYear === undefined)) {
+      if (!(typeof cscMonth === "number" && cscMonth >= 1 && cscMonth <= 12)) {
+        return false;
+      }
+      if (!(typeof cscYear === "number" && cscYear >= 1900 && cscYear <= 2100)) {
+        return false;
+      }
     }
   }
 

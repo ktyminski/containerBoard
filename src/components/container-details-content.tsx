@@ -813,6 +813,7 @@ export async function ContainerDetailsContent({
                     showThumbnails={false}
                     className="mt-0"
                     mainImageClassName="relative mx-auto aspect-square w-full max-w-[375px] overflow-hidden rounded-md border border-neutral-200 bg-neutral-100"
+                    serialNumber={listingItem.containerSerialNumber}
                     messages={moduleMessages.gallery}
                   />
                 </div>
@@ -826,6 +827,7 @@ export async function ContainerDetailsContent({
                   mainImagePriority
                   showThumbnails={false}
                   className="mt-0"
+                  serialNumber={listingItem.containerSerialNumber}
                   messages={moduleMessages.gallery}
                 />
               </div>

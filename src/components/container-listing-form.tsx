@@ -374,6 +374,8 @@ export function ContainerListingForm({
   ]);
 
   const canManageListingPhotos = listingTypeValue !== "buy";
+  const canManageLogisticsSection = listingTypeValue !== "buy";
+  const canManageCertificationSection = listingTypeValue !== "buy";
   const isCreatePublishReady = useMemo(() => {
     if (!isCreateMode || !canProceedFromIntentStep) {
       return false;
@@ -418,6 +420,9 @@ export function ContainerListingForm({
   }, [canProceedFromIntentStep]);
 
   useEffect(() => {
+    if (!canManageLogisticsSection) {
+      return;
+    }
     if (showTransportSection) {
       return;
     }
@@ -438,6 +443,7 @@ export function ContainerListingForm({
     errors.logisticsTransportIncluded?.message,
     errors.logisticsUnloadingAvailable?.message,
     errors.logisticsUnloadingIncluded?.message,
+    canManageLogisticsSection,
     showTransportSection,
   ]);
 
@@ -455,6 +461,9 @@ export function ContainerListingForm({
   ]);
 
   useEffect(() => {
+    if (!canManageCertificationSection) {
+      return;
+    }
     if (showCertificationSection) {
       return;
     }
@@ -464,8 +473,44 @@ export function ContainerListingForm({
   }, [
     errors.cscValidToMonth?.message,
     errors.cscValidToYear?.message,
+    canManageCertificationSection,
     showCertificationSection,
   ]);
+
+  useEffect(() => {
+    if (listingTypeValue !== "buy") {
+      return;
+    }
+
+    setShowTransportSection(false);
+    setShowCertificationSection(false);
+    clearErrors([
+      "logisticsTransportAvailable",
+      "logisticsTransportIncluded",
+      "logisticsTransportFreeDistanceKm",
+      "logisticsUnloadingAvailable",
+      "logisticsUnloadingIncluded",
+      "logisticsComment",
+      "hasCscPlate",
+      "hasCscCertification",
+      "hasWarranty",
+      "containerSerialNumber",
+      "cscValidToMonth",
+      "cscValidToYear",
+    ]);
+    setValue("logisticsTransportAvailable", false, { shouldDirty: true });
+    setValue("logisticsTransportIncluded", false, { shouldDirty: true });
+    setValue("logisticsTransportFreeDistanceKm", "", { shouldDirty: true });
+    setValue("logisticsUnloadingAvailable", false, { shouldDirty: true });
+    setValue("logisticsUnloadingIncluded", false, { shouldDirty: true });
+    setValue("logisticsComment", "", { shouldDirty: true });
+    setValue("hasCscPlate", false, { shouldDirty: true });
+    setValue("hasCscCertification", false, { shouldDirty: true });
+    setValue("hasWarranty", false, { shouldDirty: true });
+    setValue("containerSerialNumber", "", { shouldDirty: true });
+    setValue("cscValidToMonth", "", { shouldDirty: true });
+    setValue("cscValidToYear", "", { shouldDirty: true });
+  }, [clearErrors, listingTypeValue, setValue]);
 
   useEffect(() => {
     if (!canProceedFromIntentStep) {
@@ -517,6 +562,7 @@ export function ContainerListingForm({
 
     const locationLat = parseCoordinate(values.locationLat);
     const locationLng = parseCoordinate(values.locationLng);
+    const isBuyListing = values.type === "buy";
 
     if (locationLat === null || locationLng === null) {
       setError("locationLat", {
@@ -673,7 +719,7 @@ export function ContainerListingForm({
 
     const hasCscValidToMonth = typeof normalizedCscValidToMonth === "number";
     const hasCscValidToYear = typeof normalizedCscValidToYear === "number";
-    if (hasCscValidToMonth !== hasCscValidToYear) {
+    if (!isBuyListing && hasCscValidToMonth !== hasCscValidToYear) {
       setError("cscValidToMonth", {
         type: "validate",
         message: messages.form.provideCscMonthYear,
@@ -687,6 +733,7 @@ export function ContainerListingForm({
     }
 
     if (
+      !isBuyListing &&
       values.logisticsTransportIncluded &&
       typeof normalizedLogisticsTransportFreeDistanceKm !== "number"
     ) {
@@ -713,7 +760,7 @@ export function ContainerListingForm({
       toast.error(messages.form.invalidContainerSize);
       return;
     }
-    const canUploadPhotosForSubmission = values.type !== "buy";
+    const canUploadPhotosForSubmission = !isBuyListing;
     if (
       canUploadPhotosForSubmission &&
       totalPhotoCount > MAX_CONTAINER_TOTAL_PHOTOS
@@ -769,29 +816,38 @@ export function ContainerListingForm({
         ? false
         : values.availableFromApproximate,
       availableFrom: values.availableNow ? undefined : values.availableFrom,
-      logisticsTransportAvailable:
-        values.logisticsTransportAvailable || values.logisticsTransportIncluded,
-      logisticsTransportIncluded:
-        values.logisticsTransportAvailable && values.logisticsTransportIncluded,
+      logisticsTransportAvailable: isBuyListing
+        ? false
+        : values.logisticsTransportAvailable || values.logisticsTransportIncluded,
+      logisticsTransportIncluded: isBuyListing
+        ? false
+        : values.logisticsTransportAvailable && values.logisticsTransportIncluded,
       logisticsTransportFreeDistanceKm:
+        !isBuyListing &&
         values.logisticsTransportIncluded &&
         typeof normalizedLogisticsTransportFreeDistanceKm === "number"
           ? normalizedLogisticsTransportFreeDistanceKm
           : undefined,
-      logisticsUnloadingAvailable:
-        values.logisticsUnloadingAvailable || values.logisticsUnloadingIncluded,
-      logisticsUnloadingIncluded:
-        values.logisticsUnloadingAvailable && values.logisticsUnloadingIncluded,
-      logisticsComment: normalizeOptionalText(values.logisticsComment),
+      logisticsUnloadingAvailable: isBuyListing
+        ? false
+        : values.logisticsUnloadingAvailable || values.logisticsUnloadingIncluded,
+      logisticsUnloadingIncluded: isBuyListing
+        ? false
+        : values.logisticsUnloadingAvailable && values.logisticsUnloadingIncluded,
+      logisticsComment: isBuyListing
+        ? undefined
+        : normalizeOptionalText(values.logisticsComment),
       pricing,
       priceAmount: normalizedPriceAmount,
       priceNegotiable: values.priceNegotiable,
-      hasCscPlate: values.hasCscPlate,
-      hasCscCertification: values.hasCscCertification,
+      hasCscPlate: isBuyListing ? false : values.hasCscPlate,
+      hasCscCertification: isBuyListing ? false : values.hasCscCertification,
       hasBranding: values.hasBranding,
-      hasWarranty: values.hasWarranty,
-      containerSerialNumber: normalizeOptionalText(values.containerSerialNumber),
-      ...(hasCscValidToMonth && hasCscValidToYear
+      hasWarranty: isBuyListing ? false : values.hasWarranty,
+      containerSerialNumber: isBuyListing
+        ? undefined
+        : normalizeOptionalText(values.containerSerialNumber),
+      ...(!isBuyListing && hasCscValidToMonth && hasCscValidToYear
         ? {
             cscValidToMonth: normalizedCscValidToMonth,
             cscValidToYear: normalizedCscValidToYear,
@@ -1603,7 +1659,7 @@ export function ContainerListingForm({
             </FormSection>
           ) : null}
 
-          {showTransportSection ? (
+          {canManageLogisticsSection && showTransportSection ? (
             <FormSection title={messages.form.logisticsSectionTitle}>
               <div className="grid gap-2 sm:grid-cols-2">
                 <label className="flex w-full min-w-0 items-center gap-2 rounded-md border border-neutral-700 bg-neutral-900/70 px-3 py-2 text-sm text-neutral-200">
@@ -1800,7 +1856,7 @@ export function ContainerListingForm({
             </FormSection>
           ) : null}
 
-          {showCertificationSection ? (
+          {canManageCertificationSection && showCertificationSection ? (
             <FormSection title={messages.form.certificationSectionTitle}>
               <label className="grid max-w-md gap-1 text-sm">
                 <span className="text-neutral-700">
@@ -2052,8 +2108,8 @@ export function ContainerListingForm({
           ) : null}
 
           {!showDescriptionSection ||
-          !showTransportSection ||
-          !showCertificationSection ||
+          (canManageLogisticsSection && !showTransportSection) ||
+          (canManageCertificationSection && !showCertificationSection) ||
           (canManageListingPhotos && !showAdditionalPhotosSection) ? (
             <section className="mx-auto grid w-full max-w-3xl gap-2 sm:grid-cols-2">
               {!showDescriptionSection ? (
@@ -2070,7 +2126,7 @@ export function ContainerListingForm({
                   <span>{messages.form.addDescriptionSection}</span>
                 </button>
               ) : null}
-              {!showTransportSection ? (
+              {canManageLogisticsSection && !showTransportSection ? (
                 <button
                   type="button"
                   onClick={() => {
@@ -2084,7 +2140,7 @@ export function ContainerListingForm({
                   <span>{messages.form.addTransportSection}</span>
                 </button>
               ) : null}
-              {!showCertificationSection ? (
+              {canManageCertificationSection && !showCertificationSection ? (
                 <button
                   type="button"
                   onClick={() => {

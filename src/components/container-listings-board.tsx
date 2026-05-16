@@ -152,6 +152,7 @@ const MAP_DETAIL_POINT_COUNT_LAYER_ID = "containers-list-detail-point-count";
 const MAX_CLUSTER_POPUP_ITEMS = 24;
 const MAX_POPUP_VISIBLE_ITEMS = 20;
 const MAP_POPUP_THUMB_WIDTH = 64;
+const MAP_POPUP_MAX_WIDTH_CSS = "min(340px, calc(100vw - 24px))";
 const MAP_CLUSTER_MAX_ZOOM = 18;
 const DEFAULT_MAP_CENTER: [number, number] = [19.1451, 51.9194];
 const LIST_PAGE_SIZE = 20;
@@ -750,12 +751,16 @@ function resolvePopupPlacement(
   const spaceBelow = window.innerHeight - markerViewportY - safeBottomEdge;
   const spaceLeft = markerViewportX - mapRect.left - safeHorizontalEdge;
   const spaceRight = mapRect.right - markerViewportX - safeHorizontalEdge;
-  const estimatedPopupWidth = 336;
+  const estimatedPopupWidth = Math.min(
+    336,
+    Math.max(240, mapRect.width - safeHorizontalEdge * 2),
+  );
   const estimatedPopupHeight = Math.min(
     320,
     92 + Math.max(0, itemCount - 1) * 62,
   );
   const requiredVerticalSpace = estimatedPopupHeight + 12;
+  const isCompactMap = mapRect.width < 640;
 
   const canOpenAboveMarker = spaceAbove >= requiredVerticalSpace;
   const canOpenBelowMarker = spaceBelow >= requiredVerticalSpace;
@@ -765,7 +770,9 @@ function resolvePopupPlacement(
       : "top";
 
   const canCenterHorizontally =
-    spaceLeft >= estimatedPopupWidth && spaceRight >= estimatedPopupWidth;
+    isCompactMap
+      ? spaceLeft >= estimatedPopupWidth / 2 && spaceRight >= estimatedPopupWidth / 2
+      : spaceLeft >= estimatedPopupWidth && spaceRight >= estimatedPopupWidth;
   if (canCenterHorizontally) {
     return { anchor: verticalAnchor, offset: 8 };
   }
@@ -1332,7 +1339,7 @@ const ListingsMap = memo(function ListingsMap({
               className: "company-map-popup",
               closeButton: false,
               closeOnClick: true,
-              maxWidth: "340px",
+              maxWidth: MAP_POPUP_MAX_WIDTH_CSS,
             })
               .setLngLat([lng, lat])
               .setDOMContent(
@@ -1463,7 +1470,7 @@ const ListingsMap = memo(function ListingsMap({
             className: "company-map-popup",
             closeButton: false,
             closeOnClick: true,
-            maxWidth: "340px",
+            maxWidth: MAP_POPUP_MAX_WIDTH_CSS,
           })
             .setLngLat([clickedLng, clickedLat])
             .setDOMContent(

@@ -14,6 +14,7 @@ import {
   toIntlLocale,
 } from "@/components/container-modules-i18n";
 import { ContainerPhotoWithPlaceholder } from "@/components/container-photo-with-placeholder";
+import { ContainerSerialNumberOverlay } from "@/components/container-serial-number-overlay";
 import { CopyLinkIcon } from "@/components/icons/copy-link-icon";
 import { useToast } from "@/components/toast-provider";
 import { SelectWithChevron } from "@/components/ui/select-with-chevron";
@@ -200,6 +201,8 @@ const MyContainerListingRow = memo(function MyContainerListingRow({
   onOpenRefreshConfirmationModal,
   onOpenDeleteConfirmationModal,
 }: MyContainerListingRowProps) {
+  const containerSerialNumber = item.containerSerialNumber?.trim();
+
   return (
     <li
       className="rounded-md border border-neutral-200 bg-white p-4 shadow-sm transition-colors duration-150 hover:border-sky-100 hover:bg-sky-50/60"
@@ -218,6 +221,7 @@ const MyContainerListingRow = memo(function MyContainerListingRow({
               }
               sizes="200px"
             />
+            <ContainerSerialNumberOverlay value={containerSerialNumber} />
           </div>
         </div>
 

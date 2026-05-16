@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { ContainerPhotoWithPlaceholder } from "@/components/container-photo-with-placeholder";
+import { ContainerSerialNumberOverlay } from "@/components/container-serial-number-overlay";
 import type { ContainerListingItem } from "@/lib/container-listings";
 import {
   getContainerConditionLabel,
@@ -309,6 +310,7 @@ export function SeoContainerSalePage({
                           }
                           sizes="(max-width: 640px) 100vw, 176px"
                         />
+                        <ContainerSerialNumberOverlay value={item.containerSerialNumber} />
                         {additionalPhotoCount > 0 ? (
                           <span
                             className="absolute bottom-1.5 right-1.5 inline-flex h-6 min-w-8 items-center justify-center gap-1 rounded-md border border-neutral-300 bg-white/95 px-1.5 text-[11px] font-semibold text-neutral-900 shadow-sm backdrop-blur"

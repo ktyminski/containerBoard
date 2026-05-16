@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
 import { ContainerPhotoWithPlaceholder } from "@/components/container-photo-with-placeholder";
+import { ContainerSerialNumberOverlay } from "@/components/container-serial-number-overlay";
 import type { ContainerModuleMessages } from "@/components/container-modules-i18n";
 import { formatTemplate } from "@/lib/i18n";
 
@@ -18,6 +19,7 @@ type ContainerDetailsGalleryProps = {
   thumbnailButtonClassName?: string;
   previewImages?: string[];
   previewIndexOffset?: number;
+  serialNumber?: string | null;
   messages: ContainerModuleMessages["gallery"];
 };
 
@@ -33,6 +35,7 @@ export function ContainerDetailsGallery({
   thumbnailButtonClassName,
   previewImages,
   previewIndexOffset = 0,
+  serialNumber,
   messages,
 }: ContainerDetailsGalleryProps) {
   const [selectedIndex, setSelectedIndex] = useState(0);
@@ -174,6 +177,7 @@ export function ContainerDetailsGallery({
               sizes="176px"
               priority={mainImagePriority}
             />
+            <ContainerSerialNumberOverlay value={serialNumber} />
           </button>
         ) : null}
 

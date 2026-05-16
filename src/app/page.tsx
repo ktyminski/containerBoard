@@ -4,6 +4,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { cookies } from "next/headers";
 import { ContainerPhotoWithPlaceholder } from "@/components/container-photo-with-placeholder";
+import { ContainerSerialNumberOverlay } from "@/components/container-serial-number-overlay";
 import type { ContainerListingsMessages } from "@/components/container-listings-i18n";
 import { SESSION_COOKIE_NAME } from "@/lib/auth-session";
 import {
@@ -425,6 +426,7 @@ export default async function LandingPage() {
                           }
                           sizes="(max-width: 640px) 96px, 112px"
                         />
+                        <ContainerSerialNumberOverlay value={item.containerSerialNumber} />
                       </div>
 
                       <div className="min-w-0 flex flex-1 flex-col justify-between">
