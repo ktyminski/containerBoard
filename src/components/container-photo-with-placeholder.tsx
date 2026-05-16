@@ -7,6 +7,8 @@ type ContainerPhotoWithPlaceholderProps = ImageProps & {
   placeholderClassName?: string;
 };
 
+const loadedImageSourceKeys = new Set<string>();
+
 function getSourceKey(src: ImageProps["src"]): string {
   if (typeof src === "string") {
     return src;
@@ -28,7 +30,8 @@ export function ContainerPhotoWithPlaceholder({
 }: ContainerPhotoWithPlaceholderProps) {
   const [loadedSourceKey, setLoadedSourceKey] = useState<string | null>(null);
   const sourceKey = getSourceKey(src);
-  const isLoaded = loadedSourceKey === sourceKey;
+  const isLoaded =
+    loadedSourceKey === sourceKey || loadedImageSourceKeys.has(sourceKey);
 
   const imageClassName = `${className ?? ""} transition-opacity duration-200 ${
     isLoaded ? "opacity-100" : "opacity-0"
@@ -51,10 +54,12 @@ export function ContainerPhotoWithPlaceholder({
         alt={alt}
         className={imageClassName}
         onLoad={(event: SyntheticEvent<HTMLImageElement, Event>) => {
+          loadedImageSourceKeys.add(sourceKey);
           setLoadedSourceKey(sourceKey);
           onLoad?.(event);
         }}
         onError={(event: SyntheticEvent<HTMLImageElement, Event>) => {
+          loadedImageSourceKeys.add(sourceKey);
           setLoadedSourceKey(sourceKey);
           onError?.(event);
         }}

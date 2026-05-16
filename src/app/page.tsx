@@ -60,26 +60,21 @@ export async function generateMetadata(): Promise<Metadata> {
 
 const getCachedLatestListings = unstable_cache(
   async (limit: number): Promise<ContainerListingItem[]> => {
-    try {
-      await ensureContainerListingsIndexes();
-      await expireContainerListingsIfNeeded();
+    await ensureContainerListingsIndexes();
+    await expireContainerListingsIfNeeded();
 
-      const now = new Date();
-      const listings = await getContainerListingsCollection();
-      const filter = {
-        ...buildContainerListingsFilter({
-          includeOnlyPublic: true,
-          now,
-        }),
-        type: { $in: ["sell", "rent"] as const },
-      };
+    const now = new Date();
+    const listings = await getContainerListingsCollection();
+    const filter = {
+      ...buildContainerListingsFilter({
+        includeOnlyPublic: true,
+        now,
+      }),
+      type: { $in: ["sell", "rent"] as const },
+    };
 
-      const rows = await listings.find(filter).sort({ createdAt: -1 }).limit(limit).toArray();
-      return rows.map(mapContainerListingToItem);
-    } catch (error) {
-      logError("Failed to load latest listings on landing page", { error });
-      return [];
-    }
+    const rows = await listings.find(filter).sort({ createdAt: -1 }).limit(limit).toArray();
+    return rows.map(mapContainerListingToItem);
   },
   ["landing-latest-listings"],
   { revalidate: 300 },
