@@ -371,6 +371,11 @@ type ListingSeoPrice = {
   currency: string | null;
 };
 
+type ContainerListingOgOverlay = {
+  containerLabel: string;
+  priceLabel: string | null;
+};
+
 function formatCurrencyValue(value: number, currency: string, locale: AppLocale): string {
   const rounded = Math.round(value);
   if (currency === "PLN") {
@@ -379,35 +384,50 @@ function formatCurrencyValue(value: number, currency: string, locale: AppLocale)
   return `${rounded.toLocaleString(locale)} ${currency}`;
 }
 
+function getGrossAmountForOriginalCurrency(item: ContainerListingItem): number | null {
+  const currency = item.pricing?.original.currency;
+  if (!currency) {
+    return null;
+  }
+  if (currency === "PLN") {
+    return item.pricing?.normalized.gross.amountPln ?? null;
+  }
+  if (currency === "EUR") {
+    return item.pricing?.normalized.gross.amountEur ?? null;
+  }
+  return item.pricing?.normalized.gross.amountUsd ?? null;
+}
+
+function getGrossPriceSuffix(locale: AppLocale): string {
+  if (locale === "pl" || locale === "de" || locale === "uk") {
+    return "brutto";
+  }
+  return "gross";
+}
+
 function getListingSeoPrice(item: ContainerListingItem, locale: AppLocale): ListingSeoPrice {
-  if (
-    typeof item.pricing?.original.amount === "number" &&
-    Number.isFinite(item.pricing.original.amount) &&
-    item.pricing.original.currency
-  ) {
-    const formatted = formatCurrencyValue(item.pricing.original.amount, item.pricing.original.currency, locale);
-    const taxModeSuffix =
-      item.pricing.original.taxMode === "gross"
-        ? locale === "pl"
-          ? " brutto"
-          : " gross"
-        : locale === "pl"
-          ? " netto"
-          : " net";
+  const grossAmount = getGrossAmountForOriginalCurrency(item);
+  if (grossAmount !== null && item.pricing?.original.currency) {
+    const formatted = formatCurrencyValue(
+      grossAmount,
+      item.pricing.original.currency,
+      locale,
+    );
     return {
       titleLabel: formatted,
-      descriptionLabel: `${formatted}${taxModeSuffix}`,
-      numericPrice: item.pricing.original.amount,
+      descriptionLabel: `${formatted} ${getGrossPriceSuffix(locale)}`,
+      numericPrice: grossAmount,
       currency: item.pricing.original.currency,
     };
   }
 
   if (typeof item.priceAmount === "number" && Number.isFinite(item.priceAmount)) {
-    const formatted = formatCurrencyValue(item.priceAmount, "PLN", locale);
+    const legacyGrossAmount = Math.round(item.priceAmount * 1.23);
+    const formatted = formatCurrencyValue(legacyGrossAmount, "PLN", locale);
     return {
       titleLabel: formatted,
-      descriptionLabel: locale === "pl" ? `${formatted} netto` : `${formatted} net`,
-      numericPrice: item.priceAmount,
+      descriptionLabel: `${formatted} ${getGrossPriceSuffix(locale)}`,
+      numericPrice: legacyGrossAmount,
       currency: "PLN",
     };
   }
@@ -426,6 +446,22 @@ function getListingSeoPrice(item: ContainerListingItem, locale: AppLocale): List
     descriptionLabel: null,
     numericPrice: null,
     currency: null,
+  };
+}
+
+export function getContainerListingOgOverlay(
+  item: ContainerListingItem,
+  locale: AppLocale,
+): ContainerListingOgOverlay {
+  const sizeLabel = getContainerSeoSizeLabel(item);
+  const typeLabel = getTypeLabel(locale, item.container.type);
+  const containerLabel =
+    item.container.type === "dry" ? sizeLabel : `${sizeLabel} ${typeLabel}`;
+  const price = getListingSeoPrice(item, locale);
+
+  return {
+    containerLabel,
+    priceLabel: price.descriptionLabel,
   };
 }
 
@@ -897,6 +933,19 @@ function getPrimaryImageUrl(item: ContainerListingItem): string | null {
   return null;
 }
 
+export function getContainerListingOgImageUrl(
+  item: ContainerListingItem,
+  locale: AppLocale,
+): string {
+  const params = new URLSearchParams({
+    lang: locale,
+  });
+  if (item.updatedAt) {
+    params.set("v", item.updatedAt);
+  }
+  return getAbsoluteUrl(`/api/og/containers/${item.id}?${params.toString()}`);
+}
+
 function getStructuredDataAvailability(item: ContainerListingItem): string {
   if (item.status !== LISTING_STATUS.ACTIVE) {
     return "https://schema.org/Discontinued";
@@ -921,7 +970,7 @@ export function buildContainerListingMetadata(input: {
 }): Metadata {
   const title = getContainerListingSeoTitle(input.item, input.locale);
   const description = getContainerListingSeoDescription(input.item, input.locale);
-  const imageUrl = getPrimaryImageUrl(input.item);
+  const imageUrl = getContainerListingOgImageUrl(input.item, input.locale);
   const base = buildPageMetadata({
     path: input.path,
     locale: input.locale,
@@ -930,8 +979,14 @@ export function buildContainerListingMetadata(input: {
     type: "article",
     localePrefix: input.localePrefix,
   });
-  const ogImages = imageUrl ? [{ url: imageUrl }] : base.openGraph?.images;
-  const twitterImages = imageUrl ? [imageUrl] : base.twitter?.images;
+  const ogImages = [
+    {
+      url: imageUrl,
+      width: 1200,
+      height: 630,
+    },
+  ];
+  const twitterImages = [imageUrl];
 
   return {
     ...base,

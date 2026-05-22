@@ -4,6 +4,8 @@ import { redirect } from "next/navigation";
 import { ContainerListingsBoard } from "@/components/container-listings-board";
 import { SESSION_COOKIE_NAME } from "@/lib/auth-session";
 import type { ListingKind } from "@/components/container-listings-shared";
+import { getCompaniesCollection } from "@/lib/companies";
+import { buildContainerListingsFilterMetadata } from "@/lib/container-listings-filter-seo";
 import { getPublicContainerListingsInitialData } from "@/lib/container-listings-public-query";
 import { isTransportCompareFeatureEnabled } from "@/lib/feature-flags";
 import { getMessages, LOCALE_COOKIE_NAME, resolveLocale } from "@/lib/i18n";
@@ -11,22 +13,72 @@ import { buildPageMetadata } from "@/lib/seo";
 import { logError } from "@/lib/server-logger";
 import { getTurnstileSiteKey } from "@/lib/turnstile";
 
-export async function generateMetadata(): Promise<Metadata> {
-  const cookieStore = await cookies();
-  const locale = resolveLocale(cookieStore.get(LOCALE_COOKIE_NAME)?.value);
-  const messages = getMessages(locale).listPage;
-
-  return buildPageMetadata({
-    path: "/list",
-    locale,
-    title: messages.metaTitle,
-    description: messages.metaDescription,
-  });
-}
-
 type ListPageProps = {
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 };
+
+async function getCompanySeoContext(slug: string | undefined): Promise<
+  | {
+      slug: string;
+      name: string;
+    }
+  | undefined
+> {
+  const normalizedSlug = slug?.trim();
+  if (!normalizedSlug) {
+    return undefined;
+  }
+
+  const companies = await getCompaniesCollection();
+  const company = await companies.findOne(
+    {
+      slug: normalizedSlug,
+      isBlocked: { $ne: true },
+    },
+    {
+      projection: {
+        slug: 1,
+        name: 1,
+      },
+    },
+  );
+  const resolvedSlug = company?.slug?.trim();
+  const resolvedName = company?.name?.trim();
+  if (!resolvedSlug || !resolvedName) {
+    return undefined;
+  }
+
+  return {
+    slug: resolvedSlug,
+    name: resolvedName,
+  };
+}
+
+export async function generateMetadata({
+  searchParams,
+}: ListPageProps): Promise<Metadata> {
+  const params = await searchParams;
+  const cookieStore = await cookies();
+  const locale = resolveLocale(cookieStore.get(LOCALE_COOKIE_NAME)?.value);
+  const allMessages = getMessages(locale);
+  const companySeoContext = await getCompanySeoContext(
+    resolveCompanySlug(params.company ?? params.companySlug),
+  );
+  const filteredMetadata = buildContainerListingsFilterMetadata({
+    searchParams: params,
+    locale,
+    listMessages: allMessages.listPage,
+    containerMessages: allMessages.containerListings,
+    company: companySeoContext,
+  });
+
+  return buildPageMetadata({
+    path: filteredMetadata.path,
+    locale,
+    title: filteredMetadata.title,
+    description: filteredMetadata.description,
+  });
+}
 
 function resolveKind(
   value: string | string[] | undefined,
@@ -81,7 +133,7 @@ export default async function ListPage({ searchParams }: ListPageProps) {
   const initialKind = resolveKind(params.kind ?? params.type);
   const initialTab = resolveTab(params.tab);
   const initialMine = resolveMine(params.mine);
-  const hiddenCompanySlug = resolveCompanySlug(params.company);
+  const hiddenCompanySlug = resolveCompanySlug(params.company ?? params.companySlug);
   const initialCity = resolveTrimmedParam(params.city);
   const initialCountry = resolveTrimmedParam(params.country);
   const initialCountryCode = resolveTrimmedParam(params.countryCode)?.toUpperCase();

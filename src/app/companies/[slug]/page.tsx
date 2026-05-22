@@ -17,6 +17,7 @@ import {
 } from "@/lib/company-verification";
 import {
   getCompaniesCollection,
+  type CompanyDocument,
 } from "@/lib/companies";
 import {
   getCountryDisplayName,
@@ -35,6 +36,7 @@ import { buildPageMetadata, getAbsoluteUrl, getLocalizedCanonical } from "@/lib/
 import {
   getCompanyInitial,
 } from "@/lib/company-logo-fallback";
+import { normalizeCompanySpecializations } from "@/types/company-specialization";
 import { USER_ROLE } from "@/lib/user-roles";
 
 type CompanyDetailsPageProps = {
@@ -62,6 +64,9 @@ const COMPANY_PAGE_PROJECTION = {
   linkedinUrl: 1,
   tags: 1,
   services: 1,
+  specializations: 1,
+  communicationLanguage: 1,
+  communicationLanguages: 1,
   "logo.size": 1,
   "logo.filename": 1,
   "background.size": 1,
@@ -153,6 +158,132 @@ function buildLocalizedBranchAddress(input: {
   return input.fallbackLabel?.trim() ?? "";
 }
 
+function normalizeSeoText(value: string | undefined): string {
+  return (value ?? "").replace(/\s+/g, " ").trim();
+}
+
+function trimSeoText(value: string, maxLength: number): string {
+  const normalized = normalizeSeoText(value);
+  if (normalized.length <= maxLength) {
+    return normalized;
+  }
+
+  const slice = normalized.slice(0, maxLength - 1);
+  const lastSpace = slice.lastIndexOf(" ");
+  const cutoff = lastSpace >= Math.floor(maxLength * 0.65) ? lastSpace : slice.length;
+  return `${slice.slice(0, cutoff).trim()}...`;
+}
+
+function withCompanyMediaVersion(url: string, updatedAt: Date | undefined): string {
+  return updatedAt instanceof Date ? `${url}?v=${updatedAt.getTime()}` : url;
+}
+
+function getPrimaryCompanyLocationLabel(
+  company: Pick<CompanyDocument, "locations">,
+  locale: string,
+): string | null {
+  const location = company.locations?.[0];
+  if (!location) {
+    return null;
+  }
+
+  const countryData = getResolvedCountryData(
+    location.addressParts?.country?.trim() ?? "",
+    locale,
+  );
+  const label = buildLocalizedBranchAddress({
+    street: location.addressParts?.street,
+    houseNumber: location.addressParts?.houseNumber,
+    city: location.addressParts?.city,
+    countryLabel: countryData.countryLabel,
+    fallbackLabel: buildShortAddressLabelFromParts({
+      parts: location.addressParts,
+      fallbackLabel: location.addressText,
+    }),
+  });
+
+  return label || null;
+}
+
+function formatSeoList(values: string[], limit: number): string {
+  const normalized = values.map(normalizeSeoText).filter(Boolean);
+  const visible = normalized.slice(0, limit);
+  const remaining = normalized.length - visible.length;
+  return remaining > 0 ? `${visible.join(", ")} +${remaining}` : visible.join(", ");
+}
+
+function buildCompanySeoTitle(input: {
+  company: Pick<CompanyDocument, "name" | "locations" | "operatingArea" | "specializations">;
+  messages: ReturnType<typeof getMessages>;
+  locale: string;
+}): string {
+  const location = getPrimaryCompanyLocationLabel(input.company, input.locale);
+  const specializations = normalizeCompanySpecializations(input.company.specializations ?? [])
+    .map((specialization) => input.messages.companyCreate.specializationsOptions[specialization])
+    .filter(Boolean);
+  const operatingArea =
+    input.messages.companyCreate.operatingAreas[
+      normalizeCompanyOperatingArea(input.company.operatingArea)
+    ];
+  const context = specializations[0] ?? location ?? operatingArea;
+
+  return context ? `${input.company.name} - ${context}` : input.company.name;
+}
+
+function buildCompanySeoDescription(input: {
+  company: Pick<
+    CompanyDocument,
+    "description" | "locations" | "operatingArea" | "operatingAreaDetails" | "specializations" | "services"
+  >;
+  messages: ReturnType<typeof getMessages>;
+  locale: string;
+}): string {
+  const description = trimSeoText(input.company.description, 150);
+  const location = getPrimaryCompanyLocationLabel(input.company, input.locale);
+  const operatingArea =
+    input.messages.companyCreate.operatingAreas[
+      normalizeCompanyOperatingArea(input.company.operatingArea)
+    ];
+  const specializations = normalizeCompanySpecializations(input.company.specializations ?? [])
+    .map((specialization) => input.messages.companyCreate.specializationsOptions[specialization])
+    .filter(Boolean);
+  const serviceSummary = formatSeoList(input.company.services ?? [], 3);
+  const details = [
+    location ? `${input.messages.companyDetails.locationLabel}: ${location}` : "",
+    operatingArea
+      ? `${input.messages.companyDetails.operatingAreaLabel}: ${
+          input.company.operatingAreaDetails?.trim() || operatingArea
+        }`
+      : "",
+    specializations.length > 0
+      ? `${input.messages.companyCreate.specializationsTitle}: ${formatSeoList(specializations, 3)}`
+      : "",
+    serviceSummary ? `${input.messages.companyDetails.servicesLabel}: ${serviceSummary}` : "",
+  ].filter(Boolean);
+  const suffix = details.length > 0 ? ` ${details.join(" | ")}.` : "";
+
+  return trimSeoText(`${description}${suffix}`, 260);
+}
+
+function getCompanyOgImagePath(input: {
+  companyId: string;
+  company: Pick<CompanyDocument, "background" | "logo" | "updatedAt">;
+}): string | undefined {
+  const backgroundUrl =
+    input.company.background?.size || input.company.background?.filename
+      ? `/api/companies/${input.companyId}/background`
+      : null;
+  if (backgroundUrl) {
+    return withCompanyMediaVersion(backgroundUrl, input.company.updatedAt);
+  }
+
+  const logoUrl =
+    input.company.logo?.size || input.company.logo?.filename
+      ? `/api/companies/${input.companyId}/logo`
+      : null;
+  return logoUrl ? withCompanyMediaVersion(logoUrl, input.company.updatedAt) : undefined;
+}
+
 export async function generateMetadata({
   params,
   searchParams,
@@ -181,12 +312,25 @@ export async function generateMetadata({
   const isIndexable =
     verificationStatus === COMPANY_VERIFICATION_STATUS.VERIFIED &&
     company.isBlocked !== true;
+  const companyId = company._id.toHexString();
 
   return buildPageMetadata({
-    path: `/companies/${routeParams.slug}`,
+    path: `/companies/${company.slug}`,
     locale,
-    title: company.name,
-    description: company.description.slice(0, 160),
+    title: buildCompanySeoTitle({
+      company,
+      messages,
+      locale,
+    }),
+    description: buildCompanySeoDescription({
+      company,
+      messages,
+      locale,
+    }),
+    imagePath: getCompanyOgImagePath({
+      companyId,
+      company,
+    }),
     type: "article",
     noIndex: !isIndexable,
   });
