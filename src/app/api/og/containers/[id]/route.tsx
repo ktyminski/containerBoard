@@ -3,16 +3,17 @@ import { NextRequest, NextResponse } from "next/server";
 import { ObjectId } from "mongodb";
 import {
   expireContainerListingsIfNeeded,
+  type ContainerListingImageAsset,
   getContainerListingsCollection,
   mapContainerListingToItem,
 } from "@/lib/container-listings";
 import {
   getContainerListingOgOverlay,
-  getContainerListingSeoHeading,
+  getContainerListingOgTitle,
 } from "@/lib/container-listing-seo";
 import { LISTING_STATUS } from "@/lib/container-listing-types";
 import { resolveLocale } from "@/lib/i18n";
-import { getAbsoluteUrl } from "@/lib/seo";
+import { downloadBlobToBufferWithAccessFallback } from "@/lib/blob-storage";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -25,19 +26,97 @@ type RouteContext = {
 
 const IMAGE_WIDTH = 1200;
 const IMAGE_HEIGHT = 630;
+const OG_IMAGE_QUALITY = 82;
 
-function getAbsolutePhotoUrl(src: string | undefined): string | null {
-  const value = src?.trim();
-  if (!value) {
-    return null;
+type SharpLike = typeof import("sharp");
+
+function toBytes(value: unknown): Uint8Array | null {
+  if (Buffer.isBuffer(value)) {
+    return new Uint8Array(value);
   }
-  if (/^https?:\/\//i.test(value)) {
+  if (value instanceof Uint8Array) {
     return value;
   }
-  if (value.startsWith("/")) {
-    return getAbsoluteUrl(value);
+  if (typeof value === "object" && value !== null && "buffer" in value) {
+    const nested = (value as { buffer?: unknown }).buffer;
+    if (Buffer.isBuffer(nested)) {
+      return new Uint8Array(nested);
+    }
+    if (nested instanceof Uint8Array) {
+      return nested;
+    }
   }
   return null;
+}
+
+function normalizeImageContentType(value: string | null | undefined): string | null {
+  const normalized = value?.split(";")[0]?.trim().toLowerCase();
+  if (
+    normalized === "image/jpeg" ||
+    normalized === "image/png" ||
+    normalized === "image/webp"
+  ) {
+    return normalized;
+  }
+  return null;
+}
+
+async function resizePhotoForOg(bytes: Uint8Array): Promise<Uint8Array> {
+  const sharpModule = await import("sharp");
+  const sharp = (sharpModule.default ?? sharpModule) as unknown as SharpLike;
+  const resized = await sharp(Buffer.from(bytes), { failOn: "none" })
+    .rotate()
+    .resize({
+      width: IMAGE_WIDTH,
+      height: IMAGE_HEIGHT,
+      fit: "cover",
+      position: "attention",
+      withoutEnlargement: false,
+    })
+    .jpeg({
+      quality: OG_IMAGE_QUALITY,
+      mozjpeg: true,
+    })
+    .toBuffer();
+
+  return new Uint8Array(resized);
+}
+
+async function getPhotoDataUri(photo: ContainerListingImageAsset | undefined): Promise<string | null> {
+  if (!photo) {
+    return null;
+  }
+
+  let bytes: Uint8Array | null = null;
+  let contentType = normalizeImageContentType(photo.contentType);
+
+  if (photo.blobUrl) {
+    const downloaded = await downloadBlobToBufferWithAccessFallback({
+      urlOrPathname: photo.blobUrl,
+    });
+    if (downloaded) {
+      bytes = new Uint8Array(downloaded.buffer);
+      contentType = normalizeImageContentType(downloaded.contentType) ?? contentType;
+    }
+  }
+
+  if (!bytes) {
+    bytes = toBytes(photo.data);
+  }
+
+  if (!bytes || bytes.byteLength === 0) {
+    return null;
+  }
+
+  try {
+    const resizedBytes = await resizePhotoForOg(bytes);
+    return `data:image/jpeg;base64,${Buffer.from(resizedBytes).toString("base64")}`;
+  } catch {
+    if (!contentType) {
+      return null;
+    }
+    return `data:${contentType};base64,${Buffer.from(bytes).toString("base64")}`;
+  }
 }
 
 function getFallbackResponse(status = 404) {
@@ -69,8 +148,10 @@ export async function GET(request: NextRequest, context: RouteContext) {
   const item = mapContainerListingToItem(listing);
   const locale = resolveLocale(request.nextUrl.searchParams.get("lang"));
   const overlay = getContainerListingOgOverlay(item, locale);
-  const heading = getContainerListingSeoHeading(item, locale);
-  const photoUrl = getAbsolutePhotoUrl(item.photoUrls?.[0]);
+  const heading = getContainerListingOgTitle(item, locale);
+  const photoDataUri = await getPhotoDataUri(
+    listing.photos?.find((photo) => Boolean(photo?.blobUrl || photo?.data)),
+  );
   const priceLabel = overlay.priceLabel ?? (locale === "pl" ? "Cena na zapytanie" : "Price on request");
 
   return new ImageResponse(
@@ -86,10 +167,10 @@ export async function GET(request: NextRequest, context: RouteContext) {
           fontFamily: "Arial, Helvetica, sans-serif",
         }}
       >
-        {photoUrl ? (
+        {photoDataUri ? (
           // eslint-disable-next-line @next/next/no-img-element
           <img
-            src={photoUrl}
+            src={photoDataUri}
             alt=""
             width={IMAGE_WIDTH}
             height={IMAGE_HEIGHT}
@@ -113,7 +194,7 @@ export async function GET(request: NextRequest, context: RouteContext) {
               fontWeight: 800,
             }}
           >
-            ContainerBoard
+            containerBoard.eu
           </div>
         )}
 
@@ -218,7 +299,7 @@ export async function GET(request: NextRequest, context: RouteContext) {
                 color: "#f8fafc",
               }}
             >
-              ContainerBoard
+              Visit containerBoard.eu
             </div>
           </div>
         </div>

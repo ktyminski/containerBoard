@@ -22,7 +22,6 @@ import { SEO_CITIES } from "@/lib/seo-landings";
 import { getAbsoluteUrl, getLanguageAlternates } from "@/lib/seo";
 
 const STATIC_PATHS = [
-  "/",
   "/list",
   "/about",
   "/contact",
@@ -71,12 +70,18 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const staticEntries: MetadataRoute.Sitemap = STATIC_PATHS.map((path) => ({
     url: getAbsoluteUrl(path),
     lastModified: now,
-    changeFrequency: path === "/" || path === "/list" ? "daily" : "weekly",
-    priority: path === "/" || path === "/list" ? 1 : 0.7,
+    changeFrequency: path === "/list" ? "daily" : "weekly",
+    priority: path === "/list" ? 1 : 0.7,
     alternates: {
       languages: getLanguageAlternates(path),
     },
   }));
+  const localizedLandingEntries = getLocalizedSitemapEntries({
+    path: "/",
+    lastModified: now,
+    changeFrequency: "daily",
+    priority: 1,
+  });
 
   const transportCompanyEntries: MetadataRoute.Sitemap = [
     ...getLocalizedSitemapEntries({
@@ -241,6 +246,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     });
 
   return [
+    ...localizedLandingEntries,
     ...staticEntries,
     ...transportCompanyEntries,
     ...hubEntries,

@@ -1,11 +1,14 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { useRouter } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import {
+  getLocaleFromPathname,
+  stripLocalePrefix,
   SUPPORTED_LOCALES,
   type AppLocale,
   type AppMessages,
+  withLocalePrefix,
 } from "@/lib/i18n";
 
 type LanguageSwitcherProps = {
@@ -59,6 +62,7 @@ function FlagIcon({ locale }: { locale: AppLocale }) {
 
 export function LanguageSwitcher({ locale, messages }: LanguageSwitcherProps) {
   const router = useRouter();
+  const pathname = usePathname();
   const rootRef = useRef<HTMLDivElement | null>(null);
   const buttonRef = useRef<HTMLButtonElement | null>(null);
   const [isOpen, setIsOpen] = useState(false);
@@ -105,6 +109,11 @@ export function LanguageSwitcher({ locale, messages }: LanguageSwitcherProps) {
           body: JSON.stringify({ locale: nextLocale }),
         });
       } finally {
+        const pathLocale = getLocaleFromPathname(pathname);
+        if (pathname === "/" || pathLocale) {
+          router.replace(withLocalePrefix(stripLocalePrefix(pathname), nextLocale));
+          return;
+        }
         router.refresh();
       }
     })();

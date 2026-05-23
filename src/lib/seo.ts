@@ -13,9 +13,9 @@ export const SITE_NAME = "ContainerBoard – Buy & Sell Shipping Containers";
 
 const OPEN_GRAPH_LOCALE: Record<AppLocale, string> = {
   pl: "pl_PL",
-  en: "pl_PL",
-  de: "pl_PL",
-  uk: "pl_PL",
+  en: "en_US",
+  de: "de_DE",
+  uk: "uk_UA",
 };
 
 function normalizeSiteUrl(input: string): string {

@@ -34,13 +34,13 @@ type ListingSeoCopy = {
 
 const LISTING_SEO_COPY: Record<AppLocale, ListingSeoCopy> = {
   pl: {
-    brandName: "containerBoard",
+    brandName: "containerBoard.eu",
     containerWord: "Kontener",
     shippingContainer: "kontener morski",
-    saleFallback: "Kontener morski na sprzedaż | containerBoard",
-    rentFallback: "Kontener morski na wynajem | containerBoard",
-    buyFallback: "Kupno kontenera morskiego | containerBoard",
-    contactCta: "Skontaktuj się przez containerBoard, aby poznać szczegóły oferty i przejść do rozmowy z drugą stroną ogłoszenia.",
+    saleFallback: "Kontener morski na sprzedaż | containerBoard.eu",
+    rentFallback: "Kontener morski na wynajem | containerBoard.eu",
+    buyFallback: "Kupno kontenera morskiego | containerBoard.eu",
+    contactCta: "Odwiedź containerBoard.eu, aby poznać szczegóły oferty i przejść do rozmowy z drugą stroną ogłoszenia.",
     locationPrefix: "w lokalizacji",
     typeLabelShort: "Typ",
     conditionLabel: "Stan",
@@ -71,13 +71,13 @@ const LISTING_SEO_COPY: Record<AppLocale, ListingSeoCopy> = {
     categoryLabel: "Shipping container",
   },
   en: {
-    brandName: "containerBoard",
+    brandName: "containerBoard.eu",
     containerWord: "Container",
     shippingContainer: "shipping container",
-    saleFallback: "Shipping container for sale | containerBoard",
-    rentFallback: "Shipping container for rent | containerBoard",
-    buyFallback: "Shipping container wanted | containerBoard",
-    contactCta: "Use containerBoard to contact the advertiser and discuss the details of this listing.",
+    saleFallback: "Shipping container for sale | containerBoard.eu",
+    rentFallback: "Shipping container for rent | containerBoard.eu",
+    buyFallback: "Shipping container wanted | containerBoard.eu",
+    contactCta: "Visit containerBoard.eu to contact the advertiser and discuss the details of this listing.",
     locationPrefix: "in",
     typeLabelShort: "Type",
     conditionLabel: "Condition",
@@ -108,13 +108,13 @@ const LISTING_SEO_COPY: Record<AppLocale, ListingSeoCopy> = {
     categoryLabel: "Shipping container",
   },
   de: {
-    brandName: "containerBoard",
+    brandName: "containerBoard.eu",
     containerWord: "Container",
     shippingContainer: "Seecontainer",
-    saleFallback: "Seecontainer zum Verkauf | containerBoard",
-    rentFallback: "Seecontainer zur Miete | containerBoard",
-    buyFallback: "Seecontainer gesucht | containerBoard",
-    contactCta: "Nutzen Sie containerBoard, um den Anbieter zu kontaktieren und die Details dieses Angebots zu besprechen.",
+    saleFallback: "Seecontainer zum Verkauf | containerBoard.eu",
+    rentFallback: "Seecontainer zur Miete | containerBoard.eu",
+    buyFallback: "Seecontainer gesucht | containerBoard.eu",
+    contactCta: "Besuchen Sie containerBoard.eu, um den Anbieter zu kontaktieren und die Details dieses Angebots zu besprechen.",
     locationPrefix: "in",
     typeLabelShort: "Typ",
     conditionLabel: "Zustand",
@@ -145,13 +145,13 @@ const LISTING_SEO_COPY: Record<AppLocale, ListingSeoCopy> = {
     categoryLabel: "Shipping container",
   },
   uk: {
-    brandName: "containerBoard",
+    brandName: "containerBoard.eu",
     containerWord: "Konteiner",
     shippingContainer: "morskyi konteiner",
-    saleFallback: "Morskyi konteiner na prodazh | containerBoard",
-    rentFallback: "Morskyi konteiner v orendu | containerBoard",
-    buyFallback: "Morskyi konteiner potriben | containerBoard",
-    contactCta: "Skorystaites containerBoard, shchob zviazatysia z avtorom oholoshennia ta uzghodyty detali.",
+    saleFallback: "Morskyi konteiner na prodazh | containerBoard.eu",
+    rentFallback: "Morskyi konteiner v orendu | containerBoard.eu",
+    buyFallback: "Morskyi konteiner potriben | containerBoard.eu",
+    contactCta: "Vidvidajte containerBoard.eu, shchob zviazatysia z avtorom oholoshennia ta uzghodyty detali.",
     locationPrefix: "u lokatsii",
     typeLabelShort: "Typ",
     conditionLabel: "Stan",
@@ -364,6 +364,12 @@ function getHeadingLabel(item: ContainerListingItem, locale: AppLocale): string 
   return `${copy.containerWord} ${sizeLabel} ${typeLabel}`;
 }
 
+function getOgCompactLabel(item: ContainerListingItem, locale: AppLocale): string {
+  const sizeLabel = getContainerSeoSizeLabel(item);
+  const typeLabel = getTypeLabel(locale, item.container.type);
+  return `${sizeLabel} ${typeLabel}`;
+}
+
 type ListingSeoPrice = {
   titleLabel: string | null;
   descriptionLabel: string | null;
@@ -453,14 +459,10 @@ export function getContainerListingOgOverlay(
   item: ContainerListingItem,
   locale: AppLocale,
 ): ContainerListingOgOverlay {
-  const sizeLabel = getContainerSeoSizeLabel(item);
-  const typeLabel = getTypeLabel(locale, item.container.type);
-  const containerLabel =
-    item.container.type === "dry" ? sizeLabel : `${sizeLabel} ${typeLabel}`;
   const price = getListingSeoPrice(item, locale);
 
   return {
-    containerLabel,
+    containerLabel: getOgCompactLabel(item, locale),
     priceLabel: price.descriptionLabel,
   };
 }
@@ -845,6 +847,15 @@ export function getContainerListingSeoHeading(
   return location.city ? `${headingLabel} – ${location.city}` : headingLabel;
 }
 
+export function getContainerListingOgTitle(
+  item: ContainerListingItem,
+  locale: AppLocale,
+): string {
+  const headingLabel = getOgCompactLabel(item, locale);
+  const location = getPrimaryLocation(item);
+  return location.city ? `${headingLabel} – ${location.city}` : headingLabel;
+}
+
 export function getContainerListingSeoTitle(
   item: ContainerListingItem,
   locale: AppLocale,
@@ -969,6 +980,7 @@ export function buildContainerListingMetadata(input: {
   localePrefix?: boolean;
 }): Metadata {
   const title = getContainerListingSeoTitle(input.item, input.locale);
+  const previewTitle = getContainerListingOgTitle(input.item, input.locale);
   const description = getContainerListingSeoDescription(input.item, input.locale);
   const imageUrl = getContainerListingOgImageUrl(input.item, input.locale);
   const base = buildPageMetadata({
@@ -1000,14 +1012,14 @@ export function buildContainerListingMetadata(input: {
         : { index: false, follow: true },
     openGraph: {
       ...base.openGraph,
-      title,
+      title: previewTitle,
       description,
       images: ogImages,
     },
     twitter: {
       ...base.twitter,
       card: "summary_large_image",
-      title,
+      title: previewTitle,
       description,
       images: twitterImages,
     },
