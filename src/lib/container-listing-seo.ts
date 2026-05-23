@@ -292,20 +292,25 @@ export function getContainerSeoSizeLabel(item: ContainerListingItem): string {
 function getPrimaryLocation(item: ContainerListingItem): {
   city: string | null;
   country: string | null;
+  countryCode: string | null;
   label: string | null;
 } {
   const city = item.locationAddressParts?.city?.trim() || item.locationCity?.trim() || "";
   const country = item.locationAddressParts?.country?.trim() || item.locationCountry?.trim() || "";
+  const countryCode = item.locationCountryCode?.trim().toUpperCase() || "";
   if (city && country) {
-    return { city, country, label: `${city}, ${country}` };
+    return { city, country, countryCode: countryCode || null, label: `${city}, ${country}` };
   }
   if (city) {
-    return { city, country: country || null, label: city };
+    return { city, country: country || null, countryCode: countryCode || null, label: city };
   }
   if (country) {
-    return { city: null, country, label: country };
+    return { city: null, country, countryCode: countryCode || null, label: country };
   }
-  return { city: null, country: null, label: null };
+  if (countryCode) {
+    return { city: null, country: null, countryCode, label: countryCode };
+  }
+  return { city: null, country: null, countryCode: null, label: null };
 }
 
 function getAllLocationLabels(item: ContainerListingItem): string[] {
@@ -342,6 +347,21 @@ function getAllLocationLabels(item: ContainerListingItem): string[] {
   }
 
   return labels;
+}
+
+function getSingleLocationTitleLabel(item: ContainerListingItem): string | null {
+  if (getAllLocationLabels(item).length !== 1) {
+    return null;
+  }
+
+  const location = getPrimaryLocation(item);
+  if (location.city && location.countryCode) {
+    return `${location.city}, ${location.countryCode}`;
+  }
+  if (location.city && location.country) {
+    return `${location.city}, ${location.country}`;
+  }
+  return location.label;
 }
 
 function getSeoDisplayLabel(item: ContainerListingItem, locale: AppLocale): string {
@@ -880,8 +900,8 @@ export function getContainerListingSeoHeading(
   locale: AppLocale,
 ): string {
   const headingLabel = getHeadingLabel(item, locale);
-  const location = getPrimaryLocation(item);
-  return location.city ? `${headingLabel} – ${location.city}` : headingLabel;
+  const locationLabel = getSingleLocationTitleLabel(item);
+  return locationLabel ? `${headingLabel} – ${locationLabel}` : headingLabel;
 }
 
 export function getContainerListingOgTitle(
@@ -889,8 +909,8 @@ export function getContainerListingOgTitle(
   locale: AppLocale,
 ): string {
   const headingLabel = getOgCompactLabel(item, locale);
-  const location = getPrimaryLocation(item);
-  return location.city ? `${headingLabel} – ${location.city}` : headingLabel;
+  const locationLabel = getSingleLocationTitleLabel(item);
+  return locationLabel ? `${headingLabel} – ${locationLabel}` : headingLabel;
 }
 
 export function getContainerListingSeoTitle(
@@ -898,14 +918,14 @@ export function getContainerListingSeoTitle(
   locale: AppLocale,
 ): string {
   const copy = getListingCopy(locale);
-  const location = getPrimaryLocation(item);
+  const locationLabel = getSingleLocationTitleLabel(item);
   const price = getListingSeoPrice(item, locale);
   const segments = [
     getContainerListingSeoHeading(item, locale),
     getListingTypeTitleLabel(item.type, locale),
   ];
-  if (!location.city && location.label && !segments[0].includes(location.label)) {
-    segments.push(location.label);
+  if (locationLabel && !segments[0].includes(locationLabel)) {
+    segments.push(locationLabel);
   }
   if (price.titleLabel) {
     segments.push(price.titleLabel);
