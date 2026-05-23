@@ -26,9 +26,15 @@ type RouteContext = {
 
 const IMAGE_WIDTH = 1200;
 const IMAGE_HEIGHT = 630;
-const OG_IMAGE_QUALITY = 82;
+const OG_BACKGROUND_QUALITY = 72;
+const OG_OUTPUT_QUALITY = 76;
 
 type SharpLike = typeof import("sharp");
+
+async function getSharp(): Promise<SharpLike> {
+  const sharpModule = await import("sharp");
+  return (sharpModule.default ?? sharpModule) as unknown as SharpLike;
+}
 
 function toBytes(value: unknown): Uint8Array | null {
   if (Buffer.isBuffer(value)) {
@@ -62,8 +68,7 @@ function normalizeImageContentType(value: string | null | undefined): string | n
 }
 
 async function resizePhotoForOg(bytes: Uint8Array): Promise<Uint8Array> {
-  const sharpModule = await import("sharp");
-  const sharp = (sharpModule.default ?? sharpModule) as unknown as SharpLike;
+  const sharp = await getSharp();
   const resized = await sharp(Buffer.from(bytes), { failOn: "none" })
     .rotate()
     .resize({
@@ -74,7 +79,7 @@ async function resizePhotoForOg(bytes: Uint8Array): Promise<Uint8Array> {
       withoutEnlargement: false,
     })
     .jpeg({
-      quality: OG_IMAGE_QUALITY,
+      quality: OG_BACKGROUND_QUALITY,
       mozjpeg: true,
     })
     .toBuffer();
@@ -119,6 +124,28 @@ async function getPhotoDataUri(photo: ContainerListingImageAsset | undefined): P
   }
 }
 
+async function compressImageResponseToJpeg(response: ImageResponse): Promise<NextResponse> {
+  const sharp = await getSharp();
+  const pngBuffer = Buffer.from(await response.arrayBuffer());
+  const jpegBuffer = await sharp(pngBuffer, { failOn: "none" })
+    .jpeg({
+      quality: OG_OUTPUT_QUALITY,
+      mozjpeg: true,
+    })
+    .toBuffer();
+  const bytes = new Uint8Array(jpegBuffer);
+  const blob = new Blob([bytes.buffer], { type: "image/jpeg" });
+
+  return new NextResponse(blob, {
+    status: 200,
+    headers: {
+      "Content-Type": "image/jpeg",
+      "Content-Length": String(bytes.byteLength),
+      "Cache-Control": "public, max-age=300, stale-while-revalidate=86400",
+    },
+  });
+}
+
 function getFallbackResponse(status = 404) {
   return NextResponse.json(
     { error: "OG image not available" },
@@ -154,7 +181,7 @@ export async function GET(request: NextRequest, context: RouteContext) {
   );
   const priceLabel = overlay.priceLabel ?? (locale === "pl" ? "Cena na zapytanie" : "Price on request");
 
-  return new ImageResponse(
+  const imageResponse = new ImageResponse(
     (
       <div
         style={{
@@ -308,9 +335,8 @@ export async function GET(request: NextRequest, context: RouteContext) {
     {
       width: IMAGE_WIDTH,
       height: IMAGE_HEIGHT,
-      headers: {
-        "Cache-Control": "public, max-age=300, stale-while-revalidate=86400",
-      },
     },
   );
+
+  return compressImageResponseToJpeg(imageResponse);
 }

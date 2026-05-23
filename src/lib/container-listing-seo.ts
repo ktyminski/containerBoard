@@ -455,6 +455,43 @@ function getListingSeoPrice(item: ContainerListingItem, locale: AppLocale): List
   };
 }
 
+function getListingTypeTitleLabel(type: ListingType, locale: AppLocale): string {
+  if (locale === "pl") {
+    if (type === "rent") {
+      return "wynajem";
+    }
+    if (type === "buy") {
+      return "kupno";
+    }
+    return "sprzedaż";
+  }
+  if (locale === "de") {
+    if (type === "rent") {
+      return "Miete";
+    }
+    if (type === "buy") {
+      return "Gesuch";
+    }
+    return "Verkauf";
+  }
+  if (locale === "uk") {
+    if (type === "rent") {
+      return "orenda";
+    }
+    if (type === "buy") {
+      return "kupivlia";
+    }
+    return "prodazh";
+  }
+  if (type === "rent") {
+    return "for rent";
+  }
+  if (type === "buy") {
+    return "wanted";
+  }
+  return "for sale";
+}
+
 export function getContainerListingOgOverlay(
   item: ContainerListingItem,
   locale: AppLocale,
@@ -863,7 +900,10 @@ export function getContainerListingSeoTitle(
   const copy = getListingCopy(locale);
   const location = getPrimaryLocation(item);
   const price = getListingSeoPrice(item, locale);
-  const segments = [getContainerListingSeoHeading(item, locale)];
+  const segments = [
+    getContainerListingSeoHeading(item, locale),
+    getListingTypeTitleLabel(item.type, locale),
+  ];
   if (!location.city && location.label && !segments[0].includes(location.label)) {
     segments.push(location.label);
   }
@@ -980,7 +1020,6 @@ export function buildContainerListingMetadata(input: {
   localePrefix?: boolean;
 }): Metadata {
   const title = getContainerListingSeoTitle(input.item, input.locale);
-  const previewTitle = getContainerListingOgTitle(input.item, input.locale);
   const description = getContainerListingSeoDescription(input.item, input.locale);
   const imageUrl = getContainerListingOgImageUrl(input.item, input.locale);
   const base = buildPageMetadata({
@@ -1012,14 +1051,14 @@ export function buildContainerListingMetadata(input: {
         : { index: false, follow: true },
     openGraph: {
       ...base.openGraph,
-      title: previewTitle,
+      title,
       description,
       images: ogImages,
     },
     twitter: {
       ...base.twitter,
       card: "summary_large_image",
-      title: previewTitle,
+      title,
       description,
       images: twitterImages,
     },
