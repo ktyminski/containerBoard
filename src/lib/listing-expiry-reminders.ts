@@ -6,6 +6,7 @@ import {
   type ContainerListingDocument,
   getContainerListingsCollection,
 } from "@/lib/container-listings";
+import { createListingRenewalToken } from "@/lib/listing-renewal-tokens";
 import { sendListingExpiryReminderEmail } from "@/lib/mailer";
 import { logError } from "@/lib/server-logger";
 import { getUsersCollection } from "@/lib/users";
@@ -177,8 +178,15 @@ export async function sendListingExpiryReminders(input?: {
     }
 
     const listingId = listing._id.toHexString();
+    const renewalToken = await createListingRenewalToken({
+      listingId: listing._id,
+      userId: listing.createdByUserId,
+      issuedForExpiresAt: listing.expiresAt,
+      now,
+    });
     const manageUrl = `${baseUrl}/containers/mine`;
     const editUrl = `${baseUrl}/containers/${listingId}/edit`;
+    const renewUrl = `${baseUrl}/containers/renew?token=${encodeURIComponent(renewalToken.token)}`;
     const sendResult = await sendListingExpiryReminderEmail({
       to: recipient,
       name: normalizeOptionalString(owner?.name) ?? undefined,
@@ -196,6 +204,7 @@ export async function sendListingExpiryReminders(input?: {
           : LISTING_REMINDER_FINAL_DAYS,
       manageUrl,
       editUrl,
+      renewUrl,
     });
 
     if (!sendResult.ok) {

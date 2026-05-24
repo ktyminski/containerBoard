@@ -302,6 +302,7 @@ export async function sendListingExpiryReminderEmail(input: {
   reminderDays: number;
   manageUrl: string;
   editUrl: string;
+  renewUrl: string;
 }): Promise<SendMailResult> {
   const template = buildListingExpiryReminderMail({
     name: input.name,
@@ -311,6 +312,7 @@ export async function sendListingExpiryReminderEmail(input: {
     reminderDays: input.reminderDays,
     manageUrl: input.manageUrl,
     editUrl: input.editUrl,
+    renewUrl: input.renewUrl,
   });
 
   return sendMail({

@@ -468,6 +468,7 @@ export function buildListingExpiryReminderMail(input: {
   reminderDays: number;
   manageUrl: string;
   editUrl: string;
+  renewUrl: string;
 }): MailTemplateContent {
   const intro = greeting(input.name);
   const expiresAt = new Date(input.expiresAtIso);
@@ -483,6 +484,7 @@ export function buildListingExpiryReminderMail(input: {
     `Your listing for ${input.companyName} expires on ${expiresAtLabel}.`,
     `Current quantity: ${input.quantity}.`,
     "Before renewing, please confirm that the quantity and price are still up to date.",
+    `Renew in one click: ${input.renewUrl}`,
     `Manage listings: ${input.manageUrl}`,
     `Edit listing: ${input.editUrl}`,
   ];
@@ -494,7 +496,9 @@ export function buildListingExpiryReminderMail(input: {
     htmlParagraphRaw(
       `Current quantity: <strong>${Math.max(1, Math.trunc(input.quantity))}</strong>.`,
     ) +
-    htmlParagraph("Before renewing, please confirm that the quantity and price are still up to date.") +
+    htmlParagraph("If quantity and price are still correct, you can renew this listing with one click.") +
+    htmlButton(input.renewUrl, "Renew listing for 30 days") +
+    htmlParagraph("If anything has changed, please update the listing before renewing.") +
     htmlButton(input.manageUrl, "Manage listings") +
     htmlParagraphRaw(
       `If anything has changed, edit the listing here:<br/><a href="${escapeHtml(input.editUrl)}" style="color:${MAIL_COLORS.link};text-decoration:underline;word-break:break-all;">${escapeHtml(input.editUrl)}</a>`,

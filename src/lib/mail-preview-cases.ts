@@ -114,6 +114,7 @@ export function getMailPreviewCases(messages: AppMessages["adminMailPreviews"]["
         reminderDays: 7,
         manageUrl: "https://containerboard.eu/containers/mine",
         editUrl: "https://containerboard.eu/containers/67f1b4d6f1b7f3d0fcb12a34/edit",
+        renewUrl: "https://containerboard.eu/containers/renew?token=preview-renew-token-7d",
       }),
     },
     {
@@ -129,6 +130,7 @@ export function getMailPreviewCases(messages: AppMessages["adminMailPreviews"]["
         reminderDays: 2,
         manageUrl: "https://containerboard.eu/containers/mine",
         editUrl: "https://containerboard.eu/containers/67f1b4d6f1b7f3d0fcb12a35/edit",
+        renewUrl: "https://containerboard.eu/containers/renew?token=preview-renew-token-2d",
       }),
     },
   ];
