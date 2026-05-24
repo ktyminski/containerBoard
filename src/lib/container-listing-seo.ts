@@ -402,6 +402,8 @@ type ContainerListingOgOverlay = {
   priceLabel: string | null;
 };
 
+type ContainerListingOgImageVariant = "default" | "mobile";
+
 function formatCurrencyValue(value: number, currency: string, locale: AppLocale): string {
   const rounded = Math.round(value);
   if (currency === "PLN") {
@@ -1007,10 +1009,14 @@ function getPrimaryImageUrl(item: ContainerListingItem): string | null {
 export function getContainerListingOgImageUrl(
   item: ContainerListingItem,
   locale: AppLocale,
+  variant: ContainerListingOgImageVariant = "default",
 ): string {
   const params = new URLSearchParams({
     lang: locale,
   });
+  if (variant === "mobile") {
+    params.set("variant", variant);
+  }
   if (item.updatedAt) {
     params.set("v", item.updatedAt);
   }
@@ -1042,6 +1048,11 @@ export function buildContainerListingMetadata(input: {
   const title = getContainerListingSeoTitle(input.item, input.locale);
   const description = getContainerListingSeoDescription(input.item, input.locale);
   const imageUrl = getContainerListingOgImageUrl(input.item, input.locale);
+  const mobileImageUrl = getContainerListingOgImageUrl(
+    input.item,
+    input.locale,
+    "mobile",
+  );
   const base = buildPageMetadata({
     path: input.path,
     locale: input.locale,
@@ -1056,8 +1067,13 @@ export function buildContainerListingMetadata(input: {
       width: 1200,
       height: 630,
     },
+    {
+      url: mobileImageUrl,
+      width: 1200,
+      height: 630,
+    },
   ];
-  const twitterImages = [imageUrl];
+  const twitterImages = [imageUrl, mobileImageUrl];
 
   return {
     ...base,

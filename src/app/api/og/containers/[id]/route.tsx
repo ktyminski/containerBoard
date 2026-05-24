@@ -30,6 +30,7 @@ const OG_BACKGROUND_QUALITY = 72;
 const OG_OUTPUT_QUALITY = 76;
 
 type SharpLike = typeof import("sharp");
+type OgImageVariant = "default" | "mobile";
 
 async function getSharp(): Promise<SharpLike> {
   const sharpModule = await import("sharp");
@@ -158,6 +159,10 @@ function getFallbackResponse(status = 404) {
   );
 }
 
+function getOgImageVariant(request: NextRequest): OgImageVariant {
+  return request.nextUrl.searchParams.get("variant") === "mobile" ? "mobile" : "default";
+}
+
 export async function GET(request: NextRequest, context: RouteContext) {
   const { id } = await context.params;
   if (!ObjectId.isValid(id)) {
@@ -174,6 +179,7 @@ export async function GET(request: NextRequest, context: RouteContext) {
 
   const item = mapContainerListingToItem(listing);
   const locale = resolveLocale(request.nextUrl.searchParams.get("lang"));
+  const variant = getOgImageVariant(request);
   const overlay = getContainerListingOgOverlay(item, locale);
   const heading = getContainerListingOgTitle(item, locale);
   const photoDataUri = await getPhotoDataUri(
@@ -225,111 +231,115 @@ export async function GET(request: NextRequest, context: RouteContext) {
           </div>
         )}
 
-        <div
-          style={{
-            position: "absolute",
-            inset: 0,
-            background:
-              "linear-gradient(180deg, rgba(2,6,23,0.10) 0%, rgba(2,6,23,0.25) 42%, rgba(2,6,23,0.88) 100%)",
-          }}
-        />
+        {variant === "default" ? (
+          <>
+            <div
+              style={{
+                position: "absolute",
+                inset: 0,
+                background:
+                  "linear-gradient(180deg, rgba(2,6,23,0.10) 0%, rgba(2,6,23,0.25) 42%, rgba(2,6,23,0.88) 100%)",
+              }}
+            />
 
-        <div
-          style={{
-            position: "absolute",
-            left: 54,
-            right: 54,
-            bottom: 44,
-            display: "flex",
-            alignItems: "flex-end",
-            justifyContent: "space-between",
-            gap: 32,
-          }}
-        >
-          <div
+            <div
             style={{
+              position: "absolute",
+              left: 54,
+              right: 54,
+              bottom: 44,
               display: "flex",
-              flexDirection: "column",
-              minWidth: 0,
-              maxWidth: 760,
-              color: "#fff",
-            }}
-          >
-            <div
-              style={{
-                display: "flex",
-                borderRadius: 14,
-                background: "rgba(14, 165, 233, 0.92)",
-                color: "#f8fafc",
-                padding: "10px 18px",
-                fontSize: 32,
-                fontWeight: 800,
-                lineHeight: 1,
-              }}
-            >
-              {overlay.containerLabel}
-            </div>
-            <div
-              style={{
-                display: "flex",
-                marginTop: 18,
-                fontSize: 54,
-                fontWeight: 900,
-                lineHeight: 1.05,
-                letterSpacing: 0,
-              }}
-            >
-              {heading}
-            </div>
-            <div
-              style={{
-                display: "flex",
-                marginTop: 14,
-                fontSize: 26,
-                fontWeight: 700,
-                color: "#dbeafe",
-              }}
-            >
-              {item.companyName}
-            </div>
-          </div>
-
-          <div
-            style={{
-              display: "flex",
-              flexDirection: "column",
               alignItems: "flex-end",
-              flexShrink: 0,
-              color: "#fff",
+              justifyContent: "space-between",
+              gap: 32,
             }}
           >
             <div
               style={{
                 display: "flex",
-                borderRadius: 18,
-                background: "rgba(255, 255, 255, 0.94)",
-                color: "#082f49",
-                padding: "16px 22px",
-                fontSize: 44,
-                fontWeight: 900,
-                lineHeight: 1,
+                flexDirection: "column",
+                minWidth: 0,
+                maxWidth: 760,
+                color: "#fff",
               }}
             >
-              {priceLabel}
+              <div
+                style={{
+                  display: "flex",
+                  borderRadius: 14,
+                  background: "rgba(14, 165, 233, 0.92)",
+                  color: "#f8fafc",
+                  padding: "10px 18px",
+                  fontSize: 32,
+                  fontWeight: 800,
+                  lineHeight: 1,
+                }}
+              >
+                {overlay.containerLabel}
+              </div>
+              <div
+                style={{
+                  display: "flex",
+                  marginTop: 18,
+                  fontSize: 54,
+                  fontWeight: 900,
+                  lineHeight: 1.05,
+                  letterSpacing: 0,
+                }}
+              >
+                {heading}
+              </div>
+              <div
+                style={{
+                  display: "flex",
+                  marginTop: 14,
+                  fontSize: 26,
+                  fontWeight: 700,
+                  color: "#dbeafe",
+                }}
+              >
+                {item.companyName}
+              </div>
             </div>
+
             <div
               style={{
                 display: "flex",
-                marginTop: 18,
-                fontSize: 25,
-                fontWeight: 800,
-                color: "#f8fafc",
+                flexDirection: "column",
+                alignItems: "flex-end",
+                flexShrink: 0,
+                color: "#fff",
               }}
             >
-              Visit containerBoard.eu
+              <div
+                style={{
+                  display: "flex",
+                  borderRadius: 18,
+                  background: "rgba(255, 255, 255, 0.94)",
+                  color: "#082f49",
+                  padding: "16px 22px",
+                  fontSize: 44,
+                  fontWeight: 900,
+                  lineHeight: 1,
+                }}
+              >
+                {priceLabel}
+              </div>
+              <div
+                style={{
+                  display: "flex",
+                  marginTop: 18,
+                  fontSize: 25,
+                  fontWeight: 800,
+                  color: "#f8fafc",
+                }}
+              >
+                Visit containerBoard.eu
+              </div>
             </div>
           </div>
-        </div>
+          </>
+        ) : null}
       </div>
     ),
     {
