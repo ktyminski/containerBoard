@@ -264,6 +264,7 @@ export function ContainerListingForm({
   const locationPostalCodeValue = watch("locationPostalCode");
   const locationAddressCityValue = watch("locationAddressCity");
   const locationAddressCountryValue = watch("locationAddressCountry");
+  const containerTravelsValue = watch("containerTravels");
   const quantityValue = watch("quantity");
   const availableNowValue = watch("availableNow");
   const logisticsTransportIncludedValue = watch("logisticsTransportIncluded");
@@ -376,6 +377,7 @@ export function ContainerListingForm({
   const canManageListingPhotos = listingTypeValue !== "buy";
   const canManageLogisticsSection = listingTypeValue !== "buy";
   const canManageCertificationSection = listingTypeValue !== "buy";
+  const canSetContainerTravels = configuredLocationsCount > 1;
   const isCreatePublishReady = useMemo(() => {
     if (!isCreateMode || !canProceedFromIntentStep) {
       return false;
@@ -412,6 +414,19 @@ export function ContainerListingForm({
     isCreateMode,
   ]);
   const isSubmitReady = isCreateMode ? isCreatePublishReady : isEditSaveReady;
+
+  useEffect(() => {
+    if (canSetContainerTravels) {
+      return;
+    }
+    if (!containerTravelsValue) {
+      return;
+    }
+    setValue("containerTravels", false, {
+      shouldDirty: true,
+      shouldTouch: false,
+    });
+  }, [canSetContainerTravels, containerTravelsValue, setValue]);
 
   useEffect(() => {
     if (!canProceedFromIntentStep) {
@@ -811,6 +826,7 @@ export function ContainerListingForm({
       locationAddressLabel: normalizeOptionalText(values.locationAddressLabel),
       locationAddressParts: hasAddressParts ? locationAddressParts : undefined,
       locations: locationsPayload,
+      containerTravels: values.containerTravels && locationsPayload.length > 1,
       availableNow: values.availableNow,
       availableFromApproximate: values.availableNow
         ? false
@@ -1377,11 +1393,34 @@ export function ContainerListingForm({
               </button>
             </div>
 
+            {canSetContainerTravels ? (
+              <label className="grid w-fit max-w-full min-w-0 gap-1 rounded-md border border-neutral-300 bg-white px-3 py-2 text-sm text-neutral-700">
+                <span className="flex min-w-0 items-center gap-2">
+                  <input
+                    type="checkbox"
+                    {...register("containerTravels")}
+                    className="h-4 w-4 rounded border-neutral-400 bg-white text-[#2f639a] focus:ring-[#4e86c3]"
+                  />
+                  <span className="min-w-0 leading-snug">
+                    {messages.form.containerTravelsLabel}
+                  </span>
+                </span>
+                <span className="pl-6 text-xs leading-snug text-neutral-500">
+                  {messages.form.containerTravelsMapHint}
+                </span>
+              </label>
+            ) : null}
+
             <div className="rounded-md border border-neutral-300 bg-white p-2 text-xs text-neutral-600">
               <p className="font-medium text-neutral-700">
                 {messages.form.configuredLocationsLabel}:{" "}
                 {configuredLocationsCount}/{MAX_LISTING_LOCATIONS}
               </p>
+              {containerTravelsValue && configuredLocationsCount > 1 ? (
+                <p className="mt-1 text-neutral-500">
+                  {messages.form.containerTravelsRouteSummary}
+                </p>
+              ) : null}
               {visibleConfiguredLocationDisplays.length > 0 ? (
                 <div className="mt-1 grid gap-1 text-neutral-600">
                   {visibleConfiguredLocationDisplays.map((location, index) => (

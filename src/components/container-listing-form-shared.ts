@@ -51,6 +51,7 @@ export type ContainerListingFormValues = {
   locationPostalCode: string;
   locationAddressCity: string;
   locationAddressCountry: string;
+  containerTravels: boolean;
   availableNow: boolean;
   availableFromApproximate: boolean;
   availableFrom: string;
@@ -99,6 +100,7 @@ export const CREATE_FLOW_PRECHECK_FIELDS: Array<
   "locationPostalCode",
   "locationAddressCity",
   "locationAddressCountry",
+  "containerTravels",
   "availableNow",
   "availableFromApproximate",
   "availableFrom",
@@ -675,6 +677,7 @@ export function getDefaultValues(
     locationPostalCode: initialValues?.locationPostalCode ?? "",
     locationAddressCity: initialValues?.locationAddressCity ?? "",
     locationAddressCountry: initialValues?.locationAddressCountry ?? "",
+    containerTravels: initialValues?.containerTravels ?? false,
     availableNow: initialValues?.availableNow ?? true,
     availableFromApproximate: initialValues?.availableFromApproximate ?? false,
     availableFrom: initialValues?.availableFrom ?? today,

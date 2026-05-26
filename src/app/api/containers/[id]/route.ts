@@ -626,6 +626,7 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
         photos: nextPhotos,
         quantity: updateParsed.data.quantity,
         normalizedLocations,
+        containerTravels: updateParsed.data.containerTravels === true,
         availableNow: updateParsed.data.availableNow === true,
         availableFromApproximate:
           updateParsed.data.availableNow === true

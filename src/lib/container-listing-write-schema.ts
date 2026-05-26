@@ -118,6 +118,7 @@ const listingWriteBaseObjectSchema = z.object({
     .min(1)
     .max(MAX_LISTING_LOCATIONS)
     .optional(),
+  containerTravels: z.coerce.boolean().optional(),
   availableNow: z.coerce.boolean().optional(),
   availableFromApproximate: z.coerce.boolean().optional(),
   availableFrom: z.coerce.date().optional(),

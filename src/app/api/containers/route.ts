@@ -1821,6 +1821,7 @@ export async function POST(request: NextRequest) {
           photos: storedPhotos,
           quantity: listing.quantity,
           normalizedLocations,
+          containerTravels: listing.containerTravels === true,
           availableNow: listing.availableNow === true,
           availableFromApproximate: listing.availableNow === true
             ? false

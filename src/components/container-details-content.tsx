@@ -1056,6 +1056,12 @@ export async function ContainerDetailsContent({
         <section className="mt-4 rounded-md border border-neutral-300 bg-white p-4">
           <h2 className="text-sm font-semibold text-neutral-800">
             {moduleMessages.details.locationTitle}
+            {listingItem.containerTravels ? (
+              <span className="font-normal text-neutral-600">
+                {" "}
+                {moduleMessages.details.containerTravelsLocationSuffix}
+              </span>
+            ) : null}
           </h2>
           <ul className="mt-3 grid gap-2 text-sm text-neutral-700">
             {locationItems.map((location) => (
@@ -1160,6 +1166,7 @@ export async function ContainerDetailsContent({
         <section className="mt-4 h-[280px] overflow-hidden rounded-md border border-neutral-300 bg-white">
           <ContainerDetailsLocationsMap
             points={locationMapPoints}
+            travelRouteEnabled={listingItem.containerTravels}
             freeTransportDistanceKm={freeTransportDistanceKmForMap}
             messages={moduleMessages.shared}
           />

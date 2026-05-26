@@ -123,6 +123,7 @@ export type ContainerListingDocument = {
   locationAddressLabel?: string;
   locationAddressParts?: GeocodeAddressParts;
   locations?: ListingLocation[];
+  containerTravels?: boolean;
   availableNow?: boolean;
   availableFromApproximate?: boolean;
   availableFrom: Date;
@@ -209,6 +210,7 @@ export type ContainerListingItem = {
   locationAddressLabel?: string;
   locationAddressParts?: GeocodeAddressParts;
   locations?: ListingLocation[];
+  containerTravels: boolean;
   availableNow: boolean;
   availableFromApproximate: boolean;
   availableFrom: string;
@@ -578,6 +580,7 @@ export function mapContainerListingToItem(doc: ContainerListingDocument): Contai
     locationAddressLabel: primaryLocation?.locationAddressLabel ?? doc.locationAddressLabel,
     locationAddressParts: primaryLocation?.locationAddressParts ?? doc.locationAddressParts,
     ...(resolvedLocations.length > 0 ? { locations: resolvedLocations } : {}),
+    containerTravels: doc.containerTravels === true,
     availableNow: doc.availableNow === true,
     availableFromApproximate: doc.availableFromApproximate === true,
     availableFrom: doc.availableFrom.toISOString(),

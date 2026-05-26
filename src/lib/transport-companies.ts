@@ -143,7 +143,7 @@ export function mapTransportCompanyToPublicItem(
     description: company.description,
     services: normalizeTransportCompanyServices(company.services),
     terms: company.terms,
-    transportPrice: company.transportPrice,
+    transportPrice: company.transportPrice.trim(),
     location: company.location,
     phone: company.phone,
     email: company.email,

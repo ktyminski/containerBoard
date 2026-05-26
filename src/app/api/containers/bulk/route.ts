@@ -1048,6 +1048,7 @@ export async function POST(request: NextRequest) {
         parsedContainerColors: parsedContainerColors.colors,
         quantity: rowValue.quantity,
         normalizedLocations,
+        containerTravels: false,
         availableNow: rowValue.availableNow,
         availableFromApproximate:
           rowValue.availableNow ? false : rowValue.availableFromApproximate,

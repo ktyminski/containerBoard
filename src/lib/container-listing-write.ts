@@ -44,6 +44,7 @@ type ListingWritePersistenceInput = {
   photos?: ContainerListingImageAsset[];
   quantity: number;
   normalizedLocations: ListingLocation[];
+  containerTravels: boolean;
   availableNow: boolean;
   availableFromApproximate: boolean;
   resolvedAvailableFrom: Date;
@@ -128,6 +129,8 @@ export function buildListingPersistenceFields(
     locationLat: primaryLocation.locationLat,
     locationLng: primaryLocation.locationLng,
     locations: input.normalizedLocations,
+    containerTravels:
+      input.containerTravels === true && input.normalizedLocations.length > 1,
     availableNow: input.availableNow,
     availableFromApproximate: input.availableNow
       ? false

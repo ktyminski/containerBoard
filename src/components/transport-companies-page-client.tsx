@@ -265,6 +265,8 @@ function TransportCompanyCard({
   compareMessages: AppMessages["transportCompare"];
   onOpenDetails: (item: TransportCompanyPublicItem) => void;
 }) {
+  const transportPrice = item.transportPrice.trim();
+
   return (
     <article className="rounded-md border border-neutral-300 bg-white p-4 shadow-sm">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
@@ -283,6 +285,14 @@ function TransportCompanyCard({
               </span>
             ))}
           </div>
+          {transportPrice ? (
+            <p className="mt-3 text-sm text-neutral-700">
+              <span className="font-medium text-neutral-900">
+                {compareMessages.priceLabel}:
+              </span>{" "}
+              {transportPrice}
+            </p>
+          ) : null}
         </div>
         {typeof item.pickupDistanceKm === "number" ? (
           <span className="w-fit rounded-md border border-[#bbf7d0] bg-[#f0fdf4] px-2 py-1 text-xs font-semibold text-[#14532d]">
@@ -533,12 +543,14 @@ function TransportCompanyDetailsModal({
             ) : null}
           </div>
 
-          {item.transportPrice ? (
+          {item.transportPrice.trim() ? (
             <section>
               <h3 className="text-sm font-semibold text-neutral-900">
                 {compareMessages.priceLabel}
               </h3>
-              <p className="mt-1 text-sm text-neutral-700">{item.transportPrice}</p>
+              <p className="mt-1 text-sm text-neutral-700">
+                {item.transportPrice.trim()}
+              </p>
             </section>
           ) : null}
 

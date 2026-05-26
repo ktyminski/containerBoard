@@ -217,6 +217,7 @@ export default async function EditContainerPage({
           locationPostalCode: listingItem.locationAddressParts?.postalCode ?? "",
           locationAddressCity: listingItem.locationAddressParts?.city ?? listingItem.locationCity,
           locationAddressCountry: listingItem.locationAddressParts?.country ?? listingItem.locationCountry,
+          containerTravels: listingItem.containerTravels,
           availableNow: listingItem.availableNow,
           availableFromApproximate: listingItem.availableFromApproximate,
           availableFrom: listingItem.availableFrom.slice(0, 10),

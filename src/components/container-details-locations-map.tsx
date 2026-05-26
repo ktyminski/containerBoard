@@ -14,14 +14,29 @@ export type ContainerDetailsLocationPoint = {
 
 type ContainerDetailsLocationsMapProps = {
   points: ContainerDetailsLocationPoint[];
+  travelRouteEnabled?: boolean;
   freeTransportDistanceKm?: number | null;
   messages: ContainerModuleMessages["shared"];
 };
 
+const TRAVEL_ROUTE_SOURCE_ID = "container-details-travel-route";
+const TRAVEL_ROUTE_LAYER_ID = "container-details-travel-route-line";
 const TRANSPORT_RADIUS_SOURCE_ID = "container-details-transport-radius";
 const TRANSPORT_RADIUS_FILL_LAYER_ID = "container-details-transport-radius-fill";
 const TRANSPORT_RADIUS_STROKE_LAYER_ID = "container-details-transport-radius-stroke";
 const EARTH_RADIUS_KM = 6371.0088;
+
+type LineFeatureCollection = {
+  type: "FeatureCollection";
+  features: Array<{
+    type: "Feature";
+    properties: Record<string, never>;
+    geometry: {
+      type: "LineString";
+      coordinates: Array<[number, number]>;
+    };
+  }>;
+};
 
 type CircleFeatureCollection = {
   type: "FeatureCollection";
@@ -42,6 +57,32 @@ function createMarkerElement(): HTMLSpanElement {
   marker.className =
     "block h-3.5 w-3.5 rounded-full border-2 border-white bg-sky-500 shadow-[0_1px_6px_rgba(15,23,42,0.35)]";
   return marker;
+}
+
+function buildTravelRouteFeatureCollection(
+  points: ContainerDetailsLocationPoint[],
+  enabled: boolean,
+): LineFeatureCollection {
+  if (!enabled || points.length < 2) {
+    return {
+      type: "FeatureCollection",
+      features: [],
+    };
+  }
+
+  return {
+    type: "FeatureCollection",
+    features: [
+      {
+        type: "Feature",
+        properties: {},
+        geometry: {
+          type: "LineString",
+          coordinates: points.map((point) => [point.lng, point.lat]),
+        },
+      },
+    ],
+  };
 }
 
 function toRadians(value: number): number {
@@ -170,6 +211,7 @@ function fitMapToPoints(
 
 export function ContainerDetailsLocationsMap({
   points,
+  travelRouteEnabled = false,
   freeTransportDistanceKm = null,
   messages,
 }: ContainerDetailsLocationsMapProps) {
@@ -209,6 +251,31 @@ export function ContainerDetailsLocationsMap({
     map.addControl(new maplibregl.NavigationControl(), "top-right");
 
     const handleLoad = () => {
+      if (!map.getSource(TRAVEL_ROUTE_SOURCE_ID)) {
+        map.addSource(TRAVEL_ROUTE_SOURCE_ID, {
+          type: "geojson",
+          data: {
+            type: "FeatureCollection",
+            features: [],
+          } as LineFeatureCollection,
+        });
+      }
+      if (!map.getLayer(TRAVEL_ROUTE_LAYER_ID)) {
+        map.addLayer({
+          id: TRAVEL_ROUTE_LAYER_ID,
+          type: "line",
+          source: TRAVEL_ROUTE_SOURCE_ID,
+          layout: {
+            "line-cap": "round",
+            "line-join": "round",
+          },
+          paint: {
+            "line-color": "#f97316",
+            "line-width": 3,
+            "line-opacity": 0.85,
+          },
+        });
+      }
       if (!map.getSource(TRANSPORT_RADIUS_SOURCE_ID)) {
         map.addSource(TRANSPORT_RADIUS_SOURCE_ID, {
           type: "geojson",
@@ -240,6 +307,9 @@ export function ContainerDetailsLocationsMap({
             "line-opacity": 0.55,
           },
         });
+      }
+      if (map.getLayer(TRAVEL_ROUTE_LAYER_ID)) {
+        map.moveLayer(TRAVEL_ROUTE_LAYER_ID);
       }
       setIsMapReady(true);
     };
@@ -281,6 +351,12 @@ export function ContainerDetailsLocationsMap({
     transportRadiusSource?.setData(
       buildTransportRadiusFeatureCollection(validPoints, freeTransportDistanceKm),
     );
+    const travelRouteSource = map.getSource(
+      TRAVEL_ROUTE_SOURCE_ID,
+    ) as GeoJSONSource | undefined;
+    travelRouteSource?.setData(
+      buildTravelRouteFeatureCollection(validPoints, travelRouteEnabled),
+    );
 
     for (const point of validPoints) {
       const marker = new maplibregl.Marker({
@@ -302,7 +378,7 @@ export function ContainerDetailsLocationsMap({
     fitMapToPoints(map, validPoints, freeTransportDistanceKm);
     const frame = window.requestAnimationFrame(() => map.resize());
     return () => window.cancelAnimationFrame(frame);
-  }, [freeTransportDistanceKm, isMapReady, validPoints]);
+  }, [freeTransportDistanceKm, isMapReady, travelRouteEnabled, validPoints]);
 
   if (validPoints.length === 0) {
     return (
