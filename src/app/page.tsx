@@ -15,7 +15,6 @@ export async function generateMetadata(): Promise<Metadata> {
     locale,
     title: landing.metaTitle,
     description: landing.metaDescription,
-    imagePath: "/photos/background.webp",
     localePrefix: true,
   });
 }
