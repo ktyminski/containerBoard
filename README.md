@@ -52,11 +52,13 @@ npm run seed:local -- --keep
 - `GET /api/admin/containers` (admin)
 - `GET/POST /api/cron/fx-rates` (cron, wymaga `CRON_SECRET`)
 - `GET/POST /api/cron/listing-expiry-reminders` (cron, wymaga `CRON_SECRET`)
+- `GET/POST /api/cron/social-draft` (cron, wymaga `CRON_SECRET`)
 
 ## Kursy walut (FX)
 
 - Kursy `PLN/EUR` i `PLN/USD` sa odswiezane przez cron raz dziennie (`vercel.json`, 05:00 UTC).
 - Przypomnienia o wygasaniu ogloszen sa wysylane przez cron raz dziennie (`vercel.json`, 05:15 UTC).
+- Drafty postow social sa generowane raz dziennie (`vercel.json`, 06:00 UTC).
 - Ostatni kurs zapisywany jest w Mongo (`fx_rates`, dokument `latest`).
 - API serwerowe korzysta z kursu z bazy (bez requestow do zewnetrznego API podczas tworzenia/edycji ogloszenia).
 - Gdy odswiezenie sie nie uda, zapisywany jest fallback z env:
