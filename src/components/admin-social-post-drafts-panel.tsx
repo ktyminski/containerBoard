@@ -15,6 +15,7 @@ type SocialPostDraftItem = {
   title: string;
   caption: string;
   imageUrl: string;
+  previewImageUrl: string;
   listingUrl: string;
   dateKey: string;
   generatedAt: string;
@@ -229,14 +230,14 @@ export function AdminSocialPostDraftsPanel({
           >
             <div className="grid gap-0 md:grid-cols-[220px_minmax(0,1fr)]">
               <a
-                href={item.imageUrl}
+                href={item.previewImageUrl}
                 target="_blank"
                 rel="noreferrer"
                 className="block bg-neutral-950"
               >
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img
-                  src={item.imageUrl}
+                  src={item.previewImageUrl}
                   alt=""
                   className="aspect-[4/5] h-full w-full object-cover"
                 />
@@ -288,7 +289,7 @@ export function AdminSocialPostDraftsPanel({
                     Kopiuj caption
                   </button>
                   <a
-                    href={item.imageUrl}
+                    href={item.previewImageUrl}
                     target="_blank"
                     rel="noreferrer"
                     className={ADMIN_NEUTRAL_BUTTON_CLASS}
@@ -363,4 +364,3 @@ export function AdminSocialPostDraftsPanel({
     </section>
   );
 }
-

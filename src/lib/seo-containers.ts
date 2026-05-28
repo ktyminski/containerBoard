@@ -96,6 +96,24 @@ export const CONTAINER_SEO_COUNTRIES: ContainerSeoCountry[] = [
 const CITY_BY_SLUG = new Map(CONTAINER_SEO_CITIES.map((city) => [city.slug, city]));
 const COUNTRY_BY_SLUG = new Map(CONTAINER_SEO_COUNTRIES.map((country) => [country.slug, country]));
 
+function getDistanceKm(
+  from: Pick<ContainerSeoCity, "lat" | "lng">,
+  to: Pick<ContainerSeoCity, "lat" | "lng">,
+): number {
+  const earthRadiusKm = 6371;
+  const latDelta = ((to.lat - from.lat) * Math.PI) / 180;
+  const lngDelta = ((to.lng - from.lng) * Math.PI) / 180;
+  const fromLat = (from.lat * Math.PI) / 180;
+  const toLat = (to.lat * Math.PI) / 180;
+  const a =
+    Math.sin(latDelta / 2) * Math.sin(latDelta / 2) +
+    Math.cos(fromLat) *
+      Math.cos(toLat) *
+      Math.sin(lngDelta / 2) *
+      Math.sin(lngDelta / 2);
+  return earthRadiusKm * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+}
+
 const SEO_COPY = {
   pl: {
     hubTitle: "Kontenery na sprzedaż",
@@ -641,6 +659,26 @@ export function getContainerSeoCityPath(
   kind: ContainerSeoKind = "sell",
 ) {
   return buildCityPath(citySlug, kind);
+}
+
+export function getNearbyContainerSeoCities(
+  city: ContainerSeoCity,
+  kind: ContainerSeoKind = "sell",
+  limit = 4,
+) {
+  return CONTAINER_SEO_CITIES
+    .filter((candidate) => candidate.slug !== city.slug)
+    .map((candidate) => ({
+      city: candidate,
+      distanceKm: getDistanceKm(city, candidate),
+    }))
+    .sort((a, b) => a.distanceKm - b.distanceKm)
+    .slice(0, limit)
+    .map(({ city: nearbyCity, distanceKm }) => ({
+      name: nearbyCity.name,
+      href: getContainerSeoCityPath(nearbyCity.slug, kind),
+      distanceKm: Math.round(distanceKm),
+    }));
 }
 
 export function getContainerSeoCountryPath(

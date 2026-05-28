@@ -66,9 +66,18 @@ export function LanguageSwitcher({ locale, messages }: LanguageSwitcherProps) {
   const rootRef = useRef<HTMLDivElement | null>(null);
   const buttonRef = useRef<HTMLButtonElement | null>(null);
   const [isOpen, setIsOpen] = useState(false);
-  const activeLocale = SUPPORTED_LOCALES.includes(locale) ? locale : "pl";
+  const [selectedLocale, setSelectedLocale] = useState<AppLocale>(
+    SUPPORTED_LOCALES.includes(locale) ? locale : "pl",
+  );
+  const activeLocale = SUPPORTED_LOCALES.includes(selectedLocale)
+    ? selectedLocale
+    : "pl";
   const labels = messages.labels as Record<string, string>;
   const activeLabel = labels[activeLocale] ?? "Polski";
+
+  useEffect(() => {
+    setSelectedLocale(SUPPORTED_LOCALES.includes(locale) ? locale : "pl");
+  }, [locale]);
 
   useEffect(() => {
     if (!isOpen) {
@@ -99,6 +108,8 @@ export function LanguageSwitcher({ locale, messages }: LanguageSwitcherProps) {
 
   const handleSelect = (nextLocale: AppLocale) => {
     setIsOpen(false);
+    setSelectedLocale(nextLocale);
+    document.documentElement.lang = nextLocale;
     void (async () => {
       try {
         await fetch("/api/locale", {
@@ -112,6 +123,7 @@ export function LanguageSwitcher({ locale, messages }: LanguageSwitcherProps) {
         const pathLocale = getLocaleFromPathname(pathname);
         if (pathname === "/" || pathLocale) {
           router.replace(withLocalePrefix(stripLocalePrefix(pathname), nextLocale));
+          router.refresh();
           return;
         }
         router.refresh();

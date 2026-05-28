@@ -15,9 +15,23 @@ import {
 } from "@/lib/container-listing-types";
 import { getMessages, type AppLocale, withLocalePrefix } from "@/lib/i18n";
 import {
-  getContainerSaleSeoHubCopy,
+  getContainerSeoHubCopy,
   getContainerSeoIndexable,
+  type ContainerSeoKind,
 } from "@/lib/seo-containers";
+
+type SeoNearbyLink = {
+  name: string;
+  href: string;
+  distanceKm?: number;
+};
+
+type SeoLocalContext = {
+  kind: ContainerSeoKind;
+  locationType: "city" | "country";
+  name: string;
+  nearbyLinks?: SeoNearbyLink[];
+};
 
 type SeoContainerSalePageProps = {
   locale: AppLocale;
@@ -26,12 +40,39 @@ type SeoContainerSalePageProps = {
   browseHref: string;
   items: ContainerListingItem[];
   total: number;
+  seoContext?: SeoLocalContext;
 };
 
 type SeoListingPriceDisplay = {
   amountLabel: string;
   metaLine: string;
   isRequestPrice: boolean;
+};
+
+type LocalSeoText = {
+  locationPrefix: (isCity: boolean) => string;
+  defaultContainerLabels: string;
+  defaultConditionLabels: string;
+  transportSentence: (hasTransport: boolean, hasUnloading: boolean) => string;
+  priceSentence: (hasPrices: boolean) => string;
+  introParagraph: (offerNoun: string, locationLabel: string) => string;
+  containerParagraph: (containerLabels: string) => string;
+  checkHeading: string;
+  checkItems: string[];
+  scopeHeading: string;
+  scopeParagraph: (total: string) => string;
+  fullListCta: string;
+  faqHeading: string;
+  nearbyHeading: string;
+  faq: (input: {
+    locationLabel: string;
+    locationName: string;
+    containerLabels: string;
+    conditionLabels: string;
+    transportSentence: string;
+    intentPhrase: string;
+    browsePhrase: string;
+  }) => Array<{ question: string; answer: string }>;
 };
 
 function getContainerPlaceholderSrc(item: ContainerListingItem): string {
@@ -228,6 +269,520 @@ function getLogisticsSummaryLabels(
   return labels;
 }
 
+function getIntentCopy(locale: AppLocale, kind: ContainerSeoKind) {
+  if (locale === "pl") {
+    if (kind === "rent") {
+      return {
+        headingPrefix: "Wynajem kontenerów",
+        offerNoun: "oferty wynajmu kontenerów",
+        actionPhrase: "wynająć kontener",
+        intentPhrase: "wynajmu",
+        browsePhrase: "ofert wynajmu",
+      };
+    }
+    if (kind === "buy") {
+      return {
+        headingPrefix: "Kupno kontenerów",
+        offerNoun: "ogłoszenia kupna kontenerów",
+        actionPhrase: "znaleźć zapotrzebowanie na kontener",
+        intentPhrase: "kupna",
+        browsePhrase: "ogłoszeń kupna",
+      };
+    }
+    return {
+      headingPrefix: "Kontenery na sprzedaż",
+      offerNoun: "oferty sprzedaży kontenerów",
+      actionPhrase: "kupić kontener",
+      intentPhrase: "sprzedaży",
+      browsePhrase: "ofert sprzedaży",
+    };
+  }
+
+  if (locale === "de") {
+    if (kind === "rent") {
+      return {
+        headingPrefix: "Container zur Miete",
+        offerNoun: "Mietangebote für Container",
+        actionPhrase: "einen Container mieten",
+        intentPhrase: "Miete",
+        browsePhrase: "Mietangebote",
+      };
+    }
+    if (kind === "buy") {
+      return {
+        headingPrefix: "Container gesucht",
+        offerNoun: "Suchanzeigen für Container",
+        actionPhrase: "Containerbedarf finden",
+        intentPhrase: "Suche",
+        browsePhrase: "Suchanzeigen",
+      };
+    }
+    return {
+      headingPrefix: "Container zum Verkauf",
+      offerNoun: "Verkaufsangebote für Container",
+      actionPhrase: "einen Container kaufen",
+      intentPhrase: "Verkauf",
+      browsePhrase: "Verkaufsangebote",
+    };
+  }
+
+  if (locale === "uk") {
+    if (kind === "rent") {
+      return {
+        headingPrefix: "Оренда контейнерів",
+        offerNoun: "пропозиції оренди контейнерів",
+        actionPhrase: "орендувати контейнер",
+        intentPhrase: "оренди",
+        browsePhrase: "пропозицій оренди",
+      };
+    }
+    if (kind === "buy") {
+      return {
+        headingPrefix: "Купівля контейнерів",
+        offerNoun: "оголошення про купівлю контейнерів",
+        actionPhrase: "знайти попит на контейнер",
+        intentPhrase: "купівлі",
+        browsePhrase: "оголошень про купівлю",
+      };
+    }
+    return {
+      headingPrefix: "Контейнери на продаж",
+      offerNoun: "пропозиції продажу контейнерів",
+      actionPhrase: "купити контейнер",
+      intentPhrase: "продажу",
+      browsePhrase: "пропозицій продажу",
+    };
+  }
+
+  if (kind === "rent") {
+    return {
+      headingPrefix: "Container rental",
+      offerNoun: "container rental listings",
+      actionPhrase: "rent a container",
+      intentPhrase: "rental",
+      browsePhrase: "rental listings",
+    };
+  }
+  if (kind === "buy") {
+    return {
+      headingPrefix: "Container wanted listings",
+      offerNoun: "container wanted listings",
+      actionPhrase: "find container demand",
+      intentPhrase: "wanted",
+      browsePhrase: "wanted listings",
+    };
+  }
+  return {
+    headingPrefix: "Containers for sale",
+    offerNoun: "container sale listings",
+    actionPhrase: "buy a container",
+    intentPhrase: "sale",
+    browsePhrase: "sale listings",
+  };
+}
+
+function getLocalSeoText(locale: AppLocale): LocalSeoText {
+  if (locale === "pl") {
+    return {
+      locationPrefix: (isCity) => (isCity ? "w okolicy" : "w kraju"),
+      defaultContainerLabels: "kontenery 20 ft, 40 ft oraz 40 HC",
+      defaultConditionLabels: "nowe i używane",
+      transportSentence: (hasTransport, hasUnloading) =>
+        hasTransport || hasUnloading
+          ? `W części ogłoszeń pojawiają się opcje logistyczne, takie jak transport kontenera${hasUnloading ? " lub rozładunek HDS" : ""}.`
+          : "Jeżeli transport nie jest opisany w ogłoszeniu, warto ustalić go bezpośrednio ze sprzedającym lub wynajmującym.",
+      priceSentence: (hasPrices) =>
+        hasPrices
+          ? "Część ofert ma podaną cenę, a przy pozostałych można dopytać o wycenę bezpośrednio z poziomu ogłoszenia."
+          : "Ceny są ustalane indywidualnie, dlatego najlepiej otworzyć ogłoszenie i skontaktować się z wystawcą.",
+      introParagraph: (offerNoun, locationLabel) =>
+        `Ta strona zbiera aktywne ${offerNoun} ${locationLabel}. Dzięki temu możesz szybko porównać aktualną dostępność, lokalizację, stan techniczny i podstawowe warunki ogłoszenia bez ręcznego przeszukiwania całej tablicy.`,
+      containerParagraph: (containerLabels) =>
+        `W aktualnych ogłoszeniach mogą pojawiać się między innymi ${containerLabels}. Dla zastosowań magazynowych, budowlanych i transportowych szczególnie ważne są zdjęcia, stan kontenera, dostępność od ręki oraz możliwość odbioru lub dostawy.`,
+      checkHeading: "Co sprawdzić przed kontaktem",
+      checkItems: [
+        "typ i rozmiar kontenera",
+        "stan: nowy, one trip, cargo worthy lub WWT",
+        "lokalizację i możliwość transportu",
+        "cenę netto/brutto albo sposób wyceny",
+      ],
+      scopeHeading: "Aktualny zakres strony",
+      scopeParagraph: (total) =>
+        `W tej lokalizacji system pokazuje ${total} aktywnych ogłoszeń. Wyniki zmieniają się wraz z dodawaniem, odświeżaniem i wygasaniem ofert.`,
+      fullListCta: "Zobacz pełną listę",
+      faqHeading: "Najczęstsze pytania",
+      nearbyHeading: "Podobne lokalizacje",
+      faq: (input) => [
+        {
+          question: `Jakie kontenery są dostępne ${input.locationLabel}?`,
+          answer: `Aktualna lista zależy od aktywnych ogłoszeń. Najczęściej warto sprawdzać ${input.containerLabels}, a także stan kontenera: ${input.conditionLabels}.`,
+        },
+        {
+          question: `Czy można zorganizować transport kontenera ${input.locationName}?`,
+          answer: input.transportSentence,
+        },
+        {
+          question: `Czy strona pokazuje tylko kontenery z miasta ${input.locationName}?`,
+          answer:
+            "Lista obejmuje ogłoszenia z promienia przypisanego do tej lokalizacji, żeby pokazać również oferty z najbliższej okolicy.",
+        },
+        {
+          question: `Jak szybko sprawdzić szczegóły ${input.intentPhrase}?`,
+          answer: `Otwórz wybraną ofertę, sprawdź zdjęcia, lokalizację, cenę i dane kontaktowe wystawcy. Możesz też przejść do pełnej listy ${input.browsePhrase}.`,
+        },
+      ],
+    };
+  }
+
+  if (locale === "de") {
+    return {
+      locationPrefix: (isCity) => (isCity ? "im Raum" : "in"),
+      defaultContainerLabels: "20-ft-, 40-ft- und 40-HC-Container",
+      defaultConditionLabels: "neue und gebrauchte",
+      transportSentence: (hasTransport, hasUnloading) =>
+        hasTransport || hasUnloading
+          ? `In einigen Anzeigen gibt es Logistikoptionen wie Containertransport${hasUnloading ? " oder Entladung per HDS/Kran" : ""}.`
+          : "Wenn der Transport in der Anzeige nicht beschrieben ist, sollte er direkt mit dem Anbieter abgestimmt werden.",
+      priceSentence: (hasPrices) =>
+        hasPrices
+          ? "Ein Teil der Angebote enthält einen Preis, bei den übrigen kann die Bewertung direkt über die Anzeige angefragt werden."
+          : "Preise werden individuell abgestimmt; öffnen Sie daher am besten die Anzeige und kontaktieren Sie den Anbieter.",
+      introParagraph: (offerNoun, locationLabel) =>
+        `Diese Seite bündelt aktive ${offerNoun} ${locationLabel}. So können Sie Verfügbarkeit, Standort, Zustand und die wichtigsten Angebotsdaten vergleichen, ohne die gesamte Liste manuell zu durchsuchen.`,
+      containerParagraph: (containerLabels) =>
+        `In aktuellen Anzeigen können unter anderem ${containerLabels} erscheinen. Für Lagerung, Baustellen und Transport sind Fotos, Zustand, kurzfristige Verfügbarkeit sowie Abholung oder Lieferung besonders wichtig.`,
+      checkHeading: "Was vor der Kontaktaufnahme prüfen",
+      checkItems: [
+        "Typ und Größe des Containers",
+        "Zustand: neu, one trip, cargo worthy oder WWT",
+        "Standort und Transportmöglichkeit",
+        "Netto-/Bruttopreis oder Art der Preisfindung",
+      ],
+      scopeHeading: "Aktueller Seitenumfang",
+      scopeParagraph: (total) =>
+        `Für diese Lokalisierung zeigt das System ${total} aktive Anzeigen. Die Ergebnisse ändern sich, wenn Angebote hinzugefügt, erneuert oder beendet werden.`,
+      fullListCta: "Vollständige Liste öffnen",
+      faqHeading: "Häufige Fragen",
+      nearbyHeading: "Ähnliche Standorte",
+      faq: (input) => [
+        {
+          question: `Welche Container sind ${input.locationLabel} verfügbar?`,
+          answer: `Die aktuelle Liste hängt von aktiven Anzeigen ab. Besonders sinnvoll ist der Blick auf ${input.containerLabels} sowie auf den Zustand: ${input.conditionLabels}.`,
+        },
+        {
+          question: `Kann der Transport eines Containers ${input.locationName} organisiert werden?`,
+          answer: input.transportSentence,
+        },
+        {
+          question: `Zeigt die Seite nur Container aus ${input.locationName}?`,
+          answer:
+            "Die Liste umfasst Anzeigen aus dem Radius dieser Lokalisierung, damit auch Angebote aus der näheren Umgebung sichtbar sind.",
+        },
+        {
+          question: `Wie prüfe ich schnell Details zur ${input.intentPhrase}?`,
+          answer: `Öffnen Sie ein Angebot und prüfen Sie Fotos, Standort, Preis und Kontaktdaten des Anbieters. Sie können auch zur vollständigen Liste der ${input.browsePhrase} wechseln.`,
+        },
+      ],
+    };
+  }
+
+  if (locale === "uk") {
+    return {
+      locationPrefix: (isCity) => (isCity ? "у районі" : "у країні"),
+      defaultContainerLabels: "контейнери 20 ft, 40 ft та 40 HC",
+      defaultConditionLabels: "нові та вживані",
+      transportSentence: (hasTransport, hasUnloading) =>
+        hasTransport || hasUnloading
+          ? `У частині оголошень доступні логістичні опції, такі як доставка контейнера${hasUnloading ? " або розвантаження HDS/краном" : ""}.`
+          : "Якщо транспорт не описаний в оголошенні, його варто узгодити безпосередньо з автором оголошення.",
+      priceSentence: (hasPrices) =>
+        hasPrices
+          ? "Частина пропозицій має вказану ціну, а в інших випадках вартість можна уточнити безпосередньо через оголошення."
+          : "Ціни узгоджуються індивідуально, тому найкраще відкрити оголошення і зв'язатися з автором.",
+      introParagraph: (offerNoun, locationLabel) =>
+        `Ця сторінка збирає активні ${offerNoun} ${locationLabel}. Це допомагає швидко порівняти доступність, локацію, стан і основні умови оголошення без ручного перегляду всієї дошки.`,
+      containerParagraph: (containerLabels) =>
+        `В актуальних оголошеннях можуть з'являтися, зокрема, ${containerLabels}. Для складування, будівництва і транспорту особливо важливі фото, стан контейнера, доступність та можливість самовивозу або доставки.`,
+      checkHeading: "Що перевірити перед контактом",
+      checkItems: [
+        "тип і розмір контейнера",
+        "стан: новий, one trip, cargo worthy або WWT",
+        "локацію і можливість доставки",
+        "ціну нетто/брутто або спосіб оцінки",
+      ],
+      scopeHeading: "Поточний обсяг сторінки",
+      scopeParagraph: (total) =>
+        `У цій локації система показує ${total} активних оголошень. Результати змінюються, коли пропозиції додаються, оновлюються або завершуються.`,
+      fullListCta: "Відкрити повний список",
+      faqHeading: "Поширені питання",
+      nearbyHeading: "Схожі локації",
+      faq: (input) => [
+        {
+          question: `Які контейнери доступні ${input.locationLabel}?`,
+          answer: `Актуальний список залежить від активних оголошень. Варто перевіряти ${input.containerLabels}, а також стан контейнера: ${input.conditionLabels}.`,
+        },
+        {
+          question: `Чи можна організувати доставку контейнера ${input.locationName}?`,
+          answer: input.transportSentence,
+        },
+        {
+          question: `Чи сторінка показує лише контейнери з міста ${input.locationName}?`,
+          answer:
+            "Список охоплює оголошення в радіусі цієї локації, щоб показувати також пропозиції з найближчої околиці.",
+        },
+        {
+          question: `Як швидко перевірити деталі ${input.intentPhrase}?`,
+          answer: `Відкрийте вибране оголошення, перевірте фото, локацію, ціну та контактні дані автора. Також можна перейти до повного списку ${input.browsePhrase}.`,
+        },
+      ],
+    };
+  }
+
+  return {
+    locationPrefix: (isCity) => (isCity ? "around" : "in"),
+    defaultContainerLabels: "20 ft, 40 ft, and 40 HC containers",
+    defaultConditionLabels: "new and used",
+    transportSentence: (hasTransport, hasUnloading) =>
+      hasTransport || hasUnloading
+        ? `Some listings include logistics options such as container transport${hasUnloading ? " or unloading" : ""}.`
+        : "If transport is not described in the listing, it is worth confirming it directly with the advertiser.",
+    priceSentence: (hasPrices) =>
+      hasPrices
+        ? "Some offers include a listed price, while others can be priced directly with the advertiser."
+        : "Prices are agreed individually, so it is best to open a listing and contact the advertiser.",
+    introParagraph: (offerNoun, locationLabel) =>
+      `This page collects active ${offerNoun} ${locationLabel}. It helps you compare availability, location, condition, and core listing details without searching the full board manually.`,
+    containerParagraph: (containerLabels) =>
+      `Current listings may include ${containerLabels}. For storage, construction, and transport use, photos, condition, availability, and pickup or delivery options are especially important.`,
+    checkHeading: "What to check before contact",
+    checkItems: [
+      "container type and size",
+      "condition: new, one trip, cargo worthy, or WWT",
+      "location and transport availability",
+      "net/gross price or pricing method",
+    ],
+    scopeHeading: "Current page scope",
+    scopeParagraph: (total) =>
+      `This location currently shows ${total} active listings. Results change as offers are added, refreshed, and expired.`,
+    fullListCta: "Open full list",
+    faqHeading: "Frequently asked questions",
+    nearbyHeading: "Nearby locations",
+    faq: (input) => [
+      {
+        question: `What containers are available ${input.locationLabel}?`,
+        answer: `Availability depends on active listings. It is worth checking ${input.containerLabels} and the listed condition: ${input.conditionLabels}.`,
+      },
+      {
+        question: `Can container transport be arranged ${input.locationName}?`,
+        answer: input.transportSentence,
+      },
+      {
+        question: `Does this page only show containers in ${input.locationName}?`,
+        answer:
+          "The list covers listings within the location radius, so nearby offers may also appear.",
+      },
+      {
+        question: `How do I check the ${input.intentPhrase} details?`,
+        answer: `Open a listing to review photos, location, price, and advertiser contact details. You can also open the full ${input.browsePhrase}.`,
+      },
+    ],
+  };
+}
+
+function getTopValues(values: string[], limit = 4): string[] {
+  const counts = new Map<string, number>();
+  for (const value of values) {
+    const normalized = value.trim();
+    if (!normalized) {
+      continue;
+    }
+    counts.set(normalized, (counts.get(normalized) ?? 0) + 1);
+  }
+
+  return Array.from(counts.entries())
+    .sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]))
+    .slice(0, limit)
+    .map(([value]) => value);
+}
+
+function joinReadable(values: string[], locale: AppLocale): string {
+  if (values.length === 0) {
+    return "";
+  }
+  if (values.length === 1) {
+    return values[0];
+  }
+  const glue =
+    locale === "pl"
+      ? " oraz "
+      : locale === "de"
+        ? " und "
+        : locale === "uk"
+          ? " та "
+          : " and ";
+  return `${values.slice(0, -1).join(", ")}${glue}${values[values.length - 1]}`;
+}
+
+function getLocalContentStats(
+  items: ContainerListingItem[],
+  locale: AppLocale,
+  listingMessages: ReturnType<typeof getMessages>["containerListings"],
+) {
+  const text = getLocalSeoText(locale);
+  const containerLabels = getTopValues(
+    items.map((item) => getContainerShortLabelLocalized(listingMessages, item.container)),
+  );
+  const conditionLabels = getTopValues(
+    items.map((item) =>
+      getContainerConditionLabel(listingMessages, item.container.condition),
+    ),
+  );
+  const hasTransport = items.some((item) => item.logisticsTransportAvailable);
+  const hasUnloading = items.some((item) => item.logisticsUnloadingAvailable);
+  const hasPrices = items.some(
+    (item) =>
+      typeof item.pricing?.original.amount === "number" ||
+      typeof item.priceAmount === "number" ||
+      Boolean(item.price?.trim()),
+  );
+
+  return {
+    containerLabels:
+      containerLabels.length > 0
+        ? joinReadable(containerLabels, locale)
+        : text.defaultContainerLabels,
+    conditionLabels:
+      conditionLabels.length > 0
+        ? joinReadable(conditionLabels, locale)
+        : text.defaultConditionLabels,
+    hasTransport,
+    hasUnloading,
+    hasPrices,
+  };
+}
+
+function SeoLocalContent({
+  context,
+  items,
+  total,
+  locale,
+  browseHref,
+  listingMessages,
+}: {
+  context: SeoLocalContext;
+  items: ContainerListingItem[];
+  total: number;
+  locale: AppLocale;
+  browseHref: string;
+  listingMessages: ReturnType<typeof getMessages>["containerListings"];
+}) {
+  const intent = getIntentCopy(locale, context.kind);
+  const text = getLocalSeoText(locale);
+  const stats = getLocalContentStats(items, locale, listingMessages);
+  const isCity = context.locationType === "city";
+  const locationLabel = `${text.locationPrefix(isCity)} ${context.name}`;
+  const transportSentence = text.transportSentence(
+    stats.hasTransport,
+    stats.hasUnloading,
+  );
+  const priceSentence = text.priceSentence(stats.hasPrices);
+  const faqItems = text.faq({
+    locationLabel,
+    locationName: context.name,
+    containerLabels: stats.containerLabels,
+    conditionLabels: stats.conditionLabels,
+    transportSentence,
+    intentPhrase: intent.intentPhrase,
+    browsePhrase: intent.browsePhrase,
+  });
+
+  return (
+    <section className="grid gap-6 rounded-md border border-neutral-300 bg-white p-6 shadow-sm">
+      <div className="max-w-4xl">
+        <h2 className="text-2xl font-semibold text-neutral-900">
+          {intent.headingPrefix} {locationLabel}
+        </h2>
+        <div className="mt-3 grid gap-3 text-sm leading-7 text-neutral-700 sm:text-base">
+          <p>
+            {text.introParagraph(intent.offerNoun, locationLabel)}
+          </p>
+          <p>
+            {text.containerParagraph(stats.containerLabels)}
+          </p>
+          <p>
+            {transportSentence} {priceSentence}
+          </p>
+        </div>
+      </div>
+
+      <div className="grid gap-4 md:grid-cols-2">
+        <div className="rounded-md border border-neutral-200 bg-neutral-50 p-4">
+          <h3 className="text-base font-semibold text-neutral-900">
+            {text.checkHeading}
+          </h3>
+          <ul className="mt-3 grid gap-2 text-sm leading-6 text-neutral-700">
+            {text.checkItems.map((item) => (
+              <li key={item}>{item}</li>
+            ))}
+          </ul>
+        </div>
+        <div className="rounded-md border border-neutral-200 bg-neutral-50 p-4">
+          <h3 className="text-base font-semibold text-neutral-900">
+            {text.scopeHeading}
+          </h3>
+          <p className="mt-3 text-sm leading-6 text-neutral-700">
+            {text.scopeParagraph(total.toLocaleString(locale))}
+          </p>
+          <Link
+            href={browseHref}
+            className="mt-4 inline-flex h-10 items-center justify-center rounded-md border border-neutral-300 bg-white px-3 text-sm font-medium text-neutral-800 transition hover:bg-neutral-100"
+          >
+            {text.fullListCta}
+          </Link>
+        </div>
+      </div>
+
+      <div>
+        <h3 className="text-lg font-semibold text-neutral-900">
+          {text.faqHeading}
+        </h3>
+        <div className="mt-3 grid gap-3 md:grid-cols-2">
+          {faqItems.map((item) => (
+            <div key={item.question} className="rounded-md border border-neutral-200 p-4">
+              <h4 className="text-sm font-semibold text-neutral-900">{item.question}</h4>
+              <p className="mt-2 text-sm leading-6 text-neutral-700">{item.answer}</p>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {context.nearbyLinks && context.nearbyLinks.length > 0 ? (
+        <div>
+          <h3 className="text-lg font-semibold text-neutral-900">
+            {text.nearbyHeading}
+          </h3>
+          <div className="mt-3 flex flex-wrap gap-2">
+            {context.nearbyLinks.map((link) => (
+              <Link
+                key={link.href}
+                href={link.href}
+                className="inline-flex min-h-10 items-center rounded-md border border-neutral-300 bg-neutral-50 px-3 text-sm font-medium text-neutral-800 transition hover:bg-neutral-100"
+              >
+                {link.name}
+                {typeof link.distanceKm === "number" ? (
+                  <span className="ml-2 text-xs font-normal text-neutral-500">
+                    {link.distanceKm} km
+                  </span>
+                ) : null}
+              </Link>
+            ))}
+          </div>
+        </div>
+      ) : null}
+    </section>
+  );
+}
+
 export function SeoContainerSalePage({
   locale,
   heading,
@@ -235,8 +790,9 @@ export function SeoContainerSalePage({
   browseHref,
   items,
   total,
+  seoContext,
 }: SeoContainerSalePageProps) {
-  const copy = getContainerSaleSeoHubCopy(locale);
+  const copy = getContainerSeoHubCopy(locale, seoContext?.kind ?? "sell");
   const listingMessages = getMessages(locale).containerListings;
   const isIndexable = getContainerSeoIndexable(total);
 
@@ -262,6 +818,17 @@ export function SeoContainerSalePage({
           </div>
         </div>
       </section>
+
+      {seoContext ? (
+        <SeoLocalContent
+          context={seoContext}
+          items={items}
+          total={total}
+          locale={locale}
+          browseHref={browseHref}
+          listingMessages={listingMessages}
+        />
+      ) : null}
 
       <section className="grid gap-4">
         <div>

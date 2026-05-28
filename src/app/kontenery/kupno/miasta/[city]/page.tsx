@@ -8,6 +8,7 @@ import {
   getContainerSeoCityBySlug,
   getContainerSeoCityMetadata,
   getContainerSeoHubCopy,
+  getNearbyContainerSeoCities,
   getSeoContainerKindCityCount,
   getSeoContainerListingsByKindAndCity,
 } from "@/lib/seo-containers";
@@ -72,7 +73,12 @@ export default async function ContainerBuySeoCityPage({
       browseHref={browseHref}
       items={result.items}
       total={result.total}
+      seoContext={{
+        kind: "buy",
+        locationType: "city",
+        name: city.name,
+        nearbyLinks: getNearbyContainerSeoCities(city, "buy"),
+      }}
     />
   );
 }
-

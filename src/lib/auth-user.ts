@@ -33,6 +33,9 @@ export async function getCurrentUserFromToken(
   if (!user?._id) {
     return null;
   }
+  if (user.isBlocked === true) {
+    return null;
+  }
 
   if (user.role === USER_ROLE.USER || user.role === USER_ROLE.COMPANY_OWNER) {
     const companies = await getCompaniesCollection();

@@ -50,6 +50,7 @@ function mapDraftForApi(
     title: draft.title,
     caption: draft.caption,
     imageUrl: draft.imageUrl,
+    previewImageUrl: `/api/admin/social-post-drafts/${draft._id.toHexString()}/image?v=${draft.updatedAt.getTime()}`,
     listingUrl: draft.listingUrl,
     dateKey: draft.dateKey,
     generatedAt: draft.generatedAt.toISOString(),
