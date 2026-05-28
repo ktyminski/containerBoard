@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import "maplibre-gl/dist/maplibre-gl.css";
 import { useCallback, useEffect, useMemo, useRef, useState, type FormEvent } from "react";
 import maplibregl from "maplibre-gl";
 import {

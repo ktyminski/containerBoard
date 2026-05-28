@@ -10,9 +10,15 @@ import {
   type FocusEvent,
 } from "react";
 import { FormProvider, useForm } from "react-hook-form";
-import maplibregl, { type GeoJSONSource } from "maplibre-gl";
+import type {
+  GeoJSONSource,
+  Map as MapLibreMap,
+  MapLayerMouseEvent,
+  Marker as MapLibreMarker,
+  Popup as MapLibrePopup,
+} from "maplibre-gl";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import { MAP_STYLE_URL } from "@/components/map-shared";
+import { MAP_STYLE_URL } from "@/lib/map-config";
 import {
   getContainerConditionLabel,
   getContainerFeatureLabel,
@@ -160,6 +166,56 @@ const GUEST_FAVORITES_STORAGE_KEY = "container-listing-favorites-v1";
 const OVERLAY_CLOSE_ANIMATION_MS = 280;
 const DARK_BLUE_CTA_BASE_CLASS =
   "border border-[#2f639a] bg-[linear-gradient(180deg,#082650_0%,#0c3466_100%)] text-[#e2efff] transition hover:border-[#67c7ff] hover:text-white";
+const DESKTOP_MAP_MEDIA_QUERY = "(min-width: 1024px)";
+type MapLibreRuntime = typeof import("maplibre-gl");
+let maplibreRuntime: MapLibreRuntime | null = null;
+let maplibreRuntimePromise: Promise<MapLibreRuntime> | null = null;
+
+function loadMapLibreRuntime(): Promise<MapLibreRuntime> {
+  if (maplibreRuntime) {
+    return Promise.resolve(maplibreRuntime);
+  }
+
+  maplibreRuntimePromise ??= Promise.all([
+    import("maplibre-gl/dist/maplibre-gl.css"),
+    import("maplibre-gl"),
+  ]).then(([, module]) => {
+    maplibreRuntime = module;
+    return maplibreRuntime;
+  });
+
+  return maplibreRuntimePromise;
+}
+
+function getLoadedMapLibreRuntime(): MapLibreRuntime {
+  if (!maplibreRuntime) {
+    throw new Error("MapLibre runtime has not been loaded yet.");
+  }
+  return maplibreRuntime;
+}
+
+function useIsDesktopMapViewport(): boolean {
+  const [isDesktopMapViewport, setIsDesktopMapViewport] = useState(false);
+
+  useEffect(() => {
+    if (typeof window === "undefined") {
+      return;
+    }
+
+    const mediaQuery = window.matchMedia(DESKTOP_MAP_MEDIA_QUERY);
+    const syncViewport = () => {
+      setIsDesktopMapViewport(mediaQuery.matches);
+    };
+
+    syncViewport();
+    mediaQuery.addEventListener("change", syncViewport);
+    return () => {
+      mediaQuery.removeEventListener("change", syncViewport);
+    };
+  }, []);
+
+  return isDesktopMapViewport;
+}
 
 function normalizeFavoriteListingIds(input: unknown): string[] {
   if (!Array.isArray(input)) {
@@ -252,7 +308,7 @@ async function copyTextToClipboard(value: string): Promise<boolean> {
 }
 
 function fitMapToPoints(
-  map: maplibregl.Map,
+  map: MapLibreMap,
   points: ContainerListingMapPoint[],
 ): void {
   if (points.length === 0) {
@@ -272,7 +328,7 @@ function fitMapToPoints(
     return;
   }
 
-  const bounds = new maplibregl.LngLatBounds();
+  const bounds = new (getLoadedMapLibreRuntime()).LngLatBounds();
   for (const point of points) {
     if (point.locationLat === null || point.locationLng === null) {
       continue;
@@ -286,7 +342,7 @@ function fitMapToPoints(
 }
 
 function centerMapToPointsPreservingZoom(
-  map: maplibregl.Map,
+  map: MapLibreMap,
   points: ContainerListingMapPoint[],
 ): void {
   const currentZoom = map.getZoom();
@@ -312,7 +368,7 @@ function centerMapToPointsPreservingZoom(
     return;
   }
 
-  const bounds = new maplibregl.LngLatBounds();
+  const bounds = new (getLoadedMapLibreRuntime()).LngLatBounds();
   for (const point of points) {
     if (point.locationLat === null || point.locationLng === null) {
       continue;
@@ -803,7 +859,7 @@ function getVisualViewportRect() {
   };
 }
 
-function getPopupSafeArea(map: maplibregl.Map, edgePadding = 12): PopupSafeArea {
+function getPopupSafeArea(map: MapLibreMap, edgePadding = 12): PopupSafeArea {
   const mapRect = map.getContainer().getBoundingClientRect();
   const viewportRect = getVisualViewportRect();
   const stickyHeader = document.querySelector("header.sticky");
@@ -832,7 +888,7 @@ function getPopupSafeArea(map: maplibregl.Map, edgePadding = 12): PopupSafeArea 
 }
 
 function resolvePopupPlacement(
-  map: maplibregl.Map,
+  map: MapLibreMap,
   point: { x: number; y: number },
   itemCount: number,
 ): { anchor: PopupAnchor; offset: number } {
@@ -903,8 +959,8 @@ function resolvePopupPlacement(
 }
 
 function ensurePopupVisibility(
-  map: maplibregl.Map,
-  popup: maplibregl.Popup,
+  map: MapLibreMap,
+  popup: MapLibrePopup,
 ): void {
   const popupElement = popup.getElement();
   if (!popupElement.isConnected) {
@@ -984,17 +1040,17 @@ function ensurePopupVisibility(
 }
 
 function setSourceData(
-  map: maplibregl.Map,
+  map: MapLibreMap,
   sourceId: string,
   data: MapFeatureCollection,
 ): void {
   const source = map.getSource(sourceId);
   if (source && "setData" in source) {
-    (source as maplibregl.GeoJSONSource).setData(data as never);
+    (source as GeoJSONSource).setData(data as never);
   }
 }
 
-function getMapContainerSizeKey(map: maplibregl.Map): string {
+function getMapContainerSizeKey(map: MapLibreMap): string {
   const container = map.getContainer();
   return `${container.clientWidth}x${container.clientHeight}`;
 }
@@ -1029,9 +1085,9 @@ const ListingsMap = memo(function ListingsMap({
   onReady?: () => void;
 }) {
   const mapContainerRef = useRef<HTMLDivElement | null>(null);
-  const mapRef = useRef<maplibregl.Map | null>(null);
-  const popupRef = useRef<maplibregl.Popup | null>(null);
-  const activeLocationMarkerRef = useRef<maplibregl.Marker | null>(null);
+  const mapRef = useRef<MapLibreMap | null>(null);
+  const popupRef = useRef<MapLibrePopup | null>(null);
+  const activeLocationMarkerRef = useRef<MapLibreMarker | null>(null);
   const lastCenteredActiveLocationKeyRef = useRef<string | null>(null);
   const previousActiveLocationKeyRef = useRef<string | null>(null);
   const suppressNextAutoFitRef = useRef(false);
@@ -1177,7 +1233,7 @@ const ListingsMap = memo(function ListingsMap({
   }, [onReady]);
 
   const resizeMapIfNeeded = useCallback(
-    (map: maplibregl.Map, force = false) => {
+    (map: MapLibreMap, force = false) => {
       const nextSizeKey = getMapContainerSizeKey(map);
       if (!force && lastMapContainerSizeKeyRef.current === nextSizeKey) {
         return false;
@@ -1214,15 +1270,22 @@ const ListingsMap = memo(function ListingsMap({
       return;
     }
 
-    const map = new maplibregl.Map({
-      container: mapContainerRef.current,
-      style: MAP_STYLE_URL,
-      center: DEFAULT_MAP_CENTER,
-      zoom: 5,
-      maxZoom: 18,
-    });
+    let isCancelled = false;
 
-    map.addControl(new maplibregl.NavigationControl(), "top-right");
+    void loadMapLibreRuntime().then((maplibregl) => {
+      if (isCancelled || !mapContainerRef.current || mapRef.current) {
+        return;
+      }
+
+      const map = new maplibregl.Map({
+        container: mapContainerRef.current,
+        style: MAP_STYLE_URL,
+        center: DEFAULT_MAP_CENTER,
+        zoom: 5,
+        maxZoom: 18,
+      });
+
+      map.addControl(new maplibregl.NavigationControl(), "top-right");
 
     map.on("load", () => {
       if (!map.getSource(MAP_CLUSTER_SOURCE_ID)) {
@@ -1421,7 +1484,7 @@ const ListingsMap = memo(function ListingsMap({
         map.getCanvas().style.cursor = "";
       });
 
-      const handleClusterClick = (event: maplibregl.MapLayerMouseEvent) => {
+      const handleClusterClick = (event: MapLayerMouseEvent) => {
         const requestSeq = ++popupRequestSeqRef.current;
         const clickPoint = event.point;
         const feature =
@@ -1564,7 +1627,7 @@ const ListingsMap = memo(function ListingsMap({
       map.on("click", MAP_CLUSTER_COUNT_LAYER_ID, handleClusterClick);
 
       const handlePointClick = (
-        event: maplibregl.MapLayerMouseEvent,
+        event: MapLayerMouseEvent,
         layerId: string,
       ) => {
         const requestSeq = ++popupRequestSeqRef.current;
@@ -1737,14 +1800,16 @@ const ListingsMap = memo(function ListingsMap({
       lastMapContainerSizeKeyRef.current = getMapContainerSizeKey(map);
     });
 
-    mapRef.current = map;
+      mapRef.current = map;
+    });
 
     return () => {
+      isCancelled = true;
       popupRef.current?.remove();
       popupRef.current = null;
       activeLocationMarkerRef.current?.remove();
       activeLocationMarkerRef.current = null;
-      map.remove();
+      mapRef.current?.remove();
       mapRef.current = null;
     };
   }, [loadPopupDetailsByIds]);
@@ -1799,6 +1864,7 @@ const ListingsMap = memo(function ListingsMap({
       return;
     }
 
+    const maplibregl = getLoadedMapLibreRuntime();
     const popup = new maplibregl.Popup({
       closeButton: false,
       offset: 18,
@@ -2048,6 +2114,7 @@ export function ContainerListingsBoard({
   const [isMapOpen, setIsMapOpen] = useState(false);
   const [isDesktopMapOpen, setIsDesktopMapOpen] = useState(true);
   const [isMobileMapLoading, setIsMobileMapLoading] = useState(false);
+  const isDesktopMapViewport = useIsDesktopMapViewport();
   const [pendingDetailsNavigation, setPendingDetailsNavigation] = useState<{
     listHref: string;
   } | null>(null);
@@ -2108,6 +2175,9 @@ export function ContainerListingsBoard({
 
   const isLocationApplied = appliedFilters.locationQuery.trim().length > 0;
   const isDetailsOverlayPending = pendingDetailsNavigation !== null;
+  const shouldRenderDesktopMap = isDesktopMapViewport && isDesktopMapOpen;
+  const shouldRenderMobileMap = !isDesktopMapViewport && isMapOpen;
+  const shouldLoadMapContainers = shouldRenderDesktopMap || shouldRenderMobileMap;
   usePageScrollLock(
     (isDetailsOverlayPending && !isDetailsOverlayRouteActive) || isMapOpen,
   );
@@ -2146,6 +2216,15 @@ export function ContainerListingsBoard({
     }),
     [locale],
   );
+
+  useEffect(() => {
+    if (!isDesktopMapViewport || !isMapOpen) {
+      return;
+    }
+
+    setIsMapOpen(false);
+    setIsMobileMapLoading(false);
+  }, [isDesktopMapViewport, isMapOpen]);
 
   useEffect(() => {
     if (isDetailsOverlayRouteActive) {
@@ -2885,6 +2964,10 @@ export function ContainerListingsBoard({
       return;
     }
 
+    if (!shouldLoadMapContainers) {
+      return;
+    }
+
     const controller = new AbortController();
 
     async function loadMapContainers() {
@@ -2926,6 +3009,7 @@ export function ContainerListingsBoard({
     mapRequestUrl,
     messages.board.mapApiErrorPrefix,
     requestHeaders,
+    shouldLoadMapContainers,
   ]);
 
   const clearAllFilters = useCallback(() => {
@@ -3244,22 +3328,24 @@ export function ContainerListingsBoard({
                   : "pointer-events-none max-h-0 overflow-hidden opacity-0"
               }`}
             >
-              <ListingsMap
-                locale={locale}
-                messages={messages}
-                items={mapItems}
-                isVisible={isDesktopMapOpen}
-                detailsHrefPrefix={detailsHrefPrefix}
-                detailsQueryString={detailsQueryString}
-                activeLocation={
-                  resolvedLocationMode === "point"
-                    ? appliedFilters.locationCenter
-                    : null
-                }
-                activeLocationLabel={appliedFilters.locationQuery}
-                suppressAutoFit={resolvedLocationMode === "country"}
-                preserveZoomChangeToken={mapTabSwitchToken}
-              />
+              {shouldRenderDesktopMap ? (
+                <ListingsMap
+                  locale={locale}
+                  messages={messages}
+                  items={mapItems}
+                  isVisible={shouldRenderDesktopMap}
+                  detailsHrefPrefix={detailsHrefPrefix}
+                  detailsQueryString={detailsQueryString}
+                  activeLocation={
+                    resolvedLocationMode === "point"
+                      ? appliedFilters.locationCenter
+                      : null
+                  }
+                  activeLocationLabel={appliedFilters.locationQuery}
+                  suppressAutoFit={resolvedLocationMode === "country"}
+                  preserveZoomChangeToken={mapTabSwitchToken}
+                />
+              ) : null}
             </div>
           </div>
           <div
@@ -3344,7 +3430,7 @@ export function ContainerListingsBoard({
           </div>
         ) : null}
 
-        {isMapOpen ? (
+        {shouldRenderMobileMap ? (
           <section
             id="containers-listings-mobile-map-panel"
             className="fixed inset-x-0 bottom-0 top-16 z-[45] overflow-hidden bg-white lg:hidden"
@@ -3380,7 +3466,7 @@ export function ContainerListingsBoard({
                 locale={locale}
                 messages={messages}
                 items={mapItems}
-                isVisible={isMapOpen}
+                isVisible={shouldRenderMobileMap}
                 detailsHrefPrefix={detailsHrefPrefix}
                 detailsQueryString={detailsQueryString}
                 activeLocation={
