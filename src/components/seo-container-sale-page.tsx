@@ -50,6 +50,7 @@ type SeoListingPriceDisplay = {
 };
 
 type LocalSeoText = {
+  expandSummary: string;
   locationPrefix: (isCity: boolean) => string;
   defaultContainerLabels: string;
   defaultConditionLabels: string;
@@ -59,6 +60,7 @@ type LocalSeoText = {
   containerParagraph: (containerLabels: string) => string;
   checkHeading: string;
   checkItems: string[];
+  checkAnswerPrefix?: string;
   scopeHeading: string;
   scopeParagraph: (total: string) => string;
   fullListCta: string;
@@ -70,6 +72,7 @@ type LocalSeoText = {
     containerLabels: string;
     conditionLabels: string;
     transportSentence: string;
+    checkAnswer: string;
     intentPhrase: string;
     browsePhrase: string;
   }) => Array<{ question: string; answer: string }>;
@@ -384,8 +387,9 @@ function getIntentCopy(locale: AppLocale, kind: ContainerSeoKind) {
 function getLocalSeoText(locale: AppLocale): LocalSeoText {
   if (locale === "pl") {
     return {
+      expandSummary: "Rozwiń opis lokalizacji i najczęstsze pytania",
       locationPrefix: (isCity) => (isCity ? "w okolicy" : "w kraju"),
-      defaultContainerLabels: "kontenery 20 ft, 40 ft oraz 40 HC",
+      defaultContainerLabels: "kontenery dry van (DV) 20 ft, 40 ft oraz 40 HC",
       defaultConditionLabels: "nowe i używane",
       transportSentence: (hasTransport, hasUnloading) =>
         hasTransport || hasUnloading
@@ -402,10 +406,12 @@ function getLocalSeoText(locale: AppLocale): LocalSeoText {
       checkHeading: "Co sprawdzić przed kontaktem",
       checkItems: [
         "typ i rozmiar kontenera",
+        "czy opis dotyczy kontenera dry van / DV, HC, reefer lub innego typu",
         "stan: nowy, one trip, cargo worthy lub WWT",
         "lokalizację i możliwość transportu",
         "cenę netto/brutto albo sposób wyceny",
       ],
+      checkAnswerPrefix: "Przed kontaktem warto sprawdzić",
       scopeHeading: "Aktualny zakres strony",
       scopeParagraph: (total) =>
         `W tej lokalizacji system pokazuje ${total} aktywnych ogłoszeń. Wyniki zmieniają się wraz z dodawaniem, odświeżaniem i wygasaniem ofert.`,
@@ -436,8 +442,9 @@ function getLocalSeoText(locale: AppLocale): LocalSeoText {
 
   if (locale === "de") {
     return {
+      expandSummary: "Beschreibung und häufige Fragen aufklappen",
       locationPrefix: (isCity) => (isCity ? "im Raum" : "in"),
-      defaultContainerLabels: "20-ft-, 40-ft- und 40-HC-Container",
+      defaultContainerLabels: "Dry-Van-Container (DV), 20 ft, 40 ft und 40 HC",
       defaultConditionLabels: "neue und gebrauchte",
       transportSentence: (hasTransport, hasUnloading) =>
         hasTransport || hasUnloading
@@ -454,10 +461,12 @@ function getLocalSeoText(locale: AppLocale): LocalSeoText {
       checkHeading: "Was vor der Kontaktaufnahme prüfen",
       checkItems: [
         "Typ und Größe des Containers",
+        "ob es sich um Dry Van / DV, HC, Reefer oder einen anderen Typ handelt",
         "Zustand: neu, one trip, cargo worthy oder WWT",
         "Standort und Transportmöglichkeit",
         "Netto-/Bruttopreis oder Art der Preisfindung",
       ],
+      checkAnswerPrefix: "Vor der Kontaktaufnahme sollten Sie prüfen",
       scopeHeading: "Aktueller Seitenumfang",
       scopeParagraph: (total) =>
         `Für diese Lokalisierung zeigt das System ${total} aktive Anzeigen. Die Ergebnisse ändern sich, wenn Angebote hinzugefügt, erneuert oder beendet werden.`,
@@ -488,8 +497,9 @@ function getLocalSeoText(locale: AppLocale): LocalSeoText {
 
   if (locale === "uk") {
     return {
+      expandSummary: "Розгорнути опис локації та FAQ",
       locationPrefix: (isCity) => (isCity ? "у районі" : "у країні"),
-      defaultContainerLabels: "контейнери 20 ft, 40 ft та 40 HC",
+      defaultContainerLabels: "контейнери dry van (DV) 20 ft, 40 ft та 40 HC",
       defaultConditionLabels: "нові та вживані",
       transportSentence: (hasTransport, hasUnloading) =>
         hasTransport || hasUnloading
@@ -506,10 +516,12 @@ function getLocalSeoText(locale: AppLocale): LocalSeoText {
       checkHeading: "Що перевірити перед контактом",
       checkItems: [
         "тип і розмір контейнера",
+        "чи це dry van / DV, HC, reefer або інший тип",
         "стан: новий, one trip, cargo worthy або WWT",
         "локацію і можливість доставки",
         "ціну нетто/брутто або спосіб оцінки",
       ],
+      checkAnswerPrefix: "Перед контактом варто перевірити",
       scopeHeading: "Поточний обсяг сторінки",
       scopeParagraph: (total) =>
         `У цій локації система показує ${total} активних оголошень. Результати змінюються, коли пропозиції додаються, оновлюються або завершуються.`,
@@ -539,8 +551,9 @@ function getLocalSeoText(locale: AppLocale): LocalSeoText {
   }
 
   return {
+    expandSummary: "Expand location description and FAQ",
     locationPrefix: (isCity) => (isCity ? "around" : "in"),
-    defaultContainerLabels: "20 ft, 40 ft, and 40 HC containers",
+    defaultContainerLabels: "dry van (DV), 20 ft, 40 ft, and 40 HC containers",
     defaultConditionLabels: "new and used",
     transportSentence: (hasTransport, hasUnloading) =>
       hasTransport || hasUnloading
@@ -557,10 +570,12 @@ function getLocalSeoText(locale: AppLocale): LocalSeoText {
     checkHeading: "What to check before contact",
     checkItems: [
       "container type and size",
+      "whether it is dry van / DV, HC, reefer, or another type",
       "condition: new, one trip, cargo worthy, or WWT",
       "location and transport availability",
       "net/gross price or pricing method",
     ],
+    checkAnswerPrefix: "Before contact, check",
     scopeHeading: "Current page scope",
     scopeParagraph: (total) =>
       `This location currently shows ${total} active listings. Results change as offers are added, refreshed, and expired.`,
@@ -623,6 +638,24 @@ function joinReadable(values: string[], locale: AppLocale): string {
   return `${values.slice(0, -1).join(", ")}${glue}${values[values.length - 1]}`;
 }
 
+function withDryVanAliases(
+  label: string,
+  items: ContainerListingItem[],
+): string {
+  const hasDryContainer = items.some((item) => item.container.type === "dry");
+  if (!hasDryContainer || /dry van|dv/i.test(label)) {
+    return label;
+  }
+  return `${label} (dry van / DV)`;
+}
+
+function getCheckAnswer(text: LocalSeoText, locale: AppLocale): string {
+  const prefix = text.checkAnswerPrefix ?? text.checkHeading;
+  const normalizedItems = text.checkItems.map((item) => item.trim()).filter(Boolean);
+  const list = joinReadable(normalizedItems, locale);
+  return `${prefix}: ${list}.`;
+}
+
 function getLocalContentStats(
   items: ContainerListingItem[],
   locale: AppLocale,
@@ -649,7 +682,7 @@ function getLocalContentStats(
   return {
     containerLabels:
       containerLabels.length > 0
-        ? joinReadable(containerLabels, locale)
+        ? withDryVanAliases(joinReadable(containerLabels, locale), items)
         : text.defaultContainerLabels,
     conditionLabels:
       conditionLabels.length > 0
@@ -686,99 +719,107 @@ function SeoLocalContent({
     stats.hasUnloading,
   );
   const priceSentence = text.priceSentence(stats.hasPrices);
-  const faqItems = text.faq({
-    locationLabel,
-    locationName: context.name,
-    containerLabels: stats.containerLabels,
-    conditionLabels: stats.conditionLabels,
-    transportSentence,
-    intentPhrase: intent.intentPhrase,
-    browsePhrase: intent.browsePhrase,
-  });
+  const checkAnswer = getCheckAnswer(text, locale);
+  const faqItems = [
+    ...text.faq({
+      locationLabel,
+      locationName: context.name,
+      containerLabels: stats.containerLabels,
+      conditionLabels: stats.conditionLabels,
+      transportSentence,
+      checkAnswer,
+      intentPhrase: intent.intentPhrase,
+      browsePhrase: intent.browsePhrase,
+    }),
+    {
+      question: text.checkHeading,
+      answer: checkAnswer,
+    },
+  ];
 
   return (
-    <section className="grid gap-6 rounded-md border border-neutral-300 bg-white p-6 shadow-sm">
-      <div className="max-w-4xl">
-        <h2 className="text-2xl font-semibold text-neutral-900">
-          {intent.headingPrefix} {locationLabel}
-        </h2>
-        <div className="mt-3 grid gap-3 text-sm leading-7 text-neutral-700 sm:text-base">
-          <p>
-            {text.introParagraph(intent.offerNoun, locationLabel)}
-          </p>
-          <p>
-            {text.containerParagraph(stats.containerLabels)}
-          </p>
-          <p>
-            {transportSentence} {priceSentence}
-          </p>
-        </div>
-      </div>
-
-      <div className="grid gap-4 md:grid-cols-2">
-        <div className="rounded-md border border-neutral-200 bg-neutral-50 p-4">
-          <h3 className="text-base font-semibold text-neutral-900">
-            {text.checkHeading}
-          </h3>
-          <ul className="mt-3 grid gap-2 text-sm leading-6 text-neutral-700">
-            {text.checkItems.map((item) => (
-              <li key={item}>{item}</li>
-            ))}
-          </ul>
-        </div>
-        <div className="rounded-md border border-neutral-200 bg-neutral-50 p-4">
-          <h3 className="text-base font-semibold text-neutral-900">
-            {text.scopeHeading}
-          </h3>
-          <p className="mt-3 text-sm leading-6 text-neutral-700">
-            {text.scopeParagraph(total.toLocaleString(locale))}
-          </p>
-          <Link
-            href={browseHref}
-            className="mt-4 inline-flex h-10 items-center justify-center rounded-md border border-neutral-300 bg-white px-3 text-sm font-medium text-neutral-800 transition hover:bg-neutral-100"
-          >
-            {text.fullListCta}
-          </Link>
-        </div>
-      </div>
-
-      <div>
-        <h3 className="text-lg font-semibold text-neutral-900">
-          {text.faqHeading}
-        </h3>
-        <div className="mt-3 grid gap-3 md:grid-cols-2">
-          {faqItems.map((item) => (
-            <div key={item.question} className="rounded-md border border-neutral-200 p-4">
-              <h4 className="text-sm font-semibold text-neutral-900">{item.question}</h4>
-              <p className="mt-2 text-sm leading-6 text-neutral-700">{item.answer}</p>
+    <section className="rounded-md border border-neutral-300 bg-white shadow-sm">
+      <details className="group">
+        <summary className="flex cursor-pointer list-none items-center justify-between gap-4 px-5 py-4 text-sm font-semibold text-neutral-900 marker:hidden sm:px-6">
+          <span>{text.expandSummary}</span>
+          <span className="shrink-0 text-lg leading-none text-neutral-500 transition group-open:rotate-45">
+            +
+          </span>
+        </summary>
+        <div className="grid gap-6 border-t border-neutral-200 px-5 py-5 sm:px-6">
+          <div className="max-w-4xl">
+            <h2 className="text-2xl font-semibold text-neutral-900">
+              {intent.headingPrefix} {locationLabel}
+            </h2>
+            <div className="mt-3 grid gap-3 text-sm leading-7 text-neutral-700 sm:text-base">
+              <p>
+                {text.introParagraph(intent.offerNoun, locationLabel)}
+              </p>
+              <p>
+                {text.containerParagraph(stats.containerLabels)}
+              </p>
+              <p>
+                {transportSentence} {priceSentence}
+              </p>
             </div>
-          ))}
-        </div>
-      </div>
-
-      {context.nearbyLinks && context.nearbyLinks.length > 0 ? (
-        <div>
-          <h3 className="text-lg font-semibold text-neutral-900">
-            {text.nearbyHeading}
-          </h3>
-          <div className="mt-3 flex flex-wrap gap-2">
-            {context.nearbyLinks.map((link) => (
-              <Link
-                key={link.href}
-                href={link.href}
-                className="inline-flex min-h-10 items-center rounded-md border border-neutral-300 bg-neutral-50 px-3 text-sm font-medium text-neutral-800 transition hover:bg-neutral-100"
-              >
-                {link.name}
-                {typeof link.distanceKm === "number" ? (
-                  <span className="ml-2 text-xs font-normal text-neutral-500">
-                    {link.distanceKm} km
-                  </span>
-                ) : null}
-              </Link>
-            ))}
           </div>
+
+          <div className="grid gap-4">
+            <div className="rounded-md border border-neutral-200 bg-neutral-50 p-4">
+              <h3 className="text-base font-semibold text-neutral-900">
+                {text.scopeHeading}
+              </h3>
+              <p className="mt-3 text-sm leading-6 text-neutral-700">
+                {text.scopeParagraph(total.toLocaleString(locale))}
+              </p>
+              <Link
+                href={browseHref}
+                className="mt-4 inline-flex h-10 items-center justify-center rounded-md border border-neutral-300 bg-white px-3 text-sm font-medium text-neutral-800 transition hover:bg-neutral-100"
+              >
+                {text.fullListCta}
+              </Link>
+            </div>
+          </div>
+
+          <div>
+            <h3 className="text-lg font-semibold text-neutral-900">
+              {text.faqHeading}
+            </h3>
+            <div className="mt-3 grid gap-3 md:grid-cols-2">
+              {faqItems.map((item) => (
+                <div key={item.question} className="rounded-md border border-neutral-200 p-4">
+                  <h4 className="text-sm font-semibold text-neutral-900">{item.question}</h4>
+                  <p className="mt-2 text-sm leading-6 text-neutral-700">{item.answer}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {context.nearbyLinks && context.nearbyLinks.length > 0 ? (
+            <div>
+              <h3 className="text-lg font-semibold text-neutral-900">
+                {text.nearbyHeading}
+              </h3>
+              <div className="mt-3 flex flex-wrap gap-2">
+                {context.nearbyLinks.map((link) => (
+                  <Link
+                    key={link.href}
+                    href={link.href}
+                    className="inline-flex min-h-10 items-center rounded-md border border-neutral-300 bg-neutral-50 px-3 text-sm font-medium text-neutral-800 transition hover:bg-neutral-100"
+                  >
+                    {link.name}
+                    {typeof link.distanceKm === "number" ? (
+                      <span className="ml-2 text-xs font-normal text-neutral-500">
+                        {link.distanceKm} km
+                      </span>
+                    ) : null}
+                  </Link>
+                ))}
+              </div>
+            </div>
+          ) : null}
         </div>
-      ) : null}
+      </details>
     </section>
   );
 }
@@ -818,17 +859,6 @@ export function SeoContainerSalePage({
           </div>
         </div>
       </section>
-
-      {seoContext ? (
-        <SeoLocalContent
-          context={seoContext}
-          items={items}
-          total={total}
-          locale={locale}
-          browseHref={browseHref}
-          listingMessages={listingMessages}
-        />
-      ) : null}
 
       <section className="grid gap-4">
         <div>
@@ -1060,6 +1090,17 @@ export function SeoContainerSalePage({
           </div>
         )}
       </section>
+
+      {seoContext ? (
+        <SeoLocalContent
+          context={seoContext}
+          items={items}
+          total={total}
+          locale={locale}
+          browseHref={browseHref}
+          listingMessages={listingMessages}
+        />
+      ) : null}
     </main>
   );
 }

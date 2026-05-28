@@ -89,7 +89,16 @@ function getLandingCardImageSrc(item: ContainerListingItem): string {
     return Boolean(trimmed);
   });
 
-  return firstPhotoUrl ?? getLandingCardPlaceholderSrc(item);
+  if (!firstPhotoUrl) {
+    return getLandingCardPlaceholderSrc(item);
+  }
+
+  if (!firstPhotoUrl.startsWith("/api/containers/")) {
+    return firstPhotoUrl;
+  }
+
+  const separator = firstPhotoUrl.includes("?") ? "&" : "?";
+  return `${firstPhotoUrl}${separator}w=160`;
 }
 
 function getLandingPriceAmount(
@@ -378,6 +387,7 @@ export async function LandingPageContent({
           {latestListings.length > 0 ? (
             <ul className="grid gap-4 lg:grid-cols-2">
               {latestListings.map((item) => {
+                const imageSrc = getLandingCardImageSrc(item);
                 const priceDisplay = getLandingCardPriceDisplay(
                   item,
                   locale,
@@ -395,9 +405,10 @@ export async function LandingPageContent({
                     >
                       <div className="relative aspect-square h-24 w-24 shrink-0 overflow-hidden rounded-md border border-neutral-200 bg-neutral-100 sm:h-28 sm:w-28">
                         <ContainerPhotoWithPlaceholder
-                          src={getLandingCardImageSrc(item)}
+                          src={imageSrc}
                           alt=""
                           fill
+                          unoptimized={imageSrc.startsWith("/api/containers/")}
                           className={
                             item.photoUrls && item.photoUrls.length > 0
                               ? "object-cover"
