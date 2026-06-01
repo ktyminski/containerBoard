@@ -1,6 +1,7 @@
 ﻿"use client";
 
 import Link from "next/link";
+import { upload } from "@vercel/blob/client";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Controller, useForm } from "react-hook-form";
@@ -43,6 +44,7 @@ import {
   type AdditionalLocationInitialValue,
   type CompanyLocationPrefillOption,
   type ContainerListingFormValues,
+  type ImageItem,
   type ListingIntent,
 } from "@/components/container-listing-form-shared";
 import { type ContainerModuleMessages } from "@/components/container-modules-i18n";
@@ -76,6 +78,19 @@ import {
 } from "@/lib/container-listing-types";
 
 export type { CompanyLocationPrefillOption, ListingIntent };
+
+type UploadedContainerPhoto = {
+  filename: string;
+  contentType: "image/jpeg" | "image/png" | "image/webp";
+  size: number;
+  blobUrl: string;
+};
+
+type ContainerListingSubmitPayload = Record<string, unknown> & {
+  uploadedPhotos?: UploadedContainerPhoto[];
+};
+
+const CONTAINER_PHOTO_UPLOAD_TIMEOUT_MS = 60_000;
 
 type ContainerListingFormProps = {
   mode?: "create" | "edit";
@@ -127,6 +142,86 @@ const LISTING_INTENT_BUTTON_THEME: Record<
       "border-[#c39a57] bg-[#5b421c] text-[#fff3dc] shadow-[0_0_0_1px_rgba(195,154,87,0.42)]",
   },
 };
+
+function sanitizeUploadFilename(filename: string): string {
+  return (
+    filename
+      .trim()
+      .replace(/[^a-zA-Z0-9._-]+/g, "-")
+      .replace(/^-+|-+$/g, "")
+      .slice(0, 120) || "container-photo.webp"
+  );
+}
+
+function createUploadPath(file: File): string {
+  const id =
+    typeof crypto.randomUUID === "function"
+      ? crypto.randomUUID()
+      : `${Date.now()}-${Math.random().toString(36).slice(2)}`;
+  return `containers/uploads/${id}-${sanitizeUploadFilename(file.name)}`;
+}
+
+function getPhotoUploadItems(input: {
+  canUploadPhotos: boolean;
+  coverPhotoItem: ImageItem | null;
+  photoItems: ImageItem[];
+}): ImageItem[] {
+  if (!input.canUploadPhotos) {
+    return [];
+  }
+  return [
+    ...(input.coverPhotoItem ? [input.coverPhotoItem] : []),
+    ...input.photoItems,
+  ];
+}
+
+async function uploadContainerPhotoItem(
+  item: ImageItem,
+): Promise<UploadedContainerPhoto> {
+  const contentType = item.file.type;
+  if (
+    contentType !== "image/jpeg" &&
+    contentType !== "image/png" &&
+    contentType !== "image/webp"
+  ) {
+    throw new Error("Only JPG, PNG and WebP images can be uploaded.");
+  }
+
+  const abortController = new AbortController();
+  const timeoutId = window.setTimeout(() => {
+    abortController.abort();
+  }, CONTAINER_PHOTO_UPLOAD_TIMEOUT_MS);
+
+  let blob: Awaited<ReturnType<typeof upload>>;
+  try {
+    blob = await upload(createUploadPath(item.file), item.file, {
+      access: "private",
+      contentType,
+      handleUploadUrl: "/api/containers/uploads",
+      abortSignal: abortController.signal,
+    });
+  } catch (error) {
+    if (abortController.signal.aborted) {
+      throw new Error("Photo upload timed out. Try a smaller file or retry.");
+    }
+    throw error;
+  } finally {
+    window.clearTimeout(timeoutId);
+  }
+
+  return {
+    filename: item.file.name,
+    contentType,
+    size: item.file.size,
+    blobUrl: blob.url,
+  };
+}
+
+async function uploadContainerPhotoItems(
+  items: ImageItem[],
+): Promise<UploadedContainerPhoto[]> {
+  return Promise.all(items.map(uploadContainerPhotoItem));
+}
 
 
 
@@ -215,7 +310,7 @@ export function ContainerListingForm({
   );
   const {
     additionalInitialPhotoIndexes,
-    appendPhotosToFormData,
+    coverPhotoItem,
     coverPhotoCrop,
     coverPhotoInputRef,
     handleAdditionalPhotoFilesAdded,
@@ -232,6 +327,7 @@ export function ContainerListingForm({
     setCoverPhotoCrop,
     stableInitialPhotoUrls,
     totalPhotoCount,
+    keptInitialPhotoIndexes,
   } = useContainerListingFormPhotos({
     initialPhotoUrls,
     messages,
@@ -787,7 +883,6 @@ export function ContainerListingForm({
       );
       return;
     }
-
     const pricing = {
       original: {
         amount: normalizedPriceAmount ?? null,
@@ -803,10 +898,17 @@ export function ContainerListingForm({
       },
     };
 
-    const payload = {
+    const payload: ContainerListingSubmitPayload = {
       ...(mode === "edit" ? { action: "update" } : {}),
       ...(mode === "edit" && reactivateOnSave
         ? { reactivateOnSave: true }
+        : {}),
+      ...(mode === "edit"
+        ? {
+            keepPhotoIndexes: keptInitialPhotoIndexes,
+            prependUploadedPhotos:
+              Boolean(coverPhotoItem) && keptInitialPhotoIndexes.length > 0,
+          }
         : {}),
       ...(adminCompanyId?.trim() ? { adminCompanyId: adminCompanyId.trim() } : {}),
       type: values.type,
@@ -883,16 +985,25 @@ export function ContainerListingForm({
     };
 
     try {
-      const formData = new FormData();
-      formData.set("payload", JSON.stringify(payload));
-      appendPhotosToFormData(formData, {
-        mode,
+      const photoUploadItems = getPhotoUploadItems({
         canUploadPhotos: canUploadPhotosForSubmission,
+        coverPhotoItem,
+        photoItems,
       });
+      const uploadedPhotos =
+        photoUploadItems.length > 0
+          ? await uploadContainerPhotoItems(photoUploadItems)
+          : [];
+      if (uploadedPhotos.length > 0) {
+        payload.uploadedPhotos = uploadedPhotos;
+      }
 
       const response = await fetch(submitEndpoint, {
         method: submitMethod,
-        body: formData,
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(payload),
       });
 
       const data = (await response.json().catch(() => null)) as {
@@ -904,8 +1015,9 @@ export function ContainerListingForm({
         const details = Array.isArray(data?.issues)
           ? ` (${data?.issues.join(", ")})`
           : "";
+        const fallbackMessage = `${messages.form.saveContainerError} (HTTP ${response.status})`;
         throw new Error(
-          (data?.error ?? messages.form.saveContainerError) + details,
+          (data?.error ?? fallbackMessage) + details,
         );
       }
 

@@ -22,11 +22,6 @@ type UseContainerListingFormPhotosParams = {
   onWarning: (message: string) => void;
 };
 
-type AppendPhotosToFormDataOptions = {
-  mode: "create" | "edit";
-  canUploadPhotos: boolean;
-};
-
 export function useContainerListingFormPhotos({
   initialPhotoUrls,
   messages,
@@ -264,33 +259,6 @@ export function useContainerListingFormPhotos({
     setPhotoItems((previous) => removeImageItem(previous, id));
   }, []);
 
-  const appendPhotosToFormData = useCallback(
-    (formData: FormData, options: AppendPhotosToFormDataOptions) => {
-      if (options.mode === "edit") {
-        formData.set("keepPhotoIndexes", JSON.stringify(keptInitialPhotoIndexes));
-        if (
-          options.canUploadPhotos &&
-          coverPhotoItem &&
-          keptInitialPhotoIndexes.length > 0
-        ) {
-          formData.set("prependUploadedPhotos", "1");
-        }
-      }
-
-      if (!options.canUploadPhotos) {
-        return;
-      }
-
-      if (coverPhotoItem) {
-        formData.append("photos", coverPhotoItem.file);
-      }
-      for (const item of photoItems) {
-        formData.append("photos", item.file);
-      }
-    },
-    [coverPhotoItem, keptInitialPhotoIndexes, photoItems],
-  );
-
   const resetPhotosAfterSuccessfulSave = useCallback(() => {
     if (coverPhotoItem) {
       URL.revokeObjectURL(coverPhotoItem.previewUrl);
@@ -302,7 +270,6 @@ export function useContainerListingFormPhotos({
 
   return {
     additionalInitialPhotoIndexes,
-    appendPhotosToFormData,
     coverPhotoCrop,
     coverPhotoInputRef,
     coverPhotoItem,

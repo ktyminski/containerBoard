@@ -159,8 +159,8 @@ export const MAX_CONTAINER_PHOTO_MB = 5;
 export const MAX_ADDITIONAL_LOCATIONS = MAX_LISTING_LOCATIONS - 1;
 export const PRIMARY_LOCATION_MAP_ID = "primary-location";
 
-const MAX_CLIENT_IMAGE_DIMENSION = 2200;
-const IMAGE_OPTIMIZATION_QUALITY_STEPS = [0.9, 0.84, 0.78] as const;
+const MAX_CLIENT_IMAGE_DIMENSION = 1600;
+const IMAGE_OPTIMIZATION_QUALITY_STEPS = [0.78, 0.72, 0.66] as const;
 
 export function mapListingIntentToType(intent: ListingIntent): ListingType {
   return intent;
@@ -296,13 +296,6 @@ export async function optimizeListingImageForUpload(
     }
 
     if (!smallestBlob) {
-      return file;
-    }
-
-    if (file.size <= maxBytes && smallestBlob.size >= file.size * 0.95) {
-      return file;
-    }
-    if (smallestBlob.size >= file.size && file.size <= maxBytes) {
       return file;
     }
 

@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from "next/server";
+import { after, NextRequest, NextResponse } from "next/server";
 import { ObjectId } from "mongodb";
 import { z } from "zod";
 import { getCurrentUserFromRequest } from "@/lib/auth-user";
@@ -49,7 +49,10 @@ import {
   normalizeOptionalString,
   resolveAvailableFromDate,
 } from "@/lib/container-listing-write";
-import { updateListingSchema } from "@/lib/container-listing-write-schema";
+import {
+  updateListingSchema,
+  type UploadedContainerPhotoInput,
+} from "@/lib/container-listing-write-schema";
 import { USER_ROLE } from "@/lib/user-roles";
 import { logError, logWarn } from "@/lib/server-logger";
 
@@ -159,6 +162,25 @@ function toStoredImageAsset(
   };
 }
 
+function toUploadedContainerImageAsset(
+  photo: UploadedContainerPhotoInput,
+): ContainerListingImageAsset {
+  return {
+    filename: photo.filename,
+    contentType: photo.contentType,
+    size: photo.size,
+    width: photo.width,
+    height: photo.height,
+    blobUrl: photo.blobUrl,
+  };
+}
+
+function toUploadedBlobUrls(photos: UploadedContainerPhotoInput[]): string[] {
+  return photos
+    .map((photo) => photo.blobUrl.trim())
+    .filter(Boolean);
+}
+
 async function uploadContainerImageAsset(input: {
   listingId: ObjectId;
   key: string;
@@ -186,6 +208,14 @@ function toBlobUrls(
   return assets
     .map((asset) => asset?.blobUrl?.trim() ?? "")
     .filter(Boolean);
+}
+
+function scheduleBlobCleanup(urls: string[]): void {
+  if (urls.length === 0) {
+    return;
+  }
+
+  after(() => safeDeleteBlobUrls(urls));
 }
 
 async function parsePatchBody(request: NextRequest): Promise<{
@@ -334,11 +364,19 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
     stepStartedAt = performance.now();
     const { payload, photoFiles, keepPhotoIndexesRaw, prependUploadedPhotos } = await parsePatchBody(request);
     timings.parseBodyMs = elapsedMs(stepStartedAt);
-    const totalPhotoBytes = photoFiles.reduce((sum, file) => sum + file.size, 0);
 
     const updateParsed = updateSchema.safeParse(payload);
     if (updateParsed.success) {
-      if (photoFiles.length > MAX_LISTING_PHOTO_COUNT) {
+      const directUploadedPhotos = updateParsed.data.uploadedPhotos;
+      const totalPhotoBytes =
+        photoFiles.reduce((sum, file) => sum + file.size, 0) +
+        directUploadedPhotos.reduce((sum, photo) => sum + photo.size, 0);
+      const effectiveKeepPhotoIndexesRaw =
+        keepPhotoIndexesRaw ?? updateParsed.data.keepPhotoIndexes ?? null;
+      const shouldPrependUploadedPhotos =
+        prependUploadedPhotos || updateParsed.data.prependUploadedPhotos === true;
+      const newPhotoCount = photoFiles.length + directUploadedPhotos.length;
+      if (newPhotoCount > MAX_LISTING_PHOTO_COUNT) {
         return NextResponse.json(
           {
             error: "Invalid files",
@@ -363,11 +401,11 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
       }
       const existingPhotos = listing.photos ?? [];
       const keepPhotoIndexes =
-        keepPhotoIndexesRaw === null
+        effectiveKeepPhotoIndexesRaw === null
           ? existingPhotos.map((_, index) => index)
           : Array.from(
               new Set(
-                keepPhotoIndexesRaw
+                effectiveKeepPhotoIndexesRaw
                   .map((value) => Number(value))
                   .filter(
                     (value) =>
@@ -383,7 +421,7 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
       const removedExistingPhotos = existingPhotos.filter(
         (_photo, index) => !keepPhotoIndexes.includes(index),
       );
-      if (keptExistingPhotos.length + photoFiles.length > MAX_LISTING_PHOTO_COUNT) {
+      if (keptExistingPhotos.length + newPhotoCount > MAX_LISTING_PHOTO_COUNT) {
         return NextResponse.json(
           {
             error: "Invalid files",
@@ -513,7 +551,8 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
         ? ownerCompany?.slug?.trim() || listing.companySlug?.trim() || undefined
         : undefined;
       const uploadedBlobUrls: string[] = [];
-      let storedNextUploadedPhotos: ContainerListingImageAsset[] = [];
+      let storedNextUploadedPhotos: ContainerListingImageAsset[] =
+        directUploadedPhotos.map(toUploadedContainerImageAsset);
       try {
         stepStartedAt = performance.now();
         const nextUploadedPhotos =
@@ -524,25 +563,29 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
         stepStartedAt = performance.now();
         storedNextUploadedPhotos =
           nextUploadedPhotos.length > 0
-            ? await Promise.all(
-                nextUploadedPhotos.map(async (asset, index) => {
-                  const stored = await uploadContainerImageAsset({
-                    listingId,
-                    key: `photos/${keepPhotoIndexes.length + index}`,
-                    asset,
-                  });
-                  if (stored.blobUrl) {
-                    uploadedBlobUrls.push(stored.blobUrl);
-                  }
-                  return stored;
-                }),
-              )
-            : [];
+            ? [
+                ...storedNextUploadedPhotos,
+                ...(await Promise.all(
+                  nextUploadedPhotos.map(async (asset, index) => {
+                    const stored = await uploadContainerImageAsset({
+                      listingId,
+                      key: `photos/${keepPhotoIndexes.length + index}`,
+                      asset,
+                    });
+                    if (stored.blobUrl) {
+                      uploadedBlobUrls.push(stored.blobUrl);
+                    }
+                    return stored;
+                  }),
+                )),
+              ]
+            : storedNextUploadedPhotos;
         timings.uploadPhotosMs = elapsedMs(stepStartedAt);
       } catch (mediaError) {
-        if (uploadedBlobUrls.length > 0) {
-          await safeDeleteBlobUrls(uploadedBlobUrls);
-        }
+        await safeDeleteBlobUrls([
+          ...uploadedBlobUrls,
+          ...toUploadedBlobUrls(directUploadedPhotos),
+        ]);
         const message =
           mediaError instanceof Error ? mediaError.message : "image processing failed";
         return NextResponse.json(
@@ -553,7 +596,7 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
           { status: 400 },
         );
       }
-      const nextPhotos = prependUploadedPhotos
+      const nextPhotos = shouldPrependUploadedPhotos
         ? [...storedNextUploadedPhotos, ...keptExistingPhotos]
         : [...keptExistingPhotos, ...storedNextUploadedPhotos];
       const shouldReactivateOnSave = updateParsed.data.reactivateOnSave === true;
@@ -694,16 +737,15 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
         );
         timings.dbUpdateMs = elapsedMs(stepStartedAt);
       } catch (dbError) {
-        if (uploadedBlobUrls.length > 0) {
-          await safeDeleteBlobUrls(uploadedBlobUrls);
-        }
+        await safeDeleteBlobUrls([
+          ...uploadedBlobUrls,
+          ...toUploadedBlobUrls(directUploadedPhotos),
+        ]);
         throw dbError;
       }
       const staleBlobUrls = toBlobUrls(removedExistingPhotos);
       if (staleBlobUrls.length > 0) {
-        stepStartedAt = performance.now();
-        await safeDeleteBlobUrls(staleBlobUrls);
-        timings.deleteStalePhotosMs = elapsedMs(stepStartedAt);
+        scheduleBlobCleanup(staleBlobUrls);
       }
 
       stepStartedAt = performance.now();
@@ -714,7 +756,7 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
         route: "/api/containers/[id]",
         startedAt: writeStartedAt,
         timings,
-        photoCount: photoFiles.length,
+        photoCount: newPhotoCount,
         totalPhotoBytes,
         listingId: listingId.toHexString(),
         userId: user._id.toHexString(),
@@ -861,7 +903,7 @@ export async function DELETE(request: NextRequest, context: RouteContext) {
     await listings.deleteOne({ _id: listingId });
     const staleBlobUrls = toBlobUrls(listing.photos ?? []);
     if (staleBlobUrls.length > 0) {
-      await safeDeleteBlobUrls(staleBlobUrls);
+      scheduleBlobCleanup(staleBlobUrls);
     }
     await (await getContainerListingFavoritesCollection()).deleteMany({ listingId });
     return NextResponse.json({ ok: true });

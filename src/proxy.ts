@@ -51,6 +51,8 @@ function buildContentSecurityPolicy(): string {
   const connectSrcDirectives = [
     "'self'",
     "https://challenges.cloudflare.com",
+    "https://vercel.com",
+    "https://*.blob.vercel-storage.com",
     mapStyleOrigin,
     "wss:",
   ];

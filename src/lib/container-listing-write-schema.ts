@@ -12,6 +12,22 @@ import {
   PRICE_TAX_MODES,
 } from "@/lib/container-listing-types";
 
+const BLOB_STORAGE_HOST_SUFFIX = ".blob.vercel-storage.com";
+const CONTAINER_UPLOAD_PATH_PREFIX = "/containers/uploads/";
+
+function isVercelBlobUrl(value: string): boolean {
+  try {
+    const url = new URL(value);
+    return (
+      url.protocol === "https:" &&
+      url.hostname.endsWith(BLOB_STORAGE_HOST_SUFFIX) &&
+      url.pathname.startsWith(CONTAINER_UPLOAD_PATH_PREFIX)
+    );
+  } catch {
+    return false;
+  }
+}
+
 export const locationAddressPartsSchema = z.object({
   street: z.string().trim().min(1).max(120).optional(),
   houseNumber: z.string().trim().min(1).max(40).optional(),
@@ -94,6 +110,21 @@ export const pricingPayloadSchema = z
 
 export const listingTypeInputSchema = z.enum(LISTING_TYPES);
 
+export const uploadedContainerPhotoSchema = z.object({
+  filename: z.string().trim().min(1).max(180),
+  contentType: z.enum(["image/jpeg", "image/png", "image/webp"]),
+  size: z.coerce.number().int().min(1).max(5 * 1024 * 1024),
+  width: z.coerce.number().int().min(1).max(10_000).optional(),
+  height: z.coerce.number().int().min(1).max(10_000).optional(),
+  blobUrl: z.string().trim().refine(isVercelBlobUrl, {
+    message: "Invalid uploaded photo URL",
+  }),
+});
+
+export type UploadedContainerPhotoInput = z.infer<
+  typeof uploadedContainerPhotoSchema
+>;
+
 const listingWriteBaseObjectSchema = z.object({
   type: listingTypeInputSchema,
   container: z.object({
@@ -142,6 +173,7 @@ const listingWriteBaseObjectSchema = z.object({
   containerColorsRal: z.string().trim().max(320).optional(),
   price: z.string().trim().max(100).optional(),
   description: z.string().trim().max(16_000).optional(),
+  uploadedPhotos: z.array(uploadedContainerPhotoSchema).max(10).default([]),
   companyName: z.string().trim().min(2).max(160),
   publishedAsCompany: z.coerce.boolean().optional(),
   adminCompanyId: z.string().trim().regex(/^[a-f0-9]{24}$/i).optional(),
@@ -220,5 +252,7 @@ export const updateListingSchema = withListingWriteRefinements(
   listingWriteBaseObjectSchema.extend({
     action: z.literal("update"),
     reactivateOnSave: z.coerce.boolean().optional(),
+    keepPhotoIndexes: z.array(z.coerce.number().int().min(0)).optional(),
+    prependUploadedPhotos: z.coerce.boolean().optional(),
   }),
 );

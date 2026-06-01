@@ -68,6 +68,7 @@ import { enforcePublicReadRateLimitOrResponse } from "@/lib/app-rate-limit";
 import {
   createListingSchema,
   listingTypeInputSchema,
+  type UploadedContainerPhotoInput,
 } from "@/lib/container-listing-write-schema";
 import { normalizeCompanyVerificationStatus } from "@/lib/company-verification";
 import { enforceRateLimitOrResponse } from "@/lib/request-rate-limit";
@@ -939,6 +940,25 @@ function toStoredImageAsset(
   };
 }
 
+function toUploadedContainerImageAsset(
+  photo: UploadedContainerPhotoInput,
+): ContainerListingImageAsset {
+  return {
+    filename: photo.filename,
+    contentType: photo.contentType,
+    size: photo.size,
+    width: photo.width,
+    height: photo.height,
+    blobUrl: photo.blobUrl,
+  };
+}
+
+function toUploadedBlobUrls(photos: UploadedContainerPhotoInput[]): string[] {
+  return photos
+    .map((photo) => photo.blobUrl.trim())
+    .filter(Boolean);
+}
+
 async function uploadContainerImageAsset(input: {
   listingId: ObjectId;
   key: string;
@@ -1544,7 +1564,6 @@ export async function POST(request: NextRequest) {
     stepStartedAt = performance.now();
     const { payload, photoFiles } = await parseCreateBody(request);
     timings.parseBodyMs = elapsedMs(stepStartedAt);
-    const totalPhotoBytes = photoFiles.reduce((sum, file) => sum + file.size, 0);
     const parsed = createSchema.safeParse(payload);
     if (!parsed.success) {
       return NextResponse.json(
@@ -1555,7 +1574,12 @@ export async function POST(request: NextRequest) {
         { status: 400 },
       );
     }
-    if (photoFiles.length > MAX_LISTING_PHOTO_COUNT) {
+    const directUploadedPhotos = parsed.data.uploadedPhotos;
+    const totalPhotoCount = photoFiles.length + directUploadedPhotos.length;
+    const totalPhotoBytes =
+      photoFiles.reduce((sum, file) => sum + file.size, 0) +
+      directUploadedPhotos.reduce((sum, photo) => sum + photo.size, 0);
+    if (totalPhotoCount > MAX_LISTING_PHOTO_COUNT) {
       return NextResponse.json(
         {
           error: "Invalid files",
@@ -1751,7 +1775,8 @@ export async function POST(request: NextRequest) {
     }
 
     let uploadedPhotos: ContainerListingImageAsset[] = [];
-    let storedPhotos: ContainerListingImageAsset[] = [];
+    const directPhotoAssets = directUploadedPhotos.map(toUploadedContainerImageAsset);
+    let storedPhotos: ContainerListingImageAsset[] = [...directPhotoAssets];
     const uploadedBlobUrls: string[] = [];
     try {
       stepStartedAt = performance.now();
@@ -1763,25 +1788,29 @@ export async function POST(request: NextRequest) {
       stepStartedAt = performance.now();
       storedPhotos =
         uploadedPhotos.length > 0
-          ? await Promise.all(
-              uploadedPhotos.map(async (asset, index) => {
-                const stored = await uploadContainerImageAsset({
-                  listingId,
-                  key: `photos/${index}`,
-                  asset,
-                });
-                if (stored.blobUrl) {
-                  uploadedBlobUrls.push(stored.blobUrl);
-                }
-                return stored;
-              }),
-            )
-          : [];
+          ? [
+              ...storedPhotos,
+              ...(await Promise.all(
+                uploadedPhotos.map(async (asset, index) => {
+                  const stored = await uploadContainerImageAsset({
+                    listingId,
+                    key: `photos/${directPhotoAssets.length + index}`,
+                    asset,
+                  });
+                  if (stored.blobUrl) {
+                    uploadedBlobUrls.push(stored.blobUrl);
+                  }
+                  return stored;
+                }),
+              )),
+            ]
+          : storedPhotos;
       timings.uploadPhotosMs = elapsedMs(stepStartedAt);
     } catch (mediaError) {
-      if (uploadedBlobUrls.length > 0) {
-        await safeDeleteBlobUrls(uploadedBlobUrls);
-      }
+      await safeDeleteBlobUrls([
+        ...uploadedBlobUrls,
+        ...toUploadedBlobUrls(directUploadedPhotos),
+      ]);
       const message =
         mediaError instanceof Error ? mediaError.message : "image processing failed";
       return NextResponse.json(
@@ -1858,9 +1887,10 @@ export async function POST(request: NextRequest) {
       );
       timings.dbInsertMs = elapsedMs(stepStartedAt);
     } catch (dbError) {
-      if (uploadedBlobUrls.length > 0) {
-        await safeDeleteBlobUrls(uploadedBlobUrls);
-      }
+      await safeDeleteBlobUrls([
+        ...uploadedBlobUrls,
+        ...toUploadedBlobUrls(directUploadedPhotos),
+      ]);
       throw dbError;
     }
 
@@ -1869,7 +1899,7 @@ export async function POST(request: NextRequest) {
       route: "/api/containers",
       startedAt: writeStartedAt,
       timings,
-      photoCount: photoFiles.length,
+      photoCount: totalPhotoCount,
       totalPhotoBytes,
       listingId: insertResult.insertedId.toHexString(),
       userId: user._id.toHexString(),
