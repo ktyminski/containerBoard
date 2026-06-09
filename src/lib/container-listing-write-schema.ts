@@ -11,6 +11,7 @@ import {
   PRICE_CURRENCIES,
   PRICE_TAX_MODES,
 } from "@/lib/container-listing-types";
+import { sanitizeListingDescriptionHtml } from "@/lib/listing-description-html";
 
 const BLOB_STORAGE_HOST_SUFFIX = ".blob.vercel-storage.com";
 const CONTAINER_UPLOAD_PATH_PREFIX = "/containers/uploads/";
@@ -125,6 +126,12 @@ export type UploadedContainerPhotoInput = z.infer<
   typeof uploadedContainerPhotoSchema
 >;
 
+const listingDescriptionInputSchema = z.preprocess(
+  (value) =>
+    typeof value === "string" ? sanitizeListingDescriptionHtml(value) : value,
+  z.string().trim().max(16_000).optional(),
+);
+
 const listingWriteBaseObjectSchema = z.object({
   type: listingTypeInputSchema,
   container: z.object({
@@ -172,7 +179,7 @@ const listingWriteBaseObjectSchema = z.object({
   productionYear: z.coerce.number().int().min(1900).max(2100).optional(),
   containerColorsRal: z.string().trim().max(320).optional(),
   price: z.string().trim().max(100).optional(),
-  description: z.string().trim().max(16_000).optional(),
+  description: listingDescriptionInputSchema,
   uploadedPhotos: z.array(uploadedContainerPhotoSchema).max(10).default([]),
   companyName: z.string().trim().min(2).max(160),
   publishedAsCompany: z.coerce.boolean().optional(),
