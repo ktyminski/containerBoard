@@ -4,6 +4,7 @@ import {
   ensureContainerListingsIndexes,
   expireContainerListingsIfNeeded,
   getContainerListingsCollection,
+  getListingBumpedAtSortExpression,
   mapContainerListingToItem,
   type ContainerListingDocument,
   type ContainerListingItem,
@@ -233,6 +234,27 @@ async function getPagedRows(input: {
   priceCurrency: Currency;
 }): Promise<ContainerListingDocument[]> {
   const listings = await getContainerListingsCollection();
+  if (input.sortBy === "createdAt") {
+    return listings
+      .aggregate<ContainerListingDocument>([
+        { $match: input.filter },
+        {
+          $addFields: {
+            __sortBumpedAt: getListingBumpedAtSortExpression(),
+          },
+        },
+        {
+          $sort: {
+            __sortBumpedAt: input.sortDirection,
+            createdAt: input.sortDirection,
+          },
+        },
+        { $limit: PUBLIC_LIST_PAGE_SIZE },
+        { $project: { __sortBumpedAt: 0 } },
+      ])
+      .toArray();
+  }
+
   if (input.sortBy === "priceNet") {
     const sortPriceField = getPriceNetFieldForCurrency(input.priceCurrency);
     return listings
@@ -242,17 +264,19 @@ async function getPagedRows(input: {
           $addFields: {
             __sortPriceMissing: getPriceMissingSortExpression(sortPriceField),
             __sortPriceValue: getPriceSortValueExpression(sortPriceField),
+            __sortBumpedAt: getListingBumpedAtSortExpression(),
           },
         },
         {
           $sort: {
             __sortPriceMissing: 1,
             __sortPriceValue: input.sortDirection,
+            __sortBumpedAt: -1,
             createdAt: -1,
           },
         },
         { $limit: PUBLIC_LIST_PAGE_SIZE },
-        { $project: { __sortPriceMissing: 0, __sortPriceValue: 0 } },
+        { $project: { __sortPriceMissing: 0, __sortPriceValue: 0, __sortBumpedAt: 0 } },
       ])
       .toArray();
   }
@@ -287,6 +311,7 @@ export async function getPublicContainerListingsInitialData(input: {
   const sortDirection = sortDir === "asc" ? 1 : -1;
   const sort: Record<string, 1 | -1> = { [sortField]: sortDirection };
   if (sortField !== "createdAt") {
+    sort.bumpedAt = -1;
     sort.createdAt = -1;
   }
 

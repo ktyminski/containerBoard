@@ -294,6 +294,7 @@ export function buildContainerListingDocument(
     detailsViewCount: 1,
     createdAt: input.now,
     updatedAt: input.now,
+    bumpedAt: input.now,
     expiresAt: getDefaultListingExpiration(input.now),
   } as ContainerListingDocument;
 }

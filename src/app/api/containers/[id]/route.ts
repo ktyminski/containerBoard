@@ -13,6 +13,8 @@ import {
   getContainerListingFavoritesCollection,
   getContainerListingsCollection,
   getDefaultListingExpiration,
+  LISTING_BUMP_COOLDOWN_MS,
+  getListingBumpState,
   mapContainerListingToItem,
   type ContainerListingImageAsset,
 } from "@/lib/container-listings";
@@ -783,14 +785,25 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
     const refreshParsed = refreshSchema.safeParse(payload);
     if (refreshParsed.success) {
       const now = new Date();
+      const bumpState = getListingBumpState(listing, now);
+      const setPatch: {
+        status: ListingStatus;
+        expiresAt: Date;
+        updatedAt: Date;
+        bumpedAt?: Date;
+      } = {
+        status: LISTING_STATUS.ACTIVE,
+        expiresAt: getDefaultListingExpiration(now),
+        updatedAt: now,
+      };
+      if (bumpState.canBump) {
+        setPatch.bumpedAt = now;
+      }
+
       await listings.updateOne(
         { _id: listingId },
         {
-          $set: {
-            status: LISTING_STATUS.ACTIVE,
-            expiresAt: getDefaultListingExpiration(now),
-            updatedAt: now,
-          },
+          $set: setPatch,
           $unset: {
             expiryReminder7dSentAt: "",
             expiryReminder2dSentAt: "",
@@ -798,7 +811,16 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
         },
       );
 
-      return NextResponse.json({ ok: true });
+      return NextResponse.json({
+        ok: true,
+        renewed: true,
+        bumped: bumpState.canBump,
+        nextBumpAt: (
+          bumpState.canBump
+            ? new Date(now.getTime() + LISTING_BUMP_COOLDOWN_MS)
+            : bumpState.nextBumpAt
+        ).toISOString(),
+      });
     }
 
     const adminStatusParsed = adminSetStatusSchema.safeParse(payload);

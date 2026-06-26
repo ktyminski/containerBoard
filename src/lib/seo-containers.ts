@@ -5,6 +5,7 @@ import {
   ensureContainerListingsIndexes,
   expireContainerListingsIfNeeded,
   getContainerListingsCollection,
+  getListingBumpedAtSortExpression,
   mapContainerListingToItem,
   type ContainerListingDocument,
   type ContainerListingItem,
@@ -569,7 +570,19 @@ export async function getSeoContainerListingsByKindAndCity(
   });
 
   const [rows, total] = await Promise.all([
-    listings.find(filter).sort({ createdAt: -1 }).limit(limit).toArray(),
+    listings
+      .aggregate<ContainerListingDocument>([
+        { $match: filter },
+        {
+          $addFields: {
+            __sortBumpedAt: getListingBumpedAtSortExpression(),
+          },
+        },
+        { $sort: { __sortBumpedAt: -1, createdAt: -1 } },
+        { $limit: limit },
+        { $project: { __sortBumpedAt: 0 } },
+      ])
+      .toArray(),
     listings.countDocuments(filter),
   ]);
 
@@ -599,7 +612,19 @@ export async function getSeoContainerListingsByKindAndCountry(
   const filter = buildCountrySeoFilter(country, now, kind);
 
   const [rows, total] = await Promise.all([
-    listings.find(filter).sort({ createdAt: -1 }).limit(limit).toArray(),
+    listings
+      .aggregate<ContainerListingDocument>([
+        { $match: filter },
+        {
+          $addFields: {
+            __sortBumpedAt: getListingBumpedAtSortExpression(),
+          },
+        },
+        { $sort: { __sortBumpedAt: -1, createdAt: -1 } },
+        { $limit: limit },
+        { $project: { __sortBumpedAt: 0 } },
+      ])
+      .toArray(),
     listings.countDocuments(filter),
   ]);
 

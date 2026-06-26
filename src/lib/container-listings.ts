@@ -45,6 +45,7 @@ import { normalizeListingPrice } from "@/lib/listing-price";
 export const LISTING_TTL_DAYS = 30;
 export const LISTING_REMINDER_FIRST_DAYS = 7;
 export const LISTING_REMINDER_FINAL_DAYS = 2;
+export const LISTING_BUMP_COOLDOWN_MS = 1000 * 60 * 60 * 24 * 10;
 
 type LegacyContainerTypeCode =
   | "20DV"
@@ -160,6 +161,7 @@ export type ContainerListingDocument = {
   adminCreatedForCompanyId?: ObjectId;
   createdAt: Date;
   updatedAt: Date;
+  bumpedAt?: Date;
   expiresAt: Date;
   expiryReminder7dSentAt?: Date;
   expiryReminder2dSentAt?: Date;
@@ -244,9 +246,12 @@ export type ContainerListingItem = {
   status: ListingStatus;
   createdAt: string;
   updatedAt: string;
+  bumpedAt: string;
   expiresAt: string;
   isExpired: boolean;
   canRefresh: boolean;
+  canBump: boolean;
+  nextBumpAt: string;
   isFavorite?: boolean;
 };
 
@@ -411,8 +416,8 @@ export async function ensureContainerListingsIndexes(): Promise<void> {
       const favorites = await getContainerListingFavoritesCollection();
 
       const listingIndexes: IndexDescription[] = [
-        { key: { status: 1, expiresAt: 1, createdAt: -1 } },
-        { key: { status: 1, expiresAt: 1, companySlug: 1, createdAt: -1 } },
+        { key: { status: 1, expiresAt: 1, bumpedAt: -1, createdAt: -1 } },
+        { key: { status: 1, expiresAt: 1, companySlug: 1, bumpedAt: -1, createdAt: -1 } },
         {
           key: {
             status: 1,
@@ -421,9 +426,9 @@ export async function ensureContainerListingsIndexes(): Promise<void> {
             expiryReminder2dSentAt: 1,
           },
         },
-        { key: { createdByUserId: 1, createdAt: -1 } },
-        { key: { type: 1, "container.type": 1, createdAt: -1 } },
-        { key: { type: 1, containerType: 1, createdAt: -1 } },
+        { key: { createdByUserId: 1, bumpedAt: -1, createdAt: -1 } },
+        { key: { type: 1, "container.type": 1, bumpedAt: -1, createdAt: -1 } },
+        { key: { type: 1, containerType: 1, bumpedAt: -1, createdAt: -1 } },
         { key: { "containerColors.ral": 1 } },
         { key: { "container.size": 1, "container.height": 1, "container.type": 1 } },
         { key: { "container.condition": 1 } },
@@ -443,6 +448,7 @@ export async function ensureContainerListingsIndexes(): Promise<void> {
             type: 1,
             status: 1,
             expiresAt: 1,
+            bumpedAt: -1,
             createdAt: -1,
           },
         },
@@ -454,6 +460,7 @@ export async function ensureContainerListingsIndexes(): Promise<void> {
             type: 1,
             status: 1,
             expiresAt: 1,
+            bumpedAt: -1,
             createdAt: -1,
           },
         },
@@ -497,10 +504,49 @@ export async function expireContainerListingsIfNeeded(now = new Date()): Promise
   );
 }
 
+export function getEffectiveListingBumpedAt(
+  doc: Pick<ContainerListingDocument, "bumpedAt" | "createdAt">,
+): Date {
+  if (doc.bumpedAt instanceof Date && Number.isFinite(doc.bumpedAt.getTime())) {
+    return doc.bumpedAt;
+  }
+
+  if (doc.createdAt instanceof Date && Number.isFinite(doc.createdAt.getTime())) {
+    return doc.createdAt;
+  }
+
+  return new Date(0);
+}
+
+export function getListingBumpedAtSortExpression(): Record<string, unknown> {
+  return {
+    $ifNull: ["$bumpedAt", "$createdAt"],
+  };
+}
+
+export function getListingBumpState(
+  doc: Pick<ContainerListingDocument, "bumpedAt" | "createdAt">,
+  now = new Date(),
+): {
+  bumpedAt: Date;
+  nextBumpAt: Date;
+  canBump: boolean;
+} {
+  const bumpedAt = getEffectiveListingBumpedAt(doc);
+  const nextBumpAt = new Date(bumpedAt.getTime() + LISTING_BUMP_COOLDOWN_MS);
+  return {
+    bumpedAt,
+    nextBumpAt,
+    canBump: nextBumpAt.getTime() <= now.getTime(),
+  };
+}
+
 export function mapContainerListingToItem(doc: ContainerListingDocument): ContainerListingItem {
   const now = Date.now();
+  const nowDate = new Date(now);
   const expiresAtMs = doc.expiresAt.getTime();
   const isExpired = doc.status === LISTING_STATUS.EXPIRED || expiresAtMs <= now;
+  const bumpState = getListingBumpState(doc, nowDate);
   const pricing = doc.pricing
     ? normalizeListingPrice({
         original: {
@@ -642,9 +688,12 @@ export function mapContainerListingToItem(doc: ContainerListingDocument): Contai
       : doc.status,
     createdAt: doc.createdAt.toISOString(),
     updatedAt: doc.updatedAt.toISOString(),
+    bumpedAt: bumpState.bumpedAt.toISOString(),
     expiresAt: doc.expiresAt.toISOString(),
     isExpired,
     canRefresh: doc.status !== LISTING_STATUS.CLOSED,
+    canBump: bumpState.canBump,
+    nextBumpAt: bumpState.nextBumpAt.toISOString(),
   };
 }
 

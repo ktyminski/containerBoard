@@ -1,6 +1,10 @@
 import { createHash, randomBytes } from "node:crypto";
 import { ObjectId, type Collection } from "mongodb";
-import { getContainerListingsCollection, getDefaultListingExpiration } from "@/lib/container-listings";
+import {
+  getContainerListingsCollection,
+  getDefaultListingExpiration,
+  getListingBumpState,
+} from "@/lib/container-listings";
 import { LISTING_STATUS } from "@/lib/container-listing-types";
 import { getDb } from "@/lib/mongodb";
 
@@ -127,6 +131,8 @@ export async function renewListingWithToken(token: string): Promise<ListingRenew
         _id: 1,
         status: 1,
         expiresAt: 1,
+        createdAt: 1,
+        bumpedAt: 1,
       },
     },
   );
@@ -144,6 +150,20 @@ export async function renewListingWithToken(token: string): Promise<ListingRenew
     listing.expiresAt.getTime() > defaultExpiresAt.getTime()
       ? listing.expiresAt
       : defaultExpiresAt;
+  const bumpState = getListingBumpState(listing, now);
+  const setPatch: {
+    status: typeof LISTING_STATUS.ACTIVE;
+    expiresAt: Date;
+    updatedAt: Date;
+    bumpedAt?: Date;
+  } = {
+    status: LISTING_STATUS.ACTIVE,
+    expiresAt: currentExpiresAt,
+    updatedAt: now,
+  };
+  if (bumpState.canBump) {
+    setPatch.bumpedAt = now;
+  }
 
   await listings.updateOne(
     {
@@ -152,11 +172,7 @@ export async function renewListingWithToken(token: string): Promise<ListingRenew
       status: { $ne: LISTING_STATUS.CLOSED },
     },
     {
-      $set: {
-        status: LISTING_STATUS.ACTIVE,
-        expiresAt: currentExpiresAt,
-        updatedAt: now,
-      },
+      $set: setPatch,
       $unset: {
         expiryReminder7dSentAt: "",
         expiryReminder2dSentAt: "",

@@ -15,6 +15,7 @@
     "seed:containers:reset-model": "node --env-file=.env.local scripts/reset-seed-containers-model.mjs",
     "migrate:containers:logistics-unloading": "node --env-file=.env.local scripts/migrate-logistics-loading-to-unloading.mjs",
     "migrate:containers:country-codes": "node --env-file=.env.local scripts/backfill-container-location-country-codes.mjs",
+    "migrate:containers:bumped-at": "node --env-file=.env.local scripts/backfill-container-bumped-at.mjs",
     "migrate:drop-company-ownership-claims": "node --env-file=.env.local scripts/drop-company-ownership-claims.mjs",
     "seed:real-companies": "node --env-file=.env.local scripts/seed-real-companies.mjs",
     "seed:landing-companies": "node --env-file=.env.local scripts/seed-landing-companies.mjs",

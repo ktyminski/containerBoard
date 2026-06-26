@@ -68,6 +68,8 @@ type RefreshConfirmationModalState = {
   listingLabel: string;
   quantity: number;
   priceLabel: string;
+  canBump: boolean;
+  nextBumpAt: string;
 };
 
 type DeleteConfirmationModalState = {
@@ -104,6 +106,15 @@ function getContainerPreviewSrc(item: ContainerListingItem): string {
     return Boolean(trimmed);
   });
   return firstPhotoUrl ?? getContainerPlaceholderSrc(item);
+}
+
+function formatBumpAvailabilityDate(value: string, locale: AppLocale): string {
+  const date = new Date(value);
+  if (!Number.isFinite(date.getTime())) {
+    return value;
+  }
+
+  return date.toLocaleDateString(toIntlLocale(locale));
 }
 
 function getListingPriceLabel(
@@ -246,6 +257,13 @@ const MyContainerListingRow = memo(function MyContainerListingRow({
                 {messages.expiresLabel}:{" "}
                 {new Date(item.expiresAt).toLocaleDateString(toIntlLocale(locale))}
               </p>
+              {!item.canBump ? (
+                <p className="text-xs text-neutral-500">
+                  {formatTemplate(messages.bumpUnavailableHint, {
+                    date: formatBumpAvailabilityDate(item.nextBumpAt, locale),
+                  })}
+                </p>
+              ) : null}
             </div>
           </div>
 
@@ -310,7 +328,7 @@ const MyContainerListingRow = memo(function MyContainerListingRow({
                 }}
                 className="rounded-md border border-emerald-300 bg-white px-3 py-1.5 text-sm text-emerald-800 transition-colors hover:bg-emerald-50"
               >
-                {messages.refreshThirtyDays}
+                {item.canBump ? messages.refreshAndBump : messages.refreshThirtyDays}
               </button>
               <button
                 type="button"
@@ -581,7 +599,10 @@ export function MyContainerListings(input?: {
         body: action === "delete" ? undefined : JSON.stringify({ action }),
       });
 
-      const data = (await response.json().catch(() => null)) as { error?: string } | null;
+      const data = (await response.json().catch(() => null)) as {
+        error?: string;
+        bumped?: boolean;
+      } | null;
       if (!response.ok) {
         throw new Error(data?.error ?? messages.actionError);
       }
@@ -590,7 +611,9 @@ export function MyContainerListings(input?: {
         action === "close"
           ? messages.actionClosed
           : action === "refresh"
-            ? messages.actionRefreshed
+            ? data?.bumped
+              ? messages.actionRenewedAndBumped
+              : messages.actionRenewedOnly
             : messages.actionDeleted,
       );
       await loadMine();
@@ -599,7 +622,7 @@ export function MyContainerListings(input?: {
       toast.error(actionError instanceof Error ? actionError.message : messages.genericError);
       return false;
     }
-  }, [loadMine, messages.actionClosed, messages.actionDeleted, messages.actionError, messages.actionRefreshed, messages.genericError, toast]);
+  }, [loadMine, messages.actionClosed, messages.actionDeleted, messages.actionError, messages.actionRenewedAndBumped, messages.actionRenewedOnly, messages.genericError, toast]);
 
   const copyListingUrl = useCallback(async (listingId: string) => {
     const listingUrl = `${window.location.origin}/containers/${listingId}`;
@@ -618,6 +641,8 @@ export function MyContainerListings(input?: {
       listingLabel: getContainerShortLabelLocalized(listingMessages, item.container),
       quantity: item.quantity,
       priceLabel: getListingPriceLabel(item, locale, messages),
+      canBump: item.canBump,
+      nextBumpAt: item.nextBumpAt,
     });
     setQuantityConfirmed("yes");
     setPriceConfirmed("yes");
@@ -854,7 +879,14 @@ export function MyContainerListings(input?: {
                   {messages.refreshDialogTitle}
                 </h3>
                 <p className="text-sm text-neutral-600">
-                  {messages.refreshDialogText}
+                  {refreshModalState.canBump
+                    ? messages.refreshDialogTextWithBump
+                    : formatTemplate(messages.refreshDialogTextWithoutBump, {
+                        date: formatBumpAvailabilityDate(
+                          refreshModalState.nextBumpAt,
+                          locale,
+                        ),
+                      })}
                 </p>
               </div>
               <button
@@ -964,7 +996,7 @@ export function MyContainerListings(input?: {
                   }}
                   className="rounded-md border border-emerald-300 bg-emerald-50 px-3 py-2 text-sm font-medium text-emerald-800 transition hover:bg-emerald-100"
                 >
-                  {messages.refresh}
+                  {refreshModalState.canBump ? messages.refreshAndBump : messages.refresh}
                 </button>
               ) : null}
 

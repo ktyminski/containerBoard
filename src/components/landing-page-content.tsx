@@ -9,7 +9,9 @@ import {
   ensureContainerListingsIndexes,
   expireContainerListingsIfNeeded,
   getContainerListingsCollection,
+  getListingBumpedAtSortExpression,
   mapContainerListingToItem,
+  type ContainerListingDocument,
   type ContainerListingItem,
 } from "@/lib/container-listings";
 import {
@@ -54,7 +56,19 @@ const getCachedLatestListings = unstable_cache(
       type: { $in: ["sell", "rent"] as const },
     };
 
-    const rows = await listings.find(filter).sort({ createdAt: -1 }).limit(limit).toArray();
+    const rows = await listings
+      .aggregate<ContainerListingDocument>([
+        { $match: filter },
+        {
+          $addFields: {
+            __sortBumpedAt: getListingBumpedAtSortExpression(),
+          },
+        },
+        { $sort: { __sortBumpedAt: -1, createdAt: -1 } },
+        { $limit: limit },
+        { $project: { __sortBumpedAt: 0 } },
+      ])
+      .toArray();
     return rows.map(mapContainerListingToItem);
   },
   ["landing-latest-listings"],

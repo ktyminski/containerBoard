@@ -18,6 +18,7 @@ import {
   expireContainerListingsIfNeeded,
   getContainerListingFavoritesCollection,
   getContainerListingsCollection,
+  getListingBumpedAtSortExpression,
   mapContainerListingToMapPoints,
   mapContainerListingToItem,
   type ContainerListingDocument,
@@ -613,6 +614,7 @@ type DeliveryReachCandidateRow = Pick<
   ContainerListingDocument,
   | "_id"
   | "createdAt"
+  | "bumpedAt"
   | "locationLat"
   | "locationLng"
   | "locations"
@@ -643,6 +645,7 @@ const MAP_LISTING_PROJECTION = {
 const DELIVERY_REACH_CANDIDATE_PROJECTION = {
   _id: 1,
   createdAt: 1,
+  bumpedAt: 1,
   locationLat: 1,
   locationLng: 1,
   logisticsTransportIncluded: 1,
@@ -813,6 +816,28 @@ async function getPagedListingRows(input: {
 }): Promise<ContainerListingDocument[]> {
   const { listings, filter, sortBy, sort, sortDirection, priceCurrency, skip, limit } = input;
 
+  if (sortBy === "createdAt") {
+    return listings
+      .aggregate<ContainerListingDocument>([
+        { $match: filter },
+        {
+          $addFields: {
+            __sortBumpedAt: getListingBumpedAtSortExpression(),
+          },
+        },
+        {
+          $sort: {
+            __sortBumpedAt: sortDirection,
+            createdAt: sortDirection,
+          },
+        },
+        { $skip: skip },
+        { $limit: limit },
+        { $project: { __sortBumpedAt: 0 } },
+      ])
+      .toArray();
+  }
+
   if (sortBy === "priceNet") {
     return listings
       .aggregate<ContainerListingDocument>([
@@ -825,18 +850,20 @@ async function getPagedListingRows(input: {
             __sortPriceValue: getPriceSortValueExpression(
               getPriceNetFieldForCurrency(priceCurrency ?? "PLN"),
             ),
+            __sortBumpedAt: getListingBumpedAtSortExpression(),
           },
         },
         {
           $sort: {
             __sortPriceMissing: 1,
             __sortPriceValue: sortDirection,
+            __sortBumpedAt: -1,
             createdAt: -1,
           },
         },
         { $skip: skip },
         { $limit: limit },
-        { $project: { __sortPriceMissing: 0, __sortPriceValue: 0 } },
+        { $project: { __sortPriceMissing: 0, __sortPriceValue: 0, __sortBumpedAt: 0 } },
       ])
       .toArray();
   }
@@ -855,6 +882,29 @@ async function getMapListingRows(input: {
 }): Promise<MapListingRow[]> {
   const { listings, filter, sortBy, sort, sortDirection, priceCurrency, limit } = input;
 
+  if (sortBy === "createdAt") {
+    return listings
+      .aggregate<MapListingRow>([
+        { $match: filter },
+        {
+          $addFields: {
+            __sortBumpedAt: getListingBumpedAtSortExpression(),
+          },
+        },
+        {
+          $sort: {
+            __sortBumpedAt: sortDirection,
+            createdAt: sortDirection,
+          },
+        },
+        { $limit: limit },
+        {
+          $project: MAP_LISTING_PROJECTION,
+        },
+      ])
+      .toArray();
+  }
+
   if (sortBy === "priceNet") {
     return listings
       .aggregate<MapListingRow>([
@@ -867,12 +917,14 @@ async function getMapListingRows(input: {
             __sortPriceValue: getPriceSortValueExpression(
               getPriceNetFieldForCurrency(priceCurrency ?? "PLN"),
             ),
+            __sortBumpedAt: getListingBumpedAtSortExpression(),
           },
         },
         {
           $sort: {
             __sortPriceMissing: 1,
             __sortPriceValue: sortDirection,
+            __sortBumpedAt: -1,
             createdAt: -1,
           },
         },
@@ -1206,6 +1258,7 @@ export async function GET(request: NextRequest) {
     const sortDirection = sortDir === "asc" ? 1 : -1;
     const sort: Record<string, 1 | -1> = { [sortField]: sortDirection };
     if (sortField !== "createdAt") {
+      sort.bumpedAt = -1;
       sort.createdAt = -1;
     }
     const mapLocationBounds =
@@ -1347,7 +1400,9 @@ export async function GET(request: NextRequest) {
           if (left.deliveryDistanceKm !== right.deliveryDistanceKm) {
             return left.deliveryDistanceKm - right.deliveryDistanceKm;
           }
-          return right.row.createdAt.getTime() - left.row.createdAt.getTime();
+          const rightBumpedAt = right.row.bumpedAt ?? right.row.createdAt;
+          const leftBumpedAt = left.row.bumpedAt ?? left.row.createdAt;
+          return rightBumpedAt.getTime() - leftBumpedAt.getTime();
         });
 
       const deliveryTotal = matchedRows.length;
